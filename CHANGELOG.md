@@ -3137,16 +3137,104 @@ Session End → close() → Close backend connection
 
 ---
 
-## Next Steps
-1. Add type annotations to CLI functions
-2. Create tests for CLI components (command registry, handlers, TUI)
-3. Test Web GUI WebSocket endpoint functionality
-4. Test interface compatibility more thoroughly
-5. Implement session management and persistence
-6. Add command history and completion
-7. Implement approval mode for file operations
-8. Add more specialized commands (analyze, debug, test, deploy)
-9. Implement actual Web GUI frontend (React/Vue)
-10. Implement actual Standalone GUI (PyQt/Tkinter)
-11. Add model selection modal (requires adapter selection first)
-12. Extend observability to remaining components (adapters, memory backends, orchestrator, workers)
+### 2026-06-08 - Git-Based Backup System Setup
+**Implementation**: Git checkpoint and restore system for prompt workflow management
+- **Purpose**: Enable snapshot and revert capabilities at any prompt checkpoint during development
+- **Infrastructure Created**:
+  - Initialized git repository at `c:\Jarvis`
+  - Created `.gitignore` excluding: `__pycache__/`, `*.pyc`, `.env`, `*.log`, `venv/`, `.pytest_cache/`, `node_modules/`, and other common artifacts
+  - Created initial checkpoint: `prompt-12` with commit message "checkpoint: prompt-12-complete — 261 passed, 23 skipped"
+  - Created `scripts/checkpoint.py` helper script:
+    - Takes one argument: label (e.g., `prompt-13`)
+    - Stages all changes (`git add -A`)
+    - Commits with message `checkpoint: {label}`
+    - Creates git tag `{label}`
+    - Prints confirmation: `✓ Checkpoint saved: {label}`
+  - Created `scripts/restore.py` helper script:
+    - Lists all available checkpoint tags if no argument given
+    - Takes one argument: tag name (e.g., `prompt-12`)
+    - Runs `git checkout {tag}` and prints restored tag name
+    - Includes warning about detached HEAD state and instructions to create new branch
+
+**Testing Results**:
+- **Baseline**: 261 passed, 23 skipped, 17 warnings
+- **Command**: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
+- **Test Duration**: ~23 seconds
+- **No new tests expected**: This is infrastructure-only change, no source code modifications
+
+**Architecture Compliance**:
+- No changes to source files or tests
+- Infrastructure-only implementation
+- Maintains Clean Architecture layer boundaries
+- Scripts are standalone utilities in `scripts/` directory
+
+**Rationale**:
+- Provides safety net for prompt-based development workflow
+- Enables quick rollback if a prompt introduces breaking changes
+- Simple git-based approach leverages existing version control
+- Helper scripts abstract git complexity for easy checkpoint/restore operations
+
+**Usage**:
+```bash
+# Create a new checkpoint
+python scripts/checkpoint.py prompt-13
+
+# List all available checkpoints
+python scripts/restore.py
+
+# Restore to a specific checkpoint
+python scripts/restore.py prompt-12
+```
+
+---
+
+### 2026-06-08 - Remote GitHub Backup Setup
+**Implementation**: Private GitHub repository for offsite backup of Sovereign AI project
+- **Purpose**: Enable offsite backup and remote synchronization of checkpoint snapshots
+- **Infrastructure Created**:
+  - Verified GitHub CLI installation (gh version 2.93.0)
+  - Authenticated with GitHub CLI as AngusKingC
+  - Created private GitHub repository: `AngusKingC/sovereign-ai`
+  - Confirmed remote origin: `https://github.com/AngusKingC/sovereign-ai.git`
+  - Updated `scripts/checkpoint.py` to push to remote after creating local checkpoint:
+    - Added `git push origin main` after commit
+    - Added `git push origin --tags` after tag creation
+    - Wrapped push in try-except to handle network failures gracefully
+    - If push fails, prints warning but local checkpoint remains valid
+  - Updated `scripts/restore.py` to fetch remote tags:
+    - Added `git fetch --tags` before listing checkpoints
+    - Ensures remote tags are always visible when listing available checkpoints
+    - Gracefully handles fetch failures (shows local tags only)
+
+**Testing Results**:
+- **Baseline**: 261 passed, 23 skipped, 17 warnings
+- **Command**: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
+- **Test Duration**: ~23 seconds
+- **No new tests expected**: This is infrastructure-only change, no source code modifications
+
+**Architecture Compliance**:
+- No changes to source files or tests
+- Infrastructure-only implementation
+- Maintains Clean Architecture layer boundaries
+- Scripts are standalone utilities in `scripts/` directory
+
+**Rationale**:
+- Provides offsite backup for disaster recovery
+- Enables collaboration by sharing checkpoint snapshots
+- Remote synchronization ensures code is safe from local machine failures
+- Graceful failure handling ensures local checkpoints work even without network
+- Fetching remote tags ensures restore script sees all available checkpoints
+
+**Usage**:
+```bash
+# Create checkpoint (now automatically pushes to remote)
+python scripts/checkpoint.py prompt-13
+
+# List checkpoints (now fetches remote tags first)
+python scripts/restore.py
+
+# Restore to a specific checkpoint
+python scripts/restore.py prompt-12
+```
+
+**Repository**: https://github.com/AngusKingC/sovereign-ai (private)
