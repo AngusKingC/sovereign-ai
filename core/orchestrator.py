@@ -1,0 +1,350 @@
+"""
+Layer 1 Orchestrator.
+
+Single responsibility: Analytical coordination layer that routes tasks to workers
+without holding opinions or writing beliefs. Pure analysis and dispatch.
+"""
+
+import time
+from typing import TYPE_CHECKING
+
+from core.schemas import Task, WorkerOutput, TaskStatus
+from core.observability import (
+    TraceComponent,
+    TraceEventType,
+    TraceLevel,
+    emit_trace,
+)
+
+if TYPE_CHECKING:
+    from core.memory_router import MemoryRouter
+    from core.worker_base import WorkerBase
+    from core.task_state_machine import TaskStateMachine
+    from core.scratchpad import ScratchpadManager
+
+
+class Orchestrator:
+    """Analytical coordination layer that routes tasks to workers."""
+
+    def __init__(
+        self,
+        memory_router: "MemoryRouter",
+    ) -> None:
+        """Initialize the orchestrator with dependencies."""
+        self.memory_router = memory_router
+        self.workers: dict[str, "WorkerBase"] = {}
+        self.pending_approval_queue: list[Task] = []
+        
+        # Import TaskStateMachine lazily to avoid circular imports
+        from core.task_state_machine import TaskStateMachine
+        self.state_machine = TaskStateMachine(memory_router)
+        
+        # Import ScratchpadManager lazily to avoid circular imports
+        from core.scratchpad import ScratchpadManager
+        self.scratchpad_manager = ScratchpadManager(memory_router)
+
+    def register_worker(self, worker_id: str, worker: "WorkerBase") -> None:
+        """Register a worker with the orchestrator."""
+        self.workers[worker_id] = worker
+        
+        # Emit worker registration event (wrapped to avoid crashing main path)
+        try:
+            import asyncio
+            loop = asyncio.get_event_loop()
+            # Safely extract profile data if available
+            worker_type = getattr(worker.profile, "worker_type", "unknown") if hasattr(worker, "profile") else "unknown"
+            capabilities = getattr(worker.profile, "capabilities", []) if hasattr(worker, "profile") else []
+            
+            loop.create_task(emit_trace(
+                event_type=TraceEventType.ORCHESTRATOR_WORKER_REGISTERED,
+                component=TraceComponent.ORCHESTRATOR,
+                message="Worker registered",
+                level=TraceLevel.INFO,
+                data={
+                    "worker_id": worker_id,
+                    "worker_type": worker_type,
+                    "capabilities": capabilities,
+                },
+            ))
+        except Exception:
+            pass  # Trace failure should not crash main path
+
+    async def process_task(self, task: Task, worker_id: str) -> WorkerOutput:
+        """
+        Process a task by routing it to the specified worker.
+        
+        This is a minimal implementation for testing.
+        """
+        if worker_id not in self.workers:
+            from core.exceptions import WorkerNotFoundError
+            raise WorkerNotFoundError(worker_id)
+
+        worker = self.workers[worker_id]
+        
+        # Transition to EXECUTING before worker execution
+        try:
+            task = await self.state_machine.transition(
+                task, TaskStatus.EXECUTING, reason="Worker execution starting", actor="orchestrator"
+            )
+            # Create scratchpad when task transitions to EXECUTING
+            await self.scratchpad_manager.create(task.task_id)
+        except Exception as e:
+            # If transition fails, we cannot transition to FAILED from current state
+            # Just return error output without state transition
+            return WorkerOutput(
+                task_id=task.task_id,
+                worker_id=worker_id,
+                content="",
+                confidence=0.0,
+                model_used="none",
+                metadata={"error": str(e)},
+            )
+        
+        try:
+            output = await worker.run(task)
+            
+            # Transition to VALIDATING after worker execution
+            task = await self.state_machine.transition(
+                task, TaskStatus.VALIDATING, reason="Worker execution complete, validating output", actor="orchestrator"
+            )
+            
+            # Simple validation - if output has content, transition to COMPLETE
+            if output.content:
+                task = await self.state_machine.transition(
+                    task, TaskStatus.COMPLETE, reason="Validation passed", actor="orchestrator"
+                )
+                # Compact scratchpad when task transitions to COMPLETE
+                try:
+                    await self.scratchpad_manager.compact(task.task_id)
+                except Exception:
+                    # Silently fail if scratchpad compaction fails
+                    pass
+            else:
+                task = await self.state_machine.transition(
+                    task, TaskStatus.FAILED, reason="Validation failed: empty output", actor="orchestrator"
+                )
+                # Preserve scratchpad on FAILED - log task_id for debugging
+                try:
+                    await emit_trace(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        message="Task failed, scratchpad preserved for debugging",
+                        level=TraceLevel.INFO,
+                        data={"task_id": str(task.task_id)},
+                    )
+                except Exception:
+                    pass
+            
+            return output
+        except Exception as e:
+            # On any failure, transition to FAILED if possible
+            if self.state_machine.can_transition(task, TaskStatus.FAILED):
+                task = await self.state_machine.transition(
+                    task, TaskStatus.FAILED, reason=f"Worker execution failed: {str(e)}", actor="orchestrator"
+                )
+                # Preserve scratchpad on FAILED - log task_id for debugging
+                try:
+                    await emit_trace(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        message="Task failed, scratchpad preserved for debugging",
+                        level=TraceLevel.INFO,
+                        data={"task_id": str(task.task_id)},
+                    )
+                except Exception:
+                    pass
+            raise
+
+    async def route_task(self, task: Task) -> WorkerOutput:
+        """
+        Route a task to an appropriate worker based on task characteristics.
+
+        Uses scoring algorithm:
+        - +2 points if task.complexity_score matches worker.profile.preferred_complexity (within 0.1)
+        - +1 point for each word in task.intent that appears in worker.profile.capabilities (case-insensitive)
+        - Selects worker with highest score
+        - On tie, selects worker registered first
+        """
+        start_time = time.perf_counter()
+
+        if not self.workers:
+            from core.exceptions import WorkerNotFoundError
+            raise WorkerNotFoundError("any", "No workers registered")
+
+        # Transition to RECEIVED on task receipt
+        try:
+            task = await self.state_machine.transition(
+                task, TaskStatus.RECEIVED, reason="Task received by orchestrator", actor="orchestrator"
+            )
+        except Exception as e:
+            # If transition fails, return error output
+            return WorkerOutput(
+                task_id=task.task_id,
+                worker_id="none",
+                content="",
+                confidence=0.0,
+                model_used="none",
+                metadata={"error": str(e)},
+            )
+
+        # Emit trace event for routing start
+        await emit_trace(
+            event_type=TraceEventType.ORCHESTRATOR_ROUTING_START,
+            component=TraceComponent.ORCHESTRATOR,
+            message="Orchestrator routing started",
+            level=TraceLevel.INFO,
+            data={
+                "task_id": str(task.task_id),
+                "task_intent": task.intent,
+                "task_complexity": task.complexity_score,
+                "worker_count": len(self.workers),
+            },
+        )
+
+        # Transition to PLANNED before routing
+        try:
+            task = await self.state_machine.transition(
+                task, TaskStatus.PLANNED, reason="Planning worker selection", actor="orchestrator"
+            )
+        except Exception as e:
+            # If transition fails, return error output
+            return WorkerOutput(
+                task_id=task.task_id,
+                worker_id="none",
+                content="",
+                confidence=0.0,
+                model_used="none",
+                metadata={"error": str(e)},
+            )
+
+        # If only one worker, use it directly
+        if len(self.workers) == 1:
+            worker_id = next(iter(self.workers.keys()))
+            worker = self.workers[worker_id]
+            
+            duration_ms = int((time.perf_counter() - start_time) * 1000)
+            
+            await emit_trace(
+                event_type=TraceEventType.ORCHESTRATOR_ROUTING_COMPLETE,
+                component=TraceComponent.ORCHESTRATOR,
+                message="Worker selected (only one registered)",
+                level=TraceLevel.INFO,
+                data={
+                    "selected_worker": worker_id,
+                    "scoring_breakdown": [{"worker_id": worker_id, "score": 1, "reason": "only worker"}],
+                },
+                duration_ms=duration_ms,
+            )
+            
+            return await self.process_task(task, worker_id)
+
+        # Score each worker
+        scored_workers = []
+        intent_words = set(word.lower() for word in task.intent.lower().split())
+        scoring_breakdown = []
+        
+        for worker_id, worker in self.workers.items():
+            score = 0
+            reasons = []
+            
+            # +2 points for complexity match (within 0.1 tolerance)
+            if abs(task.complexity_score - worker.profile.preferred_complexity) < 0.1:
+                score += 2
+                reasons.append("complexity_match")
+            
+            # +1 point for each matching capability keyword
+            capabilities_lower = [cap.lower() for cap in worker.profile.capabilities]
+            for word in intent_words:
+                for capability in capabilities_lower:
+                    if word in capability or capability in word:
+                        score += 1
+                        reasons.append(f"capability_match:{word}")
+                        break  # Count each word only once per worker
+            
+            scored_workers.append((score, worker_id, worker))
+            scoring_breakdown.append({
+                "worker_id": worker_id,
+                "score": score,
+                "reasons": reasons,
+            })
+        
+        # Sort by score descending, then by registration order (maintained by dict iteration order)
+        scored_workers.sort(key=lambda x: (-x[0], list(self.workers.keys()).index(x[1])))
+        
+        # Select highest-scoring worker
+        selected_worker_id = scored_workers[0][1]
+        
+        duration_ms = int((time.perf_counter() - start_time) * 1000)
+        
+        await emit_trace(
+            event_type=TraceEventType.ORCHESTRATOR_ROUTING_COMPLETE,
+            component=TraceComponent.ORCHESTRATOR,
+            message="Worker selected via routing",
+            level=TraceLevel.INFO,
+            data={
+                "selected_worker": selected_worker_id,
+                "scoring_breakdown": scoring_breakdown,
+            },
+            duration_ms=duration_ms,
+        )
+        
+        return await self.process_task(task, selected_worker_id)
+
+    async def cancel_task(self, task: Task, reason: str = "Cancelled by user") -> Task:
+        """
+        Cancel a task by transitioning it to CANCELLED state.
+        
+        Args:
+            task: The task to cancel
+            reason: Reason for cancellation
+            
+        Returns:
+            The updated task in CANCELLED state
+        """
+        task = await self.state_machine.transition(
+            task, TaskStatus.CANCELLED, reason=reason, actor="user"
+        )
+        
+        # Delete scratchpad when task is cancelled
+        try:
+            await self.scratchpad_manager.delete(task.task_id)
+        except Exception:
+            # Silently fail if scratchpad deletion fails
+            pass
+        
+        return task
+
+    async def process_pending_approval(self, task_id: str, approved: bool) -> Task | None:
+        """
+        Process a task that was awaiting approval.
+        
+        Args:
+            task_id: The task identifier
+            approved: Whether approval was granted
+            
+        Returns:
+            The updated task if found, None otherwise
+        """
+        # Find task in pending queue
+        task = None
+        for i, pending_task in enumerate(self.pending_approval_queue):
+            if str(pending_task.task_id) == task_id:
+                task = self.pending_approval_queue.pop(i)
+                break
+        
+        if not task:
+            return None
+        
+        if approved:
+            # Transition back to EXECUTING
+            task = await self.state_machine.transition(
+                task, TaskStatus.EXECUTING, reason="Approval granted", actor="user"
+            )
+            # Re-route the task
+            return await self.route_task(task)
+        else:
+            # Transition to CANCELLED
+            task = await self.state_machine.transition(
+                task, TaskStatus.CANCELLED, reason="Approval denied", actor="user"
+            )
+            return task
