@@ -599,12 +599,14 @@ class ResourceManager:
                     )
             except Exception as e:
                 try:
-                    await emit_trace(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.SYSTEM,
-                        message="Failed to send unload signal to Ollama",
-                        level=TraceLevel.WARNING,
-                        data={"error": str(e)},
+                    await self.emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.SYSTEM,
+                            message="Failed to send unload signal to Ollama",
+                            level=TraceLevel.WARNING,
+                            data={"error": str(e)},
+                        )
                     )
                 except Exception:
                     pass
@@ -613,13 +615,15 @@ class ResourceManager:
             return True
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.SYSTEM,
-                    message="Failed to evict model",
-                    level=TraceLevel.ERROR,
-                    error_type=type(e).__name__,
-                    error_message=str(e),
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="Failed to evict model",
+                        level=TraceLevel.ERROR,
+                        error_type=type(e).__name__,
+                        error_message=str(e),
+                    )
                 )
             except Exception:
                 pass
@@ -641,12 +645,14 @@ class ResourceManager:
             )
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.SYSTEM,
-                    message="Failed to persist loaded model state",
-                    level=TraceLevel.WARNING,
-                    data={"error": str(e)},
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="Failed to persist loaded model state",
+                        level=TraceLevel.WARNING,
+                        data={"error": str(e)},
+                    )
                 )
             except Exception:
                 pass
@@ -669,12 +675,14 @@ class ResourceManager:
                                 self._loaded_models[loaded_model.model_id] = loaded_model
             except Exception as e:
                 try:
-                    await emit_trace(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.SYSTEM,
-                        message="Failed to load persisted resource manager state",
-                        level=TraceLevel.WARNING,
-                        data={"error": str(e)},
+                    await self.emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.SYSTEM,
+                            message="Failed to load persisted resource manager state",
+                            level=TraceLevel.WARNING,
+                            data={"error": str(e)},
+                        )
                     )
                 except Exception:
                     pass
@@ -703,13 +711,15 @@ class ResourceManager:
                         break
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.SYSTEM,
-                    message="Failed to initialize resource manager",
-                    level=TraceLevel.ERROR,
-                    error_type=type(e).__name__,
-                    error_message=str(e),
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="Failed to initialize resource manager",
+                        level=TraceLevel.ERROR,
+                        error_type=type(e).__name__,
+                        error_message=str(e),
+                    )
                 )
             except Exception:
                 pass

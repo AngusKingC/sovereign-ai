@@ -365,6 +365,18 @@ class MemoryTraceEmitter(TraceEmitter):
         return len(self._events)
 
 
+class NullTraceEmitter(TraceEmitter):
+    """No-op trace emitter for components that don't need tracing.
+    
+    This emitter silently absorbs all trace events without any side effects.
+    Useful for testing or when tracing is disabled.
+    """
+    
+    async def emit(self, event: TraceEvent) -> None:
+        """Silently absorb trace events (no-op)."""
+        pass
+
+
 # Global trace emitter instance
 # NOTE: This is a known violation of the "No global state" architecture law.
 # Refactoring to dependency injection would require significant changes across

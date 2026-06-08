@@ -146,8 +146,7 @@ class TestModelAcquisition:
             },
         ]
         
-        with patch('system.model_acquisition.httpx.AsyncClient') as mock_httpx, \
-             patch('system.model_acquisition.emit_trace', new_callable=AsyncMock):
+        with patch('system.model_acquisition.httpx.AsyncClient') as mock_httpx:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_response_data
@@ -179,8 +178,7 @@ class TestModelAcquisition:
             "cardData": {"text": "Test model"},
         }
         
-        with patch('system.model_acquisition.httpx.AsyncClient') as mock_httpx, \
-             patch('system.model_acquisition.emit_trace', new_callable=AsyncMock):
+        with patch('system.model_acquisition.httpx.AsyncClient') as mock_httpx:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_model_data
@@ -224,8 +222,7 @@ class TestModelAcquisition:
             )
         )
         
-        with patch('system.model_acquisition.emit_trace', new_callable=AsyncMock):
-            can_fit, reason = await acquisition.check_fit("test/model:7b", "Q4_K_M", resource_manager, registry)
+        can_fit, reason = await acquisition.check_fit("test/model:7b", "Q4_K_M", resource_manager, registry)
         
         assert can_fit is True
         assert "fits" in reason
@@ -259,8 +256,7 @@ class TestModelAcquisition:
             )
         )
         
-        with patch('system.model_acquisition.emit_trace', new_callable=AsyncMock):
-            can_fit, reason = await acquisition.check_fit("test/model:70b", "Q4_K_M", resource_manager, registry)
+        can_fit, reason = await acquisition.check_fit("test/model:70b", "Q4_K_M", resource_manager, registry)
         
         assert can_fit is False
         assert "Insufficient VRAM" in reason
@@ -291,8 +287,7 @@ class TestModelAcquisition:
             reason="Test",
         )
         
-        with patch('system.model_acquisition.emit_trace', new_callable=AsyncMock):
-            result = await acquisition.request_download(request, resource_manager, registry)
+        result = await acquisition.request_download(request, resource_manager, registry)
         
         assert result.success is True
         assert result.size_downloaded_gb == 0.0
@@ -342,8 +337,7 @@ class TestModelAcquisition:
             reason="Test",
         )
         
-        with patch('system.profiler.SystemProfiler') as mock_profiler_class, \
-             patch('system.model_acquisition.emit_trace', new_callable=AsyncMock):
+        with patch('system.profiler.SystemProfiler') as mock_profiler_class:
             mock_profiler = Mock()
             mock_profiler.get_cached = AsyncMock(return_value=system_profile)
             mock_profiler_class.return_value = mock_profiler
@@ -413,8 +407,7 @@ class TestModelAcquisition:
             reason="Test",
         )
         
-        with patch('system.profiler.SystemProfiler') as mock_profiler_class, \
-             patch('system.model_acquisition.emit_trace', new_callable=AsyncMock):
+        with patch('system.profiler.SystemProfiler') as mock_profiler_class:
             mock_profiler = Mock()
             mock_profiler.get_cached = AsyncMock(return_value=system_profile)
             mock_profiler_class.return_value = mock_profiler
@@ -430,8 +423,7 @@ class TestModelAcquisition:
         mock_router = MockMemoryRouter()
         acquisition = ModelAcquisition(mock_router)
         
-        with patch('system.model_acquisition.httpx.AsyncClient') as mock_httpx, \
-             patch('system.model_acquisition.emit_trace', new_callable=AsyncMock):
+        with patch('system.model_acquisition.httpx.AsyncClient') as mock_httpx:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.raise_for_status = Mock()
@@ -460,8 +452,7 @@ class TestModelAcquisition:
         mock_router = MockMemoryRouter()
         acquisition = ModelAcquisition(mock_router)
         
-        with patch.dict('os.environ', {'ANTHROPIC_API_KEY': 'test-key'}), \
-             patch('system.model_acquisition.emit_trace', new_callable=AsyncMock):
+        with patch.dict('os.environ', {'ANTHROPIC_API_KEY': 'test-key'}):
             result = await acquisition._validate_api_model("anthropic/claude-sonnet-4")
         
         assert result.success is True
@@ -485,8 +476,7 @@ class TestModelAcquisition:
             )
         )
         
-        with patch('system.model_acquisition.emit_trace', new_callable=AsyncMock):
-            result = await acquisition.delete_model("test/model:7b", registry)
+        result = await acquisition.delete_model("test/model:7b", registry)
         
         assert result is False
         assert len(approval_callback.calls) == 1
@@ -541,8 +531,7 @@ class TestModelAcquisition:
         
         system_profile = SystemProfile()
         
-        with patch('system.model_acquisition.emit_trace', new_callable=AsyncMock):
-            alternatives = await acquisition.list_alternatives("test/large:70b", system_profile, registry)
+        alternatives = await acquisition.list_alternatives("test/large:70b", system_profile, registry)
         
         # The list_alternatives method calls check_fit which needs resource_manager
         # Since we're mocking the flow, let's just verify the method is called correctly
@@ -566,8 +555,7 @@ class TestModelAcquisition:
             ]
         )
         
-        with patch('system.profiler.SystemProfiler') as mock_profiler_class, \
-             patch('system.model_acquisition.emit_trace', new_callable=AsyncMock):
+        with patch('system.profiler.SystemProfiler') as mock_profiler_class:
             mock_profiler = Mock()
             mock_profiler.get_cached = AsyncMock(return_value=system_profile)
             mock_profiler_class.return_value = mock_profiler
@@ -581,20 +569,20 @@ class TestModelAcquisition:
     
     async def test_trace_events_emitted_throughout_download_flow(self) -> None:
         """Test that trace events are emitted throughout download flow."""
-        mock_router = MockMemoryRouter()
-        acquisition = ModelAcquisition(mock_router)
+        from core.observability import MemoryTraceEmitter, TraceEventType
         
-        with patch('system.model_acquisition.emit_trace', new_callable=AsyncMock) as mock_emit:
-            await acquisition.search("test")
-            await acquisition.fetch_metadata("test/model")
-            
-            # Verify trace events were emitted
-            assert mock_emit.call_count >= 2
-            
-            from core.observability import TraceEventType
-            calls = mock_emit.call_args_list
-            event_types = [call[1].get("event_type") for call in calls]
-            
-            assert TraceEventType.MODEL_SEARCH in event_types
-            assert TraceEventType.MODEL_METADATA_FETCH in event_types
+        mock_router = MockMemoryRouter()
+        trace_emitter = MemoryTraceEmitter()
+        acquisition = ModelAcquisition(mock_router, emitter=trace_emitter)
+        
+        await acquisition.search("test")
+        await acquisition.fetch_metadata("test/model")
+        
+        # Verify trace events were emitted
+        events = trace_emitter.get_events()
+        assert len(events) >= 2
+        
+        event_types = [str(event.event_type) for event in events]
+        assert "model_search" in event_types
+        assert "model_metadata_fetch" in event_types
 

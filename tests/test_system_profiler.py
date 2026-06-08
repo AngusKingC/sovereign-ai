@@ -63,8 +63,7 @@ class TestSystemProfiler:
              patch('platform.version') as mock_version, \
              patch('platform.release') as mock_release, \
              patch('platform.python_version') as mock_python_version, \
-             patch('httpx.AsyncClient') as mock_httpx, \
-             patch('system.profiler.emit_trace', new_callable=AsyncMock):
+             patch('httpx.AsyncClient') as mock_httpx:
             
             # Mock psutil
             mock_cpu_count.return_value = 8
@@ -119,8 +118,7 @@ class TestSystemProfiler:
              patch('platform.version') as mock_version, \
              patch('platform.release') as mock_release, \
              patch('platform.python_version') as mock_python_version, \
-             patch('httpx.AsyncClient') as mock_httpx, \
-             patch('system.profiler.emit_trace', new_callable=AsyncMock):
+             patch('httpx.AsyncClient') as mock_httpx:
             
             # Mock psutil
             mock_cpu_count.return_value = 8
@@ -168,8 +166,7 @@ class TestSystemProfiler:
              patch('platform.version') as mock_version, \
              patch('platform.release') as mock_release, \
              patch('platform.python_version') as mock_python_version, \
-             patch('httpx.AsyncClient') as mock_httpx, \
-             patch('system.profiler.emit_trace', new_callable=AsyncMock):
+             patch('httpx.AsyncClient') as mock_httpx:
             
             # Mock psutil
             mock_cpu_count.return_value = 8
@@ -218,8 +215,7 @@ class TestSystemProfiler:
              patch('platform.version') as mock_version, \
              patch('platform.release') as mock_release, \
              patch('platform.python_version') as mock_python_version, \
-             patch('httpx.AsyncClient') as mock_httpx, \
-             patch('system.profiler.emit_trace', new_callable=AsyncMock):
+             patch('httpx.AsyncClient') as mock_httpx:
             
             # Mock psutil
             mock_cpu_count.return_value = 8
@@ -271,8 +267,11 @@ class TestSystemProfiler:
     
     async def test_trace_events_emitted_during_profiling(self) -> None:
         """Test that trace events are emitted during profiling."""
+        from core.observability import MemoryTraceEmitter, TraceEventType
+        
         mock_router = MockMemoryRouter()
-        profiler = SystemProfiler(mock_router)
+        trace_emitter = MemoryTraceEmitter()
+        profiler = SystemProfiler(mock_router, emitter=trace_emitter)
         
         with patch('psutil.cpu_count') as mock_cpu_count, \
              patch('psutil.cpu_freq') as mock_cpu_freq, \
@@ -285,8 +284,7 @@ class TestSystemProfiler:
              patch('platform.version') as mock_version, \
              patch('platform.release') as mock_release, \
              patch('platform.python_version') as mock_python_version, \
-             patch('httpx.AsyncClient') as mock_httpx, \
-             patch('system.profiler.emit_trace', new_callable=AsyncMock) as mock_emit:
+             patch('httpx.AsyncClient') as mock_httpx:
             
             # Mock psutil
             mock_cpu_count.return_value = 8
@@ -316,12 +314,12 @@ class TestSystemProfiler:
             profile = await profiler.profile()
             
             # Verify trace events were emitted
-            assert mock_emit.call_count >= 2
-            from core.observability import TraceEventType
-            calls = mock_emit.call_args_list
-            event_types = [call[1].get("event_type") for call in calls]
-            assert TraceEventType.OPERATION_START in event_types
-            assert TraceEventType.OPERATION_COMPLETE in event_types
+            events = trace_emitter.get_events()
+            assert len(events) >= 2
+            
+            event_types = [str(event.event_type) for event in events]
+            assert "operation_start" in event_types
+            assert "operation_complete" in event_types
     
     async def test_all_detection_failures_caught_no_exceptions(self) -> None:
         """Test that all detection failures are caught and do not raise exceptions."""
@@ -331,8 +329,7 @@ class TestSystemProfiler:
         with patch('psutil.cpu_count', side_effect=ImportError), \
              patch('pynvml.nvmlInit', side_effect=ImportError), \
              patch('platform.processor', side_effect=Exception("Platform error")), \
-             patch('httpx.AsyncClient', side_effect=ImportError), \
-             patch('system.profiler.emit_trace', new_callable=AsyncMock):
+             patch('httpx.AsyncClient', side_effect=ImportError):
             
             # Should not raise exception even if all detections fail
             profile = await profiler.profile()
@@ -358,8 +355,7 @@ class TestSystemProfiler:
              patch('platform.version') as mock_version, \
              patch('platform.release') as mock_release, \
              patch('platform.python_version') as mock_python_version, \
-             patch('httpx.AsyncClient') as mock_httpx, \
-             patch('system.profiler.emit_trace', new_callable=AsyncMock):
+             patch('httpx.AsyncClient') as mock_httpx:
             
             # Mock psutil
             mock_cpu_count.return_value = 8

@@ -1,0 +1,83 @@
+## Custom Exceptions (core/exceptions.py)
+- Always use InvalidStateTransitionError for illegal state transitions
+- Always use WorkerNotFoundError for worker lookup failures (not ValueError)
+- Always use ApprovalDeniedError for denied approvals
+- Never raise raw ValueError or Exception for these cases
+
+Project: Sovereign AI Agent Framework
+## Architecture Laws (Never Violate)
+- Clean Architecture: core never imports adapters, workers, memory, or cli
+- workers/ imports from core/ and adapters/ only
+- memory/ imports from core/ only
+- adapters/ imports from core/ only
+- cli/ imports from anywhere, nothing imports from cli/
+- Async-first: every I/O operation is async
+- Pydantic everywhere: no raw dicts cross boundaries
+- Typed or rejected: every public function has return type annotation
+- Observability built-in: every component emits TraceEvents
+- No global state, no magic strings (use enums), no raw LLM calls outside adapters
+- No memory access outside MemoryRouter
+- Composition over inheritance
+
+## Stack
+- Python 3.11+
+- FastAPI + WebSockets (future)
+- Pydantic v2
+- Postgres (asyncpg)
+- Qdrant
+- Ollama (local-first)
+- Cloud LLMs (escalation only, user approval required)
+
+## Hardware Context
+- Hardware is detected automatically at runtime via system/profiler.py
+- Do not hardcode hardware assumptions into any implementation
+- Always query SystemProfiler and ResourceManager for current hardware state
+- Model selection must always be based on live hardware detection, never hardcoded values
+- Local-first: prefer models that fit in detected VRAM, fall back to RAM offload, escalate to cloud as last resort
+
+## Layer Definitions
+- Layer 0: Memory substrate — governed reads/writes only
+- Layer 1: Orchestrator — analytical, no opinions, no belief writes
+- Layer 2: Workers — subjective, teachable, profile-driven
+- system/ layer: System Intelligence (profiler, model registry, resource manager, acquisition)
+
+## Critical Test Patterns
+- Always use AsyncMock (not MagicMock) when patching async functions in tests
+- Import: from unittest.mock import AsyncMock
+- All trace calls must be wrapped in try-except to prevent crashes
+- Never use raw strings for enum values — always use the enum class
+- Current test baseline: 235 passed, 23 skipped (test_llama_cpp_adapter.py skipped — missing dependency)
+- Run tests with: python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py
+
+## Current Build Phase
+- Phase 2 (Housekeeping): COMPLETE
+- Phase 2a (System Intelligence Layer): COMPLETE
+- Phase 3 (Core Infrastructure): IN PROGRESS
+- Next prompt: Task State Machine (core/task_state_machine.py)
+
+## Known Technical Debt
+- core/commands.py line 147: _global_registry (global state, marked for DI refactor)
+- core/observability.py line 313: _global_emitter (global state, marked for DI refactor)
+- These are documented violations, do not attempt to fix without explicit instruction
+
+## User Preferences
+- Always maintain CHANGELOG.md with every implementation
+- Run full test suite after every change
+- Verify Clean Architecture layer boundaries after every change
+- User has oversight on all approvals — always ask before proceeding on ambiguous decisions
+- Implement incrementally and test each component before moving to the next
+
+Mandatory checkpoint procedure after every prompt completes:
+
+1. Run full test suite to confirm zero regressions
+2. Run: python scripts/checkpoint.py prompt-{N} (where N is current prompt number)
+3. Confirm local tag created: git tag | grep prompt-{N}
+4. Confirm remote push succeeded: git ls-remote --tags origin | grep prompt-{N}
+5. If remote push failed, warn user but don't block completion (local snapshot still valid)
+6. Report completion to user with: test count, checkpoint tag name, and remote backup confirmation
+
+This must happen before reporting completion and before any next prompt begins. If checkpoint script doesn't exist, flag it immediately - do not proceed without it.
+
+The user requires that a comprehensive CHANGELOG.md file be maintained and updated with every implementation made to the Sovereign AI Agent Framework. The changelog must include detailed explanations of all changes, architecture decisions, testing results, and rationale. This must be done incrementally as work progresses, not just at the end. The changelog file is located at c:\Jarvis\CHANGELOG.md and should be updated after each significant implementation or change.
+
+When passing emitter to super().__init__(), the parameter MUST appear in the subclass __init__ signature as emitter: TraceEmitter | None = None BEFORE the super() call. A NameError: name 'emitter' is not defined always means the parameter was added to the super() call but forgotten in the signature.

@@ -27,7 +27,9 @@ from core.observability import (
     TraceComponent,
     TraceEventType,
     TraceLevel,
-    emit_trace,
+    TraceEmitter,
+    NullTraceEmitter,
+    TraceEvent,
 )
 
 if TYPE_CHECKING:
@@ -37,9 +39,10 @@ if TYPE_CHECKING:
 class SystemProfiler:
     """Persistent system profiler for hardware and software environment detection."""
 
-    def __init__(self, memory_router: "MemoryRouter") -> None:
+    def __init__(self, memory_router: "MemoryRouter", emitter: TraceEmitter | None = None) -> None:
         """Initialize the system profiler with memory router for persistence."""
         self.memory_router = memory_router
+        self.emitter = emitter or NullTraceEmitter()
         self._cached_profile: SystemProfile | None = None
 
     async def _detect_gpu(self) -> GPUInfo:
@@ -74,12 +77,14 @@ class SystemProfiler:
         except Exception as e:
             # NVML detection failed
             try:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.SYSTEM,
-                    message="GPU detection failed",
-                    level=TraceLevel.WARNING,
-                    data={"error": str(e)},
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="GPU detection failed",
+                        level=TraceLevel.WARNING,
+                        data={"error": str(e)},
+                    )
                 )
             except Exception:
                 pass
@@ -101,12 +106,14 @@ class SystemProfiler:
             return CPUInfo()
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.SYSTEM,
-                    message="CPU detection failed",
-                    level=TraceLevel.WARNING,
-                    data={"error": str(e)},
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="CPU detection failed",
+                        level=TraceLevel.WARNING,
+                        data={"error": str(e)},
+                    )
                 )
             except Exception:
                 pass
@@ -127,12 +134,14 @@ class SystemProfiler:
             return RAMInfo()
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.SYSTEM,
-                    message="RAM detection failed",
-                    level=TraceLevel.WARNING,
-                    data={"error": str(e)},
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="RAM detection failed",
+                        level=TraceLevel.WARNING,
+                        data={"error": str(e)},
+                    )
                 )
             except Exception:
                 pass
@@ -162,12 +171,14 @@ class SystemProfiler:
             pass
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.SYSTEM,
-                    message="Storage detection failed",
-                    level=TraceLevel.WARNING,
-                    data={"error": str(e)},
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="Storage detection failed",
+                        level=TraceLevel.WARNING,
+                        data={"error": str(e)},
+                    )
                 )
             except Exception:
                 pass
@@ -258,11 +269,13 @@ class SystemProfiler:
 
     async def profile(self) -> SystemProfile:
         """Run full detection and return complete system profile."""
-        await emit_trace(
-            event_type=TraceEventType.OPERATION_START,
-            component=TraceComponent.SYSTEM,
-            message="System profiling started",
-            level=TraceLevel.INFO,
+        await self.emitter.emit(
+            TraceEvent(
+                event_type=TraceEventType.OPERATION_START,
+                component=TraceComponent.SYSTEM,
+                message="System profiling started",
+                level=TraceLevel.INFO,
+            )
         )
 
         try:
@@ -303,29 +316,33 @@ class SystemProfiler:
             # Store to memory backends
             await self._store_profile(profile)
 
-            await emit_trace(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.SYSTEM,
-                message="System profiling completed",
-                level=TraceLevel.INFO,
-                data={
-                    "gpu_model": profile.gpu.model_name,
-                    "cpu_cores": profile.cpu.physical_cores,
-                    "ram_total_mb": profile.ram.total_mb,
-                    "ollama_running": profile.ollama.running,
-                },
+            await self.emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.SYSTEM,
+                    message="System profiling completed",
+                    level=TraceLevel.INFO,
+                    data={
+                        "gpu_model": profile.gpu.model_name,
+                        "cpu_cores": profile.cpu.physical_cores,
+                        "ram_total_mb": profile.ram.total_mb,
+                        "ollama_running": profile.ollama.running,
+                    },
+                )
             )
 
             return profile
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.SYSTEM,
-                    message="System profiling failed",
-                    level=TraceLevel.ERROR,
-                    error_type=type(e).__name__,
-                    error_message=str(e),
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="System profiling failed",
+                        level=TraceLevel.ERROR,
+                        error_type=type(e).__name__,
+                        error_message=str(e),
+                    )
                 )
             except Exception:
                 pass
@@ -352,12 +369,14 @@ class SystemProfiler:
             )
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.SYSTEM,
-                    message="Failed to store profile to Postgres",
-                    level=TraceLevel.WARNING,
-                    data={"error": str(e)},
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="Failed to store profile to Postgres",
+                        level=TraceLevel.WARNING,
+                        data={"error": str(e)},
+                    )
                 )
             except Exception:
                 pass
@@ -373,12 +392,14 @@ class SystemProfiler:
             )
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.SYSTEM,
-                    message="Failed to store profile to Obsidian",
-                    level=TraceLevel.WARNING,
-                    data={"error": str(e)},
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="Failed to store profile to Obsidian",
+                        level=TraceLevel.WARNING,
+                        data={"error": str(e)},
+                    )
                 )
             except Exception:
                 pass

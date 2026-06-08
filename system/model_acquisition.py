@@ -26,7 +26,9 @@ from core.observability import (
     TraceComponent,
     TraceEventType,
     TraceLevel,
-    emit_trace,
+    TraceEmitter,
+    NullTraceEmitter,
+    TraceEvent,
 )
 
 if TYPE_CHECKING:
@@ -40,10 +42,12 @@ class ModelAcquisition:
         self,
         memory_router: "MemoryRouter",
         approval_callback: ApprovalCallback | None = None,
+        emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the model acquisition manager."""
         self.memory_router = memory_router
         self.approval_callback = approval_callback
+        self.emitter = emitter or NullTraceEmitter()
         self.hf_api_url = "https://huggingface.co/api/models"
         self.hf_token = os.environ.get("HF_TOKEN")
         self.ollama_api_url = "http://localhost:11434"
@@ -53,12 +57,14 @@ class ModelAcquisition:
     ) -> list[ModelEntry]:
         """Search HuggingFace for models matching query and task tags."""
         try:
-            await emit_trace(
-                event_type=TraceEventType.MODEL_SEARCH,
-                component=TraceComponent.SYSTEM,
-                message=f"Searching HuggingFace for: {query}",
-                level=TraceLevel.INFO,
-                data={"query": query, "task_tags": task_tags, "max_results": max_results},
+            await self.emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.MODEL_SEARCH,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Searching HuggingFace for: {query}",
+                    level=TraceLevel.INFO,
+                    data={"query": query, "task_tags": task_tags, "max_results": max_results},
+                )
             )
 
             headers = {}
@@ -80,24 +86,28 @@ class ModelAcquisition:
                 if entry:
                     entries.append(entry)
 
-            await emit_trace(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.SYSTEM,
-                message=f"Found {len(entries)} models",
-                level=TraceLevel.INFO,
-                data={"result_count": len(entries)},
+            await self.emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Found {len(entries)} models",
+                    level=TraceLevel.INFO,
+                    data={"result_count": len(entries)},
+                )
             )
 
             return entries
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.SYSTEM,
-                    message="Failed to search HuggingFace",
-                    level=TraceLevel.ERROR,
-                    error_type=type(e).__name__,
-                    error_message=str(e),
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="Failed to search HuggingFace",
+                        level=TraceLevel.ERROR,
+                        error_type=type(e).__name__,
+                        error_message=str(e),
+                    )
                 )
             except Exception:
                 pass
@@ -106,12 +116,14 @@ class ModelAcquisition:
     async def fetch_metadata(self, model_id: str) -> ModelEntry | None:
         """Fetch full metadata for a specific HuggingFace model ID."""
         try:
-            await emit_trace(
-                event_type=TraceEventType.MODEL_METADATA_FETCH,
-                component=TraceComponent.SYSTEM,
-                message=f"Fetching metadata for {model_id}",
-                level=TraceLevel.INFO,
-                data={"model_id": model_id},
+            await self.emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.MODEL_METADATA_FETCH,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Fetching metadata for {model_id}",
+                    level=TraceLevel.INFO,
+                    data={"model_id": model_id},
+                )
             )
 
             headers = {}
@@ -125,23 +137,27 @@ class ModelAcquisition:
 
             entry = await self._hf_data_to_entry(model_data)
 
-            await emit_trace(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.SYSTEM,
-                message=f"Fetched metadata for {model_id}",
-                level=TraceLevel.INFO,
+            await self.emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Fetched metadata for {model_id}",
+                    level=TraceLevel.INFO,
+                )
             )
 
             return entry
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.SYSTEM,
-                    message="Failed to fetch model metadata",
-                    level=TraceLevel.ERROR,
-                    error_type=type(e).__name__,
-                    error_message=str(e),
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="Failed to fetch model metadata",
+                        level=TraceLevel.ERROR,
+                        error_type=type(e).__name__,
+                        error_message=str(e),
+                    )
                 )
             except Exception:
                 pass
@@ -213,12 +229,14 @@ class ModelAcquisition:
             )
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.SYSTEM,
-                    message="Failed to convert HF data to ModelEntry",
-                    level=TraceLevel.WARNING,
-                    data={"error": str(e)},
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="Failed to convert HF data to ModelEntry",
+                        level=TraceLevel.WARNING,
+                        data={"error": str(e)},
+                    )
                 )
             except Exception:
                 pass
@@ -258,13 +276,15 @@ class ModelAcquisition:
             return can_load, reason
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.SYSTEM,
-                    message="Failed to check model fit",
-                    level=TraceLevel.ERROR,
-                    error_type=type(e).__name__,
-                    error_message=str(e),
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="Failed to check model fit",
+                        level=TraceLevel.ERROR,
+                        error_type=type(e).__name__,
+                        error_message=str(e),
+                    )
                 )
             except Exception:
                 pass
@@ -280,22 +300,26 @@ class ModelAcquisition:
         start_time = time.time()
 
         try:
-            await emit_trace(
-                event_type=TraceEventType.MODEL_DOWNLOAD_START,
-                component=TraceComponent.SYSTEM,
-                message=f"Download request for {request.model_id}",
-                level=TraceLevel.INFO,
-                data={"model_id": request.model_id, "source": request.source.value, "quantisation": request.quantisation},
+            await self.emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.MODEL_DOWNLOAD_START,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Download request for {request.model_id}",
+                    level=TraceLevel.INFO,
+                    data={"model_id": request.model_id, "source": request.source.value, "quantisation": request.quantisation},
+                )
             )
 
             # Check if already downloaded
             entry = await registry.get(request.model_id)
             if entry and entry.download_status == DownloadStatus.DOWNLOADED:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_COMPLETE,
-                    component=TraceComponent.SYSTEM,
-                    message=f"Model {request.model_id} already downloaded",
-                    level=TraceLevel.INFO,
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_COMPLETE,
+                        component=TraceComponent.SYSTEM,
+                        message=f"Model {request.model_id} already downloaded",
+                        level=TraceLevel.INFO,
+                    )
                 )
                 return DownloadResult(
                     success=True,
@@ -326,12 +350,14 @@ class ModelAcquisition:
 
                 estimated_size_mb = estimated_size_gb * 1024
                 if available_disk_mb < estimated_size_mb * 1.2:  # Require 20% buffer
-                    await emit_trace(
-                        event_type=TraceEventType.MODEL_DOWNLOAD_FAILED,
-                        component=TraceComponent.SYSTEM,
-                        message="Insufficient disk space",
-                        level=TraceLevel.WARNING,
-                        data={"available_mb": available_disk_mb, "required_mb": estimated_size_mb * 1.2},
+                    await self.emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.MODEL_DOWNLOAD_FAILED,
+                            component=TraceComponent.SYSTEM,
+                            message="Insufficient disk space",
+                            level=TraceLevel.WARNING,
+                            data={"available_mb": available_disk_mb, "required_mb": estimated_size_mb * 1.2},
+                        )
                     )
                     return DownloadResult(
                         success=False,
@@ -353,20 +379,24 @@ class ModelAcquisition:
                         request.model_id, system_profile, registry
                     )
                     if alternatives:
-                        await emit_trace(
-                            event_type=TraceEventType.MODEL_ALTERNATIVES_LISTED,
-                            component=TraceComponent.SYSTEM,
-                            message=f"Found {len(alternatives)} alternative models",
-                            level=TraceLevel.INFO,
-                            data={"alternatives": [m.model_id for m in alternatives]},
+                        await self.emitter.emit(
+                            TraceEvent(
+                                event_type=TraceEventType.MODEL_ALTERNATIVES_LISTED,
+                                component=TraceComponent.SYSTEM,
+                                message=f"Found {len(alternatives)} alternative models",
+                                level=TraceLevel.INFO,
+                                data={"alternatives": [m.model_id for m in alternatives]},
+                            )
                         )
                 
-                await emit_trace(
-                    event_type=TraceEventType.MODEL_DOWNLOAD_FAILED,
-                    component=TraceComponent.SYSTEM,
-                    message="Model does not fit in available memory",
-                    level=TraceLevel.WARNING,
-                    data={"reason": fit_reason},
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.MODEL_DOWNLOAD_FAILED,
+                        component=TraceComponent.SYSTEM,
+                        message="Model does not fit in available memory",
+                        level=TraceLevel.WARNING,
+                        data={"reason": fit_reason},
+                    )
                 )
                 return DownloadResult(
                     success=False,
@@ -406,13 +436,15 @@ class ModelAcquisition:
             return result
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.MODEL_DOWNLOAD_FAILED,
-                    component=TraceComponent.SYSTEM,
-                    message="Download failed",
-                    level=TraceLevel.ERROR,
-                    error_type=type(e).__name__,
-                    error_message=str(e),
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.MODEL_DOWNLOAD_FAILED,
+                        component=TraceComponent.SYSTEM,
+                        message="Download failed",
+                        level=TraceLevel.ERROR,
+                        error_type=type(e).__name__,
+                        error_message=str(e),
+                    )
                 )
             except Exception:
                 pass
@@ -435,12 +467,14 @@ class ModelAcquisition:
             # Extract model name from model_id (e.g., "ollama/qwen2.5-coder:7b" -> "qwen2.5-coder:7b")
             model_name = model_id.split("/", 1)[1] if "/" in model_id else model_id
 
-            await emit_trace(
-                event_type=TraceEventType.MODEL_DOWNLOAD_START,
-                component=TraceComponent.SYSTEM,
-                message=f"Pulling {model_name} from Ollama",
-                level=TraceLevel.INFO,
-                data={"model_name": model_name},
+            await self.emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.MODEL_DOWNLOAD_START,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Pulling {model_name} from Ollama",
+                    level=TraceLevel.INFO,
+                    data={"model_name": model_name},
+                )
             )
 
             async with httpx.AsyncClient(timeout=600.0) as client:
@@ -466,22 +500,26 @@ class ModelAcquisition:
                                 
                                 # Emit progress every 10%
                                 if progress - last_progress >= 10:
-                                    await emit_trace(
-                                        event_type=TraceEventType.MODEL_DOWNLOAD_PROGRESS,
-                                        component=TraceComponent.SYSTEM,
-                                        message=f"Download progress: {progress:.1f}%",
-                                        level=TraceLevel.INFO,
-                                        data={"progress": progress, "completed": completed, "total": total},
+                                    await self.emitter.emit(
+                                        TraceEvent(
+                                            event_type=TraceEventType.MODEL_DOWNLOAD_PROGRESS,
+                                            component=TraceComponent.SYSTEM,
+                                            message=f"Download progress: {progress:.1f}%",
+                                            level=TraceLevel.INFO,
+                                            data={"progress": progress, "completed": completed, "total": total},
+                                        )
                                     )
                                     last_progress = progress
                         except json.JSONDecodeError:
                             pass
 
-            await emit_trace(
-                event_type=TraceEventType.MODEL_DOWNLOAD_COMPLETE,
-                component=TraceComponent.SYSTEM,
-                message=f"Successfully pulled {model_name}",
-                level=TraceLevel.INFO,
+            await self.emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.MODEL_DOWNLOAD_COMPLETE,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Successfully pulled {model_name}",
+                    level=TraceLevel.INFO,
+                )
             )
 
             return DownloadResult(
@@ -493,13 +531,15 @@ class ModelAcquisition:
             )
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.MODEL_DOWNLOAD_FAILED,
-                    component=TraceComponent.SYSTEM,
-                    message="Ollama pull failed",
-                    level=TraceLevel.ERROR,
-                    error_type=type(e).__name__,
-                    error_message=str(e),
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.MODEL_DOWNLOAD_FAILED,
+                        component=TraceComponent.SYSTEM,
+                        message="Ollama pull failed",
+                        level=TraceLevel.ERROR,
+                        error_type=type(e).__name__,
+                        error_message=str(e),
+                    )
                 )
             except Exception:
                 pass
@@ -523,12 +563,14 @@ class ModelAcquisition:
             model_name = model_id.split("/", 1)[1] if "/" in model_id else model_id
             download_url = f"https://huggingface.co/{model_name}/resolve/main/{quantisation}.gguf"
 
-            await emit_trace(
-                event_type=TraceEventType.MODEL_DOWNLOAD_START,
-                component=TraceComponent.SYSTEM,
-                message=f"Downloading {quantisation}.gguf from HuggingFace",
-                level=TraceLevel.INFO,
-                data={"model_id": model_id, "quantisation": quantisation, "url": download_url},
+            await self.emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.MODEL_DOWNLOAD_START,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Downloading {quantisation}.gguf from HuggingFace",
+                    level=TraceLevel.INFO,
+                    data={"model_id": model_id, "quantisation": quantisation, "url": download_url},
+                )
             )
 
             os.makedirs(target_dir, exist_ok=True)
@@ -549,20 +591,24 @@ class ModelAcquisition:
                             if total_size > 0:
                                 progress = (downloaded / total_size) * 100
                                 if progress - last_progress >= 10:
-                                    await emit_trace(
-                                        event_type=TraceEventType.MODEL_DOWNLOAD_PROGRESS,
-                                        component=TraceComponent.SYSTEM,
-                                        message=f"Download progress: {progress:.1f}%",
-                                        level=TraceLevel.INFO,
-                                        data={"progress": progress, "downloaded": downloaded, "total": total_size},
+                                    await self.emitter.emit(
+                                        TraceEvent(
+                                            event_type=TraceEventType.MODEL_DOWNLOAD_PROGRESS,
+                                            component=TraceComponent.SYSTEM,
+                                            message=f"Download progress: {progress:.1f}%",
+                                            level=TraceLevel.INFO,
+                                            data={"progress": progress, "downloaded": downloaded, "total": total_size},
+                                        )
                                     )
                                     last_progress = progress
 
-            await emit_trace(
-                event_type=TraceEventType.MODEL_DOWNLOAD_COMPLETE,
-                component=TraceComponent.SYSTEM,
-                message=f"Successfully downloaded to {output_path}",
-                level=TraceLevel.INFO,
+            await self.emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.MODEL_DOWNLOAD_COMPLETE,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Successfully downloaded to {output_path}",
+                    level=TraceLevel.INFO,
+                )
             )
 
             return DownloadResult(
@@ -574,13 +620,15 @@ class ModelAcquisition:
             )
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.MODEL_DOWNLOAD_FAILED,
-                    component=TraceComponent.SYSTEM,
-                    message="HuggingFace download failed",
-                    level=TraceLevel.ERROR,
-                    error_type=type(e).__name__,
-                    error_message=str(e),
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.MODEL_DOWNLOAD_FAILED,
+                        component=TraceComponent.SYSTEM,
+                        message="HuggingFace download failed",
+                        level=TraceLevel.ERROR,
+                        error_type=type(e).__name__,
+                        error_message=str(e),
+                    )
                 )
             except Exception:
                 pass
@@ -611,11 +659,13 @@ class ModelAcquisition:
                 api_key = os.environ.get("GOOGLE_API_KEY")
             
             if api_key:
-                await emit_trace(
-                    event_type=TraceEventType.MODEL_DOWNLOAD_COMPLETE,
-                    component=TraceComponent.SYSTEM,
-                    message=f"API model {model_id} validated (key present)",
-                    level=TraceLevel.INFO,
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.MODEL_DOWNLOAD_COMPLETE,
+                        component=TraceComponent.SYSTEM,
+                        message=f"API model {model_id} validated (key present)",
+                        level=TraceLevel.INFO,
+                    )
                 )
                 return DownloadResult(
                     success=True,
@@ -625,11 +675,13 @@ class ModelAcquisition:
                     duration_seconds=time.time() - start_time,
                 )
             else:
-                await emit_trace(
-                    event_type=TraceEventType.MODEL_DOWNLOAD_FAILED,
-                    component=TraceComponent.SYSTEM,
-                    message=f"API key not found for {provider}",
-                    level=TraceLevel.WARNING,
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.MODEL_DOWNLOAD_FAILED,
+                        component=TraceComponent.SYSTEM,
+                        message=f"API key not found for {provider}",
+                        level=TraceLevel.WARNING,
+                    )
                 )
                 return DownloadResult(
                     success=False,
@@ -641,13 +693,15 @@ class ModelAcquisition:
                 )
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.MODEL_DOWNLOAD_FAILED,
-                    component=TraceComponent.SYSTEM,
-                    message="API model validation failed",
-                    level=TraceLevel.ERROR,
-                    error_type=type(e).__name__,
-                    error_message=str(e),
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.MODEL_DOWNLOAD_FAILED,
+                        component=TraceComponent.SYSTEM,
+                        message="API model validation failed",
+                        level=TraceLevel.ERROR,
+                        error_type=type(e).__name__,
+                        error_message=str(e),
+                    )
                 )
             except Exception:
                 pass
@@ -665,11 +719,13 @@ class ModelAcquisition:
     ) -> bool:
         """Delete a downloaded model after user approval."""
         try:
-            await emit_trace(
-                event_type=TraceEventType.MODEL_DELETE,
-                component=TraceComponent.SYSTEM,
-                message=f"Requesting deletion of {model_id}",
-                level=TraceLevel.INFO,
+            await self.emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.MODEL_DELETE,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Requesting deletion of {model_id}",
+                    level=TraceLevel.INFO,
+                )
             )
 
             # Request approval
@@ -682,43 +738,51 @@ class ModelAcquisition:
                 )
                 
                 if not approved:
-                    await emit_trace(
-                        event_type=TraceEventType.OPERATION_COMPLETE,
-                        component=TraceComponent.SYSTEM,
-                        message=f"Deletion of {model_id} denied by user",
-                        level=TraceLevel.INFO,
+                    await self.emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_COMPLETE,
+                            component=TraceComponent.SYSTEM,
+                            message=f"Deletion of {model_id} denied by user",
+                            level=TraceLevel.INFO,
+                        )
                     )
                     return False
             else:
                 # No approval callback, deny
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.SYSTEM,
-                    message="No approval callback for model deletion",
-                    level=TraceLevel.WARNING,
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="No approval callback for model deletion",
+                        level=TraceLevel.WARNING,
+                    )
                 )
                 return False
 
             # Update registry
             await registry.update_download_status(model_id, DownloadStatus.NOT_DOWNLOADED, None)
 
-            await emit_trace(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.SYSTEM,
-                message=f"Successfully deleted {model_id}",
-                level=TraceLevel.INFO,
+            await self.emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Successfully deleted {model_id}",
+                    level=TraceLevel.INFO,
+                )
             )
 
             return True
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.SYSTEM,
-                    message="Failed to delete model",
-                    level=TraceLevel.ERROR,
-                    error_type=type(e).__name__,
-                    error_message=str(e),
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="Failed to delete model",
+                        level=TraceLevel.ERROR,
+                        error_type=type(e).__name__,
+                        error_message=str(e),
+                    )
                 )
             except Exception:
                 pass
@@ -752,24 +816,28 @@ class ModelAcquisition:
                     if can_fit:
                         alternatives.append(model)
             
-            await emit_trace(
-                event_type=TraceEventType.MODEL_ALTERNATIVES_LISTED,
-                component=TraceComponent.SYSTEM,
-                message=f"Found {len(alternatives)} alternative models",
-                level=TraceLevel.INFO,
-                data={"alternatives": [m.model_id for m in alternatives]},
+            await self.emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.MODEL_ALTERNATIVES_LISTED,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Found {len(alternatives)} alternative models",
+                    level=TraceLevel.INFO,
+                    data={"alternatives": [m.model_id for m in alternatives]},
+                )
             )
             
             return alternatives
         except Exception as e:
             try:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.SYSTEM,
-                    message="Failed to list alternatives",
-                    level=TraceLevel.ERROR,
-                    error_type=type(e).__name__,
-                    error_message=str(e),
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="Failed to list alternatives",
+                        level=TraceLevel.ERROR,
+                        error_type=type(e).__name__,
+                        error_message=str(e),
+                    )
                 )
             except Exception:
                 pass
