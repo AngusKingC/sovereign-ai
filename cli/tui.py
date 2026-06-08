@@ -42,7 +42,10 @@ from core.observability import (
     TraceEventType,
     TraceComponent,
     TraceLevel,
-    set_trace_emitter,
+    TraceEmitter,
+    NullTraceEmitter,
+    TraceEvent,
+    ConsoleTraceEmitter,
 )
 from cli.adapter_factory import create_worker
 from cli.command_history import CommandHistory
@@ -218,9 +221,10 @@ class JarvisTUI(App):
     
     TITLE = "Sovereign AI Agent Framework"
     
-    def __init__(self) -> None:
+    def __init__(self, emitter: TraceEmitter | None = None) -> None:
         """Initialize the TUI."""
         super().__init__()
+        self.emitter = emitter or ConsoleTraceEmitter()
         self.session_id: Optional[str] = None
         self.working_directory = Path.cwd()
         
@@ -260,10 +264,6 @@ class JarvisTUI(App):
         
         # Register default handlers with orchestrator and session manager
         register_default_handlers(self.orchestrator, self.session_manager)
-        
-        # Set up observability for CLI
-        from core.observability import ConsoleTraceEmitter
-        set_trace_emitter(ConsoleTraceEmitter())
     
     def compose(self) -> ComposeResult:
         """Compose the UI."""
@@ -296,12 +296,14 @@ class JarvisTUI(App):
         asyncio.create_task(self._create_session())
         
         # Emit TUI start event
-        asyncio.create_task(emit_trace(
-            event_type=TraceEventType.COMPONENT_START,
-            component=TraceComponent.CLI,
-            message="Textual TUI started",
-            level=TraceLevel.INFO,
-            data={"session_id": self.session_id}
+        asyncio.create_task(self.emitter.emit(
+            TraceEvent(
+                event_type=TraceEventType.COMPONENT_START,
+                component=TraceComponent.CLI,
+                message="Textual TUI started",
+                level=TraceLevel.INFO,
+                data={"session_id": self.session_id}
+            )
         ))
     
     async def _create_session(self) -> None:

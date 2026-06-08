@@ -3314,3 +3314,194 @@ Each SKILL.md must declare:
 - External dependencies (services, adapters)
 - Hardware requirements if any
 - Task suitability tags
+
+---
+
+## Phase B: Observability Dependency Injection Refactor (Prompt 13.5)
+
+### 2026-06-09 - Phase B Step 1: Add NullTraceEmitter to core/observability.py
+**Implementation**: Added NullTraceEmitter class for dependency injection
+- **Root Cause**: Missing no-op emitter for components that don't need tracing
+- **Changes to core/observability.py**:
+  - Added `NullTraceEmitter` class implementing `TraceEmitter` interface
+  - `emit()` method is a no-op (silently absorbs trace events)
+  - Useful for testing and when tracing is disabled
+- **Architecture Compliance**: Maintains Clean Architecture, no global state
+
+### 2026-06-09 - Phase B Step 2: Fix core/task_state_machine.py
+**Implementation**: Refactored TaskStateMachine to use dependency-injected TraceEmitter
+- **Changes to core/task_state_machine.py**:
+  - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
+  - Removed import of `emit_trace`
+  - Updated constructor to accept `emitter: TraceEmitter | None = None` parameter
+  - Initialized `self.emitter = emitter or NullTraceEmitter()`
+  - Replaced all `await emit_trace(...)` calls with `await self.emitter.emit(TraceEvent(...))`
+- **Changes to tests/test_task_state_machine.py**:
+  - Removed all `patch('core.task_state_machine.emit_trace', ...)` calls
+  - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
+- **Testing Results**: All 25 tests passing
+
+### 2026-06-09 - Phase B Step 3: Fix core/scratchpad.py
+**Implementation**: Refactored Scratchpad to use dependency-injected TraceEmitter
+- **Changes to core/scratchpad.py**:
+  - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
+  - Removed import of `emit_trace`
+  - Updated constructor to accept `emitter: TraceEmitter | None = None` parameter
+  - Initialized `self.emitter = emitter or NullTraceEmitter()`
+  - Replaced all `await emit_trace(...)` calls with `await self.emitter.emit(TraceEvent(...))`
+- **Changes to tests/test_scratchpad.py**:
+  - Removed all `patch('core.scratchpad.emit_trace', ...)` calls
+  - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
+- **Testing Results**: All 8 tests passing
+
+### 2026-06-09 - Phase B Step 4: Fix core/worker_base.py
+**Implementation**: Refactored WorkerBase to use dependency-injected TraceEmitter
+- **Changes to core/worker_base.py**:
+  - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
+  - Removed import of `emit_trace`
+  - Updated constructor to accept `emitter: TraceEmitter | None = None` parameter
+  - Initialized `self.emitter = emitter or NullTraceEmitter()`
+  - Replaced all `await emit_trace(...)` calls with `await self.emitter.emit(TraceEvent(...))`
+- **Changes to tests/test_worker_base.py**:
+  - Removed all `patch('core.worker_base.emit_trace', ...)` calls
+  - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
+- **Testing Results**: All 6 tests passing
+
+### 2026-06-09 - Phase B Step 5: Fix core/memory_router.py
+**Implementation**: Refactored MemoryRouter to use dependency-injected TraceEmitter
+- **Changes to core/memory_router.py**:
+  - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
+  - Removed import of `emit_trace`
+  - Updated constructor to accept `emitter: TraceEmitter | None = None` parameter
+  - Initialized `self.emitter = emitter or NullTraceEmitter()`
+  - Replaced all `await emit_trace(...)` calls with `await self.emitter.emit(TraceEvent(...))`
+- **Changes to tests/test_memory_router.py**:
+  - Removed all `patch('core.memory_router.emit_trace', ...)` calls
+  - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
+- **Testing Results**: All 12 tests passing
+
+### 2026-06-09 - Phase B Step 6: Fix core/handlers.py
+**Implementation**: Refactored handlers to use dependency-injected TraceEmitter
+- **Changes to core/handlers.py**:
+  - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
+  - Removed import of `emit_trace`
+  - Updated constructors to accept `emitter: TraceEmitter | None = None` parameter
+  - Initialized `self.emitter = emitter or NullTraceEmitter()`
+  - Replaced all `await emit_trace(...)` calls with `await self.emitter.emit(TraceEvent(...))`
+- **Changes to tests/test_handlers.py**:
+  - Removed all `patch('core.handlers.emit_trace', ...)` calls
+  - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
+- **Testing Results**: All 15 tests passing
+
+### 2026-06-09 - Phase B Step 7: Fix core/orchestrator.py
+**Implementation**: Refactored Orchestrator to use dependency-injected TraceEmitter
+- **Changes to core/orchestrator.py**:
+  - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
+  - Removed import of `emit_trace`
+  - Updated constructor to accept `emitter: TraceEmitter | None = None` parameter
+  - Initialized `self.emitter = emitter or NullTraceEmitter()`
+  - Replaced all `await emit_trace(...)` calls with `await self.emitter.emit(TraceEvent(...))`
+- **Changes to tests/test_orchestrator.py**:
+  - Removed all `patch('core.orchestrator.emit_trace', ...)` calls
+  - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
+- **Testing Results**: All 20 tests passing
+
+### 2026-06-09 - Phase B Step 8: Fix workers/ollama_worker.py
+**Implementation**: Refactored OllamaWorker to use dependency-injected TraceEmitter
+- **Changes to workers/ollama_worker.py**:
+  - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
+  - Removed import of `emit_trace`
+  - Updated constructor to accept `emitter: TraceEmitter | None = None` parameter
+  - Added emitter parameter to signature before super() call (fixing NameError)
+  - Passed emitter to super().__init__()
+  - Initialized `self.emitter = emitter or NullTraceEmitter()`
+  - Replaced all `await emit_trace(...)` calls with `await self.emitter.emit(TraceEvent(...))`
+- **Changes to tests/test_ollama_worker.py**:
+  - Removed all `patch('workers.ollama_worker.emit_trace', ...)` calls
+  - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
+- **Testing Results**: All 8 tests passing
+
+### 2026-06-09 - Phase B Step 9: Fix workers/echo_worker.py
+**Implementation**: Refactored EchoWorker to use dependency-injected TraceEmitter
+- **Changes to workers/echo_worker.py**:
+  - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
+  - Removed import of `emit_trace`
+  - Updated constructor to accept `emitter: TraceEmitter | None = None` parameter
+  - Passed emitter to super().__init__()
+  - Replaced all `await emit_trace(...)` calls with `await self.emitter.emit(TraceEvent(...))`
+- **Changes to tests/test_echo_worker.py**:
+  - Removed all `patch('workers.echo_worker.emit_trace', ...)` calls
+  - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
+- **Testing Results**: All 5 tests passing
+
+### 2026-06-09 - Phase B Step 10: Fix system/profiler.py
+**Implementation**: Refactored SystemProfiler to use dependency-injected TraceEmitter
+- **Changes to system/profiler.py**:
+  - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
+  - Removed import of `emit_trace`
+  - Updated constructor to accept `emitter: TraceEmitter | None = None` parameter
+  - Initialized `self.emitter = emitter or NullTraceEmitter()`
+  - Replaced all `await emit_trace(...)` calls with `await self.emitter.emit(TraceEvent(...))`
+  - Updated methods: `_detect_gpu`, `_detect_cpu`, `_detect_ram`, `_detect_storage`, `profile`, `_store_profile`
+- **Changes to tests/test_system_profiler.py**:
+  - Removed all `patch('system.profiler.emit_trace', ...)` calls
+  - Updated `test_trace_events_emitted_during_profiling` to use `MemoryTraceEmitter` injected into constructor
+- **Testing Results**: All 7 tests passing
+
+### 2026-06-09 - Phase B Step 11: Fix system/model_registry.py
+**Implementation**: Refactored ModelRegistry to use dependency-injected TraceEmitter
+- **Changes to system/model_registry.py**:
+  - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
+  - Removed import of `emit_trace`
+  - Updated constructor to accept `emitter: TraceEmitter | None = None` parameter
+  - Initialized `self.emitter = emitter or NullTraceEmitter()`
+  - Replaced all `await emit_trace(...)` calls with `await self.emitter.emit(TraceEvent(...))`
+  - Updated methods: `_load_from_storage`, `register`, `recommend`, `update_download_status`
+- **Changes to tests/test_model_registry.py**:
+  - Removed all `patch('system.model_registry.emit_trace', ...)` calls
+  - Updated `test_trace_events_emitted_on_key_operations` to use `MemoryTraceEmitter` injected into constructor
+- **Testing Results**: All 11 tests passing
+
+### 2026-06-09 - Phase B Step 12: Fix system/resource_manager.py
+**Implementation**: Refactored ResourceManager to use dependency-injected TraceEmitter
+- **Changes to system/resource_manager.py**:
+  - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
+  - Removed import of `emit_trace`
+  - Updated constructor to accept `emitter: TraceEmitter | None = None` parameter
+  - Initialized `self.emitter = emitter or NullTraceEmitter()`
+  - Replaced all `await emit_trace(...)` calls with `await self.emitter.emit(TraceEvent(...))`
+  - Updated methods: `can_load`, `load_model`, `unload_model`, `get_loaded_models`, `get_model_info`, `evict_model`
+- **Changes to tests/test_resource_manager.py**:
+  - Removed all `patch('system.resource_manager.emit_trace', ...)` calls
+  - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
+- **Testing Results**: All 14 tests passing
+
+### 2026-06-09 - Phase B Step 13: Fix system/model_acquisition.py
+**Implementation**: Refactored ModelAcquisition to use dependency-injected TraceEmitter
+- **Changes to system/model_acquisition.py**:
+  - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
+  - Removed import of `emit_trace`
+  - Updated constructor to accept `emitter: TraceEmitter | None = None` parameter
+  - Initialized `self.emitter = emitter or NullTraceEmitter()`
+  - Replaced all `await emit_trace(...)` calls with `await self.emitter.emit(TraceEvent(...))`
+  - Updated methods: `search`, `fetch_metadata`, `_hf_data_to_entry`, `check_fit`, `request_download`, `download_ollama`, `_download_huggingface_gguf`, `_validate_api_model`, `delete_model`, `list_alternatives`
+- **Changes to tests/test_model_acquisition.py**:
+  - Removed all `patch('system.model_acquisition.emit_trace', ...)` calls
+  - Updated `test_trace_events_emitted_throughout_download_flow` to use `MemoryTraceEmitter` injected into constructor
+- **Testing Results**: All 15 tests passing
+
+**Phase B Summary**:
+- **Total Modules Refactored**: 13 (core: 6, workers: 2, system: 3)
+- **Total Test Files Fixed**: 13
+- **Architecture Compliance**: All changes maintain Clean Architecture layer boundaries, no global state usage
+- **Testing Results**: Full suite: 288 passed, 23 skipped, 0 failures, 19 warnings
+- **Command**: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
+- **Test Duration**: ~24 seconds
+- **Rationale**: Dependency injection eliminates global state, making components more testable and composable. NullTraceEmitter provides a no-op default. MemoryTraceEmitter allows tests to assert on trace events without mocking. This refactoring aligns with the architecture law: "No global state"
+- **Checkpoint**: prompt-13.5 created and pushed to remote
+
+**Remaining Phase B Steps**:
+- Step 14: Fix cli/main.py
+- Step 15: Fix cli/rich_cli.py
+- Step 16: Fix cli/tui.py
+- Step 17: Fix all test files
