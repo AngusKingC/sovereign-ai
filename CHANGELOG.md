@@ -3505,3 +3505,33 @@ Each SKILL.md must declare:
 - Step 15: Fix cli/rich_cli.py
 - Step 16: Fix cli/tui.py
 - Step 17: Fix all test files
+
+### 2026-06-09 - Phase B Step 14: Fix cli/main.py
+**Implementation**: Verified cli/main.py does not use emit_trace
+- **Changes to cli/main.py**: No changes needed - file only imports and runs rich_cli or tui
+- **Testing Results**: No test file for cli/main.py
+
+### 2026-06-09 - Phase B Step 15: Fix cli/rich_cli.py
+**Implementation**: Verified cli/rich_cli.py does not use emit_trace
+- **Changes to cli/rich_cli.py**: No changes needed - file does not use emit_trace
+- **Testing Results**: No test file for cli/rich_cli.py
+
+### 2026-06-09 - Phase B Step 16: Fix cli/tui.py
+**Implementation**: Refactored JarvisTUI to use dependency-injected TraceEmitter
+- **Changes to cli/tui.py**:
+  - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`, `ConsoleTraceEmitter`
+  - Removed import of `set_trace_emitter`
+  - Updated constructor to accept `emitter: TraceEmitter | None = None` parameter
+  - Initialized `self.emitter = emitter or ConsoleTraceEmitter()`
+  - Removed `set_trace_emitter(ConsoleTraceEmitter())` call from constructor
+  - Replaced `emit_trace(...)` call with `self.emitter.emit(TraceEvent(...))`
+- **Testing Results**: No test file for cli/tui.py
+
+### 2026-06-09 - Phase B Step 17: Fix all test files
+**Implementation**: Verified all test files have been updated in previous steps
+- **Summary**: All test files were updated in the same step as their corresponding source files
+- **Test Files Fixed**: 13 total (one for each DI-refactored module)
+- **Pattern Applied**: Removed all `patch('module.emit_trace', ...)` calls, updated trace event tests to use MemoryTraceEmitter
+- **Testing Results**: Full suite: 288 passed, 23 skipped, 0 failures, 19 warnings
+- **Command**: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
+- **Test Duration**: ~27 seconds
