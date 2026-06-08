@@ -3238,3 +3238,79 @@ python scripts/restore.py prompt-12
 ```
 
 **Repository**: https://github.com/AngusKingC/sovereign-ai (private)
+
+---
+
+### 2026-06-08 - Skill Registry and Plugin Specification (Prompt 13)
+**Implementation**: Skill plugin system with dynamic discovery and registry
+- **Purpose**: Enable modular, discoverable skill capabilities for the Sovereign AI Agent Framework
+- **Infrastructure Created**:
+  - Created `skills/SKILL_SPECIFICATION.md` - formal specification for skill plugins
+  - Created `core/skill_registry.py` - skill discovery, validation, and query system
+  - Implemented three initial skills:
+    - **web_scraper**: Scrape webpage content using httpx and BeautifulSoup
+      - Input: url (str), selector (str, optional)
+      - Output: scraped text content (str)
+      - Async implementation with trace event emission
+    - **file_reader**: Read local files with configurable encoding
+      - Input: path (str), encoding (str, optional, default utf-8)
+      - Output: file content (str)
+      - Async implementation using aiofiles
+    - **file_writer**: Write content to local files with approval gate
+      - Input: path (str), content (str), mode (str, optional, default write)
+      - Output: success bool, bytes written (int)
+      - Approval gate stubbed (logs "APPROVAL REQUIRED", returns True)
+      - Full implementation in Prompt 14
+  - Created comprehensive test suites for all skills and skill registry
+  - Added missing dependencies: beautifulsoup4>=4.12.0, aiofiles>=23.0.0
+
+**Testing Results**:
+- **Baseline**: 261 passed, 23 skipped, 17 warnings
+- **After**: 288 passed, 23 skipped, 19 warnings
+- **New Tests**: 27 tests added (19 skill tests + 8 skill registry tests)
+- **Command**: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
+- **Test Duration**: ~25 seconds
+- **Target Met**: 284+ passed (achieved 288)
+
+**Architecture Compliance**:
+- Clean Architecture: core/skill_registry.py imports only from core/
+- Skills are in skills/ directory, separate from core/ and workers/
+- All skill implementations are async
+- All public methods have return type annotations
+- Skills emit TraceEvents via injected emitter (uses global emitter as fallback for now)
+- No layer violations detected
+
+**Rationale**:
+- Skill plugin system enables modular capability expansion without core changes
+- Dynamic discovery allows new skills to be added by dropping in skill directories
+- SKILL.md specification provides clear contract for skill metadata
+- Skill registry enables query by capability, task type, and dependency
+- Orchestrator can read skill registry to create appropriate workers
+- Approval gate stub allows file_writer to be implemented now with full approval logic in Prompt 14
+
+**Usage**:
+```python
+from core.skill_registry import SkillRegistry
+
+# Discover and register skills
+registry = SkillRegistry()
+skills = await registry.discover_skills()
+
+# Query by capability
+web_scraping_skills = registry.query_by_capability("web-scraping")
+
+# Query by task type
+file_io_skills = registry.query_by_task_type("file-io")
+
+# Get specific skill
+web_scraper = registry.get_skill("web_scraper")
+```
+
+**Skill Metadata Format**:
+Each SKILL.md must declare:
+- Skill name and description
+- Input parameters and types
+- Output format
+- External dependencies (services, adapters)
+- Hardware requirements if any
+- Task suitability tags

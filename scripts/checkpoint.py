@@ -37,7 +37,11 @@ def main():
     # Push to remote
     print(f"Pushing to remote...")
     try:
-        subprocess.run(["git", "push", "origin", "main"], check=True)
+        # Get current branch name
+        result = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True, check=True)
+        branch = result.stdout.strip()
+        
+        subprocess.run(["git", "push", "origin", branch], check=True)
         subprocess.run(["git", "push", "origin", "--tags"], check=True)
         print(f"✓ Pushed to remote")
     except subprocess.CalledProcessError as e:
