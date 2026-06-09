@@ -7,7 +7,7 @@ import tempfile
 import os
 
 from skills.file_writer.skill import FileWriterSkill
-from core.observability import MemoryTraceEmitter
+from core.observability import MemoryTraceEmitter, TraceComponent
 
 
 class TestFileWriterSkill:
@@ -100,7 +100,8 @@ class TestFileWriterSkill:
             # Check that trace events were emitted
             events = skill.emitter.get_events()
             assert len(events) > 0
-            # Just check that events were emitted, don't validate specific content
+            # File writer is a worker skill, so it should emit events with WORKER component
+            assert any(event.component == TraceComponent.WORKER for event in events)
         finally:
             os.unlink(temp_path)
 
