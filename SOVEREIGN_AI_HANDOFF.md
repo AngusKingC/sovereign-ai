@@ -6,8 +6,7 @@ development of the Sovereign AI Agent Framework. It contains the project
 vision, current state, completed work, and every remaining implementation
 in order.
 
-**Maintained by**: Claude (claude.ai) — NOT Devin. Claude updates this
-document during each working session. Devin never reads or writes this file.
+**Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
 **Last updated**: 2026-06-09 — post Prompt 15 completion + multi-model
 architecture review incorporated (ChatGPT, Grok, Gemini reviews reviewed
@@ -35,13 +34,9 @@ without breaking what exists. Every component auditable, every decision logged.
 
 ## Workflow
 
-- **Devin** — writes all code, runs tests, updates `c:\Jarvis\CHANGELOG.md`
-- **Claude** — tracks project state, manages this handoff document, prepares
-  prompts for Devin, advises on architecture and sequencing, maintains Devin
-  memory entries
-- **This handoff doc** is Claude-to-Claude only. It is never fed to Devin.
-- Claude updates this document within each session and produces a new version
-  at ~90% context usage to prepare for the next Claude session.
+- **Devin** — writes all code, runs tests, updates `c:\Jarvis\CHANGELOG.md`, updates `SOVEREIGN_AI_HANDOFF.md` after every prompt
+- **Claude** — reads this handoff document at session start to reconstruct state, advises on architecture and sequencing, maintains Devin memory entries
+- **This handoff doc** is Devin-maintained. Devin updates it after every prompt as part of standard closing steps. Claude reads it but does not write to it.
 
 ---
 
@@ -113,20 +108,30 @@ OUTPUT LAYER
 4. Confirm remote push: `git ls-remote --tags origin | grep prompt-{N}`
 5. Update `c:\Jarvis\CHANGELOG.md` — must include Implementation Notes
    documenting any problems hit mid-implementation and how they were resolved
+6. Update `SOVEREIGN_AI_HANDOFF.md` directly with these changes:
+   - Add completed prompt row to Completed Prompts table
+     (prompt number, description, test count, checkpoint tag)
+   - Update Current State section: test baseline, checkpoint tag, warnings count
+   - Update Remaining Implementation Plan: mark this prompt DONE,
+     mark next prompt IN PROGRESS
+   - Do NOT modify: Recurring Mistake Patterns, Architecture Rules,
+     Project Vision, or prompt spec content
+   - Do NOT reformat or restructure any section — append/update only
 
 ---
 
 ## Current State
 
 ### Test Baseline
-- **328 passed, 23 skipped, 0 failures** (as of Prompt 15 / checkpoint prompt-15)
+- **370 passed, 23 skipped, 1 warning** (as of Prompt 17 / checkpoint prompt-17)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
+- 1 remaining warning: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-15`
+- Latest checkpoint tag: `prompt-17`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}`
 - Restore script: `python scripts/restore.py`
 
@@ -210,7 +215,10 @@ OUTPUT LAYER
 | 13.6 amendments | DENIED state + scope storage design decisions | 291 |
 | 14 | Approval Gate System | 311 |
 | 15 | Worker Factory | 328 |
-| 16 | Model Evaluation Logic | IN PROGRESS |
+| 16 | Model Evaluation Logic | 357 |
+| 16.5 | WorkerProfile Schema Lock | 357 |
+| 17 | Worker Persistence | 370 |
+| 18 | Rating System | IN PROGRESS |
 
 ---
 
@@ -261,7 +269,7 @@ by Claude. The following changes were made to the roadmap as a result:
 ---
 
 #### Prompt 16 — Model Evaluation Logic
-**Status**: IN PROGRESS — prompt sent to Devin
+**Status**: DONE
 
 Create `system/model_evaluator.py`.
 
@@ -281,7 +289,7 @@ Minimum 13 new tests. Target: exceed 328.
 ---
 
 #### Prompt 16.5 — WorkerProfile Schema Lock (Housekeeping)
-**Status**: Queued — insert before Prompt 17
+**Status**: DONE
 
 Before Worker Persistence writes WorkerProfile to Postgres permanently,
 finalise the schema to include all fields needed by future prompts:
@@ -307,7 +315,7 @@ but add schema validation tests.
 ---
 
 #### Prompt 17 — Worker Persistence
-**Status**: Queued (moved up from original position)
+**Status**: DONE
 
 Full worker survival across restarts. Builds on finalised WorkerProfile
 schema from Prompt 16.5.
@@ -327,7 +335,7 @@ Features:
 ---
 
 #### Prompt 18 — Rating System
-**Status**: Queued (moved up — needed before Instruction Generation)
+**Status**: IN PROGRESS
 
 Create `core/rating_system.py`.
 
@@ -546,6 +554,8 @@ Same approval gates and observability as text interface.
 | Qdrant hardcoded vector size 768 | memory/qdrant.py | Latent bug — fix before Phase 6 |
 | ResourceManager missing KV cache buffer | system/resource_manager.py | OOM risk on 6GB card — fix before Prompt 29 |
 | Model registry may seed oversized models | system/model_registry.py | Standardise on Qwen 2.5 7B Q4_K_M — fix in Prompt 16.5 |
+| WorkerPersistence not passed to WorkerFactory in CLI | cli/tui.py, cli/rich_cli.py | Intentional deferral — requires CLI refactor |
+| WorkerPersistence in TYPE_CHECKING block | core/worker_factory.py | Verify no runtime issues in future prompt |
 
 ---
 
@@ -567,6 +577,10 @@ and prompt guards when patterns recur.
    exception silently swallowed, raise OUTSIDE try-except
 10. Asserting `"string" in event.data` where data is a dict →
     checks keys not values, use `event.component == X` instead
+11. Mock objects don't behave like dicts when calling .get() —
+    use proper dict structures in mock return values, not Mock() objects
+12. Test state bleeds between tests when mutating Pydantic model fields directly —
+    always reset fields like version explicitly in each test that depends on them
 
 ---
 
