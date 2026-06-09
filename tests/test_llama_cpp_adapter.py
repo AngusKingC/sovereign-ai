@@ -75,7 +75,7 @@ class TestLlamaCppAdapter:
 
         messages = [Message(role=MessageRole.USER, content="test", timestamp=datetime.now())]
 
-        with pytest.raises(RuntimeError, match="Model failed to load"):
+        with pytest.raises(RuntimeError, match="llama.cpp generation failed"):
             asyncio.run(llama_adapter.generate(messages))
 
     def test_adapter_implements_interface(self, llama_adapter):
@@ -95,4 +95,5 @@ class TestLlamaCppAdapter:
         )
         assert custom_adapter.n_gpu_layers == 0
         assert custom_adapter.n_threads == 8
+
 

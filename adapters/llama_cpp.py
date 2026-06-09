@@ -7,6 +7,7 @@ with maximum hardware control for VRAM/RAM balancing.
 
 import time
 from typing import TYPE_CHECKING, Any
+from pydantic import BaseModel
 
 import llama_cpp
 
@@ -19,8 +20,7 @@ from core.observability import (
     emit_trace,
 )
 
-if TYPE_CHECKING:
-    from pydantic import BaseModel
+
 
 
 class LlamaCppAdapter(LLMAdapter):
@@ -175,4 +175,5 @@ class LlamaCppAdapter(LLMAdapter):
     def cost_per_token(self) -> float:
         """Cost per token for this model (0 for local models)."""
         return 0.0
+
 

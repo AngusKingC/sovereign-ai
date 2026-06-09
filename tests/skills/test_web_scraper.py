@@ -3,7 +3,7 @@ Tests for Web Scraper Skill.
 """
 
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, Mock
 
 from skills.web_scraper.skill import WebScraperSkill
 
@@ -21,7 +21,7 @@ class TestWebScraperSkill:
         """Test successful scraping with valid URL."""
         mock_response = AsyncMock()
         mock_response.text = "<html><body><h1>Test Content</h1></body></html>"
-        mock_response.raise_for_status = AsyncMock()
+        mock_response.raise_for_status = Mock()
 
         with patch("skills.web_scraper.skill.httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
@@ -38,7 +38,7 @@ class TestWebScraperSkill:
         """Test scraping with CSS selector."""
         mock_response = AsyncMock()
         mock_response.text = "<html><body><p class='target'>Target Text</p><p>Other Text</p></body></html>"
-        mock_response.raise_for_status = AsyncMock()
+        mock_response.raise_for_status = Mock()
 
         with patch("skills.web_scraper.skill.httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)

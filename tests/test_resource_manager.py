@@ -122,6 +122,7 @@ class TestResourceManager:
         assert len(decision.models_to_evict) == 1
         assert decision.requires_user_approval is False
     
+    @pytest.mark.filterwarnings("ignore::UserWarning")
     async def test_can_load_returns_true_when_model_fits_in_vram(self) -> None:
         """Test that can_load returns True when model fits in available VRAM."""
         mock_router = MockMemoryRouter()

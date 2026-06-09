@@ -92,7 +92,9 @@ class Message(BaseModel):
     timestamp: datetime
     metadata: Optional[dict[str, Any]] = None
 
-    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
+    @field_serializer('timestamp')
+    def serialize_timestamp(self, value: datetime) -> str:
+        return value.isoformat()
 
 
 class TaskStateTransition(BaseModel):
@@ -104,7 +106,9 @@ class TaskStateTransition(BaseModel):
     reason: str | None = Field(default=None, description="Reason for transition")
     actor: str = Field(description="Which component triggered the transition")
 
-    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
+    @field_serializer('timestamp')
+    def serialize_timestamp(self, value: datetime) -> str:
+        return value.isoformat()
 
 
 class Task(BaseModel):
@@ -137,8 +141,10 @@ class Task(BaseModel):
     def serialize_current_state(self, value: TaskStatus) -> str:
         """Serialize current_state."""
         return value.value
-
-    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
+    
+    @field_serializer('created_at')
+    def serialize_created_at(self, value: datetime) -> str:
+        return value.isoformat()
 
 
 class WorkerProfile(BaseModel):
@@ -201,7 +207,9 @@ class TraceEvent(BaseModel):
     token_cost: Optional[int] = Field(default=None, ge=0)
     success: bool
 
-    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
+    @field_serializer('timestamp')
+    def serialize_timestamp(self, value: datetime) -> str:
+        return value.isoformat()
 
 
 class EscalationDecision(BaseModel):
@@ -224,7 +232,9 @@ class StrategicContext(BaseModel):
     open_questions: list[str] = Field(default_factory=list)
     last_updated: datetime
 
-    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
+    @field_serializer('last_updated')
+    def serialize_last_updated(self, value: datetime) -> str:
+        return value.isoformat()
 
 
 class SessionSummary(BaseModel):
@@ -238,7 +248,9 @@ class SessionSummary(BaseModel):
     total_tokens: int = Field(default=0, ge=0)
     closed_at: datetime
 
-    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
+    @field_serializer('closed_at')
+    def serialize_closed_at(self, value: datetime) -> str:
+        return value.isoformat()
 
 
 class GPUInfo(BaseModel):
@@ -317,7 +329,9 @@ class SystemProfile(BaseModel):
     ollama: OllamaInfo = Field(default_factory=OllamaInfo)
     profiled_at: datetime = Field(default_factory=datetime.now)
 
-    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
+    @field_serializer('profiled_at')
+    def serialize_profiled_at(self, value: datetime) -> str:
+        return value.isoformat()
 
 
 class ModelSource(str, Enum):
@@ -361,7 +375,9 @@ class ModelEntry(BaseModel):
     license: str = Field(default="", description="Model license")
     description: str = Field(default="", description="Model description")
 
-    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
+    @field_serializer('last_updated')
+    def serialize_last_updated(self, value: datetime) -> str:
+        return value.isoformat()
 
 
 class LoadedModel(BaseModel):
@@ -376,7 +392,13 @@ class LoadedModel(BaseModel):
     is_pinned: bool = Field(default=False, description="Whether model is pinned (never auto-evicted)")
     task_priority: TaskPriority = Field(default=TaskPriority.NORMAL, description="Task priority for eviction decisions")
 
-    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
+    @field_serializer('loaded_at')
+    def serialize_loaded_at(self, value: datetime) -> str:
+        return value.isoformat()
+    
+    @field_serializer('last_used_at')
+    def serialize_last_used_at(self, value: datetime) -> str:
+        return value.isoformat()
 
 
 class ResourceSnapshot(BaseModel):
@@ -390,7 +412,9 @@ class ResourceSnapshot(BaseModel):
     ram_available_gb: float = Field(ge=0.0, description="RAM available in GB")
     loaded_models: list[LoadedModel] = Field(default_factory=list, description="Currently loaded models")
 
-    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
+    @field_serializer('timestamp')
+    def serialize_timestamp(self, value: datetime) -> str:
+        return value.isoformat()
 
 
 class LoadDecision(BaseModel):
@@ -401,8 +425,6 @@ class LoadDecision(BaseModel):
     models_to_evict: list[str] = Field(default_factory=list, description="Model IDs to evict")
     requires_user_approval: bool = Field(default=False, description="Whether user approval is required")
     reason: str = Field(description="Human-readable reason for decision")
-
-    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
 
 
 from typing import Protocol, runtime_checkable
@@ -441,8 +463,6 @@ class DownloadRequest(BaseModel):
     adapter_name: str = Field(description="Which adapter will use this model")
     reason: str = Field(description="Why this model is being requested")
 
-    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
-
 
 class DownloadResult(BaseModel):
     """Result of a model download operation."""
@@ -452,8 +472,6 @@ class DownloadResult(BaseModel):
     size_downloaded_gb: float = Field(ge=0.0, description="Size downloaded in GB")
     duration_seconds: float = Field(ge=0.0, description="Download duration in seconds")
     error: str | None = Field(default=None, description="Error message if failed")
-
-    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
 
 
 class ScratchpadEntry(BaseModel):
@@ -466,7 +484,9 @@ class ScratchpadEntry(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.now, description="When entry was created")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
-    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
+    @field_serializer('timestamp')
+    def serialize_timestamp(self, value: datetime) -> str:
+        return value.isoformat()
 
 
 class Scratchpad(BaseModel):
@@ -479,5 +499,11 @@ class Scratchpad(BaseModel):
     summary: str | None = Field(default=None, description="Compacted summary of scratchpad")
     is_compacted: bool = Field(default=False, description="Whether scratchpad has been compacted")
 
-    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
+    @field_serializer('created_at')
+    def serialize_created_at(self, value: datetime) -> str:
+        return value.isoformat()
+    
+    @field_serializer('completed_at')
+    def serialize_completed_at(self, value: datetime | None) -> str | None:
+        return value.isoformat() if value else None
 

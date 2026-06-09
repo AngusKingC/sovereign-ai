@@ -64,7 +64,6 @@ class MockMemoryRouter:
         return []
 
 
-@pytest.mark.asyncio
 class TestWorkerFactory:
     """Test cases for WorkerFactory."""
     
@@ -105,6 +104,7 @@ class TestWorkerFactory:
             created_at=datetime.utcnow(),
         )
     
+    @pytest.mark.asyncio
     async def test_create_worker_generates_correct_worker_profile_from_description(self, factory, task):
         """Test create_worker generates correct WorkerProfile from description."""
         description = "file writer"
@@ -115,6 +115,7 @@ class TestWorkerFactory:
         assert worker.profile.worker_id == "file_writer"
         assert worker.profile.worker_type == "file_worker"
     
+    @pytest.mark.asyncio
     async def test_create_worker_matches_skills_from_skill_registry(self, factory, task):
         """Test create_worker matches skills from SkillRegistry."""
         description = "file writer"
@@ -123,6 +124,7 @@ class TestWorkerFactory:
         # Should have matched file_writer skill
         assert "write" in worker.profile.capabilities
     
+    @pytest.mark.asyncio
     async def test_create_worker_registers_worker_in_orchestrator(self, factory, task, orchestrator):
         """Test create_worker registers worker in orchestrator."""
         description = "file writer"
@@ -131,6 +133,7 @@ class TestWorkerFactory:
         assert "file_writer" in orchestrator.workers
         assert orchestrator.workers["file_writer"] == worker
     
+    @pytest.mark.asyncio
     async def test_create_worker_persists_worker_to_memory(self, factory, task, memory_router):
         """Test create_worker persists worker to memory."""
         description = "file writer"
@@ -139,6 +142,7 @@ class TestWorkerFactory:
         assert "workers:file_writer" in memory_router._data
         assert memory_router._data["workers:file_writer"]["type"] == "worker_profile"
     
+    @pytest.mark.asyncio
     async def test_create_worker_emits_trace_events(self, factory, task, emitter):
         """Test create_worker emits trace events."""
         description = "file writer"
@@ -148,6 +152,7 @@ class TestWorkerFactory:
         assert len(events) > 0
         assert any(event.event_type == TraceEventType.ORCHESTRATOR_WORKER_REGISTERED for event in events)
     
+    @pytest.mark.asyncio
     async def test_can_route_returns_true_when_matching_worker_exists(self, factory, task, orchestrator):
         """Test can_route returns True when matching worker exists."""
         # Register a worker
@@ -157,12 +162,14 @@ class TestWorkerFactory:
         can_route = await factory.can_route(task)
         assert can_route is True
     
+    @pytest.mark.asyncio
     async def test_can_route_returns_false_when_no_matching_worker_exists(self, factory, task, orchestrator):
         """Test can_route returns False when no matching worker exists."""
         # No workers registered
         can_route = await factory.can_route(task)
         assert can_route is False
     
+    @pytest.mark.asyncio
     async def test_get_or_create_worker_returns_existing_worker_when_can_route_is_true(self, factory, task):
         """Test get_or_create_worker returns existing worker when can_route is True."""
         # Create a worker first
@@ -173,6 +180,7 @@ class TestWorkerFactory:
         worker = await factory.get_or_create_worker(task)
         assert worker is not None
     
+    @pytest.mark.asyncio
     async def test_get_or_create_worker_creates_new_worker_when_can_route_is_false(self, factory, task, orchestrator):
         """Test get_or_create_worker creates new worker when can_route is False."""
         # Clear any existing workers
@@ -183,6 +191,7 @@ class TestWorkerFactory:
         assert worker is not None
         assert len(orchestrator.workers) > 0
     
+    @pytest.mark.asyncio
     async def test_list_workers_returns_all_registered_profiles(self, factory, task):
         """Test list_workers returns all registered profiles."""
         # Create multiple workers
@@ -192,6 +201,7 @@ class TestWorkerFactory:
         profiles = await factory.list_workers()
         assert len(profiles) >= 2
     
+    @pytest.mark.asyncio
     async def test_deregister_worker_removes_worker_from_orchestrator(self, factory, task, orchestrator):
         """Test deregister_worker removes worker from orchestrator."""
         description = "file writer"
@@ -203,6 +213,7 @@ class TestWorkerFactory:
         
         assert "file_writer" not in orchestrator.workers
     
+    @pytest.mark.asyncio
     async def test_deregister_worker_raises_worker_not_found_error_for_unknown_worker_id(self, factory):
         """Test deregister_worker raises WorkerNotFoundError for unknown worker_id."""
         with pytest.raises(WorkerNotFoundError):
@@ -223,7 +234,6 @@ class TestWorkerFactory:
             orchestrator.deregister_worker("nonexistent_worker")
 
 
-@pytest.mark.asyncio
 class TestDynamicWorkerProfile:
     """Test cases for DynamicWorkerProfile."""
     
@@ -294,7 +304,6 @@ class TestDynamicWorkerProfile:
         assert profile.instruction_file_ref is None
 
 
-@pytest.mark.asyncio
 class TestPlaceholderWorker:
     """Test cases for PlaceholderWorker."""
     
@@ -341,6 +350,7 @@ class TestPlaceholderWorker:
             created_at=datetime.utcnow(),
         )
     
+    @pytest.mark.asyncio
     async def test_placeholder_worker_build_prompt(self, placeholder_worker, task):
         """Test placeholder worker can build prompt."""
         messages = await placeholder_worker.build_prompt(task, [])
@@ -348,6 +358,7 @@ class TestPlaceholderWorker:
         assert len(messages) > 0
         assert len(messages) == 2  # system and user messages
     
+    @pytest.mark.asyncio
     async def test_placeholder_worker_parse_output(self, placeholder_worker, task):
         """Test placeholder worker can parse output."""
         from core.worker_base import LLMResponse

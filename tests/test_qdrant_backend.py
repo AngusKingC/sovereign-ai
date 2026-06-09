@@ -54,6 +54,7 @@ class TestQdrantBackend:
         memory = asyncio.run(qdrant_backend.fetch(sample_task))
         assert memory == []
 
+    @pytest.mark.filterwarnings("ignore::UserWarning")
     def test_write_without_connection(self, qdrant_backend):
         """Test write silently fails when no connection."""
         import asyncio

@@ -3807,3 +3807,75 @@ Each SKILL.md must declare:
 - Pydantic models: ModelRecommendation and EvaluationResult with proper validation
 
 **Next Steps**: LLM-based worker profile generation (Prompt 17)
+
+### 2026-06-09 - Prompt 16.5: Worker Status Schema and Orchestrator Routing Filter
+**Implementation**: Housekeeping prompt to lock WorkerProfile schema before Postgres persistence
+
+**Files Modified**:
+- `core/schemas.py`: Added WorkerStatus enum with ACTIVE, IDLE, ARCHIVED, DEPRECATED values
+- `core/worker_factory.py`: Updated DynamicWorkerProfile with new fields (purpose, preferred_models, performance_score, active_tasks, version, status, creation_date, instruction_file_ref)
+- `core/orchestrator.py`: Added worker status filter to routing logic (both single-worker and multi-worker paths)
+- `tests/test_schemas.py`: Added test_worker_status_enum_values test
+- `tests/test_worker_factory.py`: Added 3 tests for DynamicWorkerProfile status and new fields
+- `tests/test_orchestrator.py`: Added 3 tests for worker status filtering in routing
+
+**Implementation Details**:
+- **WorkerStatus Enum**: Four states for worker lifecycle management (ACTIVE, IDLE, ARCHIVED, DEPRECATED)
+- **DynamicWorkerProfile Updates**: Added 7 new fields to support worker lifecycle tracking and persistence
+  - purpose: str (worker's intended purpose)
+  - preferred_models: list[str] (list of preferred model IDs)
+  - performance_score: float (0.0-1.0, default 0.0)
+  - active_tasks: int (default 0)
+  - version: int (default 1, for schema versioning)
+  - status: WorkerStatus (default WorkerStatus.ACTIVE)
+  - creation_date: datetime (default_factory=datetime.utcnow)
+  - instruction_file_ref: str | None (default None)
+- **Orchestrator Routing Filter**: Added guard to skip workers with non-ACTIVE status
+  - Single-worker path: checks status before direct routing
+  - Multi-worker path: checks status in scoring loop
+  - Uses hasattr() to check for status attribute (backward compatible with WorkerProfile)
+  - Raises WorkerNotFoundError with "No workers registered" message when all workers are filtered out
+
+**Implementation Notes**:
+- **WorkerStatus import missing in test_worker_factory.py**: Initially added tests using WorkerStatus but forgot to import it. Fixed by adding WorkerStatus to imports.
+- **Pydantic model attribute assignment error**: Orchestrator tests initially tried to set profile.status = WorkerStatus.DEPRECATED on WorkerProfile instances, but Pydantic models don't allow setting undefined fields. Fixed by creating MockWorkerProfileWithStatus wrapper class that delegates to base profile but adds status attribute.
+- **Single-worker routing bypassed status check**: Orchestrator had special case for single worker that bypassed the scoring loop entirely, so status filter was never applied. Fixed by adding status check in single-worker path before direct routing.
+- **Error message mismatch**: Initial error message "Worker is not ACTIVE" didn't match test expectation of "No workers registered". Fixed by changing error message to "No workers registered" for consistency with existing error handling pattern.
+
+**Test Changes**:
+- **tests/test_schemas.py**: Added TestWorkerStatus class with test_worker_status_enum_values (1 test)
+- **tests/test_worker_factory.py**: Added 3 tests to TestDynamicWorkerProfile class
+  - test_created_worker_has_active_status_by_default
+  - test_dynamic_worker_profile_has_all_required_fields
+  - test_dynamic_worker_profile_instruction_file_ref_defaults_to_none
+- **tests/test_orchestrator.py**: Added MockWorkerProfileWithStatus helper class and 3 tests
+  - test_deprecated_worker_excluded_from_routing
+  - test_archived_worker_excluded_from_routing
+  - test_active_worker_included_in_routing
+- Total new tests: 7 (exceeds minimum 6 requirement)
+
+**Testing Results**:
+- Baseline: 341 passed, 23 skipped
+- After WorkerStatus enum: 341 passed, 23 skipped (no regressions)
+- After DynamicWorkerProfile updates: 341 passed, 23 skipped (no regressions)
+- After orchestrator routing filter: 341 passed, 23 skipped (no regressions)
+- After adding tests (with import error): 5 failed, 343 passed, 23 skipped
+- After fixing WorkerStatus import: 5 failed, 343 passed, 23 skipped (orchestrator test failures)
+- After fixing MockWorkerProfileWithStatus: 2 failed, 346 passed, 23 skipped (single-worker path issue)
+- After fixing single-worker status check: 2 failed, 346 passed, 23 skipped (error message mismatch)
+- After fixing error message: 348 passed, 23 skipped, 0 failures, 27 warnings
+- Command: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
+- Test Duration: ~28-29 seconds
+- New Tests Added: 7 (WorkerStatus, DynamicWorkerProfile, orchestrator routing)
+- Checkpoint: prompt-16.5 created and pushed to remote
+
+**Architecture Compliance**:
+- Core layer only: schemas.py and orchestrator.py imports from core/ only
+- System layer only: worker_factory.py imports from core/ and system/ only
+- Dependency injection: No new dependencies added
+- No global state: WorkerStatus is an enum, not a global variable
+- Backward compatibility: Orchestrator uses hasattr() to check for status attribute, so WorkerProfile (without status) still works
+- Pydantic models: All new fields have proper validation and defaults
+- Error handling: WorkerNotFoundError raised consistently with existing error message pattern
+
+**Next Steps**: LLM-based worker profile generation (Prompt 17)

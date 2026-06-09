@@ -84,7 +84,6 @@ class MockSystemProfiler:
         return self._profile
 
 
-@pytest.mark.asyncio
 class TestModelRecommendation:
     """Test cases for ModelRecommendation schema."""
     
@@ -106,7 +105,6 @@ class TestModelRecommendation:
         assert recommendation.fits_vram is True
 
 
-@pytest.mark.asyncio
 class TestEvaluationResult:
     """Test cases for EvaluationResult schema."""
     
