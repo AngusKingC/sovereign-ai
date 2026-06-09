@@ -3687,3 +3687,62 @@ Each SKILL.md must declare:
 - Error handling: All trace calls wrapped in try-except to prevent cascading failures
 
 **Next Steps**: Approval gate CLI/TUI integration (future prompt)
+
+### 2026-06-09 - Prompt 15: Worker Factory Implementation
+**Implementation**: Dynamic worker creation from natural language descriptions
+
+**Files Created**:
+- `core/worker_factory.py`: WorkerFactory class with DynamicWorkerProfile and PlaceholderWorker
+- `tests/test_worker_factory.py`: 17 tests covering worker factory functionality
+
+**Files Modified**:
+- `core/orchestrator.py`: Added deregister_worker method
+
+**Implementation Details**:
+- **WorkerFactory Class**:
+  - Constructor accepts SkillRegistry, Orchestrator, MemoryRouter, and TraceEmitter (dependency injection)
+  - `create_worker()`: Generates WorkerProfile from description, creates PlaceholderWorker, registers in orchestrator, persists to memory
+  - `can_route()`: Checks if orchestrator has workers that can handle task
+  - `get_or_create_worker()`: Returns existing worker or creates new one based on can_route result
+  - `list_workers()`: Returns all registered worker profiles
+  - `deregister_worker()`: Removes worker from orchestrator and cache
+- **DynamicWorkerProfile**: Extended Pydantic model for dynamically generated workers with complexity bounds
+- **PlaceholderWorker**: Minimal WorkerBase implementation for testing (real dynamic workers in future prompt)
+- **WorkerProfile Generation**: Rule-based (no LLM) with capability parsing, skill matching, and slug generation
+- **Orchestrator Integration**: Added deregister_worker method that removes worker from registry and raises WorkerNotFoundError
+
+**Implementation Notes**:
+- **Import error with WorkerBase**: Initially imported WorkerBase inside TYPE_CHECKING block, but PlaceholderWorker needed it at runtime for inheritance. Fixed by moving WorkerBase import outside TYPE_CHECKING block.
+- **Import error with Message**: PlaceholderWorker.build_prompt() used Message type which was not imported. Fixed by adding Message to imports from core.schemas.
+- **Architecture compliance**: WorkerFactory imports only from core/ (no adapters, workers, memory, cli). Uses TraceEmitter injected via constructor. All trace calls wrapped in try-except. All methods async with return type annotations.
+
+**Test Changes**:
+- **tests/test_worker_factory.py**: 17 new tests (exceeds minimum 14 requirement)
+  - 14 WorkerFactory class tests (create_worker, can_route, get_or_create_worker, list_workers, deregister_worker)
+  - 2 DynamicWorkerProfile tests
+  - 1 PlaceholderWorker test
+  - All tests inject MemoryTraceEmitter (never patch emit_trace)
+  - All tests use emitter.get_events() not emitter.events
+  - Mock objects for SkillRegistry, Orchestrator, MemoryRouter
+
+**Testing Results**:
+- Baseline: 311 passed, 23 skipped
+- After orchestrator.py change: 311 passed, 23 skipped (no regressions)
+- After worker_factory.py creation: 311 passed, 23 skipped (no regressions)
+- After test_worker_factory.py creation: 328 passed, 23 skipped (exceeds target of 311)
+- Final: 328 passed, 23 skipped, 0 failures, 22 warnings
+- Command: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
+- Test Duration: ~27-28 seconds
+- New Tests Added: 17 (worker factory)
+- Checkpoint: prompt-15 created and pushed to remote
+
+**Architecture Compliance**:
+- Core layer only: worker_factory.py imports from core/ only
+- Dependency injection: TraceEmitter, SkillRegistry, Orchestrator, MemoryRouter injected via constructor
+- No global state: Never imports emit_trace or uses global emitter
+- Async-first: All methods are async
+- Type annotations: All public methods have return type annotations
+- Error handling: All trace calls wrapped in try-except to prevent cascading failures
+- Composition over inheritance: WorkerFactory composes SkillRegistry, Orchestrator, MemoryRouter
+
+**Next Steps**: LLM-based worker profile generation (Prompt 17)
