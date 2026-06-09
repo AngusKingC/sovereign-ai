@@ -539,6 +539,18 @@ class InstructionChangelogEntry(BaseModel):
     created_at: datetime = Field(description="When this changelog entry was created")
 
 
+class VersionUpdateProposal(BaseModel):
+    """A proposal to update an instruction file."""
+    proposal_id: str = Field(description="Unique proposal identifier (UUID)")
+    worker_id: str = Field(description="Worker identifier")
+    current_version: int = Field(description="Current instruction file version")
+    proposed_content: str = Field(description="LLM-generated updated content")
+    trigger_reason: str = Field(description="Reason for update proposal")
+    rating_trend: float = Field(description="Rating trend that triggered this proposal")
+    status: str = Field(description="Proposal status: pending, approved, or rejected")
+    created_at: datetime = Field(description="When this proposal was created")
+
+
 class Scratchpad(BaseModel):
     """A per-task working memory scratchpad for worker reasoning."""
     scratchpad_id: UUID = Field(default_factory=uuid4, description="Unique scratchpad identifier")

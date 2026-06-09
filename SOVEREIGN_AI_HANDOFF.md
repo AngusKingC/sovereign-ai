@@ -124,7 +124,7 @@ OUTPUT LAYER
 ## Current State
 
 ### Test Baseline
-- **386 passed, 23 skipped, 1 warning** (as of Prompt 18 / checkpoint prompt-18)
+- **401 passed, 23 skipped, 1 warning** (as of Prompt 19 / checkpoint prompt-19)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
 - 1 remaining warning: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch
@@ -132,7 +132,7 @@ OUTPUT LAYER
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-18`
+- Latest checkpoint tag: `prompt-19`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}`
 - Restore script: `python scripts/restore.py`
 
@@ -220,7 +220,8 @@ OUTPUT LAYER
 | 16.5 | WorkerProfile Schema Lock | 357 |
 | 17 | Worker Persistence | 370 |
 | 18 | Rating System | 386 |
-| 19 | Instruction File Generation | IN PROGRESS |
+| 19 | Instruction File Generation | 401 |
+| 20 | Instruction File Versioning and Updates | IN PROGRESS |
 
 ---
 
@@ -355,7 +356,7 @@ Features:
 ---
 
 #### Prompt 19 — Instruction File Generation
-**Status**: IN PROGRESS
+**Status**: DONE
 
 Create `core/instruction_generator.py`.
 
@@ -377,7 +378,7 @@ Generation informed by rating history (from Prompt 18) and persistence
 ---
 
 #### Prompt 20 — Instruction File Versioning and Updates
-**Status**: Queued
+**Status**: IN PROGRESS
 
 Version and update mechanism for instruction files.
 Update triggered when rating trend drops below threshold over N recent tasks.

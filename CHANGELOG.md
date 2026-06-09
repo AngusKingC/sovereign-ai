@@ -4078,3 +4078,73 @@ Each SKILL.md must declare:
 **Checkpoint**: prompt-18 created and pushed to remote
 
 **Next Steps**: Prompt 19 - Instruction File Generation
+
+---
+
+### 2026-06-10 - Instruction File Generation Implementation
+**Context**: User requested implementing LLM-based worker profile generation replacing the rule-based system from Prompt 15. Each worker gets an instruction file and changelog in Obsidian. Orchestrator gets identical files.
+**Architecture Laws Compliance**:
+- Clean Architecture: ✅ core/instruction_generator.py imports only from core/ (no imports from adapters/, system, or cli)
+- Async-first: ✅ All instruction generation operations are async
+- Pydantic everywhere: ✅ Uses InstructionFile and InstructionChangelogEntry from core/schemas.py
+- Typed or rejected: ✅ All public methods have return type annotations
+- Observability built-in: ✅ TraceEmitter injected via constructor, all trace calls wrapped in try-except
+
+**Implementation Details**:
+- Added `InstructionFile` schema to `core/schemas.py`:
+  - Fields: worker_id, version, content, obsidian_path, created_at, updated_at
+  - Version starts at 1, increments on update
+
+- Added `InstructionChangelogEntry` schema to `core/schemas.py`:
+  - Fields: worker_id, version, trigger, diff_summary, rating_trend, created_at
+  - Tracks what caused each update and summary of changes
+
+- Created `core/instruction_generator.py`:
+  - `InstructionGenerator` class with LLMAdapter, RatingSystem, MemoryRouter, obsidian_vault_path, and TraceEmitter injection
+  - `generate_instruction_file()` generates new instruction file using LLM, returns tuple (InstructionFile, updated profile)
+  - `update_instruction_file()` updates existing instruction file with LLM, increments version, includes rating trend
+  - `get_instruction_file()` retrieves latest instruction file for a worker
+  - `get_instruction_changelog()` retrieves changelog entries in chronological order
+  - Writes instruction files to Obsidian vault at {vault}/workers/{worker_id}_INSTRUCTION.md
+  - Writes changelog to Obsidian vault at {vault}/workers/{worker_id}_INSTRUCTION_CHANGELOG.md
+  - Trace events emitted for: instruction_generated, instruction_updated
+
+- Integrated with `WorkerFactory.create_worker()`:
+  - Added InstructionGenerator as optional parameter to WorkerFactory.__init__()
+  - Calls generate_instruction_file() after creating worker if InstructionGenerator is injected
+  - Updates profile.instruction_file_ref with Obsidian path after generation
+
+- Created `tests/test_instruction_generator.py`:
+  - 15 tests covering all InstructionGenerator methods and trace event emission
+  - All tests use mock LLMAdapter, mock RatingSystem, and mock MemoryRouter - no live LLM calls, no live DB calls
+  - Tests verify profile update, version increment, changelog entries, trace events, and Obsidian file writing
+
+**Implementation Notes**:
+- Initial test failures due to incorrect LLMResponse mock fields (missing raw, model, tokens_used, duration_ms) - fixed by adding all required fields
+- test_generate_instruction_file_sets_instruction_file_ref_on_profile initially failed because Pydantic v2 models don't allow direct field assignment - fixed by making generate_instruction_file return tuple (InstructionFile, updated profile) using model_copy()
+- test_update_instruction_file tests initially failed because mock_rating_system.get_trend() returned AsyncMock instead of None/float - fixed by setting proper return values in test fixtures
+- Changed generate_instruction_file return type from InstructionFile to tuple[InstructionFile, DynamicWorkerProfile] to support profile mutation via model_copy()
+- All trace calls wrapped in try-except to prevent cascading failures
+- Used MemoryTraceEmitter default for emitter parameter to support optional injection
+- Obsidian vault path is optional - if not provided, files are only stored in memory router
+
+**Testing Results**:
+- New tests: 15 tests for InstructionGenerator
+- Full test suite: 401 passed, 23 skipped, 1 warning (up from 386 passed)
+- All existing tests continue to pass - zero regressions
+- New tests use mock dependencies to avoid live LLM and database calls
+
+**Architecture Compliance**:
+- core/instruction_generator.py imports only from core/ - verified
+- All I/O operations are async
+- All public methods have return type annotations
+- TraceEmitter injected via constructor, default MemoryTraceEmitter()
+- Never import emit_trace or use global emitter
+- All trace calls wrapped in try-except
+- LLMAdapter is a Protocol defined in core/ - injecting it does not violate architecture
+
+**Rationale**: Implementing LLM-based instruction file generation enables dynamic, context-aware worker instructions that can evolve based on performance data. The changelog provides audit trail for instruction evolution. Integration with RatingSystem allows instruction updates to be triggered by performance trends. Obsidian mirror provides human-readable documentation. This system replaces the rule-based approach from Prompt 15 with a more flexible, data-driven approach.
+
+**Checkpoint**: prompt-19 created and pushed to remote
+
+**Next Steps**: Prompt 20 - Instruction File Versioning and Updates
