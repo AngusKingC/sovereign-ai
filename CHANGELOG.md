@@ -4148,3 +4148,67 @@ Each SKILL.md must declare:
 **Checkpoint**: prompt-19 created and pushed to remote
 
 **Next Steps**: Prompt 20 - Instruction File Versioning and Updates
+
+---
+
+### 2026-06-10 - Instruction File Versioning and Updates Implementation
+**Context**: User requested implementing version and update mechanism for instruction files. Updates are triggered when a worker's rating trend drops below a threshold over N recent tasks. Proposed updates require user approval. Rollback is available to any previous version.
+**Architecture Laws Compliance**:
+- Clean Architecture: ✅ core/instruction_versioning.py imports only from core/ (no imports from adapters/, system, or cli)
+- Async-first: ✅ All versioning operations are async
+- Pydantic everywhere: ✅ Uses VersionUpdateProposal from core/schemas.py
+- Typed or rejected: ✅ All public methods have return type annotations
+- Observability built-in: ✅ TraceEmitter injected via constructor, all trace calls wrapped in try-except
+
+**Implementation Details**:
+- Added `VersionUpdateProposal` schema to `core/schemas.py`:
+  - Fields: proposal_id, worker_id, current_version, proposed_content, trigger_reason, rating_trend, status, created_at
+  - Status values: pending, approved, rejected
+
+- Created `core/instruction_versioning.py`:
+  - `InstructionVersionManager` class with InstructionGenerator, RatingSystem, ApprovalGate, MemoryRouter, and TraceEmitter injection
+  - Configurable trend_threshold (default -0.5) and min_ratings (default 5)
+  - `check_and_trigger_update()` checks rating trend, validates rating count, generates proposal if needed, submits to ApprovalGate
+  - `approve_update()` applies approved update, increments version, sets proposal status to approved
+  - `rollback()` restores target version as new version with trigger "rollback to v{target_version}"
+  - `get_version_history()` retrieves all instruction file versions sorted by version ascending
+  - Trace events emitted for: update_proposed, update_approved, version_rolled_back
+  - Never applies instruction update without going through ApprovalGate
+
+- Created `tests/test_instruction_versioning.py`:
+  - 15 tests covering all InstructionVersionManager methods and trace event emission
+  - All tests use mock dependencies - no live LLM calls, no live DB calls
+  - Tests verify trend threshold logic, rating count validation, proposal creation, approval workflow, rollback mechanism, and version history retrieval
+
+**Implementation Notes**:
+- No test failures or implementation issues encountered
+- All tests passed on first run
+- Used model_copy() for proposal status update to avoid Pydantic v2 immutability issues
+- Rollback creates a new version rather than overwriting history to preserve audit trail
+- Changelog entry created for rollback operations to document the action
+- All trace calls wrapped in try-except to prevent cascading failures
+- Used MemoryTraceEmitter default for emitter parameter to support optional injection
+- ApprovalGate integration ensures no instruction update can be applied without user approval
+- Trend threshold and min_ratings are configurable to allow tuning per deployment
+
+**Testing Results**:
+- New tests: 15 tests for InstructionVersionManager
+- Full test suite: 416 passed, 23 skipped, 1 warning (up from 401 passed)
+- All existing tests continue to pass - zero regressions
+- New tests use mock dependencies to avoid live LLM and database calls
+
+**Architecture Compliance**:
+- core/instruction_versioning.py imports only from core/ - verified
+- All I/O operations are async
+- All public methods have return type annotations
+- TraceEmitter injected via constructor, default MemoryTraceEmitter()
+- Never import emit_trace or use global emitter
+- All trace calls wrapped in try-except
+- ApprovalGate integration ensures proper approval workflow
+- Never applies instruction update without going through ApprovalGate
+
+**Rationale**: Implementing instruction file versioning and updates with approval workflow provides a safety mechanism for automatic instruction improvements. The rating trend trigger ensures updates only happen when performance is declining. The approval gate prevents unintended changes. Rollback capability provides recovery from bad updates. This completes the self-improvement loop foundation by enabling safe, auditable instruction evolution based on performance data.
+
+**Checkpoint**: prompt-20 created and pushed to remote
+
+**Next Steps**: Prompt 21 - Orchestrator Improvement Loop

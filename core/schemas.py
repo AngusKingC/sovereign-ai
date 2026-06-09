@@ -551,6 +551,16 @@ class VersionUpdateProposal(BaseModel):
     created_at: datetime = Field(description="When this proposal was created")
 
 
+class OrchestratorMetrics(BaseModel):
+    """Metrics for orchestrator routing decisions."""
+    task_id: str = Field(description="Task identifier")
+    routed_to_worker_id: str = Field(description="Worker that was selected for this task")
+    routing_score: float = Field(description="Score assigned to selected worker at routing time")
+    task_completed: bool = Field(description="Whether the task reached a terminal success state")
+    user_rating: float | None = Field(default=None, description="Manual rating if provided (1-10), else None")
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="When this routing decision was made")
+
+
 class Scratchpad(BaseModel):
     """A per-task working memory scratchpad for worker reasoning."""
     scratchpad_id: UUID = Field(default_factory=uuid4, description="Unique scratchpad identifier")

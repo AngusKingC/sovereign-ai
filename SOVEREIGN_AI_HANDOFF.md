@@ -124,7 +124,7 @@ OUTPUT LAYER
 ## Current State
 
 ### Test Baseline
-- **401 passed, 23 skipped, 1 warning** (as of Prompt 19 / checkpoint prompt-19)
+- **416 passed, 23 skipped, 1 warning** (as of Prompt 20 / checkpoint prompt-20)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
 - 1 remaining warning: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch
@@ -132,7 +132,7 @@ OUTPUT LAYER
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-19`
+- Latest checkpoint tag: `prompt-20`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}`
 - Restore script: `python scripts/restore.py`
 
@@ -221,7 +221,8 @@ OUTPUT LAYER
 | 17 | Worker Persistence | 370 |
 | 18 | Rating System | 386 |
 | 19 | Instruction File Generation | 401 |
-| 20 | Instruction File Versioning and Updates | IN PROGRESS |
+| 20 | Instruction File Versioning and Updates | 416 |
+| 21 | Orchestrator Improvement Loop | IN PROGRESS |
 
 ---
 
@@ -378,7 +379,7 @@ Generation informed by rating history (from Prompt 18) and persistence
 ---
 
 #### Prompt 20 — Instruction File Versioning and Updates
-**Status**: IN PROGRESS
+**Status**: DONE
 
 Version and update mechanism for instruction files.
 Update triggered when rating trend drops below threshold over N recent tasks.
@@ -387,7 +388,7 @@ Proposed update requires user approval. Rollback available to any version.
 ---
 
 #### Prompt 21 — Orchestrator Improvement Loop
-**Status**: Queued
+**Status**: IN PROGRESS
 
 Wire orchestrator into same improvement loop as workers.
 Orchestrator reviews worker ratings, proposes instruction edits.

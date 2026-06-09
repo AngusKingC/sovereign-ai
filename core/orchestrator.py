@@ -8,7 +8,7 @@ without holding opinions or writing beliefs. Pure analysis and dispatch.
 import time
 from typing import TYPE_CHECKING
 
-from core.schemas import Task, WorkerOutput, TaskStatus, WorkerStatus
+from core.schemas import Task, WorkerOutput, TaskStatus, WorkerStatus, OrchestratorMetrics
 from core.observability import (
     TraceComponent,
     TraceEventType,
@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from core.worker_base import WorkerBase
     from core.task_state_machine import TaskStateMachine
     from core.scratchpad import ScratchpadManager
+    from core.orchestrator_improvement import OrchestratorImprovementLoop
 
 
 class Orchestrator:
@@ -29,9 +30,11 @@ class Orchestrator:
     def __init__(
         self,
         memory_router: "MemoryRouter",
+        improvement_loop: "OrchestratorImprovementLoop | None" = None,
     ) -> None:
         """Initialize the orchestrator with dependencies."""
         self.memory_router = memory_router
+        self.improvement_loop = improvement_loop
         self.workers: dict[str, "WorkerBase"] = {}
         self.pending_approval_queue: list[Task] = []
         
@@ -230,6 +233,21 @@ class Orchestrator:
             
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             
+            # Emit routing metrics if improvement loop is available
+            if self.improvement_loop:
+                from core.schemas import OrchestratorMetrics
+                metrics = OrchestratorMetrics(
+                    task_id=str(task.task_id),
+                    routed_to_worker_id=worker_id,
+                    routing_score=1.0,
+                    task_completed=False,  # Will be updated later
+                    user_rating=None
+                )
+                try:
+                    await self.improvement_loop.record_routing_decision(metrics)
+                except Exception:
+                    pass  # Metrics recording failure should not crash routing
+            
             await emit_trace(
                 event_type=TraceEventType.ORCHESTRATOR_ROUTING_COMPLETE,
                 component=TraceComponent.ORCHESTRATOR,
@@ -286,6 +304,21 @@ class Orchestrator:
         selected_worker_id = scored_workers[0][1]
         
         duration_ms = int((time.perf_counter() - start_time) * 1000)
+        
+        # Emit routing metrics if improvement loop is available
+        if self.improvement_loop:
+            from core.schemas import OrchestratorMetrics
+            metrics = OrchestratorMetrics(
+                task_id=str(task.task_id),
+                routed_to_worker_id=selected_worker_id,
+                routing_score=scored_workers[0][0],
+                task_completed=False,  # Will be updated later
+                user_rating=None
+            )
+            try:
+                await self.improvement_loop.record_routing_decision(metrics)
+            except Exception:
+                pass  # Metrics recording failure should not crash routing
         
         await emit_trace(
             event_type=TraceEventType.ORCHESTRATOR_ROUTING_COMPLETE,
