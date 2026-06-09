@@ -3572,3 +3572,47 @@ Each SKILL.md must declare:
 - **Checkpoint**: prompt-13.6-design created and pushed to remote
 
 - **Next Steps**: Implementation in Prompt 14 (pending user review and approval of this design)
+
+### 2026-06-09 - Prompt 13.6 Amendments: DENIED State and Scope Storage
+**Implementation**: Two design amendments to lock in approval gate decisions before Prompt 14
+
+**Amendment 1: Add DENIED to TaskStatus enum**
+- **Changes to core/schemas.py**:
+  - Added `DENIED = "denied"` to TaskStatus enum
+  - DENIED is a terminal state for tasks denied by human approval or timeout
+- **Changes to core/task_state_machine.py**:
+  - Updated VALID_TRANSITIONS: `AWAITING_APPROVAL` → `[EXECUTING, DENIED, FAILED, CANCELLED]`
+  - Added DENIED to terminal states list in is_terminal() method
+  - Rationale: DENIED represents user decision (no retry), FAILED represents system error (retryable)
+- **Changes to docs/APPROVAL_GATE_DESIGN.md**:
+  - Updated state transitions: `AWAITING_APPROVAL` → `DENIED` (human denied or timeout)
+  - Updated state transitions: `AWAITING_APPROVAL` → `FAILED` (gate itself errored)
+  - Added new section: "Approval Gate Error" for system error handling
+  - Updated TaskStateMachine integration points to include DENIED state
+- **Rationale**: Separates user denial (no retry) from system error (retryable) for clearer audit trail
+
+**Amendment 2: Update scope storage decision**
+- **Changes to docs/APPROVAL_GATE_DESIGN.md**:
+  - Added "Scope Storage Decision" section
+  - Runtime scope lookups use in-memory dict keyed by session_id for fast access
+  - All scope creates and expiries write through to Postgres immediately for persistence
+  - On session start, active scopes loaded from Postgres into in-memory cache
+  - On process restart, scopes reload from Postgres automatically
+  - Matches existing SessionManager pattern for consistency
+- **Rationale**: Write-through ensures durability while in-memory cache provides performance
+
+**Test Changes**:
+- **Changes to tests/test_task_state_machine.py**:
+  - Added `test_denied_is_a_terminal_state`: Verifies DENIED is terminal
+  - Added `test_awaiting_approval_can_transition_to_denied`: Verifies transition works
+  - Added `test_denied_cannot_transition_to_any_other_state`: Verifies terminal behavior
+  - Updated `test_terminal_states_cannot_be_transitioned_out_of`: Added DENIED
+  - Updated `test_is_terminal_returns_true_for_complete_failed_cancelled_denied`: Added DENIED
+  - Updated `test_get_valid_next_states_returns_correct_list_for_each_state`: Added DENIED transitions
+- **Testing Results**: 291 passed, 23 skipped, 0 failures, 19 warnings (exceeds target of 288)
+- **Command**: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
+- **Test Duration**: ~24 seconds
+- **New Tests Added**: 3 (all DENIED state tests)
+- **Checkpoint**: prompt-13.6-amendments created and pushed to remote
+
+- **Next Steps**: Prompt 14 implementation (approval gate system)

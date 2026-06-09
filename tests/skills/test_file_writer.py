@@ -5,9 +5,9 @@ Tests for File Writer Skill.
 import pytest
 import tempfile
 import os
-from unittest.mock import AsyncMock, patch
 
 from skills.file_writer.skill import FileWriterSkill
+from core.observability import MemoryTraceEmitter
 
 
 class TestFileWriterSkill:
@@ -15,8 +15,9 @@ class TestFileWriterSkill:
 
     @pytest.fixture
     def skill(self):
-        """Create a FileWriterSkill instance."""
-        return FileWriterSkill()
+        """Create a FileWriterSkill instance with MemoryTraceEmitter."""
+        emitter = MemoryTraceEmitter()
+        return FileWriterSkill(approval_gate=None, emitter=emitter)
 
     @pytest.mark.asyncio
     async def test_execute_with_valid_path(self, skill):
@@ -25,14 +26,13 @@ class TestFileWriterSkill:
             temp_path = f.name
 
         try:
-            with patch("skills.file_writer.skill.emit_trace", new_callable=AsyncMock):
-                success, bytes_written = await skill.execute(temp_path, "Test content")
-                assert success is True
-                assert bytes_written == len("Test content")
+            success, bytes_written = await skill.execute(temp_path, "Test content")
+            assert success is True
+            assert bytes_written == len("Test content")
 
-                # Verify content was written
-                with open(temp_path, "r", encoding="utf-8") as f:
-                    assert f.read() == "Test content"
+            # Verify content was written
+            with open(temp_path, "r", encoding="utf-8") as f:
+                assert f.read() == "Test content"
         finally:
             os.unlink(temp_path)
 
@@ -44,13 +44,12 @@ class TestFileWriterSkill:
             temp_path = f.name
 
         try:
-            with patch("skills.file_writer.skill.emit_trace", new_callable=AsyncMock):
-                success, bytes_written = await skill.execute(temp_path, " - appended", mode="append")
-                assert success is True
+            success, bytes_written = await skill.execute(temp_path, " - appended", mode="append")
+            assert success is True
 
-                # Verify content was appended
-                with open(temp_path, "r", encoding="utf-8") as f:
-                    assert f.read() == "Initial content - appended"
+            # Verify content was appended
+            with open(temp_path, "r", encoding="utf-8") as f:
+                assert f.read() == "Initial content - appended"
         finally:
             os.unlink(temp_path)
 
@@ -73,17 +72,35 @@ class TestFileWriterSkill:
             await skill.execute("/tmp/test.txt", 123)
 
     @pytest.mark.asyncio
-    async def test_approval_gate_stub(self, skill, capsys):
-        """Test that approval gate is stubbed and logs APPROVAL REQUIRED."""
+    async def test_file_writer_with_approval_gate_none_proceeds_without_approval(self, skill):
+        """Test that file writer proceeds without approval when approval_gate is None."""
         with tempfile.NamedTemporaryFile(mode="w", delete=False, encoding="utf-8") as f:
             temp_path = f.name
 
         try:
-            with patch("skills.file_writer.skill.emit_trace", new_callable=AsyncMock):
-                await skill.execute(temp_path, "Test content")
+            success, bytes_written = await skill.execute(temp_path, "Test content")
+            assert success is True
+            assert bytes_written == len("Test content")
 
-            captured = capsys.readouterr()
-            assert "APPROVAL REQUIRED" in captured.out
+            # Verify content was written
+            with open(temp_path, "r", encoding="utf-8") as f:
+                assert f.read() == "Test content"
+        finally:
+            os.unlink(temp_path)
+
+    @pytest.mark.asyncio
+    async def test_file_writer_emits_trace_events(self, skill):
+        """Test that file writer emits trace events."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, encoding="utf-8") as f:
+            temp_path = f.name
+
+        try:
+            await skill.execute(temp_path, "Test content")
+            
+            # Check that trace events were emitted
+            events = skill.emitter.get_events()
+            assert len(events) > 0
+            # Just check that events were emitted, don't validate specific content
         finally:
             os.unlink(temp_path)
 

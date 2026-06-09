@@ -4,27 +4,50 @@ File Writer Skill - writes content to local files with configurable mode.
 Single responsibility: Write content to local filesystem with approval gate.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+from uuid import uuid4
+from datetime import datetime
 
 from core.observability import (
     TraceComponent,
     TraceEventType,
     TraceLevel,
     TraceEmitter,
-    emit_trace,
+    TraceEvent,
+    NullTraceEmitter,
 )
+from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType
+
+if TYPE_CHECKING:
+    from core.task_state_machine import TaskStateMachine
+    from core.memory_router import MemoryRouter
 
 
 class FileWriterSkill:
     """Skill for writing content to local files."""
 
-    def __init__(self, emitter: TraceEmitter | None = None) -> None:
-        """Initialize the file writer skill."""
-        self.emitter = emitter
-        # For now, use the global emitter as fallback
-        # This will be replaced with NullTraceEmitter in Prompt 13.5
+    def __init__(
+        self,
+        approval_gate: ApprovalGate | None = None,
+        emitter: TraceEmitter | None = None,
+    ) -> None:
+        """Initialize the file writer skill.
+        
+        Args:
+            approval_gate: ApprovalGate instance for authorization
+            emitter: TraceEmitter for observability
+        """
+        self.approval_gate = approval_gate
+        self.emitter = emitter if emitter is not None else NullTraceEmitter()
 
-    async def execute(self, path: str, content: str, mode: str = "write") -> tuple[bool, int]:
+    async def execute(
+        self,
+        path: str,
+        content: str,
+        mode: str = "write",
+        session_id: str = "default",
+        task_id: str = "unknown",
+    ) -> tuple[bool, int]:
         """
         Write content to file.
 
@@ -32,6 +55,8 @@ class FileWriterSkill:
             path: Path to the file to write
             content: Content to write to the file
             mode: File write mode, defaults to 'write'
+            session_id: Session identifier for approval scope checking
+            task_id: Task identifier for approval requests
 
         Returns:
             Tuple of (success: bool, bytes_written: int)
@@ -45,27 +70,73 @@ class FileWriterSkill:
         if not isinstance(content, str):
             raise ValueError("Content must be a string")
 
-        # Approval gate - stubbed for now
-        # Full implementation comes in Prompt 14
-        print("APPROVAL REQUIRED")
-        approved = True
-
-        if not approved:
-            await emit_trace(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.WARNING,
-                layer="layer_2",
-                payload={
-                    "skill": "file_writer",
-                    "path": path,
-                    "mode": mode,
-                    "error": "Approval denied",
-                },
-                duration_ms=0,
-                success=False,
+        # Check approval scope first
+        if self.approval_gate:
+            has_scope = await self.approval_gate.check_scope(
+                session_id=session_id,
+                action_type="file_write",
+                parameters={"path": path}
             )
-            return False, 0
+            
+            if not has_scope:
+                # Request approval
+                from datetime import timedelta
+                
+                request = ApprovalRequest(
+                    request_id=f"apr_{uuid4().hex}",
+                    task_id=task_id,
+                    session_id=session_id,
+                    action_type=ApprovalActionType.FILE_WRITE,
+                    action_description=f"Write to file: {path}",
+                    action_parameters={"path": path, "mode": mode},
+                    risk_level="medium",
+                    reason_for_approval="File write requires approval",
+                    expires_at=datetime.utcnow() + timedelta(seconds=300),
+                )
+                
+                try:
+                    response = await self.approval_gate.request_approval(request)
+                    if not response.approved:
+                        try:
+                            await self.emitter.emit(TraceEvent(
+                                event_id=uuid4(),
+                                timestamp=datetime.utcnow(),
+                                event_type=TraceEventType.OPERATION_COMPLETE,
+                                component=TraceComponent.WORKER,
+                                level=TraceLevel.WARNING,
+                                message="File write approval denied",
+                                data={
+                                    "skill": "file_writer",
+                                    "path": path,
+                                    "mode": mode,
+                                    "error": "Approval denied",
+                                },
+                                duration_ms=0,
+                            ))
+                        except Exception:
+                            pass
+                        return False, 0
+                except Exception:
+                    # Approval gate error - deny by default
+                    try:
+                        await self.emitter.emit(TraceEvent(
+                            event_id=uuid4(),
+                            timestamp=datetime.utcnow(),
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.WORKER,
+                            level=TraceLevel.ERROR,
+                            message="File write approval gate error",
+                            data={
+                                "skill": "file_writer",
+                                "path": path,
+                                "mode": mode,
+                                "error": "Approval gate error",
+                            },
+                            duration_ms=0,
+                        ))
+                    except Exception:
+                        pass
+                    return False, 0
 
         try:
             import aiofiles
@@ -74,35 +145,43 @@ class FileWriterSkill:
             async with aiofiles.open(path, mode=write_mode, encoding="utf-8") as file:
                 bytes_written = await file.write(content)
 
-            await emit_trace(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                layer="layer_2",
-                payload={
-                    "skill": "file_writer",
-                    "path": path,
-                    "mode": mode,
-                    "bytes_written": bytes_written,
-                },
-                duration_ms=0,
-                success=True,
-            )
+            try:
+                await self.emitter.emit(TraceEvent(
+                    event_id=uuid4(),
+                    timestamp=datetime.utcnow(),
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message=f"File write successful: {path}",
+                    data={
+                        "skill": "file_writer",
+                        "path": path,
+                        "mode": mode,
+                        "bytes_written": bytes_written,
+                    },
+                    duration_ms=0,
+                ))
+            except Exception:
+                pass
 
             return True, bytes_written
 
         except IOError as e:
-            await emit_trace(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.ERROR,
-                layer="layer_2",
-                payload={
-                    "skill": "file_writer",
-                    "path": path,
-                    "error": str(e),
-                },
-                duration_ms=0,
-                success=False,
-            )
+            try:
+                await self.emitter.emit(TraceEvent(
+                    event_id=uuid4(),
+                    timestamp=datetime.utcnow(),
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.ERROR,
+                    message=f"File write failed: {str(e)}",
+                    data={
+                        "skill": "file_writer",
+                        "path": path,
+                        "error": str(e),
+                    },
+                    duration_ms=0,
+                ))
+            except Exception:
+                pass
             raise
