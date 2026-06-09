@@ -80,7 +80,7 @@ class TestLlamaCppAdapter:
 
     def test_adapter_implements_interface(self, llama_adapter):
         """Test that adapter implements LLMAdapter interface."""
-        from adapters.base import LLMAdapter
+        from core.worker_base import LLMAdapter
 
         assert isinstance(llama_adapter, LLMAdapter)
         assert hasattr(llama_adapter, "generate")

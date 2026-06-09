@@ -17,7 +17,9 @@ from core.observability import (
     TraceEventType,
     TraceComponent,
     TraceLevel,
-    emit_trace,
+    TraceEmitter,
+    NullTraceEmitter,
+    TraceEvent,
 )
 
 
@@ -33,8 +35,10 @@ class LlamaCppAdapter(LLMAdapter):
         n_gpu_layers: int = -1,
         n_threads: int = 4,
         temperature: float = 0.1,
+        emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the llama.cpp adapter with hardware configuration."""
+        self.emitter = emitter or NullTraceEmitter()
         self.model_path = model_path
         self.n_ctx = n_ctx
         self.n_gpu_layers = n_gpu_layers
@@ -79,7 +83,7 @@ class LlamaCppAdapter(LLMAdapter):
 
         try:
             # Emit adapter call start event
-            await emit_trace(
+            await self.emitter.emit(TraceEvent(
                 event_type=TraceEventType.ADAPTER_CALL,
                 component=TraceComponent.ADAPTER,
                 message="Llama.cpp adapter generation started",
@@ -90,7 +94,7 @@ class LlamaCppAdapter(LLMAdapter):
                     "prompt_length": prompt_length,
                     "temperature": temperature or self.temperature,
                 },
-            )
+            ))
 
             self._ensure_model()
 
@@ -109,7 +113,7 @@ class LlamaCppAdapter(LLMAdapter):
             response_length = len(output["choices"][0]["text"])
 
             # Emit adapter response event
-            await emit_trace(
+            await self.emitter.emit(TraceEvent(
                 event_type=TraceEventType.ADAPTER_RESPONSE,
                 component=TraceComponent.ADAPTER,
                 message="Llama.cpp adapter generation completed",
@@ -122,7 +126,7 @@ class LlamaCppAdapter(LLMAdapter):
                     "tokens_used": output.get("usage", {}).get("total_tokens", 0),
                 },
                 duration_ms=duration_ms,
-            )
+            ))
 
             return LLMResponse(
                 content=output["choices"][0]["text"],
@@ -135,7 +139,7 @@ class LlamaCppAdapter(LLMAdapter):
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             # Emit error event (wrapped to avoid crashing main path)
             try:
-                await emit_trace(
+                await self.emitter.emit(TraceEvent(
                     event_type=TraceEventType.ADAPTER_ERROR,
                     component=TraceComponent.ADAPTER,
                     message="Llama.cpp adapter generation failed",
@@ -148,7 +152,7 @@ class LlamaCppAdapter(LLMAdapter):
                     duration_ms=duration_ms,
                     error_type=type(e).__name__,
                     error_message=str(e),
-                )
+                ))
             except Exception:
                 pass  # Trace failure should not crash main path
             raise RuntimeError(f"llama.cpp generation failed: {e}")

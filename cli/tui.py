@@ -49,6 +49,8 @@ from core.observability import (
 )
 from cli.adapter_factory import create_worker
 from cli.command_history import CommandHistory
+from system.worker_persistence import WorkerPersistence
+from cli.command_history import CommandHistory
 
 
 class SelectionScreen(ModalScreen):
@@ -254,6 +256,21 @@ class JarvisTUI(App):
             backend=history_backend,
             session_id=None,  # Will be set after session creation
         )
+        
+        # Create worker persistence (Postgres if DSN available, None otherwise)
+        if db_dsn:
+            from memory.postgres import PostgresBackend
+            from core.memory_router import MemoryRouter
+            
+            # Create memory router for worker persistence
+            memory_router = MemoryRouter(postgres_backend=PostgresBackend(dsn=db_dsn, table_name="workers"))
+            self.worker_persistence = WorkerPersistence(
+                memory_router=memory_router,
+                emitter=self.emitter,
+                obsidian_vault_path=os.getenv("OBSIDIAN_VAULT_PATH"),
+            )
+        else:
+            self.worker_persistence = None
         
         # Create orchestrator
         self.orchestrator = Orchestrator(memory_router=None)

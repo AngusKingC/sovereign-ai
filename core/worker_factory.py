@@ -5,6 +5,7 @@ Single responsibility: Analyze task descriptions and dynamically create workers
 with appropriate capabilities by matching against the SkillRegistry.
 """
 
+import asyncio
 import re
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
     from core.skill_registry import SkillRegistry
     from core.orchestrator import Orchestrator
     from core.memory_router import MemoryRouter
+    from system.worker_persistence import WorkerPersistence
 
 
 class DynamicWorkerProfile(BaseModel):
@@ -68,6 +70,7 @@ class WorkerFactory:
         orchestrator: "Orchestrator",
         memory_router: "MemoryRouter",
         emitter: TraceEmitter | None = None,
+        persistence: "WorkerPersistence | None" = None,
     ) -> None:
         """Initialize the worker factory with dependencies.
         
@@ -76,14 +79,20 @@ class WorkerFactory:
             orchestrator: Orchestrator for worker registration
             memory_router: Memory router for persistence
             emitter: TraceEmitter for observability
+            persistence: Optional worker persistence for saving/loading workers
         """
+        self.emitter = emitter if emitter is not None else NullTraceEmitter()
         self.skill_registry = skill_registry
         self.orchestrator = orchestrator
         self.memory_router = memory_router
-        self.emitter = emitter if emitter is not None else NullTraceEmitter()
+        self.persistence = persistence
         
         # Cache for generated worker profiles
         self._worker_profiles: dict[str, DynamicWorkerProfile] = {}
+        
+        # Load workers from persistence if provided
+        if self.persistence:
+            asyncio.create_task(self.load_workers_from_persistence())
 
     async def create_worker(self, description: str, task: Task) -> "WorkerBase":
         """
@@ -140,38 +149,57 @@ class WorkerFactory:
         # Register worker in orchestrator
         self.orchestrator.register_worker(profile.worker_id, worker)
         
-        # Persist worker definition to memory
-        try:
-            await self.memory_router.write(
-                collection="workers",
-                document_id=profile.worker_id,
-                document={
-                    "type": "worker_profile",
-                    "worker_id": profile.worker_id,
-                    "worker_type": profile.worker_type,
-                    "name": profile.name,
-                    "description": profile.description,
-                    "capabilities": profile.capabilities,
-                    "complexity_min": profile.complexity_min,
-                    "complexity_max": profile.complexity_max,
-                    "preferred_complexity": profile.preferred_complexity,
-                    "created_at": datetime.utcnow().isoformat(),
-                }
-            )
-        except Exception as e:
+        # Persist worker definition using WorkerPersistence if available
+        if self.persistence:
             try:
-                await self.emitter.emit(TraceEvent(
-                    event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.ORCHESTRATOR,
-                    level=TraceLevel.ERROR,
-                    message=f"Failed to persist worker profile: {str(e)}",
-                    data={"error": str(e), "worker_id": profile.worker_id},
-                    duration_ms=0,
-                ))
-            except Exception:
-                pass
+                await self.persistence.save(profile)
+            except Exception as e:
+                try:
+                    await self.emitter.emit(TraceEvent(
+                        event_id=uuid4(),
+                        timestamp=datetime.utcnow(),
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.ERROR,
+                        message=f"Failed to persist worker profile: {str(e)}",
+                        data={"error": str(e), "worker_id": profile.worker_id},
+                        duration_ms=0,
+                    ))
+                except Exception:
+                    pass
+        else:
+            # Fallback to memory_router.write for backward compatibility
+            try:
+                await self.memory_router.write(
+                    collection="workers",
+                    document_id=profile.worker_id,
+                    document={
+                        "type": "worker_profile",
+                        "worker_id": profile.worker_id,
+                        "worker_type": profile.worker_type,
+                        "name": profile.name,
+                        "description": profile.description,
+                        "capabilities": profile.capabilities,
+                        "complexity_min": profile.complexity_min,
+                        "complexity_max": profile.complexity_max,
+                        "preferred_complexity": profile.preferred_complexity,
+                        "created_at": datetime.utcnow().isoformat(),
+                    }
+                )
+            except Exception as e:
+                try:
+                    await self.emitter.emit(TraceEvent(
+                        event_id=uuid4(),
+                        timestamp=datetime.utcnow(),
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.ERROR,
+                        message=f"Failed to persist worker profile: {str(e)}",
+                        data={"error": str(e), "worker_id": profile.worker_id},
+                        duration_ms=0,
+                    ))
+                except Exception:
+                    pass
         
         # Emit trace event
         try:
@@ -275,6 +303,66 @@ class WorkerFactory:
             ))
         except Exception:
             pass
+    
+    async def load_workers_from_persistence(self) -> int:
+        """
+        Load all persisted workers from PostgreSQL and register them with the orchestrator.
+        
+        Returns:
+            Number of workers loaded
+        """
+        if not self.persistence:
+            return 0
+        
+        try:
+            profiles = await self.persistence.load_all()
+            count = 0
+            
+            for profile in profiles:
+                # Only register ACTIVE workers with the orchestrator
+                if profile.status == WorkerStatus.ACTIVE:
+                    # Create placeholder worker for each persisted profile
+                    worker = PlaceholderWorker(
+                        profile=profile,
+                        memory_router=self.memory_router,
+                        emitter=self.emitter,
+                    )
+                    
+                    # Register worker in orchestrator
+                    self.orchestrator.register_worker(profile.worker_id, worker)
+                    
+                    # Cache profile
+                    self._worker_profiles[profile.worker_id] = profile
+                    
+                    count += 1
+            
+            await self.emitter.emit(TraceEvent(
+                event_id=uuid4(),
+                timestamp=datetime.utcnow(),
+                event_type=TraceEventType.OPERATION_COMPLETE,
+                component=TraceComponent.ORCHESTRATOR,
+                level=TraceLevel.INFO,
+                message=f"Loaded {count} workers from persistence",
+                data={"count": count},
+                duration_ms=0,
+            ))
+            
+            return count
+        except Exception as e:
+            try:
+                await self.emitter.emit(TraceEvent(
+                    event_id=uuid4(),
+                    timestamp=datetime.utcnow(),
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.ORCHESTRATOR,
+                    level=TraceLevel.ERROR,
+                    message=f"Failed to load workers from persistence: {str(e)}",
+                    data={"error": str(e)},
+                    duration_ms=0,
+                ))
+            except Exception:
+                pass
+            return 0
 
     def _generate_profile(self, description: str, task: Task) -> DynamicWorkerProfile:
         """
