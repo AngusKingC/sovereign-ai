@@ -46,6 +46,14 @@ class TaskStatus(str, Enum):
     ESCALATED = "awaiting_approval"  # Maps to AWAITING_APPROVAL
 
 
+class WorkerStatus(str, Enum):
+    """Status of a worker instance."""
+    ACTIVE = "active"
+    IDLE = "idle"
+    ARCHIVED = "archived"
+    DEPRECATED = "deprecated"
+
+
 class ScratchpadEntryType(str, Enum):
     """Types of scratchpad entries for worker reasoning."""
     REASONING = "reasoning"

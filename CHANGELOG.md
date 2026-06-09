@@ -3746,3 +3746,64 @@ Each SKILL.md must declare:
 - Composition over inheritance: WorkerFactory composes SkillRegistry, Orchestrator, MemoryRouter
 
 **Next Steps**: LLM-based worker profile generation (Prompt 17)
+
+### 2026-06-09 - Prompt 16: Model Evaluation Logic Implementation
+**Implementation**: Intelligent model selection and evaluation for workers
+
+**Files Created**:
+- `system/model_evaluator.py`: ModelEvaluator class with ModelRecommendation and EvaluationResult Pydantic models
+- `tests/test_model_evaluator.py`: 13 tests covering model evaluation functionality
+
+**Implementation Details**:
+- **ModelRecommendation Pydantic Model**: 
+  - model_id, model_name, quantisation, score (0.0-1.0), reasoning, fits_vram, fits_ram, task_suitability (0.0-1.0)
+- **EvaluationResult Pydantic Model**:
+  - worker_id, task_type, recommendations (ranked list), evaluated_at, hardware_snapshot
+- **ModelEvaluator Class**:
+  - Constructor accepts ModelRegistry, ResourceManager, and TraceEmitter (dependency injection)
+  - `evaluate()`: Queries ResourceManager for hardware state, queries ModelRegistry for models by task tags, filters to models that fit VRAM/RAM, scores candidates using weighted formula (hardware 40%, suitability 30%, quality/speed 30%), returns ranked recommendations
+  - `get_best()`: Calls evaluate() and returns top recommendation or None if no models fit
+  - `record_selection()`: Records selected model, updates ModelRegistry download status, emits trace event
+- **Scoring Formula**:
+  - hardware_score = 1.0 if fits_vram else 0.5 if fits_ram else 0.0
+  - suitability_score = tag overlap count / total task_tags
+  - final_score = (hardware_score * 0.4) + (suitability_score * 0.3) + (quality_score * quality_preference * 0.3) + (speed_score * (1 - quality_preference) * 0.3)
+
+**Implementation Notes**:
+- **Import error with GPUProfile and RAMProfile**: Initially imported GPUProfile and RAMProfile from core.schemas, but these don't exist. Fixed by using GPUInfo and RAMInfo instead.
+- **SystemProfiler mocking issue**: SystemProfiler is imported inside the evaluate() method in model_evaluator.py, not at module level. Initial patch attempts using 'system.model_evaluator.SystemProfiler' failed because it's not a module attribute. Fixed by patching 'system.profiler.SystemProfiler' instead, which is the actual import location.
+- **Test fixture complexity**: Required creating mock_profiler fixture to return SystemProfile via get_cached() method, and patching SystemProfiler in all test methods that call evaluate() to avoid real SystemProfiler instantiation.
+
+**Test Changes**:
+- **tests/test_model_evaluator.py**: 13 new tests (meets minimum 13 requirement)
+  - 2 Pydantic model validation tests (ModelRecommendation, EvaluationResult)
+  - 10 ModelEvaluator class tests (evaluate, get_best, record_selection, scoring, hardware snapshot)
+  - 1 test for trace event emission
+  - All tests inject MemoryTraceEmitter (never patch emit_trace)
+  - All tests use emitter.get_events() not emitter.events
+  - Mock objects for ModelRegistry, ResourceManager, SystemProfiler
+  - Patch SystemProfiler in evaluate() tests to return mock profile
+
+**Testing Results**:
+- Baseline: 328 passed, 23 skipped
+- After model_evaluator.py creation: 328 passed, 23 skipped (no regressions)
+- After test_model_evaluator.py creation (with import errors): 7 failed, 334 passed, 23 skipped
+- After fixing GPUProfile/GPUInfo import: 7 failed, 334 passed, 23 skipped (SystemProfiler mocking issue)
+- After fixing SystemProfiler patch path: 13 passed in test_model_evaluator.py
+- Final: 341 passed, 23 skipped, 0 failures, 24 warnings
+- Command: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
+- Test Duration: ~29-30 seconds
+- New Tests Added: 13 (model evaluator)
+- Checkpoint: prompt-16 created and pushed to remote
+
+**Architecture Compliance**:
+- System layer only: model_evaluator.py imports from core/ and system/ only
+- Dependency injection: TraceEmitter, ModelRegistry, ResourceManager injected via constructor
+- No global state: Never imports emit_trace or uses global emitter
+- Async-first: All methods are async
+- Type annotations: All public methods have return type annotations
+- Error handling: All trace calls wrapped in try-except to prevent cascading failures
+- Hardware queries: Never hardcodes hardware values, always queries ResourceManager
+- Pydantic models: ModelRecommendation and EvaluationResult with proper validation
+
+**Next Steps**: LLM-based worker profile generation (Prompt 17)

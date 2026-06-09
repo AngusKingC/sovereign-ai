@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 
 from core.worker_factory import WorkerFactory, DynamicWorkerProfile, PlaceholderWorker
-from core.schemas import Task, TaskStatus, TaskPriority, WorkerProfile
+from core.schemas import Task, TaskStatus, TaskPriority, WorkerProfile, WorkerStatus
 from core.observability import MemoryTraceEmitter, TraceComponent, TraceEventType, TraceLevel
 from core.exceptions import WorkerNotFoundError
 
@@ -241,6 +241,57 @@ class TestDynamicWorkerProfile:
         assert profile.capabilities == []
         assert profile.complexity_min == 0.0
         assert profile.complexity_max == 1.0
+    
+    def test_created_worker_has_active_status_by_default(self):
+        """Test created worker has ACTIVE status by default."""
+        profile = DynamicWorkerProfile(
+            worker_id="test_worker",
+            worker_type="general_worker",
+            name="Test Worker",
+            description="A test worker",
+        )
+        
+        assert profile.status == WorkerStatus.ACTIVE
+    
+    def test_dynamic_worker_profile_has_all_required_fields(self):
+        """Test DynamicWorkerProfile has all required fields."""
+        profile = DynamicWorkerProfile(
+            worker_id="test_worker",
+            worker_type="general_worker",
+            name="Test Worker",
+            description="A test worker",
+            purpose="Test purpose",
+            capabilities=["code", "reasoning"],
+            preferred_models=["ollama/llama3.2:3b"],
+            performance_score=0.85,
+            active_tasks=2,
+            version=1,
+            status=WorkerStatus.ACTIVE,
+            instruction_file_ref="instructions.md",
+        )
+        
+        assert profile.worker_id == "test_worker"
+        assert profile.name == "Test Worker"
+        assert profile.purpose == "Test purpose"
+        assert profile.capabilities == ["code", "reasoning"]
+        assert profile.preferred_models == ["ollama/llama3.2:3b"]
+        assert profile.performance_score == 0.85
+        assert profile.active_tasks == 2
+        assert profile.version == 1
+        assert profile.status == WorkerStatus.ACTIVE
+        assert profile.instruction_file_ref == "instructions.md"
+        assert profile.creation_date is not None
+    
+    def test_dynamic_worker_profile_instruction_file_ref_defaults_to_none(self):
+        """Test DynamicWorkerProfile instruction_file_ref defaults to None."""
+        profile = DynamicWorkerProfile(
+            worker_id="test_worker",
+            worker_type="general_worker",
+            name="Test Worker",
+            description="A test worker",
+        )
+        
+        assert profile.instruction_file_ref is None
 
 
 @pytest.mark.asyncio

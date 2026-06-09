@@ -12,7 +12,7 @@ import pytest
 
 from core.memory_router import MemoryBackend, MemoryRouter
 from core.orchestrator import Orchestrator
-from core.schemas import Task, TaskPriority, WorkerProfile
+from core.schemas import Task, TaskPriority, WorkerProfile, WorkerStatus
 from core.observability import MemoryTraceEmitter, TraceEvent
 from workers.echo_worker import EchoWorker, MockLLMAdapter
 
@@ -30,6 +30,18 @@ class MockMemoryBackend(MemoryBackend):
     async def write(self, data: dict) -> None:
         """Write data to storage."""
         self.storage.append(data)
+
+
+class MockWorkerProfileWithStatus:
+    """Mock worker profile with status attribute for testing."""
+    
+    def __init__(self, base_profile: WorkerProfile, status: WorkerStatus):
+        self._base_profile = base_profile
+        self.status = status
+    
+    def __getattr__(self, name):
+        """Delegate all other attributes to the base profile."""
+        return getattr(self._base_profile, name)
 
 
 class TestOrchestrator:
@@ -384,4 +396,116 @@ class TestOrchestrator:
 
         output = asyncio.run(orchestrator.route_task(task))
         assert output.worker_id == "worker1"  # Should win due to registration order (both score 0)
+
+    def test_deprecated_worker_excluded_from_routing(self, orchestrator, memory_router):
+        """Test that deprecated workers are excluded from routing."""
+        task = Task(
+            task_id=uuid4(),
+            intent="test task",
+            complexity_score=0.5,
+            priority=TaskPriority.NORMAL,
+            created_at=datetime.now(),
+        )
+
+        # Create a worker profile with DEPRECATED status
+        base_profile = WorkerProfile(
+            worker_id="deprecated_worker",
+            worker_type="test",
+            depth_preference=0.5,
+            speculation_tolerance=0.5,
+            source_skepticism=0.5,
+            verbosity=0.5,
+            preferred_model="mock-model",
+            escalation_threshold=0.8,
+            capabilities=["test"],
+            preferred_complexity=0.5,
+        )
+        # Wrap in mock profile with status attribute
+        profile = MockWorkerProfileWithStatus(base_profile, WorkerStatus.DEPRECATED)
+
+        llm = MockLLMAdapter()
+        worker = EchoWorker(profile=profile, llm=llm, memory_router=memory_router)
+
+        orchestrator.register_worker("deprecated_worker", worker)
+
+        import asyncio
+
+        # Should raise WorkerNotFoundError since the only worker is deprecated
+        from core.exceptions import WorkerNotFoundError
+        with pytest.raises(WorkerNotFoundError, match="No workers registered"):
+            asyncio.run(orchestrator.route_task(task))
+
+    def test_archived_worker_excluded_from_routing(self, orchestrator, memory_router):
+        """Test that archived workers are excluded from routing."""
+        task = Task(
+            task_id=uuid4(),
+            intent="test task",
+            complexity_score=0.5,
+            priority=TaskPriority.NORMAL,
+            created_at=datetime.now(),
+        )
+
+        # Create a worker profile with ARCHIVED status
+        base_profile = WorkerProfile(
+            worker_id="archived_worker",
+            worker_type="test",
+            depth_preference=0.5,
+            speculation_tolerance=0.5,
+            source_skepticism=0.5,
+            verbosity=0.5,
+            preferred_model="mock-model",
+            escalation_threshold=0.8,
+            capabilities=["test"],
+            preferred_complexity=0.5,
+        )
+        # Wrap in mock profile with status attribute
+        profile = MockWorkerProfileWithStatus(base_profile, WorkerStatus.ARCHIVED)
+
+        llm = MockLLMAdapter()
+        worker = EchoWorker(profile=profile, llm=llm, memory_router=memory_router)
+
+        orchestrator.register_worker("archived_worker", worker)
+
+        import asyncio
+
+        # Should raise WorkerNotFoundError since the only worker is archived
+        from core.exceptions import WorkerNotFoundError
+        with pytest.raises(WorkerNotFoundError, match="No workers registered"):
+            asyncio.run(orchestrator.route_task(task))
+
+    def test_active_worker_included_in_routing(self, orchestrator, memory_router):
+        """Test that active workers are included in routing."""
+        task = Task(
+            task_id=uuid4(),
+            intent="test task",
+            complexity_score=0.5,
+            priority=TaskPriority.NORMAL,
+            created_at=datetime.now(),
+        )
+
+        # Create a worker profile with ACTIVE status
+        base_profile = WorkerProfile(
+            worker_id="active_worker",
+            worker_type="test",
+            depth_preference=0.5,
+            speculation_tolerance=0.5,
+            source_skepticism=0.5,
+            verbosity=0.5,
+            preferred_model="mock-model",
+            escalation_threshold=0.8,
+            capabilities=["test"],
+            preferred_complexity=0.5,
+        )
+        # Wrap in mock profile with status attribute
+        profile = MockWorkerProfileWithStatus(base_profile, WorkerStatus.ACTIVE)
+
+        llm = MockLLMAdapter()
+        worker = EchoWorker(profile=profile, llm=llm, memory_router=memory_router)
+
+        orchestrator.register_worker("active_worker", worker)
+
+        import asyncio
+
+        output = asyncio.run(orchestrator.route_task(task))
+        assert output.worker_id == "active_worker"
 

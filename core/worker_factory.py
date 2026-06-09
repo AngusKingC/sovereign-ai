@@ -12,7 +12,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from core.schemas import WorkerProfile, Task, Message
+from core.schemas import WorkerProfile, Task, Message, WorkerStatus
 from core.observability import (
     TraceComponent,
     TraceEventType,
@@ -36,6 +36,7 @@ class DynamicWorkerProfile(BaseModel):
     worker_type: str
     name: str
     description: str
+    purpose: str = ""
     capabilities: list[str] = Field(default_factory=list)
     complexity_min: float = Field(default=0.0, ge=0.0, le=1.0)
     complexity_max: float = Field(default=1.0, ge=0.0, le=1.0)
@@ -46,9 +47,16 @@ class DynamicWorkerProfile(BaseModel):
     verbosity: float = Field(default=0.5, ge=0.0, le=1.0)
     standing_instructions: list[str] = Field(default_factory=list)
     preferred_model: str = "default"
+    preferred_models: list[str] = Field(default_factory=list)
     escalation_threshold: float = Field(default=0.8, ge=0.0, le=1.0)
     tasks_completed: int = Field(default=0, ge=0)
     avg_confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    performance_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    active_tasks: int = Field(default=0, ge=0)
+    version: int = Field(default=1, ge=1)
+    status: WorkerStatus = Field(default=WorkerStatus.ACTIVE)
+    creation_date: datetime = Field(default_factory=datetime.utcnow)
+    instruction_file_ref: str | None = None
 
 
 class WorkerFactory:

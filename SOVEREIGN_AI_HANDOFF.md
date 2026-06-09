@@ -9,6 +9,10 @@ in order.
 **Maintained by**: Claude (claude.ai) — NOT Devin. Claude updates this
 document during each working session. Devin never reads or writes this file.
 
+**Last updated**: 2026-06-09 — post Prompt 15 completion + multi-model
+architecture review incorporated (ChatGPT, Grok, Gemini reviews reviewed
+and actioned by Claude).
+
 ---
 
 ## Project Vision
@@ -115,14 +119,14 @@ OUTPUT LAYER
 ## Current State
 
 ### Test Baseline
-- **311 passed, 23 skipped, 0 failures** (as of Prompt 14 / checkpoint prompt-14)
+- **328 passed, 23 skipped, 0 failures** (as of Prompt 15 / checkpoint prompt-15)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-14`
+- Latest checkpoint tag: `prompt-15`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}`
 - Restore script: `python scripts/restore.py`
 
@@ -130,7 +134,7 @@ OUTPUT LAYER
 - `core/schemas.py` — all Pydantic models including TaskStatus.DENIED
 - `core/memory_router.py` — MemoryBackend ABC, MemoryRouter with tracing
 - `core/worker_base.py` — LLMResponse, LLMAdapter Protocol, WorkerBase ABC (DI)
-- `core/orchestrator.py` — routing with scoring algorithm, DI complete
+- `core/orchestrator.py` — routing with scoring algorithm, deregister_worker, DI complete
 - `core/handlers.py` — QueryHandler, DI complete
 - `core/embedder.py` — OllamaEmbedder
 - `core/observability.py` — TraceEmitter, MemoryTraceEmitter, ConsoleTraceEmitter
@@ -144,6 +148,8 @@ OUTPUT LAYER
 - `core/skill_registry.py` — skill discovery, validation, query
 - `core/approval_gate.py` — ApprovalGate, ApprovalRequest, ApprovalResponse,
   ApprovalScope, session-scoped pre-authorisation, write-through Postgres cache
+- `core/worker_factory.py` — WorkerFactory, DynamicWorkerProfile, PlaceholderWorker,
+  rule-based worker creation from natural language description
 
 ### Memory Layer
 - `memory/obsidian.py` — Markdown vault storage
@@ -203,96 +209,156 @@ OUTPUT LAYER
 | 13.5 | DI Refactor: Full Global State Removal | 288 |
 | 13.6 amendments | DENIED state + scope storage design decisions | 291 |
 | 14 | Approval Gate System | 311 |
-| 15 | Worker Factory | IN PROGRESS |
+| 15 | Worker Factory | 328 |
+| 16 | Model Evaluation Logic | IN PROGRESS |
 
 ---
 
 ## Remaining Implementation Plan
 
+### Architecture Review Changes (Incorporated 2026-06-09)
+
+Three external reviews (ChatGPT, Grok, Gemini) were conducted and reviewed
+by Claude. The following changes were made to the roadmap as a result:
+
+**Roadmap resequenced (Prompts 17-19):**
+- Worker Persistence moved BEFORE Instruction Generation and Rating System
+- Rating System moved BEFORE Instruction Generation
+- Instruction Generation now has real persistence and rating data to work with
+- Old order: 16 Eval → 17 Instructions → 18 Persistence → 19 Rating
+- New order: 16 Eval → 17 Persistence → 18 Rating → 19 Instructions
+
+**Worker lifecycle states added to Prompt 17:**
+- WorkerStatus enum: ACTIVE, IDLE, ARCHIVED, DEPRECATED
+- Only ACTIVE workers participate in routing
+- Prevents worker proliferation degrading routing quality
+
+**WorkerProfile schema locked before Prompt 17:**
+- DynamicWorkerProfile created in Prompt 15 must be finalised before
+  Prompt 17 writes it permanently to Postgres
+- Prompt 16 housekeeping step added to lock the schema
+
+**New technical debt items flagged:**
+- Qdrant hardcoded vector size (768) — latent bug if embedder changes
+- ResourceManager missing KV cache VRAM buffer — risk of OOM on 6GB card
+- Model registry seed data may include oversized models — standardise on
+  Qwen 2.5 7B Q4_K_M as default
+
+**Memory Scoping moved earlier:**
+- Prompt 23 (Memory Scoping) moved to immediately after Prompt 17
+  (Worker Persistence) rather than sitting in Phase 6
+- Scoped memory is load-bearing for safe multi-worker and open-loop work
+
+**Prompts 22 and old-16 merged:**
+- Model Evaluator (hardware fit + task suitability) and LLM-as-Judge
+  (output quality scoring) unified into a single evaluation framework
+  in a later housekeeping prompt rather than two separate half-systems
+
+---
+
 ### PHASE 4 — The Worker Factory (Current)
 
 ---
 
-#### Prompt 15 — Worker Factory
-**Status**: ⚠️ IN PROGRESS — prompt sent to Devin, awaiting changelog
-
-Create `core/worker_factory.py` — dynamic worker creation from natural
-language description.
-
-Features:
-- `WorkerFactory` class with constructor injection
-  (SkillRegistry, Orchestrator, MemoryRouter, TraceEmitter)
-- `create_worker(description, task)` — rule-based profile generation,
-  skill matching, worker registration, memory persistence
-- `can_route(task)` — checks if orchestrator has suitable worker
-- `get_or_create_worker(task)` — routes or creates as needed
-- `list_workers()` — returns all registered profiles
-- `deregister_worker(worker_id)` — removes from orchestrator
-- Add `deregister_worker` to `core/orchestrator.py`
-- No LLM calls — rule-based only (LLM generation in Prompt 17)
-- Minimum 14 new tests in `tests/test_worker_factory.py`
-- Target: exceed 311 passed
-
----
-
 #### Prompt 16 — Model Evaluation Logic
-**Status**: Queued
+**Status**: IN PROGRESS — prompt sent to Devin
 
 Create `system/model_evaluator.py`.
 
-Evaluation criteria (in order):
-1. Hardware fit — query ResourceManager
-2. Task suitability — query ModelRegistry tags
-3. Quality vs speed preference — user-configurable per worker type
-4. Web research — HuggingFace model cards for benchmark data
+Scoring formula:
+- hardware_score: 1.0 fits_vram / 0.5 fits_ram / 0.0 neither
+- suitability_score: tag overlap / total task_tags
+- quality_score: quantisation quality_score from ModelEntry
+- speed_score: quantisation speed_score from ModelEntry
+- final = (hardware * 0.4) + (suitability * 0.3) +
+          (quality * quality_preference * 0.3) +
+          (speed * (1-quality_preference) * 0.3)
 
-Output: ranked model recommendations with reasoning, user confirms before
-assignment. Selection stored against worker profile.
+Models: ModelRecommendation, EvaluationResult
+Methods: evaluate(), get_best(), record_selection()
+Minimum 13 new tests. Target: exceed 328.
 
 ---
 
-#### Prompt 17 — Instruction File Generation
-**Status**: Queued
+#### Prompt 16.5 — WorkerProfile Schema Lock (Housekeeping)
+**Status**: Queued — insert before Prompt 17
+
+Before Worker Persistence writes WorkerProfile to Postgres permanently,
+finalise the schema to include all fields needed by future prompts:
+
+DynamicWorkerProfile fields to confirm/add:
+- worker_id: str (slug)
+- name: str
+- purpose: str
+- capabilities: list[str]
+- preferred_models: list[str]
+- performance_score: float (default 0.0, updated by rating system)
+- active_tasks: int (default 0)
+- version: int (default 1)
+- status: WorkerStatus enum (ACTIVE/IDLE/ARCHIVED/DEPRECATED)
+- creation_date: datetime
+- instruction_file_ref: str | None (Obsidian path, set in Prompt 19)
+
+Add WorkerStatus enum to core/schemas.py.
+No new implementation — schema definition and tests only.
+Design-only prompt: justify zero new implementation tests in CHANGELOG,
+but add schema validation tests.
+
+---
+
+#### Prompt 17 — Worker Persistence
+**Status**: Queued (moved up from original position)
+
+Full worker survival across restarts. Builds on finalised WorkerProfile
+schema from Prompt 16.5.
+
+Features:
+- Worker definitions serialised to Postgres on create/update
+- Obsidian mirror written on every change (one .md file per worker)
+- Worker registry loaded from Postgres on system startup
+- Workers restored with full profile, assigned model, skill list
+- Worker versioning — changes create new version, old versions preserved
+- WorkerStatus tracking: ACTIVE/IDLE/ARCHIVED/DEPRECATED
+- Only ACTIVE workers participate in routing (orchestrator enforces)
+- Worker deprecation flow: mark DEPRECATED → remove from routing →
+  preserve in Postgres for audit trail
+- WorkerFactory updated to load existing workers from Postgres on init
+
+---
+
+#### Prompt 18 — Rating System
+**Status**: Queued (moved up — needed before Instruction Generation)
+
+Create `core/rating_system.py`.
+
+Features:
+- Rating stored with: worker_id, instruction_file_version, model_used,
+  task_id, score (1-10), optional comment
+- Multi-worker comparison mode: same task to multiple workers,
+  user selection signals which performed better
+- Rating history queryable per worker, per model, per instruction version
+- Trend analysis: moving average of ratings per worker over time
+- Rating data in Postgres, summarised in Obsidian worker profile
+- Feeds ModelEvaluator in Prompt 16 — historical performance outweighs
+  benchmark rankings when sufficient data exists (>10 ratings)
+
+---
+
+#### Prompt 19 — Instruction File Generation
+**Status**: Queued (moved down — now informed by real persistence + ratings)
 
 Create `core/instruction_generator.py`.
 
 Each worker gets in Obsidian:
 - `WORKER_NAME_INSTRUCTION.md` — role, goal, persona, capabilities,
   constraints, output format, examples, model-specific optimisations
-- `WORKER_NAME_INSTRUCTION_CHANGELOG.md` — append-only, version/date/
-  change/rating trend/diff summary
+- `WORKER_NAME_INSTRUCTION_CHANGELOG.md` — append-only log,
+  version/date/change/rating trend that triggered it/diff summary
 
 Orchestrator gets identical files.
 LLM-based worker profile generation replaces rule-based from Prompt 15.
-
----
-
-#### Prompt 18 — Worker Persistence
-**Status**: Queued
-
-Full worker survival across restarts.
-
-Features:
-- Worker definitions serialised to Postgres on create/update
-- Obsidian mirror on every change
-- Registry loaded from Postgres on startup
-- Worker versioning — changes create new version, old preserved
-- Worker status tracking (active, idle, deprecated)
-
----
-
-#### Prompt 19 — Rating System
-**Status**: Queued
-
-Create `core/rating_system.py`.
-
-Features:
-- Rating stored with: worker_id, instruction_file_version, model_used,
-  task_id, score, optional comment
-- Multi-worker comparison mode
-- Rating history queryable per worker/model/instruction version
-- Trend analysis: moving average per worker over time
-- Postgres primary, Obsidian summary
+Generation informed by rating history (from Prompt 18) and persistence
+(from Prompt 17).
 
 ---
 
@@ -304,8 +370,8 @@ Features:
 **Status**: Queued
 
 Version and update mechanism for instruction files.
-Update triggered when rating trend drops below threshold.
-Proposed update requires user approval. Rollback available.
+Update triggered when rating trend drops below threshold over N recent tasks.
+Proposed update requires user approval. Rollback available to any version.
 
 ---
 
@@ -314,17 +380,25 @@ Proposed update requires user approval. Rollback available.
 
 Wire orchestrator into same improvement loop as workers.
 Orchestrator reviews worker ratings, proposes instruction edits.
-Own performance tracked (routing accuracy, task completion rate).
+Own performance tracked: routing accuracy, task completion rate.
+Own instruction file updated by same mechanism.
 
 ---
 
-#### Prompt 22 — LLM-as-Judge Evaluator
-**Status**: Queued
+#### Prompt 22 — Unified Evaluation Framework
+**Status**: Queued (merged from original Prompt 16 Model Evaluator extension
+and original Prompt 22 LLM-as-Judge)
 
-Create `core/evaluator.py`.
-Automated output scoring: task completion, accuracy, format, conciseness.
-Separate fast lightweight evaluator model.
-Manual rating overrides evaluator score.
+Extend `system/model_evaluator.py` and create `core/evaluator.py`.
+
+Combines:
+- Hardware fit scoring (from Prompt 16)
+- Historical worker performance weighting (outweighs benchmarks at >10 ratings)
+- LLM-as-Judge automated output scoring: task completion, accuracy,
+  format compliance, conciseness
+- Separate fast lightweight evaluator model (configurable, local default)
+- Manual rating overrides evaluator score when provided
+- Evaluator scores stored alongside manual ratings
 
 ---
 
@@ -333,11 +407,13 @@ Manual rating overrides evaluator score.
 ---
 
 #### Prompt 23 — Memory Scoping
-**Status**: Queued
+**Status**: Queued (moved earlier — load-bearing for multi-worker and
+open-loop safety)
 
 Worker-scoped memory partitions + shared global context layer.
-`StrategicContext` becomes data model for shared global context.
-MemoryRouter enforces scoping — rejects cross-scope access.
+`StrategicContext` schema becomes data model for shared global context.
+MemoryRouter enforces scoping — raises on cross-scope access attempts.
+`EscalationDecision` schema wired into escalation logic concurrently.
 
 ---
 
@@ -346,7 +422,7 @@ MemoryRouter enforces scoping — rejects cross-scope access.
 
 `EscalationDecision` schema exists but nothing uses it.
 Escalation hierarchy: local → better local → cloud.
-Always requires user approval unless pre-authorised.
+Always requires user approval unless pre-authorised via ApprovalScope.
 
 ---
 
@@ -355,6 +431,7 @@ Always requires user approval unless pre-authorised.
 
 Hot/warm/cold memory tiers with periodic background compaction.
 Hot: in-context. Warm: Qdrant. Cold: Postgres archival.
+Compaction runs as background task, never blocks main execution.
 
 ---
 
@@ -367,7 +444,8 @@ Hot: in-context. Warm: Qdrant. Cold: Postgres archival.
 
 `system/monitor_daemon.py` — persistent background heartbeat process.
 Scheduler: immediate, deferred, recurring, conditional tasks.
-Task queue persisted in Postgres.
+Task queue persisted in Postgres — survives restarts.
+Approval gate integration — daemon never blocks on approval.
 
 ---
 
@@ -387,6 +465,7 @@ Data sources: weather, AIS, email, news, system metrics, custom APIs.
 Types: info, warning, urgent, requires-action.
 Urgent interrupts current interaction.
 Requires-action integrates with approval gate.
+Non-urgent queues and surfaces at natural break points.
 
 ---
 
@@ -394,17 +473,35 @@ Requires-action integrates with approval gate.
 
 ---
 
-#### Prompt 29 — Multi-Worker Mode
-**Status**: Queued
+#### Prompt 29 — Resource Budgeting
+**Status**: Queued (new — inserted before multi-worker as prerequisite)
+
+Create `core/resource_budget.py`.
+Prevent exponential resource usage in multi-worker mode.
+
+Budget types:
+- Token budget (per task, per session)
+- Memory budget (VRAM + RAM caps per concurrent execution)
+- Execution budget (max concurrent workers)
+- Time budget (per task timeout)
+
+ResourceManager integration: enforce budgets before dispatching workers.
+Approval gate integration: budget overrun requires user approval.
+
+---
+
+#### Prompt 30 — Multi-Worker Mode
+**Status**: Queued (was Prompt 29)
 
 Route same task to top N workers concurrently.
-Resource Manager consulted for memory constraints.
+Resource budget enforced — only dispatch if budget allows.
+ResourceManager consulted for live memory state.
 Responses surfaced side by side. User selection feeds rating system.
 
 ---
 
-#### Prompt 30 — Worker-to-Worker Communication
-**Status**: Queued
+#### Prompt 31 — Worker-to-Worker Communication
+**Status**: Queued (was Prompt 30)
 
 Workers emit sub-task requests during execution.
 Orchestrator routes sub-tasks to specialist workers.
@@ -416,17 +513,17 @@ Circular dependency detection. Sub-tasks inherit parent priority.
 
 ---
 
-#### Prompt 31 — Web GUI
-**Status**: Queued
+#### Prompt 32 — Web GUI
+**Status**: Queued (was Prompt 31)
 
 `web/` layer — FastAPI + WebSockets + React frontend.
-Mirrors all TUI functionality.
+Mirrors all TUI functionality including worker management.
 `web/` imports from `core/` only.
 
 ---
 
-#### Prompt 32 — Voice Interface
-**Status**: Queued
+#### Prompt 33 — Voice Interface
+**Status**: Queued (was Prompt 32)
 
 Wake word detection, Whisper STT, TTS.
 Voice notifications for open loop events.
@@ -438,7 +535,7 @@ Same approval gates and observability as text interface.
 
 | Item | Location | Notes |
 |------|----------|-------|
-| google.generativeai FutureWarning | adapters/gemini.py | Do not touch |
+| google.generativeai FutureWarning | adapters/gemini.py | Do not touch until Phase 9 |
 | RuntimeWarning coroutine never awaited | skills/web_scraper tests | Do not touch |
 | llama.cpp tests skipped | tests/test_llama_cpp_adapter.py | Missing dependency |
 | StrategicContext orphaned | core/schemas.py | Addressed in Prompt 23 |
@@ -446,6 +543,9 @@ Same approval gates and observability as text interface.
 | Model selection modal incomplete | cli/tui.py | Phase 4 |
 | No tests for session postgres | core/session.py | Prompt 11 debt |
 | No tests for command_history | cli/command_history.py | Prompt 12 debt |
+| Qdrant hardcoded vector size 768 | memory/qdrant.py | Latent bug — fix before Phase 6 |
+| ResourceManager missing KV cache buffer | system/resource_manager.py | OOM risk on 6GB card — fix before Prompt 29 |
+| Model registry may seed oversized models | system/model_registry.py | Standardise on Qwen 2.5 7B Q4_K_M — fix in Prompt 16.5 |
 
 ---
 
@@ -475,9 +575,11 @@ and prompt guards when patterns recur.
 - **GPU**: NVIDIA RTX 3060 Mobile — 6GB VRAM
 - **RAM**: ~15.6GB available after VRAM
 - **OS**: Windows
-- **Local LLM**: Ollama with `qwen2.5-coder:7b`
+- **Local LLM**: Ollama with `qwen2.5-coder:7b` (Q4_K_M — fits comfortably)
 - **IDE**: Devin (SWE 1.6 Slow)
 - **Hardware detected automatically at runtime — never hardcode**
+- **KV cache consumes VRAM dynamically** — ResourceManager must budget for
+  context window overhead, not just model weights
 
 ---
 

@@ -8,7 +8,7 @@ without holding opinions or writing beliefs. Pure analysis and dispatch.
 import time
 from typing import TYPE_CHECKING
 
-from core.schemas import Task, WorkerOutput, TaskStatus
+from core.schemas import Task, WorkerOutput, TaskStatus, WorkerStatus
 from core.observability import (
     TraceComponent,
     TraceEventType,
@@ -222,6 +222,12 @@ class Orchestrator:
             worker_id = next(iter(self.workers.keys()))
             worker = self.workers[worker_id]
             
+            # Skip workers that are not ACTIVE (if they have a status attribute)
+            if hasattr(worker.profile, 'status'):
+                if worker.profile.status != WorkerStatus.ACTIVE:
+                    from core.exceptions import WorkerNotFoundError
+                    raise WorkerNotFoundError(worker_id, "No workers registered")
+            
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             
             await emit_trace(
@@ -244,6 +250,11 @@ class Orchestrator:
         scoring_breakdown = []
         
         for worker_id, worker in self.workers.items():
+            # Skip workers that are not ACTIVE (if they have a status attribute)
+            if hasattr(worker.profile, 'status'):
+                if worker.profile.status != WorkerStatus.ACTIVE:
+                    continue
+            
             score = 0
             reasons = []
             

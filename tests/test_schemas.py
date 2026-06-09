@@ -25,6 +25,7 @@ from core.schemas import (
     TraceEvent,
     WorkerOutput,
     WorkerProfile,
+    WorkerStatus,
 )
 
 
@@ -67,6 +68,17 @@ class TestTaskStatus:
         assert TaskStatus.PENDING == TaskStatus.RECEIVED
         assert TaskStatus.RUNNING == TaskStatus.EXECUTING
         assert TaskStatus.ESCALATED == TaskStatus.AWAITING_APPROVAL
+
+
+class TestWorkerStatus:
+    """Test WorkerStatus enum."""
+
+    def test_worker_status_enum_values(self):
+        """Test all four values exist."""
+        assert WorkerStatus.ACTIVE.value == "active"
+        assert WorkerStatus.IDLE.value == "idle"
+        assert WorkerStatus.ARCHIVED.value == "archived"
+        assert WorkerStatus.DEPRECATED.value == "deprecated"
 
 
 class TestLayer:
