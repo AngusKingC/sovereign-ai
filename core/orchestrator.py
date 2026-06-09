@@ -348,3 +348,43 @@ class Orchestrator:
                 task, TaskStatus.CANCELLED, reason="Approval denied", actor="user"
             )
             return task
+
+    def deregister_worker(self, worker_id: str) -> None:
+        """
+        Remove a worker from the orchestrator registry.
+        
+        Args:
+            worker_id: The worker ID to deregister
+            
+        Raises:
+            WorkerNotFoundError: If worker_id is not found in registry
+        """
+        from core.exceptions import WorkerNotFoundError
+        
+        if worker_id not in self.workers:
+            raise WorkerNotFoundError(worker_id)
+        
+        worker = self.workers[worker_id]
+        del self.workers[worker_id]
+        
+        # Emit worker deregistration event (wrapped to avoid crashing main path)
+        try:
+            import asyncio
+            loop = asyncio.get_event_loop()
+            # Safely extract profile data if available
+            worker_type = getattr(worker.profile, "worker_type", "unknown") if hasattr(worker, "profile") else "unknown"
+            capabilities = getattr(worker.profile, "capabilities", []) if hasattr(worker, "profile") else []
+            
+            loop.create_task(emit_trace(
+                event_type=TraceEventType.ORCHESTRATOR_WORKER_DEREGISTERED,
+                component=TraceComponent.ORCHESTRATOR,
+                message="Worker deregistered",
+                level=TraceLevel.INFO,
+                data={
+                    "worker_id": worker_id,
+                    "worker_type": worker_type,
+                    "capabilities": capabilities,
+                },
+            ))
+        except Exception:
+            pass  # Trace failure should not crash main path

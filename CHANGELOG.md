@@ -3652,7 +3652,7 @@ Each SKILL.md must declare:
 - **ApprovalDeniedError not raised**: Error was raised inside try-except block that caught and re-raised, but test still failed. Fixed by moving error raising outside the try-except block to ensure it propagates.
 - **Pending queue deletion**: Initially removed deletion of denied requests from pending queue when refactoring error handling. Fixed by adding deletion back in correct location.
 - **File writer test failures**: Tests still patched `emit_trace` which was removed from skill. Fixed by updating tests to use MemoryTraceEmitter injection and removing patch decorators.
-- **Trace event assertion error**: Test asserted `any("file_writer" in event.data for event in events)` but TraceEvent.data is a dict, and `in` operator on dict checks keys not values. Fixed by simplifying assertion to just check events were emitted.
+- **Trace event assertion error**: Test asserted `any("file_writer" in event.data for event in events)` but TraceEvent.data is a dict, and `in` operator on dict checks keys not values. Initially simplified assertion to just check events were emitted, but this was insufficient. Fixed by importing TraceComponent and asserting `any(event.component == TraceComponent.WORKER for event in events)` since file_writer is a worker skill and emits events with WORKER component.
 
 **Test Changes**:
 - **tests/test_approval_gate.py**: 19 new tests (exceeds minimum 15 requirement)
