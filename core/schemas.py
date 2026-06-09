@@ -519,6 +519,26 @@ class WorkerRating(BaseModel):
         return v
 
 
+class InstructionFile(BaseModel):
+    """An instruction file for a worker or orchestrator."""
+    worker_id: str = Field(description="Worker or orchestrator identifier")
+    version: int = Field(description="Instruction file version (starts at 1, increments on update)")
+    content: str = Field(description="Full markdown instruction content")
+    obsidian_path: str = Field(description="Obsidian vault path for this file")
+    created_at: datetime = Field(description="When this version was created")
+    updated_at: datetime = Field(description="When this version was last updated")
+
+
+class InstructionChangelogEntry(BaseModel):
+    """A changelog entry for instruction file updates."""
+    worker_id: str = Field(description="Worker or orchestrator identifier")
+    version: int = Field(description="Instruction file version this entry describes")
+    trigger: str = Field(description="What caused this update")
+    diff_summary: str = Field(description="LLM-generated summary of what changed")
+    rating_trend: float | None = Field(default=None, description="Rating trend at time of update")
+    created_at: datetime = Field(description="When this changelog entry was created")
+
+
 class Scratchpad(BaseModel):
     """A per-task working memory scratchpad for worker reasoning."""
     scratchpad_id: UUID = Field(default_factory=uuid4, description="Unique scratchpad identifier")

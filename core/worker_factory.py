@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from core.orchestrator import Orchestrator
     from core.memory_router import MemoryRouter
     from system.worker_persistence import WorkerPersistence
+    from core.instruction_generator import InstructionGenerator
 
 
 class DynamicWorkerProfile(BaseModel):
@@ -71,6 +72,7 @@ class WorkerFactory:
         memory_router: "MemoryRouter",
         emitter: TraceEmitter | None = None,
         persistence: "WorkerPersistence | None" = None,
+        instruction_generator: "InstructionGenerator | None" = None,
     ) -> None:
         """Initialize the worker factory with dependencies.
         
@@ -80,12 +82,14 @@ class WorkerFactory:
             memory_router: Memory router for persistence
             emitter: TraceEmitter for observability
             persistence: Optional worker persistence for saving/loading workers
+            instruction_generator: Optional instruction generator for creating instruction files
         """
         self.emitter = emitter if emitter is not None else NullTraceEmitter()
         self.skill_registry = skill_registry
         self.orchestrator = orchestrator
         self.memory_router = memory_router
         self.persistence = persistence
+        self.instruction_generator = instruction_generator
         
         # Cache for generated worker profiles
         self._worker_profiles: dict[str, DynamicWorkerProfile] = {}
@@ -195,6 +199,30 @@ class WorkerFactory:
                         component=TraceComponent.ORCHESTRATOR,
                         level=TraceLevel.ERROR,
                         message=f"Failed to persist worker profile: {str(e)}",
+                        data={"error": str(e), "worker_id": profile.worker_id},
+                        duration_ms=0,
+                    ))
+                except Exception:
+                    pass
+        
+        # Generate instruction file if InstructionGenerator is available
+        if self.instruction_generator:
+            try:
+                instruction_file, updated_profile = await self.instruction_generator.generate_instruction_file(
+                    profile=profile,
+                    trigger="Initial worker creation"
+                )
+                # Update profile with instruction file reference
+                profile = updated_profile
+            except Exception as e:
+                try:
+                    await self.emitter.emit(TraceEvent(
+                        event_id=uuid4(),
+                        timestamp=datetime.utcnow(),
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.ERROR,
+                        message=f"Failed to generate instruction file: {str(e)}",
                         data={"error": str(e), "worker_id": profile.worker_id},
                         duration_ms=0,
                     ))

@@ -4021,4 +4021,60 @@ Each SKILL.md must declare:
 
 **Checkpoint**: prompt-17 created and pushed to remote
 
-**Next Steps**: Task 3 - LLM-based worker profile generation
+---
+
+### 2026-06-09 - Rating System Implementation
+**Context**: User requested implementing a persistent worker rating system that records performance scores per worker, per model, and per instruction version, with trend analysis
+**Architecture Laws Compliance**:
+- Clean Architecture: ✅ core/rating_system.py imports only from core/ (no imports from adapters/, cli/, or memory/)
+- Async-first: ✅ All rating operations are async
+- Pydantic everywhere: ✅ Uses WorkerRating from core/schemas.py with validation
+- Typed or rejected: ✅ All public methods have return type annotations
+- Observability built-in: ✅ TraceEmitter injected via constructor, all trace calls wrapped in try-except
+
+**Implementation Details**:
+- Added `WorkerRating` schema to `core/schemas.py`:
+  - Fields: rating_id (UUID), worker_id, task_id, score (1-10 validated), model_used, instruction_file_version, comment, created_at
+  - Field validator ensures score is between 1 and 10
+
+- Created `core/rating_system.py`:
+  - `RatingSystem` class with MemoryRouter and TraceEmitter injection
+  - `_ensure_tables()` creates worker_ratings and worker_comparisons tables in Postgres
+  - `record_rating()` validates score (1-10), stores rating, returns WorkerRating
+  - `get_ratings()` retrieves ratings for a worker, respects limit, sorts by created_at descending
+  - `get_average_score()` calculates average across all ratings or last_n ratings
+  - `get_trend()` calculates performance trend (positive = improving, negative = declining, None if insufficient data)
+  - `get_best_model()` returns model with highest average score for a worker
+  - `record_comparison()` stores multi-worker comparison outcome (winner/loser)
+  - Trace events emitted for: rating_recorded, comparison_recorded, trend_calculated
+
+- Created `tests/test_rating_system.py`:
+  - 16 tests covering all RatingSystem methods and trace event emission
+  - All tests use mock MemoryRouter - no live DB calls
+  - Tests verify score validation, limit parameter, trend calculation, model ranking, and trace events
+
+**Implementation Notes**:
+- Initial edit to core/schemas.py incorrectly placed WorkerRating fields inside Scratchpad class - fixed by properly structuring both classes separately
+- test_get_ratings_respects_limit initially failed because mock MemoryRouter.fetch() doesn't actually limit results - fixed by verifying that limit parameter is passed to fetch call rather than relying on mock behavior
+- All trace calls wrapped in try-except to prevent cascading failures
+- Used MemoryTraceEmitter default for emitter parameter to support optional injection
+
+**Testing Results**:
+- New tests: 16 tests for RatingSystem
+- Full test suite: 386 passed, 23 skipped, 1 warning (up from 370 passed)
+- All existing tests continue to pass - zero regressions
+- New tests use mock MemoryRouter to avoid live database calls
+
+**Architecture Compliance**:
+- core/rating_system.py imports only from core/ - verified
+- All I/O operations are async
+- All public methods have return type annotations
+- TraceEmitter injected via constructor, default MemoryTraceEmitter()
+- Never import emit_trace or use global emitter
+- All trace calls wrapped in try-except
+
+**Rationale**: Implementing a rating system enables tracking worker performance over time, which is critical for the self-improvement loop. The trend analysis allows detecting whether workers are improving or declining. The per-model tracking helps identify which models work best for each worker. The comparison mode supports multi-worker evaluation scenarios. This system will feed into the instruction file generation (Prompt 19) to inform which instruction versions are performing well.
+
+**Checkpoint**: prompt-18 created and pushed to remote
+
+**Next Steps**: Prompt 19 - Instruction File Generation

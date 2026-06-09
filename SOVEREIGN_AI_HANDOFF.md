@@ -37,6 +37,7 @@ without breaking what exists. Every component auditable, every decision logged.
 - **Devin** — writes all code, runs tests, updates `c:\Jarvis\CHANGELOG.md`, updates `SOVEREIGN_AI_HANDOFF.md` after every prompt
 - **Claude** — reads this handoff document at session start to reconstruct state, advises on architecture and sequencing, maintains Devin memory entries
 - **This handoff doc** is Devin-maintained. Devin updates it after every prompt as part of standard closing steps. Claude reads it but does not write to it.
+- When the user pastes a CHANGELOG entry into Claude, Claude automatically produces the next prompt spec without waiting to be asked.
 
 ---
 
@@ -123,7 +124,7 @@ OUTPUT LAYER
 ## Current State
 
 ### Test Baseline
-- **370 passed, 23 skipped, 1 warning** (as of Prompt 17 / checkpoint prompt-17)
+- **386 passed, 23 skipped, 1 warning** (as of Prompt 18 / checkpoint prompt-18)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
 - 1 remaining warning: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch
@@ -131,7 +132,7 @@ OUTPUT LAYER
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-17`
+- Latest checkpoint tag: `prompt-18`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}`
 - Restore script: `python scripts/restore.py`
 
@@ -218,7 +219,8 @@ OUTPUT LAYER
 | 16 | Model Evaluation Logic | 357 |
 | 16.5 | WorkerProfile Schema Lock | 357 |
 | 17 | Worker Persistence | 370 |
-| 18 | Rating System | IN PROGRESS |
+| 18 | Rating System | 386 |
+| 19 | Instruction File Generation | IN PROGRESS |
 
 ---
 
@@ -335,7 +337,7 @@ Features:
 ---
 
 #### Prompt 18 — Rating System
-**Status**: IN PROGRESS
+**Status**: DONE
 
 Create `core/rating_system.py`.
 
@@ -353,7 +355,7 @@ Features:
 ---
 
 #### Prompt 19 — Instruction File Generation
-**Status**: Queued (moved down — now informed by real persistence + ratings)
+**Status**: IN PROGRESS
 
 Create `core/instruction_generator.py`.
 
