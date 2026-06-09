@@ -85,7 +85,7 @@ class TestTaskStateMachine:
         mock_router = MockMemoryRouter()
         state_machine = TaskStateMachine(mock_router)
         
-        for terminal_state in [TaskStatus.COMPLETE, TaskStatus.FAILED, TaskStatus.CANCELLED]:
+        for terminal_state in [TaskStatus.COMPLETE, TaskStatus.FAILED, TaskStatus.CANCELLED, TaskStatus.DENIED]:
             task = Task(
                 task_id=uuid4(),
                 intent="Test task",
@@ -122,12 +122,12 @@ class TestTaskStateMachine:
         assert task.current_state == TaskStatus.RECEIVED  # Should not mutate
         assert len(task.state_history) == 0
     
-    async def test_is_terminal_returns_true_for_complete_failed_cancelled(self) -> None:
-        """Test that is_terminal returns True for COMPLETE, FAILED, CANCELLED."""
+    async def test_is_terminal_returns_true_for_complete_failed_cancelled_denied(self) -> None:
+        """Test that is_terminal returns True for COMPLETE, FAILED, CANCELLED, DENIED."""
         mock_router = MockMemoryRouter()
         state_machine = TaskStateMachine(mock_router)
         
-        for terminal_state in [TaskStatus.COMPLETE, TaskStatus.FAILED, TaskStatus.CANCELLED]:
+        for terminal_state in [TaskStatus.COMPLETE, TaskStatus.FAILED, TaskStatus.CANCELLED, TaskStatus.DENIED]:
             task = Task(
                 task_id=uuid4(),
                 intent="Test task",
@@ -162,10 +162,11 @@ class TestTaskStateMachine:
             (TaskStatus.PLANNED, [TaskStatus.EXECUTING, TaskStatus.FAILED, TaskStatus.CANCELLED]),
             (TaskStatus.EXECUTING, [TaskStatus.VALIDATING, TaskStatus.AWAITING_APPROVAL, TaskStatus.FAILED, TaskStatus.CANCELLED]),
             (TaskStatus.VALIDATING, [TaskStatus.COMPLETE, TaskStatus.EXECUTING, TaskStatus.FAILED, TaskStatus.CANCELLED]),
-            (TaskStatus.AWAITING_APPROVAL, [TaskStatus.EXECUTING, TaskStatus.CANCELLED]),
+            (TaskStatus.AWAITING_APPROVAL, [TaskStatus.EXECUTING, TaskStatus.DENIED, TaskStatus.FAILED, TaskStatus.CANCELLED]),
             (TaskStatus.COMPLETE, []),
             (TaskStatus.FAILED, []),
             (TaskStatus.CANCELLED, []),
+            (TaskStatus.DENIED, []),
         ]
         
         for current_state, expected_next_states in test_cases:
@@ -529,4 +530,63 @@ class TestTaskStateMachine:
         failed_transition = [t for t in task.state_history if t.to_state == TaskStatus.FAILED]
         assert len(failed_transition) >= 1
         assert "Worker execution failed" in failed_transition[0].reason
+    
+    async def test_denied_is_a_terminal_state(self) -> None:
+        """Test that DENIED is a terminal state."""
+        mock_router = MockMemoryRouter()
+        state_machine = TaskStateMachine(mock_router)
+        
+        task = Task(
+            task_id=uuid4(),
+            intent="Test task",
+            complexity_score=0.5,
+            priority=TaskPriority.NORMAL,
+            current_state=TaskStatus.DENIED,
+            created_at=datetime.now(),
+        )
+        
+        assert state_machine.is_terminal(task) is True
+    
+    async def test_awaiting_approval_can_transition_to_denied(self) -> None:
+        """Test that AWAITING_APPROVAL can transition to DENIED."""
+        mock_router = MockMemoryRouter()
+        state_machine = TaskStateMachine(mock_router)
+        
+        task = Task(
+            task_id=uuid4(),
+            intent="Test task",
+            complexity_score=0.5,
+            priority=TaskPriority.NORMAL,
+            current_state=TaskStatus.AWAITING_APPROVAL,
+            created_at=datetime.now(),
+        )
+        
+        # Transition to DENIED
+        task = await state_machine.transition(task, TaskStatus.DENIED, reason="Approval denied by user", actor="approval_gate")
+        
+        assert task.current_state == TaskStatus.DENIED
+        assert len(task.state_history) == 1
+        assert task.state_history[0].from_state == TaskStatus.AWAITING_APPROVAL
+        assert task.state_history[0].to_state == TaskStatus.DENIED
+        assert task.state_history[0].reason == "Approval denied by user"
+        assert task.state_history[0].actor == "approval_gate"
+    
+    async def test_denied_cannot_transition_to_any_other_state(self) -> None:
+        """Test that DENIED cannot transition to any other state (terminal state)."""
+        mock_router = MockMemoryRouter()
+        state_machine = TaskStateMachine(mock_router)
+        
+        task = Task(
+            task_id=uuid4(),
+            intent="Test task",
+            complexity_score=0.5,
+            priority=TaskPriority.NORMAL,
+            current_state=TaskStatus.DENIED,
+            created_at=datetime.now(),
+        )
+        
+        # Try to transition from DENIED to any other state
+        for target_state in [TaskStatus.PLANNED, TaskStatus.EXECUTING, TaskStatus.COMPLETE, TaskStatus.FAILED, TaskStatus.CANCELLED]:
+            with pytest.raises(InvalidStateTransitionError):
+                await state_machine.transition(task, target_state, actor="test")
 

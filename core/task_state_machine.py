@@ -29,10 +29,11 @@ class TaskStateMachine:
         TaskStatus.PLANNED: [TaskStatus.EXECUTING, TaskStatus.FAILED, TaskStatus.CANCELLED],
         TaskStatus.EXECUTING: [TaskStatus.VALIDATING, TaskStatus.AWAITING_APPROVAL, TaskStatus.FAILED, TaskStatus.CANCELLED],
         TaskStatus.VALIDATING: [TaskStatus.COMPLETE, TaskStatus.EXECUTING, TaskStatus.FAILED, TaskStatus.CANCELLED],
-        TaskStatus.AWAITING_APPROVAL: [TaskStatus.EXECUTING, TaskStatus.CANCELLED],
+        TaskStatus.AWAITING_APPROVAL: [TaskStatus.EXECUTING, TaskStatus.DENIED, TaskStatus.FAILED, TaskStatus.CANCELLED],
         TaskStatus.COMPLETE: [],  # Terminal state
         TaskStatus.FAILED: [],  # Terminal state
         TaskStatus.CANCELLED: [],  # Terminal state
+        TaskStatus.DENIED: [],  # Terminal state
     }
 
     def __init__(self, memory_router: "MemoryRouter") -> None:
@@ -174,9 +175,9 @@ class TaskStateMachine:
             task: The task to check
             
         Returns:
-            True if the task is in a terminal state (COMPLETE, FAILED, CANCELLED)
+            True if the task is in a terminal state (COMPLETE, FAILED, CANCELLED, DENIED)
         """
-        return task.current_state in [TaskStatus.COMPLETE, TaskStatus.FAILED, TaskStatus.CANCELLED]
+        return task.current_state in [TaskStatus.COMPLETE, TaskStatus.FAILED, TaskStatus.CANCELLED, TaskStatus.DENIED]
 
     def get_valid_next_states(self, task: Task) -> list[TaskStatus]:
         """Return list of valid next states for the current task state.

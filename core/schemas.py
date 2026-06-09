@@ -38,6 +38,7 @@ class TaskStatus(str, Enum):
     COMPLETE = "complete"
     FAILED = "failed"
     CANCELLED = "cancelled"
+    DENIED = "denied"
     
     # Backward compatibility aliases
     PENDING = "received"  # Maps to RECEIVED

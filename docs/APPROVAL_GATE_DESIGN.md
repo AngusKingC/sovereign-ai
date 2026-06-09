@@ -90,6 +90,14 @@ class ApprovalScope(BaseModel):
     session_id: str
 ```
 
+**Scope Storage Decision:**
+- Runtime scope lookups use an in-memory dict keyed by session_id for fast access
+- All scope creates and expiries write through to Postgres immediately for persistence
+- On session start, active scopes are loaded from Postgres into the in-memory cache
+- On process restart, scopes reload from Postgres automatically to restore state
+- This matches the existing SessionManager pattern for consistency across the codebase
+- Write-through ensures durability while in-memory cache provides performance
+
 ### 5. Expiry Duration — How Long Before an AWAITING_APPROVAL Task Auto-Resolves?
 **Decision: 5 minutes default, configurable per action type**
 
@@ -109,7 +117,7 @@ Approval requests expire after 5 minutes of inactivity. This is the same as the 
 **State Transition:**
 ```
 APPROVAL_REQUEST: PENDING → EXPIRED (after timeout)
-TASK: AWAITING_APPROVAL → FAILED (when request expires)
+TASK: AWAITING_APPROVAL → DENIED (when request expires)
 ```
 
 ### 6. Non-Blocking Guarantee — Approval Must Never Stall Monitor Daemon or Background Jobs
@@ -415,11 +423,11 @@ async def grant_approval(request_id: str, user_id: str) -> None:
 
 #### 3. Approval Denied
 **Trigger**: User denies request via CLI/TUI/Web GUI
-**Transition**: `AWAITING_APPROVAL` → `FAILED`
+**Transition**: `AWAITING_APPROVAL` → `DENIED`
 **Action**:
 - Update `ApprovalRequest` status to `denied`
 - Record denial reason
-- Fail task with `ApprovalDeniedError`
+- Transition task to `DENIED` state (terminal state)
 - Emit trace event: `approval_denied`
 
 ```python
@@ -436,17 +444,18 @@ async def deny_approval(request_id: str, user_id: str, reason: str) -> None:
     await approval_gate.update_request(request_id, response)
     await task_state_machine.transition(
         request.task_id, 
-        "FAILED",
-        error=ApprovalDeniedError(reason)
+        TaskStatus.DENIED,
+        reason=f"Approval denied: {reason}",
+        actor="approval_gate"
     )
 ```
 
 #### 4. Approval Expired
 **Trigger**: Background cleanup job detects expired request
-**Transition**: `AWAITING_APPROVAL` → `FAILED`
+**Transition**: `AWAITING_APPROVAL` → `DENIED`
 **Action**:
 - Update `ApprovalRequest` status to `expired`
-- Fail task with `ApprovalTimeoutError`
+- Transition task to `DENIED` state (terminal state)
 - Emit trace event: `approval_expired`
 
 ```python
@@ -456,8 +465,29 @@ async def expire_request(request_id: str) -> None:
     await approval_gate.expire_request(request_id)
     await task_state_machine.transition(
         request.task_id,
-        "FAILED",
-        error=ApprovalTimeoutError(f"Approval request expired at {request.expires_at}")
+        TaskStatus.DENIED,
+        reason=f"Approval request expired at {request.expires_at}",
+        actor="approval_gate"
+    )
+```
+
+#### 5. Approval Gate Error
+**Trigger**: Approval gate itself encounters an error (e.g., database failure)
+**Transition**: `AWAITING_APPROVAL` → `FAILED`
+**Action**:
+- Log error details
+- Transition task to `FAILED` state (not `DENIED` - this is a system error, not a user decision)
+- Emit trace event: `approval_error`
+
+```python
+# Pseudocode (implementation in Prompt 14)
+async def handle_approval_error(request_id: str, error: Exception) -> None:
+    request = await approval_gate.get_request(request_id)
+    await task_state_machine.transition(
+        request.task_id,
+        TaskStatus.FAILED,
+        reason=f"Approval gate error: {str(error)}",
+        actor="approval_gate"
     )
 ```
 
@@ -474,16 +504,21 @@ class TaskState(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+    DENIED = "denied"  # NEW STATE - terminal state for denied approvals
 
 # Valid transitions
 VALID_TRANSITIONS = {
     "PLANNED": ["IN_PROGRESS", "FAILED", "CANCELLED"],
     "IN_PROGRESS": ["COMPLETED", "FAILED", "CANCELLED", "AWAITING_APPROVAL"],  # NEW
-    "AWAITING_APPROVAL": ["IN_PROGRESS", "FAILED"],  # NEW
-    "COMPLETED": [],
+    "AWAITING_APPROVAL": ["IN_PROGRESS", "DENIED", "FAILED", "CANCELLED"],  # UPDATED - added DENIED
+    "COMPLETED": [],  # Terminal state
     "FAILED": ["PLANNED"],  # Allow retry from failed
-    "CANCELLED": []
+    "CANCELLED": [],  # Terminal state
+    "DENIED": []  # Terminal state - no retry from denied
 }
+
+# Terminal states
+TERMINAL_STATES = [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED, TaskStatus.DENIED]
 ```
 
 ### Trace Events

@@ -3500,12 +3500,6 @@ Each SKILL.md must declare:
 - **Rationale**: Dependency injection eliminates global state, making components more testable and composable. NullTraceEmitter provides a no-op default. MemoryTraceEmitter allows tests to assert on trace events without mocking. This refactoring aligns with the architecture law: "No global state"
 - **Checkpoint**: prompt-13.5 created and pushed to remote
 
-**Remaining Phase B Steps**:
-- Step 14: Fix cli/main.py
-- Step 15: Fix cli/rich_cli.py
-- Step 16: Fix cli/tui.py
-- Step 17: Fix all test files
-
 ### 2026-06-09 - Phase B Step 14: Fix cli/main.py
 **Implementation**: Verified cli/main.py does not use emit_trace
 - **Changes to cli/main.py**: No changes needed - file only imports and runs rich_cli or tui
@@ -3535,3 +3529,46 @@ Each SKILL.md must declare:
 - **Testing Results**: Full suite: 288 passed, 23 skipped, 0 failures, 19 warnings
 - **Command**: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 - **Test Duration**: ~27 seconds
+
+---
+
+## Phase C: Approval Gate Design (Prompt 13.6)
+
+### 2026-06-09 - Approval Gate Design Document
+**Implementation**: Created comprehensive design document for approval gate system
+- **Purpose**: Lock in approval gate contracts before implementation in Prompt 14
+- **Document**: `docs/APPROVAL_GATE_DESIGN.md`
+- **Design Decisions**:
+  1. **On Denial**: Task fails permanently with `ApprovalDeniedError` (no retry)
+  2. **On Timeout**: Auto-deny after 5 minutes (configurable per action type)
+  3. **Who Can Approve**: Human-only approval with optional session-scoped approval policies
+  4. **Batched Approval Scopes**: Yes - session-scoped approval policies supported (file write, download, network, command scopes)
+  5. **Expiry Duration**: 5 minutes default, configurable per action type
+  6. **Non-Blocking Guarantee**: Async approval gate with separate pending queue, never blocks monitor daemon
+
+- **Pydantic Schema Contracts**:
+  - `ApprovalRequest`: Request for human approval with action details, risk assessment, timing
+  - `ApprovalResponse`: Response to approval request with decision and metadata
+  - `ApprovalScope`: Session-scoped approval policy with pattern matching and limits
+
+- **Postgres Table Structure**:
+  - `approval_requests`: Stores approval requests with full audit trail
+  - `approval_scopes`: Stores session-scoped approval policies
+
+- **TaskStateMachine Integration**:
+  - New state: `AWAITING_APPROVAL`
+  - Transitions: `IN_PROGRESS` → `AWAITING_APPROVAL` (request), `AWAITING_APPROVAL` → `IN_PROGRESS` (approve), `AWAITING_APPROVAL` → `FAILED` (deny/expire)
+  - Trace events: `approval_requested`, `approval_granted`, `approval_denied`, `approval_expired`
+
+- **Security Considerations**:
+  - Full audit trail of all approval actions
+  - Access control via authentication
+  - Rate limiting to prevent spam attacks
+  - Data protection for sensitive action parameters
+
+- **Testing Results**: Full suite: 288 passed, 23 skipped, 0 failures, 19 warnings
+- **Command**: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
+- **Test Duration**: ~24 seconds
+- **Checkpoint**: prompt-13.6-design created and pushed to remote
+
+- **Next Steps**: Implementation in Prompt 14 (pending user review and approval of this design)
