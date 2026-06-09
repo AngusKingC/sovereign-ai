@@ -3879,3 +3879,56 @@ Each SKILL.md must declare:
 - Error handling: WorkerNotFoundError raised consistently with existing error message pattern
 
 **Next Steps**: LLM-based worker profile generation (Prompt 17)
+
+---
+
+## Prompt: Warnings Cleanup
+
+**Summary**: Cleaned up all test warnings by fixing Pydantic json_encoders deprecation, asyncio mark misuse, web_scraper RuntimeWarning, and qdrant_client UserWarning. Reduced warnings from 27 to 1 (external library warning not in scope).
+
+**Files Changed**:
+- `core/schemas.py`: Replaced deprecated `json_encoders` with `field_serializer` for datetime fields
+- `tests/test_worker_factory.py`: Removed `@pytest.mark.asyncio` from class-level decorators, added to individual async methods
+- `tests/test_model_evaluator.py`: Removed `@pytest.mark.asyncio` from non-async test classes
+- `tests/skills/test_web_scraper.py`: Changed `AsyncMock` to `Mock` for `raise_for_status` (synchronous method)
+- `tests/test_qdrant_backend.py`: Added `@pytest.mark.filterwarnings("ignore::UserWarning")` to suppress qdrant_client compatibility warning
+- `tests/test_resource_manager.py`: Added `@pytest.mark.filterwarnings("ignore::UserWarning")` to suppress qdrant_client compatibility warning
+
+**Warning Types Fixed**:
+1. **Pydantic json_encoders deprecation** (14 instances): Replaced `model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}` with `@field_serializer` decorators for each datetime field in classes:
+   - Message, TaskStateTransition, Task, TraceEvent, StrategicContext, SessionSummary, SystemProfile, ModelEntry, LoadedModel, ResourceSnapshot, DownloadRequest, DownloadResult, ScratchpadEntry, Scratchpad
+
+2. **pytest asyncio mark on non-async tests** (6 instances): Removed `@pytest.mark.asyncio` from class-level decorators in:
+   - `TestWorkerFactory` (test_worker_factory.py): Added decorator to individual async methods only
+   - `TestDynamicWorkerProfile` (test_worker_factory.py): Removed decorator (all methods non-async)
+   - `TestPlaceholderWorker` (test_worker_factory.py): Added decorator to individual async methods only
+   - `TestModelRecommendation` (test_model_evaluator.py): Removed decorator (all methods non-async)
+   - `TestEvaluationResult` (test_model_evaluator.py): Removed decorator (all methods non-async)
+
+3. **web_scraper RuntimeWarning** (2 instances): Fixed coroutine never awaited warning by changing `AsyncMock()` to `Mock()` for `raise_for_status` (synchronous method in httpx) in:
+   - `test_execute_with_valid_url`
+   - `test_execute_with_selector`
+
+4. **qdrant_client UserWarning** (2 instances): Suppressed "Failed to obtain server version" warning using `@pytest.mark.filterwarnings("ignore::UserWarning")` in:
+   - `test_write_without_connection` (test_qdrant_backend.py)
+   - `test_can_load_returns_true_when_model_fits_in_vram` (test_resource_manager.py)
+
+**Implementation Notes**:
+- Fixed json_encoders deprecation by adding `@field_serializer` decorators to each datetime field instead of using deprecated `model_config` with `json_encoders`
+- Fixed asyncio mark warnings by moving decorator from class level to individual async methods, removing from non-async test classes
+- Fixed RuntimeWarning by recognizing that `raise_for_status()` is synchronous in httpx, so Mock should be used instead of AsyncMock
+- Fixed qdrant_client UserWarning by suppressing the warning at test level since it's an external library compatibility check that fails in test environment
+- Ran full test suite after each file change to confirm no regressions and warning count reduction
+- Final test results: 348 passed, 23 skipped, 1 warning (FutureWarning from google.generativeai - external library, not in scope)
+
+**Test Results**:
+- Baseline: 348 passed, 23 skipped, 27 warnings
+- After json_encoders fix: 348 passed, 23 skipped, 13 warnings
+- After test_worker_factory.py fix: 348 passed, 23 skipped, 7 warnings
+- After test_model_evaluator.py fix: 348 passed, 23 skipped, 5 warnings
+- After web_scraper fix: 348 passed, 23 skipped, 3 warnings
+- After qdrant_client fix: 348 passed, 23 skipped, 1 warning
+
+**Checkpoint**: prompt-warnings-cleanup created and pushed to remote
+
+**Next Steps**: Task 2 - Worker Persistence implementation
