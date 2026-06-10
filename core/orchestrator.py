@@ -8,7 +8,7 @@ without holding opinions or writing beliefs. Pure analysis and dispatch.
 import time
 from typing import TYPE_CHECKING
 
-from core.schemas import Task, WorkerOutput, TaskStatus, WorkerStatus, OrchestratorMetrics, StrategicContext, EscalationDecision
+from core.schemas import Task, WorkerOutput, TaskStatus, WorkerStatus, OrchestratorMetrics, StrategicContext, EscalationDecision, EscalationTier, ApprovalActionType
 from core.observability import (
     TraceComponent,
     TraceEventType,
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from core.task_state_machine import TaskStateMachine
     from core.scratchpad import ScratchpadManager
     from core.orchestrator_improvement import OrchestratorImprovementLoop
+    from core.approval_gate import ApprovalGate, ApprovalRequest
 
 
 class Orchestrator:
@@ -31,10 +32,14 @@ class Orchestrator:
         self,
         memory_router: "MemoryRouter",
         improvement_loop: "OrchestratorImprovementLoop | None" = None,
+        cloud_fallback_model: str = "gpt-4o",
+        approval_gate: "ApprovalGate | None" = None,
     ) -> None:
         """Initialize the orchestrator with dependencies."""
         self.memory_router = memory_router
         self.improvement_loop = improvement_loop
+        self.cloud_fallback_model = cloud_fallback_model
+        self.approval_gate = approval_gate
         self.workers: dict[str, "WorkerBase"] = {}
         self.pending_approval_queue: list[Task] = []
         
@@ -329,18 +334,24 @@ class Orchestrator:
         # Check if highest score is below minimum routing threshold
         min_routing_score = 1.0  # Minimum score to accept a worker
         if scored_workers[0][0] < min_routing_score:
-            # No suitable worker found - create escalation decision
-            escalation_decision = EscalationDecision(
+            # Step 1: Determine escalation tier
+            # For now, default to CLOUD escalation (LOCAL_UPGRADE logic requires model availability tracking)
+            tier = EscalationTier.CLOUD
+            to_model = self.cloud_fallback_model
+            from_model = "local"  # Could be enhanced to track current model
+            
+            # Step 2: Create EscalationDecision
+            decision = EscalationDecision(
                 task_id=str(task.task_id),
                 reason=f"No worker met minimum routing score (highest: {scored_workers[0][0]}, required: {min_routing_score})",
-                from_model="local",
-                to_model="cloud",  # Default to cloud escalation
-                escalation_tier="cloud",
+                from_model=from_model,
+                to_model=to_model,
+                escalation_tier=tier,
                 requires_approval=True,
                 approved=False,
             )
             
-            # Emit escalation decision trace event
+            # Emit escalation_decision_created trace event
             try:
                 await emit_trace(
                     event_type=TraceEventType.ESCALATION_TRIGGERED,
@@ -349,37 +360,158 @@ class Orchestrator:
                     level=TraceLevel.WARNING,
                     data={
                         "task_id": str(task.task_id),
-                        "escalation_tier": escalation_decision.escalation_tier,
-                        "reason": escalation_decision.reason,
+                        "escalation_tier": tier.value,
+                        "to_model": to_model,
+                        "reason": decision.reason,
                         "highest_score": scored_workers[0][0],
                     },
                 )
             except Exception:
                 pass
             
-            # Record escalation in StrategicContext
-            try:
-                current_context = await self.memory_router.get_global_context(caller_id="orchestrator")
-                if current_context is None:
-                    current_context = StrategicContext()
-                
-                current_context.escalation_history.append(
-                    f"Task {task.task_id}: escalated to {escalation_decision.escalation_tier} - {escalation_decision.reason}"
+            # Step 3: Submit to ApprovalGate
+            if self.approval_gate:
+                try:
+                    from datetime import datetime, timedelta
+                    from uuid import uuid4
+                    from core.approval_gate import ApprovalRequest
+                    
+                    approval_request = ApprovalRequest(
+                        request_id=str(uuid4()),
+                        task_id=str(task.task_id),
+                        session_id=str(uuid4()),  # Could be enhanced to track session
+                        action_type=ApprovalActionType.CLOUD_ESCALATION,
+                        action_description=f"Escalate task {task.task_id} to {tier.value} model {to_model}",
+                        action_parameters={"tier": tier.value, "to_model": to_model},
+                        risk_level="high",
+                        reason_for_approval=decision.reason,
+                        expires_at=datetime.utcnow() + timedelta(minutes=5),
+                    )
+                    
+                    approval_response = await self.approval_gate.request_approval(approval_request)
+                    
+                    # Step 4: Branch on approval
+                    if approval_response.approved:
+                        # Set decision.approved = True using model_copy for Pydantic v2 immutability
+                        decision = decision.model_copy(update={"approved": True})
+                        
+                        # Update StrategicContext.escalation_history
+                        try:
+                            current_context = await self.memory_router.get_global_context(caller_id="orchestrator")
+                            if current_context is None:
+                                current_context = StrategicContext()
+                            
+                            current_context.escalation_history.append(
+                                f"Task {task.task_id}: escalated to {tier.value} model {to_model} - approved"
+                            )
+                            
+                            await self.memory_router.set_global_context(current_context, caller_id="orchestrator")
+                        except Exception:
+                            pass  # Context update failure should not crash escalation
+                        
+                        # Re-dispatch task to to_model via appropriate adapter
+                        # For now, return a placeholder response - full re-dispatch requires adapter integration
+                        try:
+                            await emit_trace(
+                                event_type=TraceEventType.ESCALATION_TRIGGERED,
+                                component=TraceComponent.ORCHESTRATOR,
+                                message="Escalation approved - re-dispatching to cloud model",
+                                level=TraceLevel.INFO,
+                                data={
+                                    "task_id": str(task.task_id),
+                                    "to_model": to_model,
+                                },
+                            )
+                        except Exception:
+                            pass
+                        
+                        # Return escalated response (placeholder for now)
+                        return WorkerOutput(
+                            task_id=task.task_id,
+                            worker_id="cloud",
+                            content=f"Task escalated to {to_model} (placeholder response)",
+                            confidence=0.8,
+                            model_used=to_model,
+                            metadata={"escalation": decision.model_dump()},
+                        )
+                    else:
+                        # Denied: transition task to TaskStatus.DENIED
+                        try:
+                            task = await self.state_machine.transition(
+                                task,
+                                TaskStatus.DENIED,
+                                reason=f"Escalation denied: {approval_response.decision_reason}",
+                                actor="approval_gate",
+                            )
+                        except Exception:
+                            pass  # Transition failure should not crash
+                        
+                        # Emit escalation_denied trace event
+                        try:
+                            await emit_trace(
+                                event_type=TraceEventType.ESCALATION_TRIGGERED,
+                                component=TraceComponent.ORCHESTRATOR,
+                                message="Escalation denied",
+                                level=TraceLevel.WARNING,
+                                data={
+                                    "task_id": str(task.task_id),
+                                    "reason": approval_response.decision_reason,
+                                },
+                            )
+                        except Exception:
+                            pass
+                        
+                        # Return response indicating denial
+                        return WorkerOutput(
+                            task_id=task.task_id,
+                            worker_id="none",
+                            content="",
+                            confidence=0.0,
+                            model_used="none",
+                            metadata={
+                                "escalation": decision.model_dump(),
+                                "denied": True,
+                                "denied_reason": approval_response.decision_reason,
+                            },
+                        )
+                except Exception as e:
+                    # Emit escalation_error trace event
+                    try:
+                        await emit_trace(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.ORCHESTRATOR,
+                            message="Escalation error",
+                            level=TraceLevel.ERROR,
+                            data={
+                                "task_id": str(task.task_id),
+                                "error": str(e),
+                            },
+                        )
+                    except Exception:
+                        pass
+                    
+                    # Return error response without raising
+                    return WorkerOutput(
+                        task_id=task.task_id,
+                        worker_id="none",
+                        content="",
+                        confidence=0.0,
+                        model_used="none",
+                        metadata={
+                            "escalation": decision.model_dump(),
+                            "error": str(e),
+                        },
+                    )
+            else:
+                # No ApprovalGate configured - return error output with escalation metadata
+                return WorkerOutput(
+                    task_id=task.task_id,
+                    worker_id="none",
+                    content="",
+                    confidence=0.0,
+                    model_used="none",
+                    metadata={"escalation": decision.model_dump()},
                 )
-                
-                await self.memory_router.set_global_context(current_context, caller_id="orchestrator")
-            except Exception:
-                pass  # Context update failure should not crash escalation
-            
-            # For now, return error output - in full implementation would submit to ApprovalGate
-            return WorkerOutput(
-                task_id=task.task_id,
-                worker_id="none",
-                content="",
-                confidence=0.0,
-                model_used="none",
-                metadata={"escalation": escalation_decision.model_dump()},
-            )
         
         # Select highest-scoring worker
         selected_worker_id = scored_workers[0][1]

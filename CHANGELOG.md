@@ -4361,3 +4361,80 @@ Each SKILL.md must declare:
 **Checkpoint**: prompt-22 created and pushed to remote
 
 **Next Steps**: Prompt 23 - TBD
+
+---
+
+## Prompt 23 — Memory Scoping (2026-06-10)
+
+**Context**: Prompt 23 implements worker-scoped memory partitions with a shared global context layer. MemoryRouter enforces scoping so workers can only access their own partition and the shared global context. Cross-scope access attempts raise CrossScopeAccessError. StrategicContext and EscalationDecision schemas are activated from orphan status and integrated into the orchestrator for routing state tracking and escalation logic.
+
+**Implementation Details**:
+
+- Added `CrossScopeAccessError` to `core/exceptions.py`:
+  - Raised when a worker attempts to access another worker's memory partition
+  - Includes caller_id, scope, and message fields
+
+- Updated `StrategicContext` schema in `core/schemas.py`:
+  - Replaced old fields with: context_id, active_workers, current_priorities, recent_task_summary, escalation_history, updated_at
+  - Used for shared global routing state
+
+- Updated `EscalationDecision` schema in `core/schemas.py`:
+  - Replaced old fields with: decision_id, task_id, reason, from_model, to_model, escalation_tier, requires_approval, approved, created_at
+  - Used for escalation decisions when no local worker can handle a task
+
+- Modified `core/memory_router.py`:
+  - Added emitter injection to constructor (default MemoryTraceEmitter)
+  - Updated existing trace calls to use injected emitter with try-except wrapping
+  - Added `scoped_write()`: enforces scope access rules, writes to namespaced key, emits trace event
+  - Added `scoped_read()`: enforces scope access rules, reads from namespaced key, emits trace event
+  - Added `get_global_context()`: reads StrategicContext from global scope (any caller may read)
+  - Added `set_global_context()`: writes StrategicContext to global scope (only orchestrator may write)
+  - Scope model: "global" (readable by all, writable only by orchestrator) and "worker:{worker_id}" (private to that worker)
+
+- Modified `core/orchestrator.py`:
+  - Added imports for StrategicContext and EscalationDecision
+  - After successful routing decision, updates StrategicContext.recent_task_summary and active_workers via memory_router.set_global_context() with caller_id="orchestrator"
+  - Wrapped context update in try-except to prevent routing crashes
+  - When no local worker meets minimum routing score (1.0), creates EscalationDecision with escalation_tier="cloud"
+  - Records escalation in StrategicContext.escalation_history
+  - Emits ESCALATION_TRIGGERED trace event
+  - Returns error output with escalation metadata (full ApprovalGate integration deferred)
+
+- Created `tests/test_memory_scoping.py`:
+  - 17 tests covering all MemoryRouter scoped methods, CrossScopeAccessError scenarios, and StrategicContext operations
+  - Tests verify scope enforcement, trace emission, and error handling
+  - All tests use mock dependencies - no live DB calls
+
+**Implementation Notes**:
+- Full test suite could not be run due to Python environment issue (bad marshal data in typing_extensions) - this is a system-level issue unrelated to code changes
+- New tests for memory scoping (test_memory_scoping.py) passed successfully: 17 passed
+- MemoryRouter constructor required emitter injection - added with default MemoryTraceEmitter() to maintain backward compatibility
+- Existing trace calls in MemoryRouter updated to use injected emitter instead of global emit_trace function
+- All trace calls wrapped in try-except to prevent cascading failures
+- CrossScopeAccessError raised OUTSIDE try-except blocks to ensure proper propagation
+- StrategicContext and EscalationDecision schemas completely replaced old field definitions to match prompt requirements
+- EscalationDecision integration in orchestrator returns error output for now - full ApprovalGate submission deferred to future prompt
+- MemoryRouter imports StrategicContext from core/schemas and CrossScopeAccessError from core/exceptions - both in core/, architecture compliant
+
+**Testing Results**:
+- New tests: 17 tests for memory scoping (all passed)
+- Full test suite: Could not run due to Python environment issue (bad marshal data in typing_extensions)
+- New tests use mock dependencies to avoid live DB calls
+- Test coverage includes: scoped_write/read access control, global context operations, trace emission, error handling
+
+**Architecture Compliance**:
+- core/memory_router.py imports only from core/ (StrategicContext, CrossScopeAccessError) - verified
+- core/orchestrator.py imports StrategicContext and EscalationDecision from core/schemas - verified
+- All new methods async with return type annotations
+- TraceEmitter injected via constructor, default MemoryTraceEmitter()
+- All trace calls wrapped in try-except
+- CrossScopeAccessError raised OUTSIDE try-except that would catch it
+- No memory access outside MemoryRouter
+- Silent handling for context update failures in orchestrator (wrapped in try-except)
+
+**Rationale**: Implementing worker-scoped memory partitions with shared global context provides isolation between workers while enabling orchestrator-level coordination. Workers can only access their own memory partition, preventing data leakage and ensuring privacy. The shared global context (StrategicContext) allows the orchestrator to maintain routing state, active worker lists, and escalation history that all workers can read but only the orchestrator can write. Cross-scope access enforcement via CrossScopeAccessError prevents accidental or malicious cross-worker data access. EscalationDecision schema provides a structured way to represent escalation decisions when no local worker can handle a task, with approval tracking and escalation tier classification. This creates a secure memory architecture that supports multi-worker collaboration while maintaining isolation and accountability.
+
+**Checkpoint**: prompt-23 created and pushed to remote
+
+**Next Steps**: Prompt 24 - TBD
+

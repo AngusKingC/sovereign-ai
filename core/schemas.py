@@ -54,6 +54,12 @@ class WorkerStatus(str, Enum):
     DEPRECATED = "deprecated"
 
 
+class EscalationTier(str, Enum):
+    """Escalation tier for task escalation."""
+    LOCAL_UPGRADE = "local_upgrade"
+    CLOUD = "cloud"
+
+
 class ScratchpadEntryType(str, Enum):
     """Types of scratchpad entries for worker reasoning."""
     REASONING = "reasoning"
@@ -219,7 +225,7 @@ class EscalationDecision(BaseModel):
     reason: str
     from_model: str
     to_model: str
-    escalation_tier: str  # "local_upgrade" | "cloud"
+    escalation_tier: EscalationTier
     requires_approval: bool = True
     approved: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)

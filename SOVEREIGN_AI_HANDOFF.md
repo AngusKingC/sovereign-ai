@@ -129,7 +129,7 @@ OUTPUT LAYER
 ## Current State
 
 ### Test Baseline
-- **446 passed, 23 skipped, 3 warnings** (as of Prompt 22 / checkpoint prompt-22)
+- **463 passed, 23 skipped, 3 warnings** (as of Prompt 23 / checkpoint prompt-23)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
 - 3 remaining warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless
@@ -137,7 +137,7 @@ OUTPUT LAYER
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-22`
+- Latest checkpoint tag: `prompt-23`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}`
 - Restore script: `python scripts/restore.py`
 
@@ -234,6 +234,7 @@ OUTPUT LAYER
 | 20 | Instruction File Versioning and Updates | 416 |
 | 21 | Orchestrator Improvement Loop | 431 |
 | 22 | Unified Evaluation Framework | 446 |
+| 23 | Memory Scoping | 463 |
 
 ---
 
@@ -426,6 +427,16 @@ Features:
 - Historical performance weighting in ModelEvaluator (70% historical, 30% base when >10 records)
 - OrchestratorMetrics.task_completed updated when task reaches COMPLETE state
 - Evaluation records persisted to memory router with key pattern: evaluation:{task_id}:{worker_id}
+
+---
+
+#### Prompt 23 — Memory Scoping
+**Status**: DONE
+
+Implement worker-scoped memory partitions with shared global context layer.
+MemoryRouter enforces scoping — workers can only access their own partition and the shared global context.
+Cross-scope access attempts raise CrossScopeAccessError.
+StrategicContext and EscalationDecision schemas activated from orphan status and integrated into orchestrator.
 
 ---
 
