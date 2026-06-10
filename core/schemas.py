@@ -184,6 +184,7 @@ class WorkerOutput(BaseModel):
     escalation_recommended: bool = False
     model_used: str
     tokens_used: int = Field(default=0, ge=0)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("confidence")
     @classmethod
@@ -214,23 +215,28 @@ class TraceEvent(BaseModel):
 
 class EscalationDecision(BaseModel):
     """Decision regarding whether to escalate to cloud models."""
+    task_id: UUID
     should_escalate: bool
     reasons: list[str] = Field(default_factory=list)
     suggested_model: str
-    estimated_cost: float = Field(ge=0.0)
-    task_id: UUID
+    estimated_cost: float = Field(default=0.0, ge=0.0)
+    tier: str = "cloud"
+    to_model: str = ""
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class StrategicContext(BaseModel):
     """High-level context about the agent's current state and goals."""
+    context_id: str = Field(default_factory=lambda: str(uuid4()))
     active_goals: list[str] = Field(default_factory=list)
-    pending_tasks: list[Task] = Field(default_factory=list)
+    pending_tasks: list[Any] = Field(default_factory=list)
     completed_today: list[str] = Field(default_factory=list)
     blocked_tasks: list[str] = Field(default_factory=list)
     worker_performance: dict[str, float] = Field(default_factory=dict)
     cloud_spend_today: float = Field(default=0.0, ge=0.0)
     open_questions: list[str] = Field(default_factory=list)
     last_updated: datetime
+    escalation_history: list[str] = Field(default_factory=list)
 
     @field_serializer('last_updated')
     def serialize_last_updated(self, value: datetime) -> str:

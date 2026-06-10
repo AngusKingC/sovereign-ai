@@ -146,11 +146,9 @@ class TestMemoryRouter:
 
     def test_tracing_on_fetch(self, trace_emitter, mock_backend, sample_task):
         """Test that fetch operations emit trace events."""
-        from core.observability import set_trace_emitter
-        set_trace_emitter(trace_emitter)
-        
         router = MemoryRouter(
             backends={"mock": mock_backend},
+            emitter=trace_emitter,
         )
 
         import asyncio
@@ -159,15 +157,13 @@ class TestMemoryRouter:
 
         events = trace_emitter.get_events()
         assert len(events) > 0
-        assert any(str(event.event_type) == "data_read" for event in events)
+        assert any(event.event_type.value == "MEMORY_QUERY" for event in events)
 
     def test_tracing_on_write(self, trace_emitter, mock_backend):
         """Test that write operations emit trace events."""
-        from core.observability import set_trace_emitter
-        set_trace_emitter(trace_emitter)
-        
         router = MemoryRouter(
             backends={"mock": mock_backend},
+            emitter=trace_emitter,
         )
 
         import asyncio
@@ -177,5 +173,5 @@ class TestMemoryRouter:
 
         events = trace_emitter.get_events()
         assert len(events) > 0
-        assert any(str(event.event_type) == "data_write" for event in events)
+        assert any(event.event_type.value == "MEMORY_WRITE" for event in events)
 
