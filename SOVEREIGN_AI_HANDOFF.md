@@ -8,9 +8,13 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-09 — post Prompt 15 completion + multi-model
-architecture review incorporated (ChatGPT, Grok, Gemini reviews reviewed
-and actioned by Claude).
+**Last updated**: 2026-06-10 — post Prompt 22 completion + competitive
+landscape review incorporated (Hermes Agent, OpenJarvis, LangGraph, CrewAI,
+AutoGPT, OpenHands, SuperAGI, Google ADK, OpenAI Agents SDK, Microsoft Agent
+Framework reviewed and actioned by Claude). Six new features added to roadmap:
+MCP Adapter (22.5), Trace-Based Skill Optimiser (22.6), crash-resume extended
+into Prompt 26, Telegram Gateway (28.5), A2A Protocol extended into Prompt 31,
+Trajectory Export / Fine-tuning Pipeline (34, new Phase 10).
 
 ---
 
@@ -58,7 +62,8 @@ COGNITION LAYER
 ACTION LAYER
 ├── Skills (atomic capabilities, plugin architecture)
 ├── Services (Gmail, calendar, AIS, weather APIs)
-└── Adapters (12 LLM providers behind unified protocol)
+├── Adapters (12 LLM providers + MCP client behind unified protocol)
+└── Gateways (Telegram — future)
         ↓
 MEMORY LAYER
 ├── Postgres (primary, structured, fast)
@@ -124,23 +129,23 @@ OUTPUT LAYER
 ## Current State
 
 ### Test Baseline
-- **416 passed, 23 skipped, 1 warning** (as of Prompt 20 / checkpoint prompt-20)
+- **446 passed, 23 skipped, 3 warnings** (as of Prompt 22 / checkpoint prompt-22)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
-- 1 remaining warning: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch
+- 3 remaining warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-20`
+- Latest checkpoint tag: `prompt-22`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}`
 - Restore script: `python scripts/restore.py`
 
 ### Core Layer
-- `core/schemas.py` — all Pydantic models including TaskStatus.DENIED
+- `core/schemas.py` — all Pydantic models including TaskStatus.DENIED, EvaluatorScore, EvaluationRecord, OrchestratorMetrics
 - `core/memory_router.py` — MemoryBackend ABC, MemoryRouter with tracing
 - `core/worker_base.py` — LLMResponse, LLMAdapter Protocol, WorkerBase ABC (DI)
-- `core/orchestrator.py` — routing with scoring algorithm, deregister_worker, DI complete
+- `core/orchestrator.py` — routing with scoring algorithm, deregister_worker, mark_task_completed integration, DI complete
 - `core/handlers.py` — QueryHandler, DI complete
 - `core/embedder.py` — OllamaEmbedder
 - `core/observability.py` — TraceEmitter, MemoryTraceEmitter, ConsoleTraceEmitter
@@ -156,6 +161,11 @@ OUTPUT LAYER
   ApprovalScope, session-scoped pre-authorisation, write-through Postgres cache
 - `core/worker_factory.py` — WorkerFactory, DynamicWorkerProfile, PlaceholderWorker,
   rule-based worker creation from natural language description
+- `core/rating_system.py` — RatingSystem, worker rating persistence, trend analysis
+- `core/instruction_generator.py` — InstructionGenerator, LLM-based instruction file generation
+- `core/instruction_versioning.py` — InstructionVersionManager, version control for instruction files
+- `core/orchestrator_improvement.py` — OrchestratorImprovementLoop, orchestrator self-improvement
+- `core/evaluator.py` — OutputEvaluator, LLM-as-Judge automated output evaluation
 
 ### Memory Layer
 - `memory/obsidian.py` — Markdown vault storage
@@ -222,7 +232,8 @@ OUTPUT LAYER
 | 18 | Rating System | 386 |
 | 19 | Instruction File Generation | 401 |
 | 20 | Instruction File Versioning and Updates | 416 |
-| 21 | Orchestrator Improvement Loop | IN PROGRESS |
+| 21 | Orchestrator Improvement Loop | 431 |
+| 22 | Unified Evaluation Framework | 446 |
 
 ---
 
@@ -388,7 +399,7 @@ Proposed update requires user approval. Rollback available to any version.
 ---
 
 #### Prompt 21 — Orchestrator Improvement Loop
-**Status**: IN PROGRESS
+**Status**: DONE
 
 Wire orchestrator into same improvement loop as workers.
 Orchestrator reviews worker ratings, proposes instruction edits.
@@ -398,19 +409,127 @@ Own instruction file updated by same mechanism.
 ---
 
 #### Prompt 22 — Unified Evaluation Framework
-**Status**: Queued (merged from original Prompt 16 Model Evaluator extension
-and original Prompt 22 LLM-as-Judge)
+**Status**: DONE
 
 Extend `system/model_evaluator.py` and create `core/evaluator.py`.
 
 Combines:
 - Hardware fit scoring (from Prompt 16)
 - Historical worker performance weighting (outweighs benchmarks at >10 ratings)
-- LLM-as-Judge automated output scoring: task completion, accuracy,
-  format compliance, conciseness
-- Separate fast lightweight evaluator model (configurable, local default)
-- Manual rating overrides evaluator score when provided
-- Evaluator scores stored alongside manual ratings
+- LLM-as-Judge automated output quality scoring
+
+Features:
+- OutputEvaluator class with evaluate_output(), record_evaluation(), get_worker_evaluations()
+- Component scores: task_completion, accuracy, format_compliance, conciseness
+- Composite score: weighted average (0.4*task_completion + 0.3*accuracy + 0.2*format_compliance + 0.1*conciseness)
+- Manual rating override (1-10 scale normalized to 0.1-1.0)
+- Historical performance weighting in ModelEvaluator (70% historical, 30% base when >10 records)
+- OrchestratorMetrics.task_completed updated when task reaches COMPLETE state
+- Evaluation records persisted to memory router with key pattern: evaluation:{task_id}:{worker_id}
+
+---
+
+### Competitive Landscape Review Changes (Incorporated 2026-06-10)
+
+Competitive analysis conducted against Hermes Agent, OpenJarvis, LangGraph,
+CrewAI, AutoGPT, OpenHands, SuperAGI, Google ADK, OpenAI Agents SDK, and
+Microsoft Agent Framework. Six improvements added to the roadmap:
+
+**MCP Adapter added as Prompt 22.5:**
+- MCP (Model Context Protocol) is the 2026 industry standard for agent-to-tool
+  communication, adopted by all major frameworks
+- Adds `adapters/mcp_adapter.py` (MCP client) and `skills/mcp_server.py`
+  (exposes SkillRegistry as MCP endpoint)
+- Purely additive — no core/ changes. Enables community skill catalogs
+  (agentskills.io) and external tool interoperability
+- Must land before Phase 7 so open-loop monitors can consume community skills
+
+**Trace-Based Skill Optimiser added as Prompt 22.6:**
+- Complements existing rating-trend trigger with a continuous trace-scoring path
+- Reads TraceEmitter event logs, scores instruction performance from tool call
+  success/failure patterns, feeds InstructionVersionManager as a second trigger
+- Placed after 22.5 so MCP tool call outcomes flow into traces first
+- If both triggers fire simultaneously, proposals queue — never collide
+  (policy must be documented in InstructionVersionManager before implementation)
+
+**Crash-resume extended into Prompt 26 (Monitor Daemon):**
+- TaskStateMachine gains checkpoint() / load_checkpoints() for Postgres-serialised
+  task resume after daemon restart
+- No new prompt needed — Prompt 26 already plans Postgres task queue persistence
+
+**Telegram Gateway added as Prompt 28.5:**
+- Delivers notifications from the Notification Layer (Prompt 28) to mobile
+- Critical for sailing use case — AIS/weather alerts reachable on the water
+- Depends on Prompt 28 (NotificationSystem) — cannot be built before it
+- ApprovalGate integration: action requests via Telegram route through existing gate
+
+**A2A Protocol extended into Prompt 31 (Worker-to-Worker Communication):**
+- Worker sub-task messages implemented against A2A standard schema rather than
+  proprietary protocol — near-zero extra cost at implementation time
+- Adds thin `core/a2a_protocol.py` schema + routing layer
+- External A2A interop (calling agents in other frameworks) deferred — internal
+  compliance first
+
+**Trajectory Export / Fine-tuning Pipeline added as Prompt 34 (new Phase 10):**
+- Exports TraceEmitter logs in ShareGPT format for local model fine-tuning
+- Prerequisite chain: Phases 7+8 must be complete, meaningful trace history
+  must exist before export is useful
+- Closes self-improvement loop at model weights level, not just instruction level
+
+---
+
+#### Prompt 22.5 — MCP Adapter (Housekeeping)
+**Status**: Queued
+
+Add MCP (Model Context Protocol) as a standard protocol surface.
+
+Files:
+- `adapters/mcp_adapter.py` — MCP client: calls external MCP tool servers,
+  wraps responses as LLMAdapter-compatible results. Async, DI for emitter.
+- `skills/mcp_server.py` — MCP server: exposes SkillRegistry as MCP-compliant
+  tool endpoint. No core/ imports.
+
+Architecture:
+- `adapters/mcp_adapter.py` imports only from `core/` (LLMAdapter, LLMResponse)
+- `skills/mcp_server.py` imports only from `core/` (SkillRegistry)
+- No changes to core/ layer
+- Emitter injected via constructor, default MemoryTraceEmitter()
+
+Tests: minimum 10. Target: exceed 446.
+
+---
+
+#### Prompt 22.6 — Trace-Based Skill Optimiser (Housekeeping)
+**Status**: Queued
+
+Add continuous trace-scoring as a second trigger path for instruction updates,
+complementing the existing rating-trend trigger from Prompt 20.
+
+Files:
+- `core/trace_optimiser.py` — TraceOptimiser class
+
+Constructor injection: MemoryRouter, InstructionVersionManager, TraceEmitter.
+
+Methods (all async, all typed):
+- `score_recent_traces(worker_id, n)` — reads last N traces for worker from
+  MemoryRouter, computes tool call success rate and error frequency as a
+  composite trace score (0.0–1.0)
+- `check_and_trigger_update(worker_id)` — if trace score < trace_threshold
+  (default 0.65), calls InstructionVersionManager.check_and_trigger_update()
+  as a second trigger path. Returns VersionUpdateProposal | None.
+- Emits trace events: trace_score_computed, trace_update_triggered
+
+Collision policy (mandatory — implement before any trigger can fire):
+- InstructionVersionManager must check for an existing PENDING proposal before
+  creating a new one. If a PENDING proposal exists for a worker, skip and return
+  the existing proposal. Document this rule in InstructionVersionManager.
+
+Architecture:
+- `core/trace_optimiser.py` imports only from `core/`
+- Configurable: trace_threshold and min_traces (default 10) via constructor
+- All trace calls wrapped in try-except
+
+Tests: minimum 12. Target: exceed new 22.5 baseline.
 
 ---
 
@@ -459,6 +578,15 @@ Scheduler: immediate, deferred, recurring, conditional tasks.
 Task queue persisted in Postgres — survives restarts.
 Approval gate integration — daemon never blocks on approval.
 
+**Extended scope (competitive review 2026-06-10):**
+Task-level crash resume — extends `core/task_state_machine.py`:
+- `checkpoint(task_id)` — serialises current task state + last completed step
+  to Postgres at each step boundary
+- `load_checkpoints()` — called at daemon startup, restores any tasks that were
+  IN_PROGRESS at shutdown
+- Tasks resume from last checkpoint step, not from scratch
+- Checkpoint records keyed: `task_checkpoint:{task_id}`
+
 ---
 
 #### Prompt 27 — Event Trigger System
@@ -478,6 +606,31 @@ Types: info, warning, urgent, requires-action.
 Urgent interrupts current interaction.
 Requires-action integrates with approval gate.
 Non-urgent queues and surfaces at natural break points.
+
+---
+
+#### Prompt 28.5 — Telegram Gateway
+**Status**: Queued
+
+Deliver notifications from the NotificationSystem to mobile via Telegram.
+Critical for sailing use case — AIS/weather alerts reachable on the water.
+Depends on Prompt 28 (NotificationSystem must exist before delivery channel).
+
+Files:
+- `adapters/telegram_gateway.py` — inbound message handler + outbound delivery
+
+Features:
+- Outbound: receives notifications from NotificationSystem, delivers to
+  configured Telegram chat ID
+- Inbound: receives messages from Telegram, routes to QueryHandler as tasks
+- ApprovalGate integration: action-request notifications sent via Telegram
+  include approve/reject reply options; responses route through existing gate
+- Runs as optional background service — system functions without it
+- Config: bot token and chat ID loaded from env vars, never hardcoded
+- Emitter injected via constructor, default MemoryTraceEmitter()
+- `adapters/telegram_gateway.py` imports only from `core/`
+
+Tests: minimum 10.
 
 ---
 
@@ -519,6 +672,22 @@ Workers emit sub-task requests during execution.
 Orchestrator routes sub-tasks to specialist workers.
 Circular dependency detection. Sub-tasks inherit parent priority.
 
+**Extended scope (competitive review 2026-06-10):**
+Implement internal worker messaging against A2A (Agent-to-Agent) protocol
+standard rather than a proprietary schema. Near-zero extra cost at
+implementation time; preserves future interoperability with LangGraph,
+CrewAI, and other A2A-compliant frameworks.
+
+Files:
+- `core/a2a_protocol.py` — thin schema + routing layer, imports only from `core/`
+
+A2A-standard task envelope schema:
+- Request: `task_id`, `input`, `metadata`, `requester_agent_id`
+- Response: `task_id`, `status`, `output`, `artifacts`
+
+Note: External A2A interop (calling agents in other frameworks) is deferred.
+Internal compliance first — use the standard schema, external bridge later.
+
 ---
 
 ### PHASE 9 — Interfaces
@@ -543,7 +712,42 @@ Same approval gates and observability as text interface.
 
 ---
 
-## Known Technical Debt
+### PHASE 10 — Model Evolution (New — added 2026-06-10)
+
+---
+
+#### Prompt 34 — Trajectory Export / Fine-tuning Pipeline
+**Status**: Queued
+
+Close the self-improvement loop at the model weights level, not just the
+instruction/prompt level.
+
+Prerequisite: Phases 7 and 8 complete, meaningful trace history accumulated
+(minimum configurable threshold before export is triggered).
+
+Files:
+- `system/trajectory_exporter.py` — TrajectoryExporter class
+
+Features:
+- Reads completed task traces from TraceEmitter event log via MemoryRouter
+- Filters by quality threshold (only traces where OutputEvaluator final_score
+  exceeds configurable minimum — default 0.7)
+- Exports in ShareGPT format (.jsonl) — compatible with Axolotl, Unsloth,
+  and standard fine-tuning pipelines
+- Export modes: manual trigger, scheduled export, minimum trace count threshold
+- Trajectory compression: fits training data into token budgets
+- No model training infrastructure in scope — export pipeline only
+- `system/trajectory_exporter.py` imports from `core/` and `system/` only
+
+Architecture:
+- Emitter injected via constructor, default MemoryTraceEmitter()
+- All I/O async
+- All public methods typed
+- Export path configurable via constructor, never hardcoded
+
+Tests: minimum 12.
+
+---
 
 | Item | Location | Notes |
 |------|----------|-------|
@@ -585,6 +789,11 @@ and prompt guards when patterns recur.
     use proper dict structures in mock return values, not Mock() objects
 12. Test state bleeds between tests when mutating Pydantic model fields directly —
     always reset fields like version explicitly in each test that depends on them
+13. Dual-trigger collision in InstructionVersionManager — rating-trend trigger
+    (Prompt 20) and trace-score trigger (Prompt 22.6) can both fire for the same
+    worker. InstructionVersionManager MUST check for an existing PENDING proposal
+    before creating a new one. If PENDING exists, skip and return it. Implement
+    this guard in Prompt 22.6 before the trace trigger is wired up.
 
 ---
 
@@ -623,3 +832,7 @@ Priority workers once factory is operational:
 - CrewAI: github.com/crewAIInc/crewAI
 - MemGPT/Letta: github.com/cpacker/MemGPT
 - SWE-agent: github.com/princeton-nlp/SWE-agent
+- Hermes Agent: github.com/NousResearch/hermes-agent
+- OpenJarvis: github.com/open-jarvis/OpenJarvis
+- agentskills.io: open standard for portable agent skills (MCP-compatible)
+- A2A Protocol: google-deepmind.github.io/agent-to-agent

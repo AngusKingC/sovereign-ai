@@ -16,6 +16,7 @@ from core.schemas import (
     QuantisationVariant,
     SystemProfile,
     DownloadStatus,
+    EvaluationRecord,
 )
 from core.observability import (
     TraceComponent,
@@ -316,3 +317,28 @@ class ModelEvaluator:
                 )
         except Exception:
             pass
+
+    def historical_performance_weight(
+        self,
+        worker_id: str,
+        base_score: float,
+        evaluation_records: list[EvaluationRecord],
+    ) -> float:
+        """Weight base score with historical performance data.
+        
+        Args:
+            worker_id: Worker identifier
+            base_score: Base score from hardware/fit evaluation
+            evaluation_records: Historical evaluation records for the worker
+            
+        Returns:
+            Weighted score if >10 records exist, otherwise base score unchanged
+        """
+        if len(evaluation_records) > 10:
+            # Compute average final score from historical records
+            avg_final_score = sum(record.final_score for record in evaluation_records) / len(evaluation_records)
+            # Weighted blend: 70% historical, 30% base
+            return (avg_final_score * 0.7) + (base_score * 0.3)
+        else:
+            # Not enough historical data, return base score unchanged
+            return base_score

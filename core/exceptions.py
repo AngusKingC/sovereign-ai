@@ -57,3 +57,21 @@ class ApprovalDeniedError(Exception):
         self.message = reason or f"Approval denied for action: {action}"
         super().__init__(self.message)
 
+
+class CrossScopeAccessError(Exception):
+    """Raised when a worker attempts to access another worker's memory partition."""
+    
+    def __init__(self, caller_id: str, scope: str, message: str | None = None) -> None:
+        """Initialize the cross-scope access error.
+        
+        Args:
+            caller_id: The caller attempting the access
+            scope: The scope being accessed
+            message: Optional additional message
+        """
+        self.caller_id = caller_id
+        self.scope = scope
+        self.message = message or f"Caller '{caller_id}' attempted to access scope '{scope}'"
+        super().__init__(self.message)
+
+

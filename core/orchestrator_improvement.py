@@ -226,3 +226,54 @@ class OrchestratorImprovementLoop:
             pass
         
         return proposal
+
+    async def mark_task_completed(self, task_id: str) -> None:
+        """Mark a task as completed in orchestrator metrics.
+        
+        Args:
+            task_id: Task identifier to mark as completed
+        """
+        # Retrieve the OrchestratorMetrics record for task_id
+        document_id = f"orchestrator_metrics:{task_id}"
+        result = await self.memory_router.fetch(
+            {"task_id": task_id},
+            document_id=document_id,
+            limit=1
+        )
+        
+        if not result:
+            # No record found, emit warning trace and return silently
+            try:
+                await self.emitter.emit(TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.ORCHESTRATOR,
+                    message=f"No orchestrator metrics found for task {task_id}",
+                    level=TraceLevel.WARNING,
+                    data={"task_id": task_id}
+                ))
+            except Exception:
+                pass
+            return
+        
+        # Update task_completed to True
+        metrics_data = result[0].get("content", {})
+        metrics_data["task_completed"] = True
+        metrics_data["updated_at"] = datetime.utcnow().isoformat()
+        
+        # Persist the updated record
+        await self.memory_router.write(
+            metrics_data,
+            document_id=document_id
+        )
+        
+        # Emit trace event
+        try:
+            await self.emitter.emit(TraceEvent(
+                event_type=TraceEventType.OPERATION_COMPLETE,
+                component=TraceComponent.ORCHESTRATOR,
+                message=f"Task {task_id} marked as completed",
+                level=TraceLevel.INFO,
+                data={"task_id": task_id}
+            ))
+        except Exception:
+            pass

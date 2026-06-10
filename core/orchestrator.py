@@ -8,7 +8,7 @@ without holding opinions or writing beliefs. Pure analysis and dispatch.
 import time
 from typing import TYPE_CHECKING
 
-from core.schemas import Task, WorkerOutput, TaskStatus, WorkerStatus, OrchestratorMetrics
+from core.schemas import Task, WorkerOutput, TaskStatus, WorkerStatus, OrchestratorMetrics, StrategicContext, EscalationDecision
 from core.observability import (
     TraceComponent,
     TraceEventType,
@@ -122,6 +122,12 @@ class Orchestrator:
                 except Exception:
                     # Silently fail if scratchpad compaction fails
                     pass
+                # Mark task as completed in orchestrator metrics
+                if self.improvement_loop:
+                    try:
+                        await self.improvement_loop.mark_task_completed(str(task.task_id))
+                    except Exception:
+                        pass  # Metrics update failure should not crash task completion
             else:
                 task = await self.state_machine.transition(
                     task, TaskStatus.FAILED, reason="Validation failed: empty output", actor="orchestrator"
@@ -260,6 +266,26 @@ class Orchestrator:
                 duration_ms=duration_ms,
             )
             
+            # Update StrategicContext after successful routing decision
+            try:
+                current_context = await self.memory_router.get_global_context(caller_id="orchestrator")
+                if current_context is None:
+                    current_context = StrategicContext()
+                
+                # Update recent task summary
+                current_context.recent_task_summary = f"Task {task.task_id}: {task.intent} routed to {worker_id}"
+                
+                # Update active workers list
+                current_context.active_workers = list(self.workers.keys())
+                
+                # Update timestamp
+                from datetime import datetime
+                current_context.updated_at = datetime.utcnow()
+                
+                await self.memory_router.set_global_context(current_context, caller_id="orchestrator")
+            except Exception:
+                pass  # Context update failure should not crash routing
+            
             return await self.process_task(task, worker_id)
 
         # Score each worker
@@ -300,6 +326,61 @@ class Orchestrator:
         # Sort by score descending, then by registration order (maintained by dict iteration order)
         scored_workers.sort(key=lambda x: (-x[0], list(self.workers.keys()).index(x[1])))
         
+        # Check if highest score is below minimum routing threshold
+        min_routing_score = 1.0  # Minimum score to accept a worker
+        if scored_workers[0][0] < min_routing_score:
+            # No suitable worker found - create escalation decision
+            escalation_decision = EscalationDecision(
+                task_id=str(task.task_id),
+                reason=f"No worker met minimum routing score (highest: {scored_workers[0][0]}, required: {min_routing_score})",
+                from_model="local",
+                to_model="cloud",  # Default to cloud escalation
+                escalation_tier="cloud",
+                requires_approval=True,
+                approved=False,
+            )
+            
+            # Emit escalation decision trace event
+            try:
+                await emit_trace(
+                    event_type=TraceEventType.ESCALATION_TRIGGERED,
+                    component=TraceComponent.ORCHESTRATOR,
+                    message="Escalation decision created - no suitable local worker",
+                    level=TraceLevel.WARNING,
+                    data={
+                        "task_id": str(task.task_id),
+                        "escalation_tier": escalation_decision.escalation_tier,
+                        "reason": escalation_decision.reason,
+                        "highest_score": scored_workers[0][0],
+                    },
+                )
+            except Exception:
+                pass
+            
+            # Record escalation in StrategicContext
+            try:
+                current_context = await self.memory_router.get_global_context(caller_id="orchestrator")
+                if current_context is None:
+                    current_context = StrategicContext()
+                
+                current_context.escalation_history.append(
+                    f"Task {task.task_id}: escalated to {escalation_decision.escalation_tier} - {escalation_decision.reason}"
+                )
+                
+                await self.memory_router.set_global_context(current_context, caller_id="orchestrator")
+            except Exception:
+                pass  # Context update failure should not crash escalation
+            
+            # For now, return error output - in full implementation would submit to ApprovalGate
+            return WorkerOutput(
+                task_id=task.task_id,
+                worker_id="none",
+                content="",
+                confidence=0.0,
+                model_used="none",
+                metadata={"escalation": escalation_decision.model_dump()},
+            )
+        
         # Select highest-scoring worker
         selected_worker_id = scored_workers[0][1]
         
@@ -331,6 +412,26 @@ class Orchestrator:
             },
             duration_ms=duration_ms,
         )
+        
+        # Update StrategicContext after successful routing decision
+        try:
+            current_context = await self.memory_router.get_global_context(caller_id="orchestrator")
+            if current_context is None:
+                current_context = StrategicContext()
+            
+            # Update recent task summary
+            current_context.recent_task_summary = f"Task {task.task_id}: {task.intent} routed to {selected_worker_id}"
+            
+            # Update active workers list
+            current_context.active_workers = list(self.workers.keys())
+            
+            # Update timestamp
+            from datetime import datetime
+            current_context.updated_at = datetime.utcnow()
+            
+            await self.memory_router.set_global_context(current_context, caller_id="orchestrator")
+        except Exception:
+            pass  # Context update failure should not crash routing
         
         return await self.process_task(task, selected_worker_id)
 

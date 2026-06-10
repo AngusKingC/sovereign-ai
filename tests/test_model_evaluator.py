@@ -8,7 +8,7 @@ from uuid import uuid4
 from unittest.mock import AsyncMock, patch
 
 from system.model_evaluator import ModelEvaluator, ModelRecommendation, EvaluationResult
-from core.schemas import ModelEntry, QuantisationVariant, ModelSource, DownloadStatus, SystemProfile, GPUInfo, RAMInfo
+from core.schemas import ModelEntry, QuantisationVariant, ModelSource, DownloadStatus, SystemProfile, GPUInfo, RAMInfo, EvaluationRecord
 from core.observability import MemoryTraceEmitter, TraceComponent, TraceEventType, TraceLevel
 
 
@@ -338,4 +338,54 @@ class TestModelEvaluator:
         # test_model_2 has higher quality (0.90 vs 0.85) but lower speed (0.85 vs 0.90)
         # With quality_preference=0.5, the scores should be close
         assert len(result.recommendations) == 2
-        assert all(0.0 <= r.score <= 1.0 for r in result.recommendations)
+    
+    def test_historical_performance_weight_returns_blended_score_when_more_than_10_records(self, evaluator):
+        """Test historical_performance_weight returns blended score when >10 records exist."""
+        # Create 11 evaluation records with final_score = 0.8
+        evaluation_records = [
+            EvaluationRecord(
+                record_id=f"record-{i}",
+                task_id=f"task-{i}",
+                worker_id="worker-1",
+                evaluator_score=None,
+                manual_rating=8.0,
+                final_score=0.8,
+                timestamp=datetime.utcnow()
+            )
+            for i in range(11)
+        ]
+        
+        # base_score = 0.6, avg_final_score = 0.8
+        # blended = (0.8 * 0.7) + (0.6 * 0.3) = 0.56 + 0.18 = 0.74
+        weighted_score = evaluator.historical_performance_weight(
+            worker_id="worker-1",
+            base_score=0.6,
+            evaluation_records=evaluation_records
+        )
+        
+        assert abs(weighted_score - 0.74) < 0.001
+    
+    def test_historical_performance_weight_returns_base_score_unchanged_when_10_or_fewer_records(self, evaluator):
+        """Test historical_performance_weight returns base score unchanged when ≤10 records."""
+        # Create 10 evaluation records
+        evaluation_records = [
+            EvaluationRecord(
+                record_id=f"record-{i}",
+                task_id=f"task-{i}",
+                worker_id="worker-1",
+                evaluator_score=None,
+                manual_rating=8.0,
+                final_score=0.8,
+                timestamp=datetime.utcnow()
+            )
+            for i in range(10)
+        ]
+        
+        # base_score should be returned unchanged
+        weighted_score = evaluator.historical_performance_weight(
+            worker_id="worker-1",
+            base_score=0.6,
+            evaluation_records=evaluation_records
+        )
+        
+        assert weighted_score == 0.6

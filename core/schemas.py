@@ -214,26 +214,32 @@ class TraceEvent(BaseModel):
 
 class EscalationDecision(BaseModel):
     """Decision regarding whether to escalate to cloud models."""
-    should_escalate: bool
-    reasons: list[str] = Field(default_factory=list)
-    suggested_model: str
-    estimated_cost: float = Field(ge=0.0)
-    task_id: UUID
+    decision_id: str = Field(default_factory=lambda: str(uuid4()))
+    task_id: str
+    reason: str
+    from_model: str
+    to_model: str
+    escalation_tier: str  # "local_upgrade" | "cloud"
+    requires_approval: bool = True
+    approved: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    @field_serializer('created_at')
+    def serialize_created_at(self, value: datetime) -> str:
+        return value.isoformat()
 
 
 class StrategicContext(BaseModel):
     """High-level context about the agent's current state and goals."""
-    active_goals: list[str] = Field(default_factory=list)
-    pending_tasks: list[Task] = Field(default_factory=list)
-    completed_today: list[str] = Field(default_factory=list)
-    blocked_tasks: list[str] = Field(default_factory=list)
-    worker_performance: dict[str, float] = Field(default_factory=dict)
-    cloud_spend_today: float = Field(default=0.0, ge=0.0)
-    open_questions: list[str] = Field(default_factory=list)
-    last_updated: datetime
+    context_id: str = Field(default_factory=lambda: str(uuid4()))
+    active_workers: list[str] = Field(default_factory=list)
+    current_priorities: list[str] = Field(default_factory=list)
+    recent_task_summary: str = ""
+    escalation_history: list[str] = Field(default_factory=list)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    @field_serializer('last_updated')
-    def serialize_last_updated(self, value: datetime) -> str:
+    @field_serializer('updated_at')
+    def serialize_updated_at(self, value: datetime) -> str:
         return value.isoformat()
 
 
@@ -559,6 +565,30 @@ class OrchestratorMetrics(BaseModel):
     task_completed: bool = Field(description="Whether the task reached a terminal success state")
     user_rating: float | None = Field(default=None, description="Manual rating if provided (1-10), else None")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="When this routing decision was made")
+
+
+class EvaluatorScore(BaseModel):
+    """Score from LLM-as-Judge evaluation of worker output."""
+    task_id: str = Field(description="Task identifier")
+    worker_id: str = Field(description="Worker identifier")
+    task_completion: float = Field(description="Did output address the task? (0.0-1.0)")
+    accuracy: float = Field(description="Factual/logical correctness (0.0-1.0)")
+    format_compliance: float = Field(description="Followed output format instructions (0.0-1.0)")
+    conciseness: float = Field(description="Appropriately brief (0.0-1.0)")
+    composite_score: float = Field(description="Weighted average of above four")
+    evaluator_model: str = Field(description="Which model performed the evaluation")
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="When evaluation was performed")
+
+
+class EvaluationRecord(BaseModel):
+    """Record of a worker evaluation, combining auto-eval and manual rating."""
+    record_id: str = Field(default_factory=lambda: str(uuid4()), description="Unique record identifier")
+    task_id: str = Field(description="Task identifier")
+    worker_id: str = Field(description="Worker identifier")
+    evaluator_score: EvaluatorScore | None = Field(default=None, description="Auto-eval score if performed")
+    manual_rating: float | None = Field(default=None, description="Manual rating 1-10 if provided")
+    final_score: float = Field(description="Resolved score (manual wins if present)")
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="When record was created")
 
 
 class Scratchpad(BaseModel):
