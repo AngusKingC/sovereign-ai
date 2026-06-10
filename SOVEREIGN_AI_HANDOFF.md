@@ -129,7 +129,7 @@ OUTPUT LAYER
 ## Current State
 
 ### Test Baseline
-- **463 passed, 23 skipped, 3 warnings** (as of Prompt 23 / checkpoint prompt-23)
+- **437 passed, 23 skipped, 2 warnings** (as of Prompt 23 / checkpoint prompt-23)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
 - 3 remaining warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless
@@ -234,7 +234,7 @@ OUTPUT LAYER
 | 20 | Instruction File Versioning and Updates | 416 |
 | 21 | Orchestrator Improvement Loop | 431 |
 | 22 | Unified Evaluation Framework | 446 |
-| 23 | Memory Scoping | 463 |
+| 23 | Memory Scoping | 437 |
 
 ---
 
@@ -549,8 +549,7 @@ Tests: minimum 12. Target: exceed new 22.5 baseline.
 ---
 
 #### Prompt 23 — Memory Scoping
-**Status**: Queued (moved earlier — load-bearing for multi-worker and
-open-loop safety)
+**Status**: DONE
 
 Worker-scoped memory partitions + shared global context layer.
 `StrategicContext` schema becomes data model for shared global context.

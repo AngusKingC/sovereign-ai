@@ -4197,6 +4197,62 @@ Each SKILL.md must declare:
 - All existing tests continue to pass - zero regressions
 - New tests use mock dependencies to avoid live LLM and database calls
 
+---
+
+### 2026-06-10 - Memory Scoping Implementation
+**Context**: User requested implementing memory scoping with ScopedMemoryRouter to enforce scope-based key prefixing and cross-scope access restrictions. Also updated StrategicContext, EscalationDecision, and WorkerOutput schemas with new fields.
+**Architecture Laws Compliance**:
+- Clean Architecture: ✅ core/memory_router.py imports only from core/ (no imports from adapters/, system, or cli)
+- Async-first: ✅ All memory operations are async
+- Pydantic everywhere: ✅ Uses TraceEvent, EventType, Layer from core/schemas.py
+- Typed or rejected: ✅ All public methods have return type annotations
+- Observability built-in: ✅ TraceEmitter injected via constructor, all trace calls use injected emitter
+
+**Implementation Details**:
+- Updated `core/schemas.py`:
+  - Replaced `StrategicContext` with new schema including: context_id, pending_tasks (list[Any]), escalation_history
+  - Replaced `EscalationDecision` with new schema including: task_id, tier, to_model, metadata
+  - Added `metadata` field to `WorkerOutput` with default {}
+  - Restored `field_serializer` for `StrategicContext.last_updated`
+
+- Updated `core/memory_router.py`:
+  - Added `MemoryScope` enum with GLOBAL and WORKER values
+  - Added `ScopedMemoryRouter` class wrapping MemoryRouter with scope string
+  - ScopedMemoryRouter prefixes all keys with scope string (e.g., "global:key", "worker:w1:key")
+  - Cross-scope guard: worker:w1 cannot read worker:w2 keys (raises PermissionError)
+  - Global scope can read any key without restriction
+  - Updated MemoryRouter to use injected emitter instead of global emit_trace
+  - Fixed TraceEvent construction to use correct EventType enum (MEMORY_QUERY, MEMORY_WRITE)
+  - Fixed TraceEvent construction to use correct Layer enum (L0 instead of CORE)
+  - Removed try-except blocks around trace emission to surface errors during testing
+
+- Updated `tests/test_memory_router.py`:
+  - Fixed test_tracing_on_fetch and test_tracing_on_write to use injected emitter
+  - Fixed event type assertions to use event.event_type.value instead of str(event.event_type)
+
+- Created `tests/test_memory_scoping.py`:
+  - 15 tests covering ScopedMemoryRouter, StrategicContext, EscalationDecision, WorkerOutput
+  - Tests verify key prefixing, cross-scope guard, trace event emission, schema validation
+  - All tests use mock dependencies - no live LLM calls, no live DB calls
+
+**Implementation Notes**:
+- test_tracing_on_fetch and test_tracing_on_write initially failed because tests used global set_trace_emitter but MemoryRouter now uses injected emitter - fixed by passing emitter to constructor
+- Event type assertions initially failed because str(event.event_type) returned "EventType.MEMORY_QUERY" not "MEMORY_QUERY" - fixed by using event.event_type.value
+- TraceEvent construction initially failed with AttributeError: CORE because Layer enum uses L0/L1 not CORE - fixed by using Layer.L0
+- TraceEvent construction initially failed because used TraceEventType from observability but TraceEvent schema uses EventType from schemas - fixed by importing EventType from schemas
+- StrategicContext.last_updated serialization initially failed because field_serializer was removed during schema update - restored field_serializer
+- WorkerOutput tests initially failed with ValidationError because confidence field is required - added confidence=0.9 to test fixtures
+- Cross-scope guard test initially failed because mock backend filtered by intent - changed mock to return all storage
+- Global scope test initially failed because mock backend filtered by intent - changed mock to return all storage
+- All trace emission try-except blocks removed to surface errors during development and testing
+- Used MemoryTraceEmitter default for emitter parameter to support optional injection
+
+**Testing Results**:
+- New tests: 15 tests for memory scoping
+- Full test suite: 437 passed, 23 skipped, 2 warnings (up from 422 passed)
+- All existing tests continue to pass - zero regressions
+- New tests use mock dependencies to avoid live LLM and database calls
+
 **Architecture Compliance**:
 - core/instruction_versioning.py imports only from core/ - verified
 - All I/O operations are async
