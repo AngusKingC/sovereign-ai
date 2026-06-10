@@ -6,20 +6,26 @@ and routing requests to appropriate memory backends.
 """
 
 from abc import ABC, abstractmethod
+from datetime import datetime
+from enum import Enum
 from typing import TYPE_CHECKING, Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
-from core.exceptions import CrossScopeAccessError
-from core.schemas import StrategicContext, Task
+from core.schemas import Task, TraceEvent, Layer, EventType
 from core.observability import (
     TraceComponent,
-    TraceEventType,
     TraceLevel,
-    emit_trace,
+    MemoryTraceEmitter,
 )
 
 if TYPE_CHECKING:
     from core.observability import TraceEmitter
+
+
+class MemoryScope(str, Enum):
+    """Memory scope for scoping access."""
+    GLOBAL = "global"
+    WORKER = "worker"
 
 
 class MemoryBackend(ABC):
@@ -36,6 +42,114 @@ class MemoryBackend(ABC):
         raise NotImplementedError
 
 
+class ScopedMemoryRouter:
+    """Memory router with scope-based key prefixing and access control."""
+
+    def __init__(
+        self,
+        router: "MemoryRouter",
+        scope: str,
+        emitter: "TraceEmitter | None" = None,
+    ) -> None:
+        """Initialize the scoped memory router.
+
+        Args:
+            router: The underlying memory router to delegate to
+            scope: The scope for this router (e.g., "global" or "worker:{worker_id}")
+            emitter: Trace emitter for events
+        """
+        self._router = router
+        self._scope = scope
+        self._emitter = emitter or MemoryTraceEmitter()
+
+    async def fetch(self, task: Task) -> list[dict[str, Any]]:
+        """Fetch memory relevant to the task with scope prefixing.
+
+        Args:
+            task: The task to fetch memory for
+
+        Returns:
+            List of memory entries with scope-prefixed keys
+        """
+        import time
+
+        start_time = time.perf_counter()
+
+        # Prefix task intent with scope for backend queries
+        scoped_task = Task(
+            task_id=task.task_id,
+            intent=f"{self._scope}:{task.intent}",
+            complexity_score=task.complexity_score,
+            priority=task.priority,
+            current_state=task.current_state,
+            created_at=task.created_at,
+        )
+
+        memory = await self._router.fetch(scoped_task)
+
+        # Cross-scope guard: filter out keys from other worker scopes
+        if self._scope.startswith("worker:"):
+            filtered_memory = []
+            for entry in memory:
+                for key in entry.keys():
+                    if key.startswith("worker:") and not key.startswith(f"{self._scope}:"):
+                        raise PermissionError(
+                            f"Cross-scope access denied: {self._scope} cannot read {key}"
+                        )
+                filtered_memory.append(entry)
+            memory = filtered_memory
+
+        duration_ms = int((time.perf_counter() - start_time) * 1000)
+        event = TraceEvent(
+            event_id=uuid4(),
+            timestamp=datetime.utcnow(),
+            layer=Layer.L0,
+            component=str(TraceComponent.MEMORY_ROUTER),
+            event_type=EventType.MEMORY_QUERY,
+            payload={
+                "task_id": str(task.task_id),
+                "scope": self._scope,
+                "memory_count": len(memory),
+            },
+            duration_ms=duration_ms,
+            success=True,
+        )
+        await self._emitter.emit(event)
+
+        return memory
+
+    async def write(self, data: dict[str, Any]) -> None:
+        """Write data to memory with scope prefixing.
+
+        Args:
+            data: The data to write (keys will be prefixed with scope)
+        """
+        import time
+
+        start_time = time.perf_counter()
+
+        # Prefix all keys with scope
+        scoped_data = {f"{self._scope}:{key}": value for key, value in data.items()}
+
+        await self._router.write(scoped_data)
+
+        duration_ms = int((time.perf_counter() - start_time) * 1000)
+        event = TraceEvent(
+            event_id=uuid4(),
+            timestamp=datetime.utcnow(),
+            layer=Layer.L0,
+            component=str(TraceComponent.MEMORY_ROUTER),
+            event_type=EventType.MEMORY_WRITE,
+            payload={
+                "scope": self._scope,
+                "key_count": len(scoped_data),
+            },
+            duration_ms=duration_ms,
+            success=True,
+        )
+        await self._emitter.emit(event)
+
+
 class MemoryRouter:
     """Routes memory operations to appropriate backends with governed access."""
 
@@ -44,13 +158,14 @@ class MemoryRouter:
         backends: dict[str, MemoryBackend],
         emitter: "TraceEmitter | None" = None,
     ) -> None:
-        """Initialize the memory router with backends."""
+        """Initialize the memory router with backends.
+
+        Args:
+            backends: Dictionary of backend name to backend instance
+            emitter: Trace emitter for events
+        """
         self.backends = backends
-        if emitter is None:
-            from core.observability import MemoryTraceEmitter
-            self.emitter = MemoryTraceEmitter()
-        else:
-            self.emitter = emitter
+        self.emitter = emitter or MemoryTraceEmitter()
 
     async def fetch(self, task: Task) -> list[dict[str, Any]]:
         """
@@ -68,37 +183,38 @@ class MemoryRouter:
                 memory = await backend.fetch(task)
                 all_memory.extend(memory)
             except Exception as e:
-                try:
-                    await self.emitter.emit(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.MEMORY_ROUTER,
-                        message=f"Memory query failed for backend {backend_name}",
-                        level=TraceLevel.ERROR,
-                        data={
-                            "task_id": str(task.task_id),
-                            "backend": backend_name,
-                            "error": str(e),
-                        },
-                    )
-                except Exception:
-                    pass
+                event = TraceEvent(
+                    event_id=uuid4(),
+                    timestamp=datetime.utcnow(),
+                    layer=Layer.L0,
+                    component=str(TraceComponent.MEMORY_ROUTER),
+                    event_type=EventType.MEMORY_QUERY,
+                    payload={
+                        "task_id": str(task.task_id),
+                        "backend": backend_name,
+                        "error": str(e),
+                    },
+                    duration_ms=0,
+                    success=False,
+                )
+                await self.emitter.emit(event)
 
         duration_ms = int((time.perf_counter() - start_time) * 1000)
-        try:
-            await self.emitter.emit(
-                event_type=TraceEventType.DATA_READ,
-                component=TraceComponent.MEMORY_ROUTER,
-                message="Memory query completed",
-                level=TraceLevel.INFO,
-                data={
-                    "task_id": str(task.task_id),
-                    "backend_count": len(self.backends),
-                    "memory_count": len(all_memory),
-                },
-                duration_ms=duration_ms,
-            )
-        except Exception:
-            pass
+        event = TraceEvent(
+            event_id=uuid4(),
+            timestamp=datetime.utcnow(),
+            layer=Layer.L0,
+            component=str(TraceComponent.MEMORY_ROUTER),
+            event_type=EventType.MEMORY_QUERY,
+            payload={
+                "task_id": str(task.task_id),
+                "backend_count": len(self.backends),
+                "memory_count": len(all_memory),
+            },
+            duration_ms=duration_ms,
+            success=True,
+        )
+        await self.emitter.emit(event)
 
         return all_memory
 
@@ -110,7 +226,6 @@ class MemoryRouter:
         Otherwise, writes to all backends.
         """
         import time
-        from datetime import datetime
 
         start_time = time.perf_counter()
 
@@ -123,198 +238,32 @@ class MemoryRouter:
             try:
                 await backend.write(data)
             except Exception as e:
-                try:
-                    await self.emitter.emit(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.MEMORY_ROUTER,
-                        message=f"Memory write failed for backend {name}",
-                        level=TraceLevel.ERROR,
-                        data={
-                            "backend": name,
-                            "error": str(e),
-                        },
-                    )
-                except Exception:
-                    pass
+                event = TraceEvent(
+                    event_id=uuid4(),
+                    timestamp=datetime.utcnow(),
+                    layer=Layer.L0,
+                    component=str(TraceComponent.MEMORY_ROUTER),
+                    event_type=EventType.MEMORY_WRITE,
+                    payload={
+                        "backend": name,
+                        "error": str(e),
+                    },
+                    duration_ms=0,
+                    success=False,
+                )
+                await self.emitter.emit(event)
 
         duration_ms = int((time.perf_counter() - start_time) * 1000)
-        try:
-            await self.emitter.emit(
-                event_type=TraceEventType.DATA_WRITE,
-                component=TraceComponent.MEMORY_ROUTER,
-                message="Memory write completed",
-                level=TraceLevel.INFO,
-                data={
-                    "backend_count": len(backends_to_write),
-                },
-                duration_ms=duration_ms,
-            )
-        except Exception:
-            pass
-
-    async def scoped_write(
-        self,
-        key: str,
-        value: str,
-        scope: str,
-        caller_id: str,
-    ) -> None:
-        """Write to a scoped memory partition with access control.
-        
-        Args:
-            key: The key to write
-            value: The value to write
-            scope: Either "global" or "worker:{worker_id}"
-            caller_id: The ID of the caller attempting the write
-            
-        Raises:
-            CrossScopeAccessError: If caller does not have write access to the scope
-        """
-        # Enforce scope access rules
-        if scope == "global":
-            if caller_id != "orchestrator":
-                raise CrossScopeAccessError(caller_id=caller_id, scope=scope)
-        elif scope.startswith("worker:"):
-            worker_id = scope.split(":", 1)[1]
-            if caller_id != worker_id:
-                raise CrossScopeAccessError(caller_id=caller_id, scope=scope)
-        else:
-            raise ValueError(f"Invalid scope: {scope}")
-        
-        # Write to backend with namespaced key
-        namespaced_key = f"{scope}:{key}"
-        await self.write({"key": namespaced_key, "value": value})
-        
-        # Emit trace event
-        try:
-            await self.emitter.emit(
-                event_type=TraceEventType.DATA_WRITE,
-                component=TraceComponent.MEMORY_ROUTER,
-                message="Scoped memory write completed",
-                level=TraceLevel.INFO,
-                data={
-                    "scope": scope,
-                    "key": key,
-                    "caller_id": caller_id,
-                },
-            )
-        except Exception:
-            pass
-
-    async def scoped_read(
-        self,
-        key: str,
-        scope: str,
-        caller_id: str,
-    ) -> str | None:
-        """Read from a scoped memory partition with access control.
-        
-        Args:
-            key: The key to read
-            scope: Either "global" or "worker:{worker_id}"
-            caller_id: The ID of the caller attempting the read
-            
-        Returns:
-            The value if found, None otherwise
-            
-        Raises:
-            CrossScopeAccessError: If caller does not have read access to the scope
-        """
-        # Enforce scope access rules
-        if scope == "global":
-            # Any caller may read global scope
-            pass
-        elif scope.startswith("worker:"):
-            worker_id = scope.split(":", 1)[1]
-            if caller_id != worker_id:
-                raise CrossScopeAccessError(caller_id=caller_id, scope=scope)
-        else:
-            raise ValueError(f"Invalid scope: {scope}")
-        
-        # Read from backend with namespaced key
-        namespaced_key = f"{scope}:{key}"
-        try:
-            # For now, we'll use a simple approach - read from the first backend
-            # In a full implementation, this would query the appropriate backend
-            if "postgres" in self.backends:
-                # Try to read from postgres backend
-                # This is a simplified implementation - actual implementation would
-                # depend on the backend's read API
-                pass
-        except Exception:
-            pass
-        
-        # Emit trace event
-        try:
-            await self.emitter.emit(
-                event_type=TraceEventType.DATA_READ,
-                component=TraceComponent.MEMORY_ROUTER,
-                message="Scoped memory read completed",
-                level=TraceLevel.INFO,
-                data={
-                    "scope": scope,
-                    "key": key,
-                    "caller_id": caller_id,
-                },
-            )
-        except Exception:
-            pass
-        
-        # For now, return None - actual implementation would fetch from backend
-        return None
-
-    async def get_global_context(self, caller_id: str) -> StrategicContext | None:
-        """Read the global StrategicContext.
-        
-        Args:
-            caller_id: The ID of the caller attempting the read
-            
-        Returns:
-            StrategicContext if found, None otherwise
-        """
-        # Any caller may read global context
-        try:
-            # Read from backend
-            namespaced_key = "global:strategic_context"
-            # Simplified implementation - actual would query backend
-            return None
-        except Exception:
-            return None
-
-    async def set_global_context(
-        self,
-        context: StrategicContext,
-        caller_id: str,
-    ) -> None:
-        """Write the global StrategicContext.
-        
-        Args:
-            context: The StrategicContext to persist
-            caller_id: The ID of the caller attempting the write
-            
-        Raises:
-            CrossScopeAccessError: If caller is not the orchestrator
-        """
-        # Only orchestrator may write global context
-        if caller_id != "orchestrator":
-            raise CrossScopeAccessError(caller_id=caller_id, scope="global")
-        
-        # Persist to backend
-        namespaced_key = "global:strategic_context"
-        import json
-        await self.write({"key": namespaced_key, "value": context.model_dump_json()})
-        
-        # Emit trace event
-        try:
-            await self.emitter.emit(
-                event_type=TraceEventType.DATA_WRITE,
-                component=TraceComponent.MEMORY_ROUTER,
-                message="Global context updated",
-                level=TraceLevel.INFO,
-                data={
-                    "context_id": context.context_id,
-                    "caller_id": caller_id,
-                },
-            )
-        except Exception:
-            pass
+        event = TraceEvent(
+            event_id=uuid4(),
+            timestamp=datetime.utcnow(),
+            layer=Layer.L0,
+            component=str(TraceComponent.MEMORY_ROUTER),
+            event_type=EventType.MEMORY_WRITE,
+            payload={
+                "backend_count": len(backends_to_write),
+            },
+            duration_ms=duration_ms,
+            success=True,
+        )
+        await self.emitter.emit(event)

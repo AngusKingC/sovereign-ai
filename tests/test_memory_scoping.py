@@ -1,245 +1,287 @@
-"""
-Tests for memory scoping functionality.
-
-Tests worker-scoped memory partitions with shared global context layer.
-"""
+"""Tests for memory scoping functionality."""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import datetime
+from uuid import UUID, uuid4
 
-from core.exceptions import CrossScopeAccessError
-from core.memory_router import MemoryRouter, MemoryBackend
-from core.schemas import StrategicContext, Task
+from core.memory_router import MemoryRouter, MemoryScope, ScopedMemoryRouter
 from core.observability import MemoryTraceEmitter
+from core.schemas import StrategicContext, EscalationDecision, WorkerOutput, Task
 
 
-class MockMemoryBackend(MemoryBackend):
+class MockMemoryBackend:
     """Mock memory backend for testing."""
-    
+
     def __init__(self):
-        self.data = {}
-    
+        self.storage = []
+
     async def fetch(self, task: Task) -> list[dict]:
-        return []
-    
+        """Return all stored memory (simplified for testing)."""
+        return self.storage.copy()
+
     async def write(self, data: dict) -> None:
-        if "key" in data:
-            self.data[data["key"]] = data.get("value")
+        """Store data in memory."""
+        self.storage.append(data)
 
 
-class TestMemoryScoping:
-    """Test suite for memory scoping functionality."""
-    
-    @pytest.fixture
-    def mock_backend(self):
-        """Create a mock memory backend."""
-        return MockMemoryBackend()
-    
-    @pytest.fixture
-    def memory_router(self, mock_backend):
-        """Create a memory router with mock backend."""
+@pytest.fixture
+def mock_backend():
+    """Create a mock memory backend."""
+    return MockMemoryBackend()
+
+
+@pytest.fixture
+def task():
+    """Create a sample task for testing."""
+    return Task(
+        task_id=uuid4(),
+        intent="test_task",
+        complexity_score=0.5,
+        priority="normal",
+        current_state="received",
+        created_at=datetime.utcnow(),
+    )
+
+
+class TestScopedMemoryRouter:
+    """Tests for ScopedMemoryRouter class."""
+
+    def test_global_scope_prefixes_keys(self, mock_backend, task):
+        """Test that global scope prefixes keys with 'global:'."""
         emitter = MemoryTraceEmitter()
-        return MemoryRouter(backends={"mock": mock_backend}, emitter=emitter)
-    
-    @pytest.fixture
-    def strategic_context(self):
-        """Create a StrategicContext for testing."""
-        return StrategicContext(
-            active_workers=["worker1", "worker2"],
-            current_priorities=["priority1"],
-            recent_task_summary="Test task completed",
-            escalation_history=["escalation1"],
+        router = MemoryRouter(backends={"mock": mock_backend}, emitter=emitter)
+        scoped_router = ScopedMemoryRouter(router, "global", emitter=emitter)
+
+        import asyncio
+
+        asyncio.run(scoped_router.write({"test_key": "test_value"}))
+
+        assert len(mock_backend.storage) == 1
+        assert "global:test_key" in mock_backend.storage[0]
+
+    def test_worker_scope_prefixes_keys(self, mock_backend, task):
+        """Test that worker scope prefixes keys with 'worker:w1:'."""
+        emitter = MemoryTraceEmitter()
+        router = MemoryRouter(backends={"mock": mock_backend}, emitter=emitter)
+        scoped_router = ScopedMemoryRouter(router, "worker:w1", emitter=emitter)
+
+        import asyncio
+
+        asyncio.run(scoped_router.write({"test_key": "test_value"}))
+
+        assert len(mock_backend.storage) == 1
+        assert "worker:w1:test_key" in mock_backend.storage[0]
+
+    def test_fetch_emits_trace_event(self, mock_backend, task):
+        """Test that fetch() emits a trace event via the injected emitter."""
+        emitter = MemoryTraceEmitter()
+        router = MemoryRouter(backends={"mock": mock_backend}, emitter=emitter)
+        scoped_router = ScopedMemoryRouter(router, "global", emitter=emitter)
+
+        import asyncio
+
+        asyncio.run(scoped_router.fetch(task))
+
+        events = emitter.get_events()
+        assert len(events) > 0
+
+    def test_write_emits_trace_event(self, mock_backend, task):
+        """Test that write() emits a trace event via the injected emitter."""
+        emitter = MemoryTraceEmitter()
+        router = MemoryRouter(backends={"mock": mock_backend}, emitter=emitter)
+        scoped_router = ScopedMemoryRouter(router, "global", emitter=emitter)
+
+        import asyncio
+
+        asyncio.run(scoped_router.write({"test_key": "test_value"}))
+
+        events = emitter.get_events()
+        assert len(events) > 0
+
+    def test_cross_scope_read_raises_permission_error(self, mock_backend, task):
+        """Test that cross-scope read raises PermissionError."""
+        emitter = MemoryTraceEmitter()
+        router = MemoryRouter(backends={"mock": mock_backend}, emitter=emitter)
+        scoped_router = ScopedMemoryRouter(router, "worker:w1", emitter=emitter)
+
+        # Pre-populate backend with data from another worker scope
+        mock_backend.storage.append({"worker:w2:test_key": "test_value"})
+
+        import asyncio
+
+        with pytest.raises(PermissionError, match="Cross-scope access denied"):
+            asyncio.run(scoped_router.fetch(task))
+
+    def test_global_scope_can_read_any_key(self, mock_backend, task):
+        """Test that global scope can read any key without cross-scope restriction."""
+        emitter = MemoryTraceEmitter()
+        router = MemoryRouter(backends={"mock": mock_backend}, emitter=emitter)
+        scoped_router = ScopedMemoryRouter(router, "global", emitter=emitter)
+
+        # Pre-populate backend with data from worker scopes
+        mock_backend.storage.append({"worker:w1:test_key": "test_value"})
+        mock_backend.storage.append({"worker:w2:test_key": "test_value"})
+
+        import asyncio
+
+        # Should not raise PermissionError
+        result = asyncio.run(scoped_router.fetch(task))
+        assert len(result) == 2
+
+    def test_different_scopes_do_not_share_key_space(self, mock_backend, task):
+        """Test that two ScopedMemoryRouter instances with different scopes do not share key space."""
+        emitter1 = MemoryTraceEmitter()
+        emitter2 = MemoryTraceEmitter()
+        router = MemoryRouter(backends={"mock": mock_backend}, emitter=emitter1)
+        scoped_router1 = ScopedMemoryRouter(router, "worker:w1", emitter=emitter1)
+        scoped_router2 = ScopedMemoryRouter(router, "worker:w2", emitter=emitter2)
+
+        import asyncio
+
+        asyncio.run(scoped_router1.write({"test_key": "value1"}))
+        asyncio.run(scoped_router2.write({"test_key": "value2"}))
+
+        assert len(mock_backend.storage) == 2
+        # Both writes should be stored with their respective prefixes
+        keys = [list(entry.keys())[0] for entry in mock_backend.storage]
+        assert "worker:w1:test_key" in keys
+        assert "worker:w2:test_key" in keys
+
+
+class TestStrategicContext:
+    """Tests for StrategicContext schema."""
+
+    def test_strategic_context_validates_correctly(self):
+        """Test that StrategicContext validates with all required fields."""
+        context = StrategicContext(
+            active_goals=["goal1"],
+            pending_tasks=[],
+            completed_today=["task1"],
+            blocked_tasks=[],
+            worker_performance={"worker1": 0.9},
+            cloud_spend_today=0.0,
+            open_questions=["question1"],
+            last_updated=datetime.utcnow(),
+            escalation_history=[],
         )
-    
-    @pytest.mark.asyncio
-    async def test_scoped_write_with_global_scope_and_orchestrator_caller_succeeds(self, memory_router):
-        """Test that scoped_write succeeds with global scope and orchestrator caller."""
-        await memory_router.scoped_write(
-            key="test_key",
-            value="test_value",
-            scope="global",
-            caller_id="orchestrator",
-        )
-        # Should not raise an exception
-    
-    @pytest.mark.asyncio
-    async def test_scoped_write_with_global_scope_and_non_orchestrator_caller_raises_error(self, memory_router):
-        """Test that scoped_write raises CrossScopeAccessError for non-orchestrator caller on global scope."""
-        with pytest.raises(CrossScopeAccessError) as exc_info:
-            await memory_router.scoped_write(
-                key="test_key",
-                value="test_value",
-                scope="global",
-                caller_id="worker1",
+        assert context.context_id is not None
+        assert len(context.active_goals) == 1
+        assert context.cloud_spend_today == 0.0
+
+    def test_strategic_context_cloud_spend_rejects_negative(self):
+        """Test that StrategicContext.cloud_spend_today rejects negative values."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            StrategicContext(
+                active_goals=[],
+                pending_tasks=[],
+                completed_today=[],
+                blocked_tasks=[],
+                worker_performance={},
+                cloud_spend_today=-1.0,  # Invalid
+                open_questions=[],
+                last_updated=datetime.utcnow(),
+                escalation_history=[],
             )
-        assert exc_info.value.caller_id == "worker1"
-        assert exc_info.value.scope == "global"
-    
-    @pytest.mark.asyncio
-    async def test_scoped_write_with_worker_scope_and_matching_caller_succeeds(self, memory_router):
-        """Test that scoped_write succeeds with worker scope when caller matches."""
-        await memory_router.scoped_write(
-            key="test_key",
-            value="test_value",
-            scope="worker:alice",
-            caller_id="alice",
+
+    def test_strategic_context_last_updated_serializes_to_json(self):
+        """Test that StrategicContext.last_updated serialises to JSON correctly."""
+        context = StrategicContext(
+            active_goals=[],
+            pending_tasks=[],
+            completed_today=[],
+            blocked_tasks=[],
+            worker_performance={},
+            cloud_spend_today=0.0,
+            open_questions=[],
+            last_updated=datetime(2026, 1, 1, 12, 0, 0),
+            escalation_history=[],
         )
-        # Should not raise an exception
-    
-    @pytest.mark.asyncio
-    async def test_scoped_write_with_worker_scope_and_non_matching_caller_raises_error(self, memory_router):
-        """Test that scoped_write raises CrossScopeAccessError when caller doesn't match worker scope."""
-        with pytest.raises(CrossScopeAccessError) as exc_info:
-            await memory_router.scoped_write(
-                key="test_key",
-                value="test_value",
-                scope="worker:alice",
-                caller_id="bob",
-            )
-        assert exc_info.value.caller_id == "bob"
-        assert exc_info.value.scope == "worker:alice"
-    
-    @pytest.mark.asyncio
-    async def test_scoped_read_of_global_scope_by_any_caller_succeeds(self, memory_router):
-        """Test that scoped_read of global scope succeeds for any caller."""
-        result = await memory_router.scoped_read(
-            key="test_key",
-            scope="global",
-            caller_id="worker1",
+        json_data = context.model_dump()
+        assert "last_updated" in json_data
+        assert json_data["last_updated"] == "2026-01-01T12:00:00"
+
+
+class TestEscalationDecision:
+    """Tests for EscalationDecision schema."""
+
+    def test_escalation_decision_constructs_correctly(self):
+        """Test that EscalationDecision constructs with all required fields."""
+        decision = EscalationDecision(
+            task_id=uuid4(),
+            should_escalate=True,
+            reasons=["low confidence"],
+            suggested_model="gpt-4o",
+            estimated_cost=0.5,
         )
-        # Should not raise an exception
-        assert result is None  # Returns None when key not found
-    
-    @pytest.mark.asyncio
-    async def test_scoped_read_of_worker_scope_by_matching_caller_succeeds(self, memory_router):
-        """Test that scoped_read of worker scope succeeds when caller matches."""
-        result = await memory_router.scoped_read(
-            key="test_key",
-            scope="worker:alice",
-            caller_id="alice",
+        assert decision.should_escalate is True
+        assert decision.estimated_cost == 0.5
+        assert decision.tier == "cloud"
+        assert decision.to_model == ""
+        assert decision.metadata == {}
+
+    def test_escalation_decision_estimated_cost_defaults_to_zero(self):
+        """Test that EscalationDecision.estimated_cost defaults to 0.0."""
+        decision = EscalationDecision(
+            task_id=uuid4(),
+            should_escalate=True,
+            reasons=["low confidence"],
+            suggested_model="gpt-4o",
         )
-        # Should not raise an exception
-        assert result is None  # Returns None when key not found
-    
-    @pytest.mark.asyncio
-    async def test_scoped_read_of_worker_scope_by_non_matching_caller_raises_error(self, memory_router):
-        """Test that scoped_read raises CrossScopeAccessError when caller doesn't match worker scope."""
-        with pytest.raises(CrossScopeAccessError) as exc_info:
-            await memory_router.scoped_read(
-                key="test_key",
-                scope="worker:alice",
-                caller_id="bob",
-            )
-        assert exc_info.value.caller_id == "bob"
-        assert exc_info.value.scope == "worker:alice"
-    
-    @pytest.mark.asyncio
-    async def test_scoped_read_returns_none_when_key_does_not_exist(self, memory_router):
-        """Test that scoped_read returns None when key does not exist."""
-        result = await memory_router.scoped_read(
-            key="nonexistent_key",
-            scope="global",
-            caller_id="orchestrator",
+        assert decision.estimated_cost == 0.0
+
+
+class TestWorkerOutput:
+    """Tests for WorkerOutput schema."""
+
+    def test_worker_output_constructs_with_metadata_default(self):
+        """Test that WorkerOutput constructs with metadata={} by default."""
+        output = WorkerOutput(
+            worker_id="worker1",
+            task_id=uuid4(),
+            content="test content",
+            confidence=0.9,
+            model_used="gpt-4o",
+            tokens_used=100,
         )
-        assert result is None
-    
-    @pytest.mark.asyncio
-    async def test_scoped_write_emits_correct_trace_event(self, memory_router):
-        """Test that scoped_write emits correct trace event with scope and caller_id in data."""
-        await memory_router.scoped_write(
-            key="test_key",
-            value="test_value",
-            scope="global",
-            caller_id="orchestrator",
+        assert output.metadata == {}
+
+    def test_worker_output_accepts_metadata_dict(self):
+        """Test that WorkerOutput accepts metadata={"denied": True} without error."""
+        output = WorkerOutput(
+            worker_id="worker1",
+            task_id=uuid4(),
+            content="test content",
+            confidence=0.9,
+            model_used="gpt-4o",
+            tokens_used=100,
+            metadata={"denied": True},
         )
-        # MemoryTraceEmitter doesn't store events by default, so we just verify no exception was raised
-        # The actual emission is wrapped in try-except, so we just ensure the method completes
-        assert True
-    
-    @pytest.mark.asyncio
-    async def test_scoped_read_emits_correct_trace_event(self, memory_router):
-        """Test that scoped_read emits correct trace event."""
-        await memory_router.scoped_read(
-            key="test_key",
-            scope="global",
-            caller_id="orchestrator",
-        )
-        # MemoryTraceEmitter doesn't store events by default, so we just verify no exception was raised
-        # The actual emission is wrapped in try-except, so we just ensure the method completes
-        assert True
-    
-    @pytest.mark.asyncio
-    async def test_set_global_context_by_orchestrator_persists_strategic_context(self, memory_router, strategic_context):
-        """Test that set_global_context by orchestrator persists StrategicContext."""
-        await memory_router.set_global_context(
-            context=strategic_context,
-            caller_id="orchestrator",
-        )
-        # Should not raise an exception
-        assert True
-    
-    @pytest.mark.asyncio
-    async def test_set_global_context_by_non_orchestrator_raises_error(self, memory_router, strategic_context):
-        """Test that set_global_context raises CrossScopeAccessError for non-orchestrator caller."""
-        with pytest.raises(CrossScopeAccessError) as exc_info:
-            await memory_router.set_global_context(
-                context=strategic_context,
-                caller_id="worker1",
-            )
-        assert exc_info.value.caller_id == "worker1"
-        assert exc_info.value.scope == "global"
-    
-    @pytest.mark.asyncio
-    async def test_get_global_context_returns_none_when_not_yet_set(self, memory_router):
-        """Test that get_global_context returns None when not yet set."""
-        result = await memory_router.get_global_context(caller_id="orchestrator")
-        assert result is None
-    
-    @pytest.mark.asyncio
-    async def test_get_global_context_returns_correct_strategic_context_when_set(self, memory_router, strategic_context):
-        """Test that get_global_context returns correct StrategicContext when set."""
-        # First set the context
-        await memory_router.set_global_context(
-            context=strategic_context,
-            caller_id="orchestrator",
-        )
-        
-        # Then retrieve it
-        result = await memory_router.get_global_context(caller_id="orchestrator")
-        # For now, returns None due to simplified implementation
-        # In full implementation, would return the persisted context
-        assert result is None
-    
-    @pytest.mark.asyncio
-    async def test_global_context_updated_trace_event_emitted_on_successful_set_global_context(self, memory_router, strategic_context):
-        """Test that global_context_updated trace event is emitted on successful set_global_context."""
-        await memory_router.set_global_context(
-            context=strategic_context,
-            caller_id="orchestrator",
-        )
-        # MemoryTraceEmitter doesn't store events by default, so we just verify no exception was raised
-        # The actual emission is wrapped in try-except, so we just ensure the method completes
-        assert True
-    
-    @pytest.mark.asyncio
-    async def test_scoped_write_with_invalid_scope_raises_value_error(self, memory_router):
-        """Test that scoped_write raises ValueError for invalid scope."""
-        with pytest.raises(ValueError) as exc_info:
-            await memory_router.scoped_write(
-                key="test_key",
-                value="test_value",
-                scope="invalid_scope",
-                caller_id="orchestrator",
-            )
-        assert "Invalid scope" in str(exc_info.value)
-    
-    @pytest.mark.asyncio
-    async def test_scoped_read_with_invalid_scope_raises_value_error(self, memory_router):
-        """Test that scoped_read raises ValueError for invalid scope."""
-        with pytest.raises(ValueError) as exc_info:
-            await memory_router.scoped_read(
-                key="test_key",
-                scope="invalid_scope",
-                caller_id="orchestrator",
-            )
-        assert "Invalid scope" in str(exc_info.value)
+        assert output.metadata == {"denied": True}
+
+
+class TestMemoryRouterTraceEvents:
+    """Tests for MemoryRouter trace event field names."""
+
+    def test_memory_router_trace_events_use_correct_field_names(self, mock_backend, task):
+        """Test that MemoryRouter trace events use correct field names (not layer, payload, success)."""
+        emitter = MemoryTraceEmitter()
+        router = MemoryRouter(backends={"mock": mock_backend}, emitter=emitter)
+
+        import asyncio
+
+        asyncio.run(router.fetch(task))
+
+        events = emitter.get_events()
+        assert len(events) > 0
+        # Check that events have the correct TraceEvent schema fields
+        for event in events:
+            assert hasattr(event, "event_id")
+            assert hasattr(event, "timestamp")
+            assert hasattr(event, "layer")
+            assert hasattr(event, "component")
+            assert hasattr(event, "event_type")
+            assert hasattr(event, "payload")
+            assert hasattr(event, "duration_ms")
+            assert hasattr(event, "success")
