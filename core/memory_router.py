@@ -19,6 +19,9 @@ from core.observability import (
 )
 
 if TYPE_CHECKING:
+    from core.memory_compactor import MemoryCompactor
+
+if TYPE_CHECKING:
     from core.observability import TraceEmitter
 
 
@@ -157,15 +160,18 @@ class MemoryRouter:
         self,
         backends: dict[str, MemoryBackend],
         emitter: "TraceEmitter | None" = None,
+        compactor: "MemoryCompactor | None" = None,
     ) -> None:
         """Initialize the memory router with backends.
 
         Args:
             backends: Dictionary of backend name to backend instance
             emitter: Trace emitter for events
+            compactor: Optional memory compactor for tiered memory management
         """
         self.backends = backends
         self.emitter = emitter or MemoryTraceEmitter()
+        self._compactor = compactor
 
     async def fetch(self, task: Task) -> list[dict[str, Any]]:
         """
@@ -177,6 +183,38 @@ class MemoryRouter:
 
         start_time = time.perf_counter()
         all_memory = []
+
+        # Check hot store first if compactor is configured
+        if self._compactor:
+            scope = "global"
+            key = task.intent
+            if ":" in task.intent:
+                parts = task.intent.split(":", 1)
+                if parts[0] in ["global", "worker", "warm", "cold"]:
+                    scope = parts[0]
+                    key = parts[1]
+            
+            hot_result = self._compactor.get(key, scope)
+            if hot_result is not None:
+                all_memory.append(hot_result)
+                duration_ms = int((time.perf_counter() - start_time) * 1000)
+                event = TraceEvent(
+                    event_id=uuid4(),
+                    timestamp=datetime.utcnow(),
+                    layer=Layer.L0,
+                    component=str(TraceComponent.MEMORY_ROUTER),
+                    event_type=EventType.MEMORY_QUERY,
+                    payload={
+                        "task_id": str(task.task_id),
+                        "backend_count": len(self.backends),
+                        "memory_count": len(all_memory),
+                        "source": "hot_store",
+                    },
+                    duration_ms=duration_ms,
+                    success=True,
+                )
+                await self.emitter.emit(event)
+                return all_memory
 
         for backend_name, backend in self.backends.items():
             try:
@@ -198,6 +236,11 @@ class MemoryRouter:
                     success=False,
                 )
                 await self.emitter.emit(event)
+
+        # Store each memory entry in hot store if compactor is configured
+        if self._compactor:
+            for entry in all_memory:
+                await self._compactor.put(key, entry, scope)
 
         duration_ms = int((time.perf_counter() - start_time) * 1000)
         event = TraceEvent(

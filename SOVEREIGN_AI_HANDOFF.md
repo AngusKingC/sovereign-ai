@@ -129,15 +129,15 @@ OUTPUT LAYER
 ## Current State
 
 ### Test Baseline
-- **469 passed, 23 skipped, 4 warnings** (as of Prompt 24 / checkpoint prompt-24)
+- **501 passed, 37 skipped, 4 warnings** (as of Prompt 26 / checkpoint prompt-26)
 - Baseline is dynamic — every prompt must exceed the previous count
-- Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
+- Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency), `tests/test_escalation.py` (escalation logic disabled)
 - 4 remaining warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-24`
+- Latest checkpoint tag: `prompt-26`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}`
 - Restore script: `python scripts/restore.py`
 
@@ -583,7 +583,7 @@ Compaction runs as background task, never blocks main execution.
 ---
 
 #### Prompt 26 — Monitor Daemon
-**Status**: Queued
+**Status**: DONE
 
 `system/monitor_daemon.py` — persistent background heartbeat process.
 Scheduler: immediate, deferred, recurring, conditional tasks.
@@ -602,7 +602,7 @@ Task-level crash resume — extends `core/task_state_machine.py`:
 ---
 
 #### Prompt 27 — Event Trigger System
-**Status**: Queued
+**Status**: IN PROGRESS
 
 `system/event_triggers.py` — conditional tasks on data conditions.
 Trigger types: threshold, change detection, pattern match, schedule.

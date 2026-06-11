@@ -244,8 +244,8 @@ class StrategicContext(BaseModel):
     last_updated: datetime
     escalation_history: list[str] = Field(default_factory=list)
 
-    @field_serializer('updated_at')
-    def serialize_updated_at(self, value: datetime) -> str:
+    @field_serializer('last_updated')
+    def serialize_last_updated(self, value: datetime) -> str:
         return value.isoformat()
 
 
