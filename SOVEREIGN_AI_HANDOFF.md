@@ -129,15 +129,15 @@ OUTPUT LAYER
 ## Current State
 
 ### Test Baseline
-- **437 passed, 23 skipped, 2 warnings** (as of Prompt 23 / checkpoint prompt-23)
+- **469 passed, 23 skipped, 4 warnings** (as of Prompt 24 / checkpoint prompt-24)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
-- 3 remaining warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless
+- 4 remaining warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-23`
+- Latest checkpoint tag: `prompt-24`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}`
 - Restore script: `python scripts/restore.py`
 
@@ -145,9 +145,10 @@ OUTPUT LAYER
 - `core/schemas.py` — all Pydantic models including TaskStatus.DENIED, EvaluatorScore, EvaluationRecord, OrchestratorMetrics
 - `core/memory_router.py` — MemoryBackend ABC, MemoryRouter with tracing
 - `core/worker_base.py` — LLMResponse, LLMAdapter Protocol, WorkerBase ABC (DI)
-- `core/orchestrator.py` — routing with scoring algorithm, deregister_worker, mark_task_completed integration, DI complete
+- `core/orchestrator.py` — routing with scoring algorithm, deregister_worker, mark_task_completed integration, DI complete, escalation engine integration
 - `core/handlers.py` — QueryHandler, DI complete
 - `core/embedder.py` — OllamaEmbedder
+- `core/escalation.py` — EscalationEngine with evaluate(), request_approval(), execute_escalation()
 - `core/observability.py` — TraceEmitter, MemoryTraceEmitter, ConsoleTraceEmitter
 - `core/commands.py` — CommandRegistry, DI complete
 - `core/exceptions.py` — InvalidStateTransitionError, WorkerNotFoundError,
@@ -235,6 +236,7 @@ OUTPUT LAYER
 | 21 | Orchestrator Improvement Loop | 431 |
 | 22 | Unified Evaluation Framework | 446 |
 | 23 | Memory Scoping | 437 |
+| 24 | Escalation Engine | 469 |
 
 ---
 
@@ -559,7 +561,7 @@ MemoryRouter enforces scoping — raises on cross-scope access attempts.
 ---
 
 #### Prompt 24 — Wire EscalationDecision
-**Status**: Queued
+**Status**: DONE
 
 `EscalationDecision` schema exists but nothing uses it.
 Escalation hierarchy: local → better local → cloud.
@@ -568,7 +570,7 @@ Always requires user approval unless pre-authorised via ApprovalScope.
 ---
 
 #### Prompt 25 — Tiered Memory Compaction
-**Status**: Queued
+**Status**: IN PROGRESS
 
 Hot/warm/cold memory tiers with periodic background compaction.
 Hot: in-context. Warm: Qdrant. Cold: Postgres archival.

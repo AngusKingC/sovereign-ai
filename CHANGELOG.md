@@ -4492,5 +4492,85 @@ Each SKILL.md must declare:
 
 **Checkpoint**: prompt-23 created and pushed to remote
 
-**Next Steps**: Prompt 24 - TBD
+---
+
+## Prompt 24 - Escalation Engine Implementation
+
+**Date**: 2026-06-11
+
+**Summary**: Implemented EscalationEngine in core/escalation.py with evaluate(), request_approval(), and execute_escalation() methods. Wired escalation engine into orchestrator via optional constructor injection. Created comprehensive test suite with 17 tests covering escalation triggers, approval workflow, and orchestrator integration.
+
+**Files Modified**:
+- Created `core/escalation.py`:
+  - EscalationEngine class with __init__(approval_gate, memory_router, emitter)
+  - evaluate(task, worker_output, available_models) -> EscalationDecision
+  - request_approval(task, decision) -> bool
+  - execute_escalation(task, decision) -> WorkerOutput
+  - Escalation triggers: confidence < 0.5, metadata["denied"], metadata["error"]
+  - Uses correct TraceEvent fields: event_type, component, level, message, data, duration_ms
+  - Uses TraceEventType.OPERATION_COMPLETE and OPERATION_ERROR (non-existent ESCALATION_* types)
+  - Uses TraceComponent enum directly, not str(TraceComponent.*)
+  - Uses Layer from core/schemas, not core/observability
+
+- Modified `core/orchestrator.py`:
+  - Added escalation_engine: EscalationEngine | None = None parameter to constructor
+  - Stored as self._escalation_engine
+  - In process_task after worker.run, if escalation_engine set:
+    - Call evaluate() to check if escalation needed
+    - If should_escalate: call request_approval()
+    - If approved: call execute_escalation() and return result
+    - If denied: set result.metadata["escalation_denied"] = True and return original result
+  - If no escalation_engine: return result unchanged (backward compatible)
+
+- Created `tests/test_escalation.py`:
+  - 17 tests covering EscalationEngine and orchestrator integration
+  - Tests for evaluate() escalation triggers and no-escalation cases
+  - Tests for reasons list correctness and tier/suggested_model logic
+  - Tests for trace event emission via emitter.get_events()
+  - Tests for request_approval() approval and denial paths
+  - Tests for execute_escalation() output and memory write via ScopedMemoryRouter
+  - Tests for orchestrator wiring with and without escalation_engine
+  - Tests for escalation denied path metadata setting
+  - All tests use MemoryTraceEmitter explicitly, mock dependencies
+
+**Implementation Notes**:
+- Initial test failures due to incorrect TraceEvent field names (layer, payload, success) - fixed to use correct fields (event_type, component, level, message, data, duration_ms)
+- Initial test failures due to non-existent TraceEventType.ESCALATION_* enum values - fixed to use OPERATION_COMPLETE and OPERATION_ERROR
+- Initial test failures due to str(TraceComponent.*) conversion - fixed to use enum values directly
+- Initial test failures due to Layer import from core.observability - fixed to import from core/schemas
+- Initial test failures due to TaskPriority not imported in test file - fixed by adding import
+- Initial test failures due to ApprovalResponse missing required fields (task_id, approved_by) - fixed by adding them
+- Initial test failures due to asyncio.run() in pytest-asyncio tests - fixed by using await directly
+- Initial test failures due to mock worker missing status attribute - fixed by setting status="active"
+- Initial test failures due to MockLLMAdapter import that doesn't exist - fixed by removing unused import
+- core/escalation.py uses ScopedMemoryRouter.write() (not scoped_write() as mentioned in spec - method doesn't exist)
+- EscalationDecision and WorkerOutput field names verified against core/schemas.py before use
+- All trace events use correct field names per user rule
+- MemoryTraceEmitter constructed and passed via constructor injection per user rule
+- Events retrieved via emitter.get_events() per user rule
+- Test baseline: 452 passed, 23 skipped, 4 warnings
+- Final test suite: 469 passed, 23 skipped, 4 warnings (+17 new tests)
+
+**Testing Results**:
+- New tests: 17 tests for escalation engine (all passed)
+- Full test suite: 469 passed, 23 skipped, 4 warnings
+- Test coverage includes: escalation triggers, approval workflow, memory writes, orchestrator integration, trace emission
+- All tests use mock dependencies - no live DB or LLM calls
+
+**Architecture Compliance**:
+- core/escalation.py imports only from core/ (schemas, observability, approval_gate, memory_router) - verified
+- core/orchestrator.py imports EscalationEngine from core/escalation - verified
+- All methods async with return type annotations
+- TraceEmitter injected via constructor, default MemoryTraceEmitter()
+- TraceEvent constructed with correct fields: event_type, component, level, message, data, duration_ms
+- Events retrieved via emitter.get_events()
+- No domain exceptions raised inside try-except blocks
+- No Pydantic model mutation in tests
+- Schema field names verified against source before use
+
+**Rationale**: EscalationEngine provides a real escalation path with approval gating for tasks that local workers cannot handle. The engine evaluates worker output for low confidence, denial flags, or error flags to trigger escalation. It requests user approval via ApprovalGate before executing escalation, ensuring human oversight for cloud model dispatch. The orchestrator integration is optional via constructor injection, maintaining backward compatibility for existing code paths. The execute_escalation method is a stub that writes the escalation decision to memory via ScopedMemoryRouter with "global" scope, preparing for actual cloud dispatch in Phase 7. This creates a secure escalation workflow with human-in-the-loop approval and proper observability.
+
+**Checkpoint**: prompt-24 created and pushed to remote
+
+**Next Steps**: Prompt 25 - TBD
 
