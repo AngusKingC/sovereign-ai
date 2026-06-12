@@ -13,6 +13,7 @@ from core.schemas import Task, WorkerOutput, TaskStatus, EscalationDecision, Esc
 from core.approval_gate import ApprovalActionType, ApprovalGate, ApprovalRequest, ApprovalResponse
 from core.orchestrator import Orchestrator
 from core.exceptions import CrossScopeAccessError
+from core.observability import MemoryTraceEmitter
 
 
 class TestEscalationFlow:
@@ -62,6 +63,7 @@ class TestEscalationFlow:
                 cloud_fallback_model="gpt-4o",
                 approval_gate=mock_approval_gate,
                 escalation_engine=mock_escalation_engine,
+                emitter=MemoryTraceEmitter(),
             )
             # Replace the state_machine with our mock
             orch.state_machine = mock_state_machine
@@ -108,8 +110,7 @@ class TestEscalationFlow:
         ))
         
         # Process task
-        with patch('core.orchestrator.emit_trace', AsyncMock()):
-            result = await orchestrator.process_task(task, "worker1")
+        result = await orchestrator.process_task(task, "worker1")
         
         # Verify evaluate was called
         assert mock_escalation_engine.evaluate.called
@@ -146,8 +147,7 @@ class TestEscalationFlow:
         ))
         
         # Process task
-        with patch('core.orchestrator.emit_trace', AsyncMock()):
-            result = await orchestrator.process_task(task, "worker1")
+        result = await orchestrator.process_task(task, "worker1")
         
         # Verify evaluate was called but request_approval was not
         assert mock_escalation_engine.evaluate.called
@@ -192,8 +192,7 @@ class TestEscalationFlow:
         ))
         
         # Process task
-        with patch('core.orchestrator.emit_trace', AsyncMock()):
-            result = await orchestrator.process_task(task, "worker1")
+        result = await orchestrator.process_task(task, "worker1")
         
         # Verify request_approval was called
         assert mock_escalation_engine.request_approval.called
@@ -236,8 +235,7 @@ class TestEscalationFlow:
         ))
         
         # Process task
-        with patch('core.orchestrator.emit_trace', AsyncMock()):
-            result = await orchestrator.process_task(task, "worker1")
+        result = await orchestrator.process_task(task, "worker1")
         
         # Verify execute_escalation was called
         assert mock_escalation_engine.execute_escalation.called
@@ -273,8 +271,7 @@ class TestEscalationFlow:
         mock_escalation_engine.request_approval = AsyncMock(return_value=False)
         
         # Process task
-        with patch('core.orchestrator.emit_trace', AsyncMock()):
-            result = await orchestrator.process_task(task, "worker1")
+        result = await orchestrator.process_task(task, "worker1")
         
         # Verify escalation_denied metadata is set
         assert result.metadata.get("escalation_denied") is True
@@ -303,8 +300,7 @@ class TestEscalationFlow:
         mock_escalation_engine.evaluate = AsyncMock(side_effect=Exception("Test error"))
         
         # Process task - should not raise
-        with patch('core.orchestrator.emit_trace', AsyncMock()):
-            result = await orchestrator.process_task(task, "worker1")
+        result = await orchestrator.process_task(task, "worker1")
         
         # Should return original worker output
         assert result.worker_id == "worker1"

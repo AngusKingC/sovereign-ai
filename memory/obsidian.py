@@ -19,17 +19,20 @@ from core.observability import (
     TraceEventType,
     TraceComponent,
     TraceLevel,
-    emit_trace,
+    TraceEvent,
+    TraceEmitter,
+    MemoryTraceEmitter,
 )
 
 
 class ObsidianBackend(MemoryBackend):
     """Memory backend for Obsidian markdown vaults."""
 
-    def __init__(self, vault_path: str) -> None:
+    def __init__(self, vault_path: str, emitter: TraceEmitter | None = None) -> None:
         """Initialize the Obsidian backend with a vault path."""
         self.vault_path = Path(vault_path)
         self.vault_path.mkdir(parents=True, exist_ok=True)
+        self._emitter = emitter or MemoryTraceEmitter()
 
     async def fetch(self, task: Task) -> list[dict[str, Any]]:
         """
@@ -42,32 +45,41 @@ class ObsidianBackend(MemoryBackend):
 
         try:
             # Emit fetch start event
-            await emit_trace(
-                event_type=TraceEventType.MEMORY_FETCH,
-                component=TraceComponent.MEMORY_ROUTER,
-                message="Obsidian memory fetch started",
-                level=TraceLevel.INFO,
-                data={
-                    "backend_type": "obsidian",
-                    "task_id": str(task.task_id),
-                    "vault_path": str(self.vault_path),
-                },
-            )
-
-            if not self.vault_path.exists():
-                duration_ms = int((time.perf_counter() - start_time) * 1000)
-                await emit_trace(
+            try:
+                event = TraceEvent(
                     event_type=TraceEventType.MEMORY_FETCH,
                     component=TraceComponent.MEMORY_ROUTER,
-                    message="Obsidian memory fetch completed (vault not found)",
+                    message="Obsidian memory fetch started",
                     level=TraceLevel.INFO,
                     data={
                         "backend_type": "obsidian",
                         "task_id": str(task.task_id),
-                        "records_fetched": 0,
+                        "vault_path": str(self.vault_path),
                     },
-                    duration_ms=duration_ms,
+                    duration_ms=0,
                 )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
+
+            if not self.vault_path.exists():
+                duration_ms = int((time.perf_counter() - start_time) * 1000)
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.MEMORY_FETCH,
+                        component=TraceComponent.MEMORY_ROUTER,
+                        message="Obsidian memory fetch completed (vault not found)",
+                        level=TraceLevel.INFO,
+                        data={
+                            "backend_type": "obsidian",
+                            "task_id": str(task.task_id),
+                            "records_fetched": 0,
+                        },
+                        duration_ms=duration_ms,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
                 return memory
 
             # Run file I/O in thread pool to avoid blocking
@@ -88,25 +100,29 @@ class ObsidianBackend(MemoryBackend):
             duration_ms = int((time.perf_counter() - start_time) * 1000)
 
             # Emit fetch complete event
-            await emit_trace(
-                event_type=TraceEventType.MEMORY_FETCH,
-                component=TraceComponent.MEMORY_ROUTER,
-                message="Obsidian memory fetch completed",
-                level=TraceLevel.INFO,
-                data={
-                    "backend_type": "obsidian",
-                    "task_id": str(task.task_id),
-                    "records_fetched": len(memory),
-                },
-                duration_ms=duration_ms,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.MEMORY_FETCH,
+                    component=TraceComponent.MEMORY_ROUTER,
+                    message="Obsidian memory fetch completed",
+                    level=TraceLevel.INFO,
+                    data={
+                        "backend_type": "obsidian",
+                        "task_id": str(task.task_id),
+                        "records_fetched": len(memory),
+                    },
+                    duration_ms=duration_ms,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             return memory
         except Exception as e:
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             # Emit error event (wrapped to avoid crashing main path)
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.MEMORY_FETCH,
                     component=TraceComponent.MEMORY_ROUTER,
                     message="Obsidian memory fetch failed",
@@ -119,6 +135,7 @@ class ObsidianBackend(MemoryBackend):
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass  # Trace failure should not crash main path
             raise
@@ -133,16 +150,21 @@ class ObsidianBackend(MemoryBackend):
 
         try:
             # Emit write start event
-            await emit_trace(
-                event_type=TraceEventType.MEMORY_WRITE,
-                component=TraceComponent.MEMORY_ROUTER,
-                message="Obsidian memory write started",
-                level=TraceLevel.INFO,
-                data={
-                    "backend_type": "obsidian",
-                    "vault_path": str(self.vault_path),
-                },
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.MEMORY_WRITE,
+                    component=TraceComponent.MEMORY_ROUTER,
+                    message="Obsidian memory write started",
+                    level=TraceLevel.INFO,
+                    data={
+                        "backend_type": "obsidian",
+                        "vault_path": str(self.vault_path),
+                    },
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             unique_id = str(uuid4())[:8]
@@ -159,23 +181,27 @@ class ObsidianBackend(MemoryBackend):
             duration_ms = int((time.perf_counter() - start_time) * 1000)
 
             # Emit write complete event
-            await emit_trace(
-                event_type=TraceEventType.MEMORY_WRITE,
-                component=TraceComponent.MEMORY_ROUTER,
-                message="Obsidian memory write completed",
-                level=TraceLevel.INFO,
-                data={
-                    "backend_type": "obsidian",
-                    "filename": filename,
-                    "records_written": 1,
-                },
-                duration_ms=duration_ms,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.MEMORY_WRITE,
+                    component=TraceComponent.MEMORY_ROUTER,
+                    message="Obsidian memory write completed",
+                    level=TraceLevel.INFO,
+                    data={
+                        "backend_type": "obsidian",
+                        "filename": filename,
+                        "records_written": 1,
+                    },
+                    duration_ms=duration_ms,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
         except Exception as e:
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             # Emit error event (wrapped to avoid crashing main path)
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.MEMORY_WRITE,
                     component=TraceComponent.MEMORY_ROUTER,
                     message="Obsidian memory write failed",
@@ -187,6 +213,7 @@ class ObsidianBackend(MemoryBackend):
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass  # Trace failure should not crash main path
             raise

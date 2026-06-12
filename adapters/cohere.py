@@ -16,7 +16,9 @@ from core.observability import (
     TraceEventType,
     TraceComponent,
     TraceLevel,
-    emit_trace,
+    TraceEvent,
+    TraceEmitter,
+    MemoryTraceEmitter,
 )
 
 if TYPE_CHECKING:
@@ -33,12 +35,14 @@ class CohereAdapter(LLMAdapter):
         api_key: str,
         model_name: str = "command-r-plus",
         temperature: float = 0.1,
+        emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the Cohere adapter with API configuration."""
         self.api_key = api_key
         self._model_name = model_name
         self.temperature = temperature
         self._client: cohere.AsyncClient | None = None
+        self._emitter = emitter or MemoryTraceEmitter()
 
     def _ensure_client(self) -> None:
         """Ensure Cohere client is initialized."""
@@ -74,18 +78,23 @@ class CohereAdapter(LLMAdapter):
 
         try:
             # Emit adapter call start event
-            await emit_trace(
-                event_type=TraceEventType.ADAPTER_CALL,
-                component=TraceComponent.ADAPTER,
-                message="Cohere adapter generation started",
-                level=TraceLevel.INFO,
-                data={
-                    "adapter_name": "cohere",
-                    "model_name": self._model_name,
-                    "prompt_length": prompt_length,
-                    "temperature": temperature or self.temperature,
-                },
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.ADAPTER_CALL,
+                    component=TraceComponent.ADAPTER,
+                    message="Cohere adapter generation started",
+                    level=TraceLevel.INFO,
+                    data={
+                        "adapter_name": "cohere",
+                        "model_name": self._model_name,
+                        "prompt_length": prompt_length,
+                        "temperature": temperature or self.temperature,
+                    },
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             self._ensure_client()
 
@@ -105,20 +114,24 @@ class CohereAdapter(LLMAdapter):
             response_length = len(response.text)
 
             # Emit adapter response event
-            await emit_trace(
-                event_type=TraceEventType.ADAPTER_RESPONSE,
-                component=TraceComponent.ADAPTER,
-                message="Cohere adapter generation completed",
-                level=TraceLevel.INFO,
-                data={
-                    "adapter_name": "cohere",
-                    "model_name": self._model_name,
-                    "prompt_length": prompt_length,
-                    "response_length": response_length,
-                    "tokens_used": response.meta.billed_units.input_tokens + response.meta.billed_units.output_tokens if response.meta else 0,
-                },
-                duration_ms=duration_ms,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.ADAPTER_RESPONSE,
+                    component=TraceComponent.ADAPTER,
+                    message="Cohere adapter generation completed",
+                    level=TraceLevel.INFO,
+                    data={
+                        "adapter_name": "cohere",
+                        "model_name": self._model_name,
+                        "prompt_length": prompt_length,
+                        "response_length": response_length,
+                        "tokens_used": response.meta.billed_units.input_tokens + response.meta.billed_units.output_tokens if response.meta else 0,
+                    },
+                    duration_ms=duration_ms,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             return LLMResponse(
                 content=response.text,
@@ -131,7 +144,7 @@ class CohereAdapter(LLMAdapter):
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             # Emit error event (wrapped to avoid crashing main path)
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.ADAPTER_ERROR,
                     component=TraceComponent.ADAPTER,
                     message="Cohere adapter generation failed",
@@ -145,6 +158,7 @@ class CohereAdapter(LLMAdapter):
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass  # Trace failure should not crash main path
             raise RuntimeError(f"Cohere generation failed: {e}")

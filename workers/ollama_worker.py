@@ -14,7 +14,9 @@ from core.observability import (
     TraceComponent,
     TraceEventType,
     TraceLevel,
-    emit_trace,
+    TraceEvent,
+    TraceEmitter,
+    MemoryTraceEmitter,
 )
 
 if TYPE_CHECKING:
@@ -80,17 +82,22 @@ class OllamaWorker(WorkerBase):
 
         try:
             # Emit prompt build start event
-            await emit_trace(
-                event_type=TraceEventType.WORKER_PROMPT_BUILD,
-                component=TraceComponent.WORKER,
-                message="Worker prompt building started",
-                level=TraceLevel.INFO,
-                data={
-                    "worker_name": self.profile.worker_id,
-                    "task_id": str(task.task_id),
-                    "memory_records_used": len(memory),
-                },
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.WORKER_PROMPT_BUILD,
+                    component=TraceComponent.WORKER,
+                    message="Worker prompt building started",
+                    level=TraceLevel.INFO,
+                    data={
+                        "worker_name": self.profile.worker_id,
+                        "task_id": str(task.task_id),
+                        "memory_records_used": len(memory),
+                    },
+                    duration_ms=0,
+                )
+                await self.emitter.emit(event)
+            except Exception:
+                pass
 
             now = datetime.now()
             messages = [
@@ -124,25 +131,29 @@ class OllamaWorker(WorkerBase):
             duration_ms = int((time.perf_counter() - start_time) * 1000)
 
             # Emit prompt build complete event
-            await emit_trace(
-                event_type=TraceEventType.WORKER_PROMPT_BUILD,
-                component=TraceComponent.WORKER,
-                message="Worker prompt building completed",
-                level=TraceLevel.INFO,
-                data={
-                    "worker_name": self.profile.worker_id,
-                    "task_id": str(task.task_id),
-                    "memory_records_used": len(memory),
-                },
-                duration_ms=duration_ms,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.WORKER_PROMPT_BUILD,
+                    component=TraceComponent.WORKER,
+                    message="Worker prompt building completed",
+                    level=TraceLevel.INFO,
+                    data={
+                        "worker_name": self.profile.worker_id,
+                        "task_id": str(task.task_id),
+                        "memory_records_used": len(memory),
+                    },
+                    duration_ms=duration_ms,
+                )
+                await self.emitter.emit(event)
+            except Exception:
+                pass
 
             return messages
         except Exception as e:
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             # Emit error event (wrapped to avoid crashing main path)
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.WORKER_PROMPT_BUILD,
                     component=TraceComponent.WORKER,
                     message="Worker prompt building failed",
@@ -155,6 +166,7 @@ class OllamaWorker(WorkerBase):
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self.emitter.emit(event)
             except Exception:
                 pass  # Trace failure should not crash main path
             raise
@@ -172,16 +184,21 @@ class OllamaWorker(WorkerBase):
 
         try:
             # Emit output parse start event
-            await emit_trace(
-                event_type=TraceEventType.WORKER_OUTPUT_PARSE,
-                component=TraceComponent.WORKER,
-                message="Worker output parsing started",
-                level=TraceLevel.INFO,
-                data={
-                    "worker_name": self.profile.worker_id,
-                    "task_id": str(task_id),
-                },
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.WORKER_OUTPUT_PARSE,
+                    component=TraceComponent.WORKER,
+                    message="Worker output parsing started",
+                    level=TraceLevel.INFO,
+                    data={
+                        "worker_name": self.profile.worker_id,
+                        "task_id": str(task_id),
+                    },
+                    duration_ms=0,
+                )
+                await self.emitter.emit(event)
+            except Exception:
+                pass
 
             output = WorkerOutput(
                 worker_id=self.profile.worker_id,
@@ -199,25 +216,29 @@ class OllamaWorker(WorkerBase):
             duration_ms = int((time.perf_counter() - start_time) * 1000)
 
             # Emit output parse complete event
-            await emit_trace(
-                event_type=TraceEventType.WORKER_OUTPUT_PARSE,
-                component=TraceComponent.WORKER,
-                message="Worker output parsing completed",
-                level=TraceLevel.INFO,
-                data={
-                    "worker_name": self.profile.worker_id,
-                    "task_id": str(task_id),
-                    "confidence_score": output.confidence,
-                },
-                duration_ms=duration_ms,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.WORKER_OUTPUT_PARSE,
+                    component=TraceComponent.WORKER,
+                    message="Worker output parsing completed",
+                    level=TraceLevel.INFO,
+                    data={
+                        "worker_name": self.profile.worker_id,
+                        "task_id": str(task_id),
+                        "confidence_score": output.confidence,
+                    },
+                    duration_ms=duration_ms,
+                )
+                await self.emitter.emit(event)
+            except Exception:
+                pass
 
             return output
         except Exception as e:
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             # Emit error event (wrapped to avoid crashing main path)
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.WORKER_OUTPUT_PARSE,
                     component=TraceComponent.WORKER,
                     message="Worker output parsing failed",
@@ -230,6 +251,7 @@ class OllamaWorker(WorkerBase):
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self.emitter.emit(event)
             except Exception:
                 pass  # Trace failure should not crash main path
             raise

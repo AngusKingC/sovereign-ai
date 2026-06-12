@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from core.skill_registry import SkillRegistry, SkillMetadata
+from core.observability import MemoryTraceEmitter
 
 
 class TestSkillRegistry:
@@ -15,13 +16,12 @@ class TestSkillRegistry:
     @pytest.fixture
     def registry(self):
         """Create a SkillRegistry instance."""
-        return SkillRegistry()
+        return SkillRegistry(emitter=MemoryTraceEmitter())
 
     @pytest.mark.asyncio
     async def test_discovery_finds_all_three_skills(self, registry):
         """Test that discovery finds all three skills."""
-        with patch("core.skill_registry.emit_trace", new_callable=AsyncMock):
-            skills = await registry.discover_skills()
+        skills = await registry.discover_skills()
 
         assert len(skills) >= 3
         assert "web_scraper" in skills
@@ -48,16 +48,14 @@ class TestSkillRegistry:
             skill_path=str(skill_dir),
         )
 
-        with patch("core.skill_registry.emit_trace", new_callable=AsyncMock):
-            is_valid = await registry.validate_skill(metadata)
+        is_valid = await registry.validate_skill(metadata)
 
         assert is_valid is False
 
     @pytest.mark.asyncio
     async def test_query_by_capability_returns_correct_results(self, registry):
         """Test that query by capability returns correct results."""
-        with patch("core.skill_registry.emit_trace", new_callable=AsyncMock):
-            await registry.discover_skills()
+        await registry.discover_skills()
 
         web_scraping_skills = registry.query_by_capability("web-scraping")
         assert len(web_scraping_skills) > 0
@@ -66,8 +64,7 @@ class TestSkillRegistry:
     @pytest.mark.asyncio
     async def test_query_by_task_type_returns_correct_results(self, registry):
         """Test that query by task type returns correct results."""
-        with patch("core.skill_registry.emit_trace", new_callable=AsyncMock):
-            await registry.discover_skills()
+        await registry.discover_skills()
 
         file_io_skills = registry.query_by_task_type("file-io")
         assert len(file_io_skills) > 0
@@ -76,16 +73,15 @@ class TestSkillRegistry:
     @pytest.mark.asyncio
     async def test_registry_emits_correct_trace_events(self, registry):
         """Test that registry emits correct TraceEvents."""
-        with patch("core.skill_registry.emit_trace", new_callable=AsyncMock) as mock_emit:
-            await registry.discover_skills()
+        await registry.discover_skills()
 
         # Should have emitted at least one trace event
-        assert mock_emit.call_count > 0
+        events = registry.emitter.get_events()
+        assert len(events) > 0
 
-        # Check that the last call was successful
-        last_call = mock_emit.call_args_list[-1]
-        assert last_call[1]["success"] is True
-        assert last_call[1]["component"].value == "orchestrator"
+        # Check that the last event has correct component
+        last_event = events[-1]
+        assert last_event.component == "orchestrator"
 
     def test_get_skill_returns_correct_metadata(self, registry):
         """Test that get_skill returns correct metadata."""

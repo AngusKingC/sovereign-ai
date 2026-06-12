@@ -10,8 +10,9 @@ from core.observability import (
     TraceComponent,
     TraceEventType,
     TraceLevel,
+    TraceEvent,
     TraceEmitter,
-    emit_trace,
+    MemoryTraceEmitter,
 )
 
 
@@ -20,9 +21,7 @@ class FileReaderSkill:
 
     def __init__(self, emitter: TraceEmitter | None = None) -> None:
         """Initialize the file reader skill."""
-        self.emitter = emitter
-        # For now, use the global emitter as fallback
-        # This will be replaced with NullTraceEmitter in Prompt 13.5
+        self._emitter = emitter or MemoryTraceEmitter()
 
     async def execute(self, path: str, encoding: str = "utf-8") -> str:
         """
@@ -49,50 +48,59 @@ class FileReaderSkill:
             async with aiofiles.open(path, mode="r", encoding=encoding) as file:
                 content = await file.read()
 
-            await emit_trace(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                layer="layer_2",
-                payload={
-                    "skill": "file_reader",
-                    "path": path,
-                    "encoding": encoding,
-                    "content_length": len(content),
-                },
-                duration_ms=0,
-                success=True,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="File reading completed",
+                    data={
+                        "skill": "file_reader",
+                        "path": path,
+                        "encoding": encoding,
+                        "content_length": len(content),
+                    },
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             return content
 
         except FileNotFoundError as e:
-            await emit_trace(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.ERROR,
-                layer="layer_2",
-                payload={
-                    "skill": "file_reader",
-                    "path": path,
-                    "error": str(e),
-                },
-                duration_ms=0,
-                success=False,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.ERROR,
+                    message="File not found",
+                    data={
+                        "skill": "file_reader",
+                        "path": path,
+                        "error": str(e),
+                    },
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
             raise
         except IOError as e:
-            await emit_trace(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.ERROR,
-                layer="layer_2",
-                payload={
-                    "skill": "file_reader",
-                    "path": path,
-                    "error": str(e),
-                },
-                duration_ms=0,
-                success=False,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.ERROR,
+                    message="File read failed",
+                    data={
+                        "skill": "file_reader",
+                        "path": path,
+                        "error": str(e),
+                    },
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
             raise

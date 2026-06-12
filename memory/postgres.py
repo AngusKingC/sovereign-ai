@@ -17,6 +17,9 @@ from core.observability import (
     TraceEventType,
     TraceComponent,
     TraceLevel,
+    TraceEvent,
+    TraceEmitter,
+    MemoryTraceEmitter,
 )
 
 
@@ -27,11 +30,13 @@ class PostgresBackend(MemoryBackend):
         self,
         dsn: str = "postgresql://localhost:5432/sovereign",
         table_name: str = "memory_entries",
+        emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the PostgreSQL backend with connection details."""
         self.dsn = dsn
         self.table_name = table_name
         self.pool: asyncpg.Pool | None = None
+        self._emitter = emitter or MemoryTraceEmitter()
 
     async def _ensure_connection(self) -> None:
         """Ensure connection pool is initialized."""
@@ -72,34 +77,43 @@ class PostgresBackend(MemoryBackend):
 
         try:
             # Emit fetch start event
-            await emit_trace(
-                event_type=TraceEventType.MEMORY_FETCH,
-                component=TraceComponent.MEMORY_ROUTER,
-                message="PostgreSQL memory fetch started",
-                level=TraceLevel.INFO,
-                data={
-                    "backend_type": "postgres",
-                    "task_id": str(task.task_id),
-                    "table_name": self.table_name,
-                },
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.MEMORY_FETCH,
+                    component=TraceComponent.MEMORY_ROUTER,
+                    message="PostgreSQL memory fetch started",
+                    level=TraceLevel.INFO,
+                    data={
+                        "backend_type": "postgres",
+                        "task_id": str(task.task_id),
+                        "table_name": self.table_name,
+                    },
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             await self._ensure_connection()
 
             if self.pool is None:
                 duration_ms = int((time.perf_counter() - start_time) * 1000)
-                await emit_trace(
-                    event_type=TraceEventType.MEMORY_FETCH,
-                    component=TraceComponent.MEMORY_ROUTER,
-                    message="PostgreSQL memory fetch completed (pool not initialized)",
-                    level=TraceLevel.WARNING,
-                    data={
-                        "backend_type": "postgres",
-                        "task_id": str(task.task_id),
-                        "records_fetched": 0,
-                    },
-                    duration_ms=duration_ms,
-                )
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.MEMORY_FETCH,
+                        component=TraceComponent.MEMORY_ROUTER,
+                        message="PostgreSQL memory fetch completed (pool not initialized)",
+                        level=TraceLevel.WARNING,
+                        data={
+                            "backend_type": "postgres",
+                            "task_id": str(task.task_id),
+                            "records_fetched": 0,
+                        },
+                        duration_ms=duration_ms,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
                 return []
 
             async with self.pool.acquire() as conn:
@@ -127,25 +141,29 @@ class PostgresBackend(MemoryBackend):
             duration_ms = int((time.perf_counter() - start_time) * 1000)
 
             # Emit fetch complete event
-            await emit_trace(
-                event_type=TraceEventType.MEMORY_FETCH,
-                component=TraceComponent.MEMORY_ROUTER,
-                message="PostgreSQL memory fetch completed",
-                level=TraceLevel.INFO,
-                data={
-                    "backend_type": "postgres",
-                    "task_id": str(task.task_id),
-                    "records_fetched": len(result),
-                },
-                duration_ms=duration_ms,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.MEMORY_FETCH,
+                    component=TraceComponent.MEMORY_ROUTER,
+                    message="PostgreSQL memory fetch completed",
+                    level=TraceLevel.INFO,
+                    data={
+                        "backend_type": "postgres",
+                        "task_id": str(task.task_id),
+                        "records_fetched": len(result),
+                    },
+                    duration_ms=duration_ms,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             return result
         except Exception as e:
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             # Emit error event (wrapped to avoid crashing main path)
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.MEMORY_FETCH,
                     component=TraceComponent.MEMORY_ROUTER,
                     message="PostgreSQL memory fetch failed",
@@ -158,6 +176,7 @@ class PostgresBackend(MemoryBackend):
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass  # Trace failure should not crash main path
             return []
@@ -173,31 +192,40 @@ class PostgresBackend(MemoryBackend):
 
         try:
             # Emit write start event
-            await emit_trace(
-                event_type=TraceEventType.MEMORY_WRITE,
-                component=TraceComponent.MEMORY_ROUTER,
-                message="PostgreSQL memory write started",
-                level=TraceLevel.INFO,
-                data={
-                    "backend_type": "postgres",
-                    "table_name": self.table_name,
-                },
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.MEMORY_WRITE,
+                    component=TraceComponent.MEMORY_ROUTER,
+                    message="PostgreSQL memory write started",
+                    level=TraceLevel.INFO,
+                    data={
+                        "backend_type": "postgres",
+                        "table_name": self.table_name,
+                    },
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             await self._ensure_connection()
 
             if self.pool is None:
                 duration_ms = int((time.perf_counter() - start_time) * 1000)
-                await emit_trace(
-                    event_type=TraceEventType.MEMORY_WRITE,
-                    component=TraceComponent.MEMORY_ROUTER,
-                    message="PostgreSQL memory write skipped (pool not initialized)",
-                    level=TraceLevel.WARNING,
-                    data={
-                        "backend_type": "postgres",
-                    },
-                    duration_ms=duration_ms,
-                )
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.MEMORY_WRITE,
+                        component=TraceComponent.MEMORY_ROUTER,
+                        message="PostgreSQL memory write skipped (pool not initialized)",
+                        level=TraceLevel.WARNING,
+                        data={
+                            "backend_type": "postgres",
+                        },
+                        duration_ms=duration_ms,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
                 return
 
             task_id = data.get("task_id")
@@ -218,22 +246,26 @@ class PostgresBackend(MemoryBackend):
             duration_ms = int((time.perf_counter() - start_time) * 1000)
 
             # Emit write complete event
-            await emit_trace(
-                event_type=TraceEventType.MEMORY_WRITE,
-                component=TraceComponent.MEMORY_ROUTER,
-                message="PostgreSQL memory write completed",
-                level=TraceLevel.INFO,
-                data={
-                    "backend_type": "postgres",
-                    "records_written": 1,
-                },
-                duration_ms=duration_ms,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.MEMORY_WRITE,
+                    component=TraceComponent.MEMORY_ROUTER,
+                    message="PostgreSQL memory write completed",
+                    level=TraceLevel.INFO,
+                    data={
+                        "backend_type": "postgres",
+                        "records_written": 1,
+                    },
+                    duration_ms=duration_ms,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
         except Exception as e:
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             # Emit error event (wrapped to avoid crashing main path)
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.MEMORY_WRITE,
                     component=TraceComponent.MEMORY_ROUTER,
                     message="PostgreSQL memory write failed",
@@ -245,6 +277,7 @@ class PostgresBackend(MemoryBackend):
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass  # Trace failure should not crash main path
             # Silently fail on connection errors

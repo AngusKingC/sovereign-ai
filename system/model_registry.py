@@ -19,7 +19,9 @@ from core.observability import (
     TraceComponent,
     TraceEventType,
     TraceLevel,
-    emit_trace,
+    TraceEvent,
+    TraceEmitter,
+    MemoryTraceEmitter,
 )
 
 if TYPE_CHECKING:
@@ -29,21 +31,28 @@ if TYPE_CHECKING:
 class ModelRegistry:
     """Registry for tracking model information and compatibility."""
 
-    def __init__(self, memory_router: "MemoryRouter") -> None:
+    def __init__(self, memory_router: "MemoryRouter", emitter: TraceEmitter | None = None) -> None:
         """Initialize the model registry with memory router for persistence."""
         self.memory_router = memory_router
         self._models: dict[str, ModelEntry] = {}
         self._loaded = False
+        self._emitter = emitter or MemoryTraceEmitter()
 
     async def _load_from_storage(self) -> None:
         """Load registry from Postgres storage."""
         try:
-            await emit_trace(
-                event_type=TraceEventType.MODEL_REGISTRY_LOAD,
-                component=TraceComponent.SYSTEM,
-                message="Loading model registry from storage",
-                level=TraceLevel.INFO,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.MODEL_REGISTRY_LOAD,
+                    component=TraceComponent.SYSTEM,
+                    message="Loading model registry from storage",
+                    level=TraceLevel.INFO,
+                    data={},
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             # Try to load from Postgres
             try:
@@ -59,33 +68,43 @@ class ModelRegistry:
                             self._models[entry.model_id] = entry
             except Exception as e:
                 try:
-                    await emit_trace(
+                    event = TraceEvent(
                         event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.SYSTEM,
                         message="Failed to load model registry from Postgres",
                         level=TraceLevel.WARNING,
                         data={"error": str(e)},
+                        duration_ms=0,
                     )
+                    await self._emitter.emit(event)
                 except Exception:
                     pass
 
-            await emit_trace(
-                event_type=TraceEventType.MODEL_REGISTRY_LOAD_COMPLETE,
-                component=TraceComponent.SYSTEM,
-                message=f"Model registry loaded with {len(self._models)} models",
-                level=TraceLevel.INFO,
-                data={"model_count": len(self._models)},
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.MODEL_REGISTRY_LOAD_COMPLETE,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Model registry loaded with {len(self._models)} models",
+                    level=TraceLevel.INFO,
+                    data={"model_count": len(self._models)},
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
         except Exception as e:
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.SYSTEM,
                     message="Failed to load model registry",
                     level=TraceLevel.ERROR,
+                    data={},
+                    duration_ms=0,
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
 
@@ -101,40 +120,50 @@ class ModelRegistry:
             )
         except Exception as e:
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.SYSTEM,
                     message="Failed to save model entry to storage",
                     level=TraceLevel.WARNING,
                     data={"model_id": entry.model_id, "error": str(e)},
+                    duration_ms=0,
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
 
     async def register(self, entry: ModelEntry) -> None:
         """Add or update a model entry."""
         try:
-            await emit_trace(
-                event_type=TraceEventType.MODEL_REGISTRY_REGISTER,
-                component=TraceComponent.SYSTEM,
-                message=f"Registering model: {entry.model_id}",
-                level=TraceLevel.INFO,
-                data={"model_id": entry.model_id, "source": entry.source.value},
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.MODEL_REGISTRY_REGISTER,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Registering model: {entry.model_id}",
+                    level=TraceLevel.INFO,
+                    data={"model_id": entry.model_id, "source": entry.source.value},
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             entry.last_updated = datetime.now()
             self._models[entry.model_id] = entry
             await self._save_to_storage(entry)
         except Exception as e:
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.SYSTEM,
                     message="Failed to register model",
                     level=TraceLevel.ERROR,
+                    data={},
+                    duration_ms=0,
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
             raise
@@ -164,13 +193,18 @@ class ModelRegistry:
     ) -> list[ModelEntry]:
         """Recommend models based on task tags and system profile."""
         try:
-            await emit_trace(
-                event_type=TraceEventType.MODEL_REGISTRY_RECOMMEND,
-                component=TraceComponent.SYSTEM,
-                message="Generating model recommendations",
-                level=TraceLevel.INFO,
-                data={"task_tags": task_tags, "vram_available_mb": system_profile.gpu.available_vram_mb},
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.MODEL_REGISTRY_RECOMMEND,
+                    component=TraceComponent.SYSTEM,
+                    message="Generating model recommendations",
+                    level=TraceLevel.INFO,
+                    data={"task_tags": task_tags, "vram_available_mb": system_profile.gpu.available_vram_mb},
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             # Filter by task tag match
             matching_models = []
@@ -208,25 +242,33 @@ class ModelRegistry:
 
             result = [model for model, _, _, _ in viable_models]
 
-            await emit_trace(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.SYSTEM,
-                message=f"Generated {len(result)} model recommendations",
-                level=TraceLevel.INFO,
-                data={"recommendation_count": len(result)},
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Generated {len(result)} model recommendations",
+                    level=TraceLevel.INFO,
+                    data={"recommendation_count": len(result)},
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             return result
         except Exception as e:
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.SYSTEM,
                     message="Failed to generate recommendations",
                     level=TraceLevel.ERROR,
+                    data={},
+                    duration_ms=0,
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
             raise
@@ -236,13 +278,18 @@ class ModelRegistry:
     ) -> None:
         """Update download status for a model."""
         try:
-            await emit_trace(
-                event_type=TraceEventType.MODEL_REGISTRY_DOWNLOAD_UPDATE,
-                component=TraceComponent.SYSTEM,
-                message=f"Updating download status for {model_id}",
-                level=TraceLevel.INFO,
-                data={"model_id": model_id, "status": status.value, "quantisation": quantisation},
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.MODEL_REGISTRY_DOWNLOAD_UPDATE,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Updating download status for {model_id}",
+                    level=TraceLevel.INFO,
+                    data={"model_id": model_id, "status": status.value, "quantisation": quantisation},
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             if model_id in self._models:
                 entry = self._models[model_id]
@@ -252,14 +299,17 @@ class ModelRegistry:
                 await self._save_to_storage(entry)
         except Exception as e:
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.SYSTEM,
                     message="Failed to update download status",
                     level=TraceLevel.ERROR,
+                    data={},
+                    duration_ms=0,
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
             raise

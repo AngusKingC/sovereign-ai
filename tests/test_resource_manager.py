@@ -18,6 +18,7 @@ from core.schemas import (
     OllamaInfo,
 )
 from system.resource_manager import ResourceManager
+from core.observability import MemoryTraceEmitter
 
 
 class MockMemoryRouter:
@@ -126,7 +127,7 @@ class TestResourceManager:
     async def test_can_load_returns_true_when_model_fits_in_vram(self) -> None:
         """Test that can_load returns True when model fits in available VRAM."""
         mock_router = MockMemoryRouter()
-        manager = ResourceManager(mock_router)
+        manager = ResourceManager(mock_router, emitter=MemoryTraceEmitter())
         
         registry = MockModelRegistry()
         registry.add_model(
@@ -152,8 +153,7 @@ class TestResourceManager:
             ram=RAMInfo(total_mb=32000, available_mb=16000),
         )
         
-        with patch('system.profiler.SystemProfiler') as mock_profiler_class, \
-             patch('system.resource_manager.emit_trace', new_callable=AsyncMock):
+        with patch('system.profiler.SystemProfiler') as mock_profiler_class:
             mock_profiler = Mock()
             mock_profiler.get_cached = AsyncMock(return_value=system_profile)
             mock_profiler_class.return_value = mock_profiler
@@ -166,7 +166,7 @@ class TestResourceManager:
     async def test_can_load_returns_false_when_model_does_not_fit(self) -> None:
         """Test that can_load returns False when model does not fit."""
         mock_router = MockMemoryRouter()
-        manager = ResourceManager(mock_router)
+        manager = ResourceManager(mock_router, emitter=MemoryTraceEmitter())
         
         registry = MockModelRegistry()
         registry.add_model(
@@ -192,8 +192,7 @@ class TestResourceManager:
             ram=RAMInfo(total_mb=32000, available_mb=16000),
         )
         
-        with patch('system.profiler.SystemProfiler') as mock_profiler_class, \
-             patch('system.resource_manager.emit_trace', new_callable=AsyncMock):
+        with patch('system.profiler.SystemProfiler') as mock_profiler_class:
             mock_profiler = Mock()
             mock_profiler.get_cached = AsyncMock(return_value=system_profile)
             mock_profiler_class.return_value = mock_profiler
@@ -206,15 +205,14 @@ class TestResourceManager:
     async def test_request_load_approves_immediately_when_model_already_loaded(self) -> None:
         """Test that request_load approves immediately when model already loaded."""
         mock_router = MockMemoryRouter()
-        manager = ResourceManager(mock_router)
+        manager = ResourceManager(mock_router, emitter=MemoryTraceEmitter())
         
         # Pre-load a model
         await manager.record_load("test/model:7b", "ollama", "Q4_K_M", 5.0, 8.0)
         
         registry = MockModelRegistry()
         
-        with patch('system.resource_manager.emit_trace', new_callable=AsyncMock):
-            decision = await manager.request_load("test/model:7b", "Q4_K_M", registry)
+        decision = await manager.request_load("test/model:7b", "Q4_K_M", registry)
         
         assert decision.approved is True
         assert decision.reason == "Model already loaded"
@@ -223,7 +221,7 @@ class TestResourceManager:
     async def test_request_load_approves_when_model_fits_without_eviction(self) -> None:
         """Test that request_load approves when model fits without eviction."""
         mock_router = MockMemoryRouter()
-        manager = ResourceManager(mock_router)
+        manager = ResourceManager(mock_router, emitter=MemoryTraceEmitter())
         
         registry = MockModelRegistry()
         registry.add_model(
@@ -250,8 +248,7 @@ class TestResourceManager:
         )
         
         with patch('system.profiler.SystemProfiler') as mock_profiler_class, \
-             patch('system.resource_manager.httpx.AsyncClient') as mock_httpx, \
-             patch('system.resource_manager.emit_trace', new_callable=AsyncMock):
+             patch('system.resource_manager.httpx.AsyncClient') as mock_httpx:
             mock_profiler = Mock()
             mock_profiler.get_cached = AsyncMock(return_value=system_profile)
             mock_profiler_class.return_value = mock_profiler
@@ -274,7 +271,7 @@ class TestResourceManager:
     async def test_request_load_queues_non_pinned_evictions_when_needed(self) -> None:
         """Test that request_load queues non-pinned evictions when needed."""
         mock_router = MockMemoryRouter()
-        manager = ResourceManager(mock_router)
+        manager = ResourceManager(mock_router, emitter=MemoryTraceEmitter())
         
         # Load a model that takes up space
         await manager.record_load("old/model:7b", "ollama", "Q4_K_M", 8.0, 12.0)
@@ -304,8 +301,7 @@ class TestResourceManager:
         )
         
         with patch('system.profiler.SystemProfiler') as mock_profiler_class, \
-             patch('system.resource_manager.httpx.AsyncClient') as mock_httpx, \
-             patch('system.resource_manager.emit_trace', new_callable=AsyncMock):
+             patch('system.resource_manager.httpx.AsyncClient') as mock_httpx:
             mock_profiler = Mock()
             mock_profiler.get_cached = AsyncMock(return_value=system_profile)
             mock_profiler_class.return_value = mock_profiler
@@ -329,7 +325,7 @@ class TestResourceManager:
         """Test that request_load requires user approval when pinned model eviction needed."""
         mock_router = MockMemoryRouter()
         approval_callback = MockApprovalCallback(approve=False)
-        manager = ResourceManager(mock_router, approval_callback)
+        manager = ResourceManager(mock_router, approval_callback, emitter=MemoryTraceEmitter())
         
         # Load a pinned model that takes up space
         await manager.record_load("pinned/model:7b", "ollama", "Q4_K_M", 8.0, 12.0)
@@ -360,8 +356,7 @@ class TestResourceManager:
         )
         
         with patch('system.profiler.SystemProfiler') as mock_profiler_class, \
-             patch('system.resource_manager.httpx.AsyncClient') as mock_httpx, \
-             patch('system.resource_manager.emit_trace', new_callable=AsyncMock):
+             patch('system.resource_manager.httpx.AsyncClient') as mock_httpx:
             mock_profiler = Mock()
             mock_profiler.get_cached = AsyncMock(return_value=system_profile)
             mock_profiler_class.return_value = mock_profiler
@@ -385,7 +380,7 @@ class TestResourceManager:
     async def test_eviction_priority_idle_time_before_task_priority(self) -> None:
         """Test that eviction priority is idle time before task priority."""
         mock_router = MockMemoryRouter()
-        manager = ResourceManager(mock_router)
+        manager = ResourceManager(mock_router, emitter=MemoryTraceEmitter())
         
         # Load models with different idle times and priorities
         await manager.record_load("model1:7b", "ollama", "Q4_K_M", 3.0, 5.0)
@@ -425,56 +420,53 @@ class TestResourceManager:
     async def test_record_load_and_record_unload_update_state_correctly(self) -> None:
         """Test that record_load and record_unload update state correctly."""
         mock_router = MockMemoryRouter()
-        manager = ResourceManager(mock_router)
+        manager = ResourceManager(mock_router, emitter=MemoryTraceEmitter())
         
-        with patch('system.resource_manager.emit_trace', new_callable=AsyncMock):
-            await manager.record_load("test/model:7b", "ollama", "Q4_K_M", 5.0, 8.0)
-            
-            loaded = await manager.get_loaded_models()
-            assert len(loaded) == 1
-            assert loaded[0].model_id == "test/model:7b"
-            
-            await manager.record_unload("test/model:7b")
-            
-            loaded = await manager.get_loaded_models()
-            assert len(loaded) == 0
+        await manager.record_load("test/model:7b", "ollama", "Q4_K_M", 5.0, 8.0)
+        
+        loaded = await manager.get_loaded_models()
+        assert len(loaded) == 1
+        assert loaded[0].model_id == "test/model:7b"
+        
+        await manager.record_unload("test/model:7b")
+        
+        loaded = await manager.get_loaded_models()
+        assert len(loaded) == 0
     
     async def test_record_usage_updates_last_used_at(self) -> None:
         """Test that record_usage updates last_used_at."""
         mock_router = MockMemoryRouter()
-        manager = ResourceManager(mock_router)
+        manager = ResourceManager(mock_router, emitter=MemoryTraceEmitter())
         
-        with patch('system.resource_manager.emit_trace', new_callable=AsyncMock):
-            await manager.record_load("test/model:7b", "ollama", "Q4_K_M", 5.0, 8.0)
-            
-            original_last_used = (await manager.get_loaded_models())[0].last_used_at
-            
-            # Wait a bit and record usage
-            import time
-            time.sleep(0.01)
-            await manager.record_usage("test/model:7b")
-            
-            updated_last_used = (await manager.get_loaded_models())[0].last_used_at
-            
-            assert updated_last_used > original_last_used
+        await manager.record_load("test/model:7b", "ollama", "Q4_K_M", 5.0, 8.0)
+        
+        original_last_used = (await manager.get_loaded_models())[0].last_used_at
+        
+        # Wait a bit and record usage
+        import time
+        time.sleep(0.01)
+        await manager.record_usage("test/model:7b")
+        
+        updated_last_used = (await manager.get_loaded_models())[0].last_used_at
+        
+        assert updated_last_used > original_last_used
     
     async def test_trace_events_emitted_on_key_operations(self) -> None:
         """Test that trace events are emitted on key operations."""
         mock_router = MockMemoryRouter()
-        manager = ResourceManager(mock_router)
+        manager = ResourceManager(mock_router, emitter=MemoryTraceEmitter())
         
-        with patch('system.resource_manager.emit_trace', new_callable=AsyncMock) as mock_emit:
-            await manager.record_load("test/model:7b", "ollama", "Q4_K_M", 5.0, 8.0)
-            await manager.pin_model("test/model:7b")
-            await manager.unpin_model("test/model:7b")
-            
-            # Verify trace events were emitted (pin and unpin)
-            assert mock_emit.call_count >= 2
-            
-            from core.observability import TraceEventType
-            calls = mock_emit.call_args_list
-            event_types = [call[1].get("event_type") for call in calls]
-            
-            assert TraceEventType.RESOURCE_PIN in event_types
-            assert TraceEventType.RESOURCE_UNPIN in event_types
+        await manager.record_load("test/model:7b", "ollama", "Q4_K_M", 5.0, 8.0)
+        await manager.pin_model("test/model:7b")
+        await manager.unpin_model("test/model:7b")
+        
+        # Verify trace events were emitted (pin and unpin)
+        events = manager._emitter.get_events()
+        assert len(events) >= 2
+        
+        from core.observability import TraceEventType
+        event_types = [event.event_type for event in events]
+        
+        assert TraceEventType.RESOURCE_PIN in event_types
+        assert TraceEventType.RESOURCE_UNPIN in event_types
 

@@ -14,7 +14,9 @@ from core.observability import (
     TraceComponent,
     TraceEventType,
     TraceLevel,
-    emit_trace,
+    TraceEvent,
+    TraceEmitter,
+    MemoryTraceEmitter,
 )
 
 if TYPE_CHECKING:
@@ -37,6 +39,7 @@ class Orchestrator:
         cloud_fallback_model: str = "gpt-4o",
         approval_gate: "ApprovalGate | None" = None,
         escalation_engine: "EscalationEngine | None" = None,
+        emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the orchestrator with dependencies."""
         self.memory_router = memory_router
@@ -46,6 +49,7 @@ class Orchestrator:
         self.escalation_engine = escalation_engine
         self.workers: dict[str, "WorkerBase"] = {}
         self.pending_approval_queue: list[Task] = []
+        self._emitter = emitter or MemoryTraceEmitter()
         
         # Import TaskStateMachine lazily to avoid circular imports
         from core.task_state_machine import TaskStateMachine
@@ -67,7 +71,7 @@ class Orchestrator:
             worker_type = getattr(worker.profile, "worker_type", "unknown") if hasattr(worker, "profile") else "unknown"
             capabilities = getattr(worker.profile, "capabilities", []) if hasattr(worker, "profile") else []
             
-            loop.create_task(emit_trace(
+            loop.create_task(self._emitter.emit(TraceEvent(
                 event_type=TraceEventType.ORCHESTRATOR_WORKER_REGISTERED,
                 component=TraceComponent.ORCHESTRATOR,
                 message="Worker registered",
@@ -77,7 +81,8 @@ class Orchestrator:
                     "worker_type": worker_type,
                     "capabilities": capabilities,
                 },
-            ))
+                duration_ms=0,
+            )))
         except Exception:
             pass  # Trace failure should not crash main path
 
@@ -165,13 +170,15 @@ class Orchestrator:
                 )
                 # Preserve scratchpad on FAILED - log task_id for debugging
                 try:
-                    await emit_trace(
+                    event = TraceEvent(
                         event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.ORCHESTRATOR,
                         message="Task failed, scratchpad preserved for debugging",
                         level=TraceLevel.INFO,
                         data={"task_id": str(task.task_id)},
+                        duration_ms=0,
                     )
+                    await self._emitter.emit(event)
                 except Exception:
                     pass
             
@@ -184,13 +191,15 @@ class Orchestrator:
                 )
                 # Preserve scratchpad on FAILED - log task_id for debugging
                 try:
-                    await emit_trace(
+                    event = TraceEvent(
                         event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.ORCHESTRATOR,
                         message="Task failed, scratchpad preserved for debugging",
                         level=TraceLevel.INFO,
                         data={"task_id": str(task.task_id)},
+                        duration_ms=0,
                     )
+                    await self._emitter.emit(event)
                 except Exception:
                     pass
             raise
@@ -228,18 +237,23 @@ class Orchestrator:
             )
 
         # Emit trace event for routing start
-        await emit_trace(
-            event_type=TraceEventType.ORCHESTRATOR_ROUTING_START,
-            component=TraceComponent.ORCHESTRATOR,
-            message="Orchestrator routing started",
-            level=TraceLevel.INFO,
-            data={
-                "task_id": str(task.task_id),
-                "task_intent": task.intent,
-                "task_complexity": task.complexity_score,
-                "worker_count": len(self.workers),
-            },
-        )
+        try:
+            event = TraceEvent(
+                event_type=TraceEventType.ORCHESTRATOR_ROUTING_START,
+                component=TraceComponent.ORCHESTRATOR,
+                message="Orchestrator routing started",
+                level=TraceLevel.INFO,
+                data={
+                    "task_id": str(task.task_id),
+                    "task_intent": task.intent,
+                    "task_complexity": task.complexity_score,
+                    "worker_count": len(self.workers),
+                },
+                duration_ms=0,
+            )
+            await self._emitter.emit(event)
+        except Exception:
+            pass
 
         # Transition to PLANNED before routing
         try:
@@ -285,17 +299,21 @@ class Orchestrator:
                 except Exception:
                     pass  # Metrics recording failure should not crash routing
             
-            await emit_trace(
-                event_type=TraceEventType.ORCHESTRATOR_ROUTING_COMPLETE,
-                component=TraceComponent.ORCHESTRATOR,
-                message="Worker selected (only one registered)",
-                level=TraceLevel.INFO,
-                data={
-                    "selected_worker": worker_id,
-                    "scoring_breakdown": [{"worker_id": worker_id, "score": 1, "reason": "only worker"}],
-                },
-                duration_ms=duration_ms,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.ORCHESTRATOR_ROUTING_COMPLETE,
+                    component=TraceComponent.ORCHESTRATOR,
+                    message="Worker selected (only one registered)",
+                    level=TraceLevel.INFO,
+                    data={
+                        "selected_worker": worker_id,
+                        "scoring_breakdown": [{"worker_id": worker_id, "score": 1, "reason": "only worker"}],
+                    },
+                    duration_ms=duration_ms,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
             
             # Update StrategicContext after successful routing decision
             try:
@@ -377,17 +395,21 @@ class Orchestrator:
             except Exception:
                 pass  # Metrics recording failure should not crash routing
         
-        await emit_trace(
-            event_type=TraceEventType.ORCHESTRATOR_ROUTING_COMPLETE,
-            component=TraceComponent.ORCHESTRATOR,
-            message="Worker selected via routing",
-            level=TraceLevel.INFO,
-            data={
-                "selected_worker": selected_worker_id,
-                "scoring_breakdown": scoring_breakdown,
-            },
-            duration_ms=duration_ms,
-        )
+        try:
+            event = TraceEvent(
+                event_type=TraceEventType.ORCHESTRATOR_ROUTING_COMPLETE,
+                component=TraceComponent.ORCHESTRATOR,
+                message="Worker selected via routing",
+                level=TraceLevel.INFO,
+                data={
+                    "selected_worker": selected_worker_id,
+                    "scoring_breakdown": scoring_breakdown,
+                },
+                duration_ms=duration_ms,
+            )
+            await self._emitter.emit(event)
+        except Exception:
+            pass
         
         # Update StrategicContext after successful routing decision
         try:
@@ -496,7 +518,7 @@ class Orchestrator:
             worker_type = getattr(worker.profile, "worker_type", "unknown") if hasattr(worker, "profile") else "unknown"
             capabilities = getattr(worker.profile, "capabilities", []) if hasattr(worker, "profile") else []
             
-            loop.create_task(emit_trace(
+            loop.create_task(self._emitter.emit(TraceEvent(
                 event_type=TraceEventType.ORCHESTRATOR_WORKER_DEREGISTERED,
                 component=TraceComponent.ORCHESTRATOR,
                 message="Worker deregistered",
@@ -506,6 +528,7 @@ class Orchestrator:
                     "worker_type": worker_type,
                     "capabilities": capabilities,
                 },
-            ))
+                duration_ms=0,
+            )))
         except Exception:
             pass  # Trace failure should not crash main path

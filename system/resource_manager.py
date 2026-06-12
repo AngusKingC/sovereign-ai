@@ -25,7 +25,9 @@ from core.observability import (
     TraceComponent,
     TraceEventType,
     TraceLevel,
-    emit_trace,
+    TraceEvent,
+    TraceEmitter,
+    MemoryTraceEmitter,
 )
 
 if TYPE_CHECKING:
@@ -39,22 +41,30 @@ class ResourceManager:
         self,
         memory_router: "MemoryRouter",
         approval_callback: ApprovalCallback | None = None,
+        emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the resource manager with memory router and optional approval callback."""
         self.memory_router = memory_router
         self.approval_callback = approval_callback
         self._loaded_models: dict[str, LoadedModel] = {}
         self._ollama_api_url = "http://localhost:11434"
+        self._emitter = emitter or MemoryTraceEmitter()
 
     async def snapshot(self, system_profile: SystemProfile) -> ResourceSnapshot:
         """Query current live resource state from SystemProfiler and Ollama API."""
         try:
-            await emit_trace(
-                event_type=TraceEventType.RESOURCE_SNAPSHOT,
-                component=TraceComponent.SYSTEM,
-                message="Taking resource snapshot",
-                level=TraceLevel.INFO,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.RESOURCE_SNAPSHOT,
+                    component=TraceComponent.SYSTEM,
+                    message="Taking resource snapshot",
+                    level=TraceLevel.INFO,
+                    data={},
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             # Get resource info from system profile
             vram_total_gb = system_profile.gpu.total_vram_mb / 1024
@@ -91,13 +101,15 @@ class ResourceManager:
                                 )
             except Exception as e:
                 try:
-                    await emit_trace(
+                    event = TraceEvent(
                         event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.SYSTEM,
                         message="Failed to query Ollama API for loaded models",
                         level=TraceLevel.WARNING,
                         data={"error": str(e)},
+                        duration_ms=0,
                     )
+                    await self._emitter.emit(event)
                 except Exception:
                     pass
 
@@ -118,14 +130,17 @@ class ResourceManager:
             return snapshot
         except Exception as e:
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.SYSTEM,
                     message="Failed to take resource snapshot",
                     level=TraceLevel.ERROR,
+                    data={},
+                    duration_ms=0,
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
             raise
@@ -142,13 +157,15 @@ class ResourceManager:
             )
         except Exception as e:
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.SYSTEM,
                     message="Failed to store resource snapshot",
                     level=TraceLevel.WARNING,
                     data={"error": str(e)},
+                    duration_ms=0,
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
 
@@ -192,14 +209,17 @@ class ResourceManager:
             return False, f"Model does not fit in available VRAM ({variant.vram_required_gb}GB > {snapshot.vram_available_gb}GB) or RAM ({variant.ram_required_gb}GB > {snapshot.ram_available_gb}GB)"
         except Exception as e:
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.SYSTEM,
                     message="Failed to check if model can load",
                     level=TraceLevel.ERROR,
+                    data={},
+                    duration_ms=0,
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
             return False, f"Error checking load capability: {str(e)}"
@@ -209,22 +229,33 @@ class ResourceManager:
     ) -> LoadDecision:
         """Full load decision flow."""
         try:
-            await emit_trace(
-                event_type=TraceEventType.RESOURCE_LOAD_REQUEST,
-                component=TraceComponent.SYSTEM,
-                message=f"Load request for {model_id}:{quantisation}",
-                level=TraceLevel.INFO,
-                data={"model_id": model_id, "quantisation": quantisation},
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.RESOURCE_LOAD_REQUEST,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Load request for {model_id}:{quantisation}",
+                    level=TraceLevel.INFO,
+                    data={"model_id": model_id, "quantisation": quantisation},
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             # Check if already loaded
             if model_id in self._loaded_models:
-                await emit_trace(
-                    event_type=TraceEventType.RESOURCE_LOAD_APPROVED,
-                    component=TraceComponent.SYSTEM,
-                    message=f"Model {model_id} already loaded",
-                    level=TraceLevel.INFO,
-                )
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.RESOURCE_LOAD_APPROVED,
+                        component=TraceComponent.SYSTEM,
+                        message=f"Model {model_id} already loaded",
+                        level=TraceLevel.INFO,
+                        data={},
+                        duration_ms=0,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
                 return LoadDecision(
                     approved=True,
                     model_id=model_id,
@@ -237,12 +268,18 @@ class ResourceManager:
             # Get model entry
             entry = await registry.get(model_id)
             if not entry:
-                await emit_trace(
-                    event_type=TraceEventType.RESOURCE_LOAD_DENIED,
-                    component=TraceComponent.SYSTEM,
-                    message=f"Model {model_id} not found in registry",
-                    level=TraceLevel.WARNING,
-                )
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.RESOURCE_LOAD_DENIED,
+                        component=TraceComponent.SYSTEM,
+                        message=f"Model {model_id} not found in registry",
+                        level=TraceLevel.WARNING,
+                        data={},
+                        duration_ms=0,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
                 return LoadDecision(
                     approved=False,
                     model_id=model_id,
@@ -260,12 +297,18 @@ class ResourceManager:
                     break
 
             if not variant:
-                await emit_trace(
-                    event_type=TraceEventType.RESOURCE_LOAD_DENIED,
-                    component=TraceComponent.SYSTEM,
-                    message=f"Quantisation variant {quantisation} not found",
-                    level=TraceLevel.WARNING,
-                )
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.RESOURCE_LOAD_DENIED,
+                        component=TraceComponent.SYSTEM,
+                        message=f"Quantisation variant {quantisation} not found",
+                        level=TraceLevel.WARNING,
+                        data={},
+                        duration_ms=0,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
                 return LoadDecision(
                     approved=False,
                     model_id=model_id,
@@ -280,12 +323,18 @@ class ResourceManager:
             profiler = SystemProfiler(self.memory_router)
             system_profile = await profiler.get_cached()
             if not system_profile:
-                await emit_trace(
-                    event_type=TraceEventType.RESOURCE_LOAD_DENIED,
-                    component=TraceComponent.SYSTEM,
-                    message="System profile not available",
-                    level=TraceLevel.WARNING,
-                )
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.RESOURCE_LOAD_DENIED,
+                        component=TraceComponent.SYSTEM,
+                        message="System profile not available",
+                        level=TraceLevel.WARNING,
+                        data={},
+                        duration_ms=0,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
                 return LoadDecision(
                     approved=False,
                     model_id=model_id,
@@ -299,12 +348,18 @@ class ResourceManager:
 
             # Check if fits without eviction
             if variant.vram_required_gb <= snapshot.vram_available_gb:
-                await emit_trace(
-                    event_type=TraceEventType.RESOURCE_LOAD_APPROVED,
-                    component=TraceComponent.SYSTEM,
-                    message=f"Model fits in available VRAM",
-                    level=TraceLevel.INFO,
-                )
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.RESOURCE_LOAD_APPROVED,
+                        component=TraceComponent.SYSTEM,
+                        message=f"Model fits in available VRAM",
+                        level=TraceLevel.INFO,
+                        data={},
+                        duration_ms=0,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
                 return LoadDecision(
                     approved=True,
                     model_id=model_id,
@@ -336,12 +391,18 @@ class ResourceManager:
                 if model.is_pinned:
                     # Need user approval for pinned model
                     if self.approval_callback:
-                        await emit_trace(
-                            event_type=TraceEventType.RESOURCE_APPROVAL_REQUESTED,
-                            component=TraceComponent.SYSTEM,
-                            message=f"Requesting approval to evict pinned model {model.model_id}",
-                            level=TraceLevel.INFO,
-                        )
+                        try:
+                            event = TraceEvent(
+                                event_type=TraceEventType.RESOURCE_APPROVAL_REQUESTED,
+                                component=TraceComponent.SYSTEM,
+                                message=f"Requesting approval to evict pinned model {model.model_id}",
+                                level=TraceLevel.INFO,
+                                data={},
+                                duration_ms=0,
+                            )
+                            await self._emitter.emit(event)
+                        except Exception:
+                            pass
 
                         approved = await self.approval_callback.request_approval(
                             action_description=f"Evict pinned model {model.model_id} to load {model_id}",
@@ -354,12 +415,18 @@ class ResourceManager:
                             models_to_evict.append(model.model_id)
                             vram_freed += model.vram_used_gb
                         else:
-                            await emit_trace(
-                                event_type=TraceEventType.RESOURCE_LOAD_DENIED,
-                                component=TraceComponent.SYSTEM,
-                                message=f"User denied eviction of pinned model {model.model_id}",
-                                level=TraceLevel.INFO,
-                            )
+                            try:
+                                event = TraceEvent(
+                                    event_type=TraceEventType.RESOURCE_LOAD_DENIED,
+                                    component=TraceComponent.SYSTEM,
+                                    message=f"User denied eviction of pinned model {model.model_id}",
+                                    level=TraceLevel.INFO,
+                                    data={},
+                                    duration_ms=0,
+                                )
+                                await self._emitter.emit(event)
+                            except Exception:
+                                pass
                             return LoadDecision(
                                 approved=False,
                                 model_id=model_id,
@@ -370,12 +437,18 @@ class ResourceManager:
                             )
                     else:
                         # No approval callback, deny
-                        await emit_trace(
-                            event_type=TraceEventType.RESOURCE_LOAD_DENIED,
-                            component=TraceComponent.SYSTEM,
-                            message=f"No approval callback for pinned model eviction",
-                            level=TraceLevel.WARNING,
-                        )
+                        try:
+                            event = TraceEvent(
+                                event_type=TraceEventType.RESOURCE_LOAD_DENIED,
+                                component=TraceComponent.SYSTEM,
+                                message=f"No approval callback for pinned model eviction",
+                                level=TraceLevel.WARNING,
+                                data={},
+                                duration_ms=0,
+                            )
+                            await self._emitter.emit(event)
+                        except Exception:
+                            pass
                         return LoadDecision(
                             approved=False,
                             model_id=model_id,
@@ -389,13 +462,18 @@ class ResourceManager:
                     vram_freed += model.vram_used_gb
 
             if vram_freed >= vram_to_free:
-                await emit_trace(
-                    event_type=TraceEventType.RESOURCE_LOAD_APPROVED,
-                    component=TraceComponent.SYSTEM,
-                    message=f"Load approved with {len(models_to_evict)} evictions",
-                    level=TraceLevel.INFO,
-                    data={"models_to_evict": models_to_evict},
-                )
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.RESOURCE_LOAD_APPROVED,
+                        component=TraceComponent.SYSTEM,
+                        message=f"Load approved with {len(models_to_evict)} evictions",
+                        level=TraceLevel.INFO,
+                        data={"models_to_evict": models_to_evict},
+                        duration_ms=0,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
                 return LoadDecision(
                     approved=True,
                     model_id=model_id,
@@ -405,12 +483,18 @@ class ResourceManager:
                     reason=f"Load approved after evicting {len(models_to_evict)} models",
                 )
             else:
-                await emit_trace(
-                    event_type=TraceEventType.RESOURCE_LOAD_DENIED,
-                    component=TraceComponent.SYSTEM,
-                    message="Insufficient memory even after eviction",
-                    level=TraceLevel.WARNING,
-                )
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.RESOURCE_LOAD_DENIED,
+                        component=TraceComponent.SYSTEM,
+                        message="Insufficient memory even after eviction",
+                        level=TraceLevel.WARNING,
+                        data={},
+                        duration_ms=0,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
                 return LoadDecision(
                     approved=False,
                     model_id=model_id,
@@ -421,14 +505,17 @@ class ResourceManager:
                 )
         except Exception as e:
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.SYSTEM,
                     message="Failed to process load request",
                     level=TraceLevel.ERROR,
+                    data={},
+                    duration_ms=0,
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
             return LoadDecision(
@@ -463,14 +550,17 @@ class ResourceManager:
             await self._persist_loaded_state()
         except Exception as e:
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.SYSTEM,
                     message="Failed to record model load",
                     level=TraceLevel.ERROR,
+                    data={},
+                    duration_ms=0,
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
 
@@ -482,14 +572,17 @@ class ResourceManager:
                 await self._persist_loaded_state()
         except Exception as e:
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.SYSTEM,
                     message="Failed to record model unload",
                     level=TraceLevel.ERROR,
+                    data={},
+                    duration_ms=0,
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
 
@@ -501,64 +594,85 @@ class ResourceManager:
                 await self._persist_loaded_state()
         except Exception as e:
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.SYSTEM,
                     message="Failed to record model usage",
                     level=TraceLevel.ERROR,
+                    data={},
+                    duration_ms=0,
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
 
     async def pin_model(self, model_id: str) -> None:
         """Pin a model so it is never auto-evicted."""
         try:
-            await emit_trace(
-                event_type=TraceEventType.RESOURCE_PIN,
-                component=TraceComponent.SYSTEM,
-                message=f"Pinning model {model_id}",
-                level=TraceLevel.INFO,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.RESOURCE_PIN,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Pinning model {model_id}",
+                    level=TraceLevel.INFO,
+                    data={},
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
             if model_id in self._loaded_models:
                 self._loaded_models[model_id].is_pinned = True
                 await self._persist_loaded_state()
         except Exception as e:
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.SYSTEM,
                     message="Failed to pin model",
                     level=TraceLevel.ERROR,
+                    data={},
+                    duration_ms=0,
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
 
     async def unpin_model(self, model_id: str) -> None:
         """Unpin a model."""
         try:
-            await emit_trace(
-                event_type=TraceEventType.RESOURCE_UNPIN,
-                component=TraceComponent.SYSTEM,
-                message=f"Unpinning model {model_id}",
-                level=TraceLevel.INFO,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.RESOURCE_UNPIN,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Unpinning model {model_id}",
+                    level=TraceLevel.INFO,
+                    data={},
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
             if model_id in self._loaded_models:
                 self._loaded_models[model_id].is_pinned = False
                 await self._persist_loaded_state()
         except Exception as e:
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.SYSTEM,
                     message="Failed to unpin model",
                     level=TraceLevel.ERROR,
+                    data={},
+                    duration_ms=0,
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
 
@@ -575,20 +689,32 @@ class ResourceManager:
             model = self._loaded_models[model_id]
 
             if model.is_pinned and not force:
-                await emit_trace(
-                    event_type=TraceEventType.RESOURCE_EVICT,
-                    component=TraceComponent.SYSTEM,
-                    message=f"Cannot evict pinned model {model_id}",
-                    level=TraceLevel.WARNING,
-                )
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.RESOURCE_EVICT,
+                        component=TraceComponent.SYSTEM,
+                        message=f"Cannot evict pinned model {model_id}",
+                        level=TraceLevel.WARNING,
+                        data={},
+                        duration_ms=0,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
                 return False
 
-            await emit_trace(
-                event_type=TraceEventType.RESOURCE_EVICT,
-                component=TraceComponent.SYSTEM,
-                message=f"Evicting model {model_id}",
-                level=TraceLevel.INFO,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.RESOURCE_EVICT,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Evicting model {model_id}",
+                    level=TraceLevel.INFO,
+                    data={},
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             # Send unload signal to Ollama API
             try:
@@ -599,15 +725,15 @@ class ResourceManager:
                     )
             except Exception as e:
                 try:
-                    await self.emitter.emit(
-                        TraceEvent(
-                            event_type=TraceEventType.OPERATION_ERROR,
-                            component=TraceComponent.SYSTEM,
-                            message="Failed to send unload signal to Ollama",
-                            level=TraceLevel.WARNING,
-                            data={"error": str(e)},
-                        )
+                    event = TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="Failed to send unload signal to Ollama",
+                        level=TraceLevel.WARNING,
+                        data={"error": str(e)},
+                        duration_ms=0,
                     )
+                    await self._emitter.emit(event)
                 except Exception:
                     pass
 
@@ -615,16 +741,17 @@ class ResourceManager:
             return True
         except Exception as e:
             try:
-                await self.emitter.emit(
-                    TraceEvent(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.SYSTEM,
-                        message="Failed to evict model",
-                        level=TraceLevel.ERROR,
-                        error_type=type(e).__name__,
-                        error_message=str(e),
-                    )
+                event = TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.SYSTEM,
+                    message="Failed to evict model",
+                    level=TraceLevel.ERROR,
+                    data={},
+                    duration_ms=0,
+                    error_type=type(e).__name__,
+                    error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
             return False
@@ -645,15 +772,15 @@ class ResourceManager:
             )
         except Exception as e:
             try:
-                await self.emitter.emit(
-                    TraceEvent(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.SYSTEM,
-                        message="Failed to persist loaded model state",
-                        level=TraceLevel.WARNING,
-                        data={"error": str(e)},
-                    )
+                event = TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.SYSTEM,
+                    message="Failed to persist loaded model state",
+                    level=TraceLevel.WARNING,
+                    data={"error": str(e)},
+                    duration_ms=0,
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
 
@@ -675,15 +802,15 @@ class ResourceManager:
                                 self._loaded_models[loaded_model.model_id] = loaded_model
             except Exception as e:
                 try:
-                    await self.emitter.emit(
-                        TraceEvent(
-                            event_type=TraceEventType.OPERATION_ERROR,
-                            component=TraceComponent.SYSTEM,
-                            message="Failed to load persisted resource manager state",
-                            level=TraceLevel.WARNING,
-                            data={"error": str(e)},
-                        )
+                    event = TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.SYSTEM,
+                        message="Failed to load persisted resource manager state",
+                        level=TraceLevel.WARNING,
+                        data={"error": str(e)},
+                        duration_ms=0,
                     )
+                    await self._emitter.emit(event)
                 except Exception:
                     pass
 
@@ -711,15 +838,16 @@ class ResourceManager:
                         break
         except Exception as e:
             try:
-                await self.emitter.emit(
-                    TraceEvent(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.SYSTEM,
-                        message="Failed to initialize resource manager",
-                        level=TraceLevel.ERROR,
-                        error_type=type(e).__name__,
-                        error_message=str(e),
-                    )
+                event = TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.SYSTEM,
+                    message="Failed to initialize resource manager",
+                    level=TraceLevel.ERROR,
+                    data={},
+                    duration_ms=0,
+                    error_type=type(e).__name__,
+                    error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass

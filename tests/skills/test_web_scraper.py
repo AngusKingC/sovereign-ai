@@ -6,6 +6,7 @@ import pytest
 from unittest.mock import AsyncMock, patch, Mock
 
 from skills.web_scraper.skill import WebScraperSkill
+from core.observability import MemoryTraceEmitter
 
 
 class TestWebScraperSkill:
@@ -14,7 +15,7 @@ class TestWebScraperSkill:
     @pytest.fixture
     def skill(self):
         """Create a WebScraperSkill instance."""
-        return WebScraperSkill()
+        return WebScraperSkill(emitter=MemoryTraceEmitter())
 
     @pytest.mark.asyncio
     async def test_execute_with_valid_url(self, skill):
@@ -27,11 +28,10 @@ class TestWebScraperSkill:
             mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
             mock_client.return_value.__aenter__.return_value.__aexit__ = AsyncMock()
 
-            with patch("skills.web_scraper.skill.emit_trace", new_callable=AsyncMock):
-                result = await skill.execute("https://example.com")
+            result = await skill.execute("https://example.com")
 
-                assert "Test Content" in result
-                mock_client.return_value.__aenter__.return_value.get.assert_called_once_with("https://example.com")
+            assert "Test Content" in result
+            mock_client.return_value.__aenter__.return_value.get.assert_called_once_with("https://example.com")
 
     @pytest.mark.asyncio
     async def test_execute_with_selector(self, skill):
@@ -44,11 +44,10 @@ class TestWebScraperSkill:
             mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
             mock_client.return_value.__aenter__.return_value.__aexit__ = AsyncMock()
 
-            with patch("skills.web_scraper.skill.emit_trace", new_callable=AsyncMock):
-                result = await skill.execute("https://example.com", selector=".target")
+            result = await skill.execute("https://example.com", selector=".target")
 
-                assert "Target Text" in result
-                assert "Other Text" not in result
+            assert "Target Text" in result
+            assert "Other Text" not in result
 
     @pytest.mark.asyncio
     async def test_execute_with_invalid_url(self, skill):
@@ -69,9 +68,8 @@ class TestWebScraperSkill:
             mock_client.return_value.__aenter__.return_value.get.side_effect = Exception("HTTP Error")
             mock_client.return_value.__aenter__.return_value.__aexit__ = AsyncMock()
 
-            with patch("skills.web_scraper.skill.emit_trace", new_callable=AsyncMock):
-                with pytest.raises(Exception, match="HTTP Error"):
-                    await skill.execute("https://example.com")
+            with pytest.raises(Exception, match="HTTP Error"):
+                await skill.execute("https://example.com")
 
     def test_skill_metadata_parsing(self):
         """Test that SKILL.md can be parsed correctly."""

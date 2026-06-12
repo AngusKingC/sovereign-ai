@@ -8,6 +8,7 @@ import os
 from unittest.mock import AsyncMock, patch
 
 from skills.file_reader.skill import FileReaderSkill
+from core.observability import MemoryTraceEmitter
 
 
 class TestFileReaderSkill:
@@ -16,7 +17,7 @@ class TestFileReaderSkill:
     @pytest.fixture
     def skill(self):
         """Create a FileReaderSkill instance."""
-        return FileReaderSkill()
+        return FileReaderSkill(emitter=MemoryTraceEmitter())
 
     @pytest.mark.asyncio
     async def test_execute_with_valid_path(self, skill):
@@ -26,9 +27,8 @@ class TestFileReaderSkill:
             temp_path = f.name
 
         try:
-            with patch("skills.file_reader.skill.emit_trace", new_callable=AsyncMock):
-                result = await skill.execute(temp_path)
-                assert result == "Test file content"
+            result = await skill.execute(temp_path)
+            assert result == "Test file content"
         finally:
             os.unlink(temp_path)
 
@@ -40,9 +40,8 @@ class TestFileReaderSkill:
             temp_path = f.name
 
         try:
-            with patch("skills.file_reader.skill.emit_trace", new_callable=AsyncMock):
-                result = await skill.execute(temp_path, encoding="utf-8")
-                assert result == "Test file content"
+            result = await skill.execute(temp_path, encoding="utf-8")
+            assert result == "Test file content"
         finally:
             os.unlink(temp_path)
 
@@ -61,9 +60,8 @@ class TestFileReaderSkill:
     @pytest.mark.asyncio
     async def test_execute_file_not_found(self, skill):
         """Test that FileNotFoundError is raised for non-existent file."""
-        with patch("skills.file_reader.skill.emit_trace", new_callable=AsyncMock):
-            with pytest.raises(FileNotFoundError):
-                await skill.execute("/nonexistent/path/to/file.txt")
+        with pytest.raises(FileNotFoundError):
+            await skill.execute("/nonexistent/path/to/file.txt")
 
     def test_skill_metadata_parsing(self):
         """Test that SKILL.md can be parsed correctly."""

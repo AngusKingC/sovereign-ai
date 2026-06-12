@@ -18,7 +18,9 @@ from core.observability import (
     TraceEventType,
     TraceComponent,
     TraceLevel,
-    emit_trace,
+    TraceEvent,
+    TraceEmitter,
+    MemoryTraceEmitter,
 )
 
 
@@ -31,6 +33,7 @@ class QdrantBackend(MemoryBackend):
         collection_name: str = "memory_vectors",
         vector_size: int = 768,
         embedder: OllamaEmbedder | None = None,
+        emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the Qdrant backend with connection details."""
         self.url = url
@@ -38,6 +41,7 @@ class QdrantBackend(MemoryBackend):
         self.vector_size = vector_size
         self.embedder = embedder if embedder is not None else OllamaEmbedder()
         self.client: QdrantClient | None = None
+        self._emitter = emitter or MemoryTraceEmitter()
 
     async def _ensure_connection(self) -> None:
         """Ensure Qdrant client is initialized."""
@@ -71,34 +75,43 @@ class QdrantBackend(MemoryBackend):
 
         try:
             # Emit fetch start event
-            await emit_trace(
-                event_type=TraceEventType.MEMORY_FETCH,
-                component=TraceComponent.MEMORY_ROUTER,
-                message="Qdrant memory fetch started",
-                level=TraceLevel.INFO,
-                data={
-                    "backend_type": "qdrant",
-                    "task_id": str(task.task_id),
-                    "collection_name": self.collection_name,
-                },
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.MEMORY_FETCH,
+                    component=TraceComponent.MEMORY_ROUTER,
+                    message="Qdrant memory fetch started",
+                    level=TraceLevel.INFO,
+                    data={
+                        "backend_type": "qdrant",
+                        "task_id": str(task.task_id),
+                        "collection_name": self.collection_name,
+                    },
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             await self._ensure_connection()
 
             if self.client is None:
                 duration_ms = int((time.perf_counter() - start_time) * 1000)
-                await emit_trace(
-                    event_type=TraceEventType.MEMORY_FETCH,
-                    component=TraceComponent.MEMORY_ROUTER,
-                    message="Qdrant memory fetch completed (client not initialized)",
-                    level=TraceLevel.WARNING,
-                    data={
-                        "backend_type": "qdrant",
-                        "task_id": str(task.task_id),
-                        "records_fetched": 0,
-                    },
-                    duration_ms=duration_ms,
-                )
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.MEMORY_FETCH,
+                        component=TraceComponent.MEMORY_ROUTER,
+                        message="Qdrant memory fetch completed (client not initialized)",
+                        level=TraceLevel.WARNING,
+                        data={
+                            "backend_type": "qdrant",
+                            "task_id": str(task.task_id),
+                            "records_fetched": 0,
+                        },
+                        duration_ms=duration_ms,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
                 return []
 
             # Generate embedding for task intent
@@ -106,13 +119,18 @@ class QdrantBackend(MemoryBackend):
                 query_vector = await self.embedder.embed(task.intent)
             except Exception as e:
                 # Fallback to zero vector on embedder failure
-                await emit_trace(
-                    event_type=TraceEventType.EMBEDDING_ERROR,
-                    component=TraceComponent.EMBEDDER,
-                    message="Embedder failed during fetch, falling back to zero vector",
-                    level=TraceLevel.WARNING,
-                    data={"error": str(e), "task_intent": task.intent},
-                )
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.EMBEDDING_ERROR,
+                        component=TraceComponent.EMBEDDER,
+                        message="Embedder failed during fetch, falling back to zero vector",
+                        level=TraceLevel.WARNING,
+                        data={"error": str(e), "task_intent": task.intent},
+                        duration_ms=0,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
                 query_vector = [0.0] * self.vector_size
 
             search_result = self.client.search(
@@ -134,25 +152,29 @@ class QdrantBackend(MemoryBackend):
             duration_ms = int((time.perf_counter() - start_time) * 1000)
 
             # Emit fetch complete event
-            await emit_trace(
-                event_type=TraceEventType.MEMORY_FETCH,
-                component=TraceComponent.MEMORY_ROUTER,
-                message="Qdrant memory fetch completed",
-                level=TraceLevel.INFO,
-                data={
-                    "backend_type": "qdrant",
-                    "task_id": str(task.task_id),
-                    "records_fetched": len(result),
-                },
-                duration_ms=duration_ms,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.MEMORY_FETCH,
+                    component=TraceComponent.MEMORY_ROUTER,
+                    message="Qdrant memory fetch completed",
+                    level=TraceLevel.INFO,
+                    data={
+                        "backend_type": "qdrant",
+                        "task_id": str(task.task_id),
+                        "records_fetched": len(result),
+                    },
+                    duration_ms=duration_ms,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             return result
         except Exception as e:
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             # Emit error event (wrapped to avoid crashing main path)
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.MEMORY_FETCH,
                     component=TraceComponent.MEMORY_ROUTER,
                     message="Qdrant memory fetch failed",
@@ -165,6 +187,7 @@ class QdrantBackend(MemoryBackend):
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass  # Trace failure should not crash main path
             return []
@@ -181,31 +204,40 @@ class QdrantBackend(MemoryBackend):
 
         try:
             # Emit write start event
-            await emit_trace(
-                event_type=TraceEventType.MEMORY_WRITE,
-                component=TraceComponent.MEMORY_ROUTER,
-                message="Qdrant memory write started",
-                level=TraceLevel.INFO,
-                data={
-                    "backend_type": "qdrant",
-                    "collection_name": self.collection_name,
-                },
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.MEMORY_WRITE,
+                    component=TraceComponent.MEMORY_ROUTER,
+                    message="Qdrant memory write started",
+                    level=TraceLevel.INFO,
+                    data={
+                        "backend_type": "qdrant",
+                        "collection_name": self.collection_name,
+                    },
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             await self._ensure_connection()
 
             if self.client is None:
                 duration_ms = int((time.perf_counter() - start_time) * 1000)
-                await emit_trace(
-                    event_type=TraceEventType.MEMORY_WRITE,
-                    component=TraceComponent.MEMORY_ROUTER,
-                    message="Qdrant memory write skipped (client not initialized)",
-                    level=TraceLevel.WARNING,
-                    data={
-                        "backend_type": "qdrant",
-                    },
-                    duration_ms=duration_ms,
-                )
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.MEMORY_WRITE,
+                        component=TraceComponent.MEMORY_ROUTER,
+                        message="Qdrant memory write skipped (client not initialized)",
+                        level=TraceLevel.WARNING,
+                        data={
+                            "backend_type": "qdrant",
+                        },
+                        duration_ms=duration_ms,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
                 return
 
             # Generate embedding for content
@@ -214,13 +246,18 @@ class QdrantBackend(MemoryBackend):
                 vector = await self.embedder.embed(text)
             except Exception as e:
                 # Fallback to zero vector on embedder failure
-                await emit_trace(
-                    event_type=TraceEventType.EMBEDDING_ERROR,
-                    component=TraceComponent.EMBEDDER,
-                    message="Embedder failed during write, falling back to zero vector",
-                    level=TraceLevel.WARNING,
-                    data={"error": str(e), "content": text},
-                )
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.EMBEDDING_ERROR,
+                        component=TraceComponent.EMBEDDER,
+                        message="Embedder failed during write, falling back to zero vector",
+                        level=TraceLevel.WARNING,
+                        data={"error": str(e), "content": text},
+                        duration_ms=0,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
                 vector = [0.0] * self.vector_size
 
             point = PointStruct(
@@ -237,22 +274,26 @@ class QdrantBackend(MemoryBackend):
             duration_ms = int((time.perf_counter() - start_time) * 1000)
 
             # Emit write complete event
-            await emit_trace(
-                event_type=TraceEventType.MEMORY_WRITE,
-                component=TraceComponent.MEMORY_ROUTER,
-                message="Qdrant memory write completed",
-                level=TraceLevel.INFO,
-                data={
-                    "backend_type": "qdrant",
-                    "records_written": 1,
-                },
-                duration_ms=duration_ms,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.MEMORY_WRITE,
+                    component=TraceComponent.MEMORY_ROUTER,
+                    message="Qdrant memory write completed",
+                    level=TraceLevel.INFO,
+                    data={
+                        "backend_type": "qdrant",
+                        "records_written": 1,
+                    },
+                    duration_ms=duration_ms,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
         except Exception as e:
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             # Emit error event (wrapped to avoid crashing main path)
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.MEMORY_WRITE,
                     component=TraceComponent.MEMORY_ROUTER,
                     message="Qdrant memory write failed",
@@ -264,6 +305,7 @@ class QdrantBackend(MemoryBackend):
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass  # Trace failure should not crash main path
             # Silently fail on connection errors

@@ -14,8 +14,9 @@ from core.observability import (
     TraceComponent,
     TraceEventType,
     TraceLevel,
+    TraceEvent,
     TraceEmitter,
-    emit_trace,
+    MemoryTraceEmitter,
 )
 
 
@@ -37,9 +38,7 @@ class SkillRegistry:
 
     def __init__(self, emitter: TraceEmitter | None = None) -> None:
         """Initialize the skill registry."""
-        self.emitter = emitter
-        # For now, use the global emitter as fallback
-        # This will be replaced with NullTraceEmitter in Prompt 13.5
+        self.emitter = emitter or MemoryTraceEmitter()
         self._skills: dict[str, SkillMetadata] = {}
         self._skills_dir = Path(__file__).parent.parent / "skills"
 
@@ -51,18 +50,21 @@ class SkillRegistry:
             Dictionary mapping skill names to their metadata
         """
         if not self._skills_dir.exists():
-            await emit_trace(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.ORCHESTRATOR,
-                level=TraceLevel.WARNING,
-                layer="layer_1",
-                payload={
-                    "error": "Skills directory does not exist",
-                    "path": str(self._skills_dir),
-                },
-                duration_ms=0,
-                success=False,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.ORCHESTRATOR,
+                    message="Skills directory does not exist",
+                    level=TraceLevel.WARNING,
+                    data={
+                        "error": "Skills directory does not exist",
+                        "path": str(self._skills_dir),
+                    },
+                    duration_ms=0,
+                )
+                await self.emitter.emit(event)
+            except Exception:
+                pass
             return {}
 
         discovered = {}
@@ -80,33 +82,39 @@ class SkillRegistry:
                 if metadata:
                     discovered[metadata.name] = metadata
             except Exception as e:
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_COMPLETE,
-                    component=TraceComponent.ORCHESTRATOR,
-                    level=TraceLevel.ERROR,
-                    layer="layer_1",
-                    payload={
-                        "error": str(e),
-                        "skill_dir": str(skill_dir),
-                    },
-                    duration_ms=0,
-                    success=False,
-                )
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.OPERATION_COMPLETE,
+                        component=TraceComponent.ORCHESTRATOR,
+                        message="Failed to parse skill directory",
+                        level=TraceLevel.ERROR,
+                        data={
+                            "error": str(e),
+                            "skill_dir": str(skill_dir),
+                        },
+                        duration_ms=0,
+                    )
+                    await self.emitter.emit(event)
+                except Exception:
+                    pass
 
         self._skills = discovered
 
-        await emit_trace(
-            event_type=TraceEventType.OPERATION_COMPLETE,
-            component=TraceComponent.ORCHESTRATOR,
-            level=TraceLevel.INFO,
-            layer="layer_1",
-            payload={
-                "skills_discovered": len(discovered),
-                "skill_names": list(discovered.keys()),
-            },
-            duration_ms=0,
-            success=True,
-        )
+        try:
+            event = TraceEvent(
+                event_type=TraceEventType.OPERATION_COMPLETE,
+                component=TraceComponent.ORCHESTRATOR,
+                message="Skills discovery completed",
+                level=TraceLevel.INFO,
+                data={
+                    "skills_discovered": len(discovered),
+                    "skill_names": list(discovered.keys()),
+                },
+                duration_ms=0,
+            )
+            await self.emitter.emit(event)
+        except Exception:
+            pass
 
         return discovered
 

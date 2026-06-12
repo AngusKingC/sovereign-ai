@@ -13,8 +13,9 @@ from core.observability import (
     TraceComponent,
     TraceEventType,
     TraceLevel,
+    TraceEvent,
     TraceEmitter,
-    emit_trace,
+    MemoryTraceEmitter,
 )
 
 
@@ -23,9 +24,7 @@ class WebScraperSkill:
 
     def __init__(self, emitter: TraceEmitter | None = None) -> None:
         """Initialize the web scraper skill."""
-        self.emitter = emitter
-        # For now, use the global emitter as fallback
-        # This will be replaced with NullTraceEmitter in Prompt 13.5
+        self._emitter = emitter or MemoryTraceEmitter()
 
     async def execute(self, url: str, selector: str | None = None) -> str:
         """
@@ -58,35 +57,41 @@ class WebScraperSkill:
                 else:
                     content = soup.get_text(separator="\n", strip=True)
 
-                await emit_trace(
-                    event_type=TraceEventType.OPERATION_COMPLETE,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.INFO,
-                    layer="layer_2",
-                    payload={
-                        "skill": "web_scraper",
-                        "url": url,
-                        "selector": selector,
-                        "content_length": len(content),
-                    },
-                    duration_ms=0,
-                    success=True,
-                )
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.OPERATION_COMPLETE,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.INFO,
+                        message="Web scraping completed",
+                        data={
+                            "skill": "web_scraper",
+                            "url": url,
+                            "selector": selector,
+                            "content_length": len(content),
+                        },
+                        duration_ms=0,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
 
                 return content
 
         except httpx.HTTPError as e:
-            await emit_trace(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.ERROR,
-                layer="layer_2",
-                payload={
-                    "skill": "web_scraper",
-                    "url": url,
-                    "error": str(e),
-                },
-                duration_ms=0,
-                success=False,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.ERROR,
+                    message="Web scraping failed",
+                    data={
+                        "skill": "web_scraper",
+                        "url": url,
+                        "error": str(e),
+                    },
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
             raise

@@ -868,14 +868,17 @@ class ModelAcquisition:
             }
         except Exception as e:
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.SYSTEM,
                     message="Failed to get storage summary",
                     level=TraceLevel.ERROR,
+                    data={},
+                    duration_ms=0,
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self.emitter.emit(event)
             except Exception:
                 pass
             return {

@@ -63,9 +63,9 @@ class TestOrchestrator:
         return MemoryTraceEmitter()
 
     @pytest.fixture
-    def orchestrator(self, memory_router):
+    def orchestrator(self, memory_router, trace_emitter):
         """Create an orchestrator."""
-        return Orchestrator(memory_router=memory_router)
+        return Orchestrator(memory_router=memory_router, emitter=trace_emitter)
 
     @pytest.fixture
     def sample_task(self):
@@ -321,9 +321,6 @@ class TestOrchestrator:
 
     def test_trace_events_emitted_during_routing(self, orchestrator, memory_router, sample_task, trace_emitter):
         """Test that trace events are emitted during routing."""
-        from core.observability import set_trace_emitter
-        set_trace_emitter(trace_emitter)
-
         profile = WorkerProfile(
             worker_id="worker1",
             worker_type="test",
@@ -337,7 +334,7 @@ class TestOrchestrator:
             preferred_complexity=0.5,
         )
         llm = MockLLMAdapter()
-        worker = EchoWorker(profile=profile, llm=llm, memory_router=memory_router)
+        worker = EchoWorker(profile=profile, llm=llm, memory_router=memory_router, emitter=trace_emitter)
 
         orchestrator.register_worker("worker1", worker)
 

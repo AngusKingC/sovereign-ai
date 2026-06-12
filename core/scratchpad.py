@@ -12,18 +12,19 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel
 
 from core.memory_router import MemoryRouter
-from core.observability import TraceComponent, TraceEventType, TraceLevel, emit_trace
+from core.observability import TraceComponent, TraceEventType, TraceLevel, TraceEvent, TraceEmitter, MemoryTraceEmitter
 from core.schemas import Scratchpad, ScratchpadEntry, ScratchpadEntryType
 
 
 class ScratchpadManager:
     """Manages per-task working memory scratchpads."""
 
-    def __init__(self, memory_router: MemoryRouter) -> None:
+    def __init__(self, memory_router: MemoryRouter, emitter: TraceEmitter | None = None) -> None:
         """Initialize scratchpad manager with memory router for persistence."""
         self.memory_router = memory_router
         # In-memory cache for active scratchpads (in production, this would be Postgres)
         self._scratchpads: dict[UUID, Scratchpad] = {}
+        self._emitter = emitter or MemoryTraceEmitter()
 
     async def create(self, task_id: UUID) -> Scratchpad:
         """Create a new scratchpad for a task.
@@ -42,7 +43,7 @@ class ScratchpadManager:
         
         # Emit trace event
         try:
-            await emit_trace(
+            event = TraceEvent(
                 event_type=TraceEventType.SCRATCHPAD_CREATED,
                 component=TraceComponent.ORCHESTRATOR,
                 message="Scratchpad created",
@@ -51,7 +52,9 @@ class ScratchpadManager:
                     "task_id": str(task_id),
                     "scratchpad_id": str(scratchpad.scratchpad_id),
                 },
+                duration_ms=0,
             )
+            await self._emitter.emit(event)
         except Exception:
             pass
         
@@ -107,7 +110,7 @@ class ScratchpadManager:
         
         # Emit trace event
         try:
-            await emit_trace(
+            event = TraceEvent(
                 event_type=TraceEventType.SCRATCHPAD_ENTRY_ADDED,
                 component=TraceComponent.ORCHESTRATOR,
                 message="Scratchpad entry added",
@@ -118,7 +121,9 @@ class ScratchpadManager:
                     "entry_type": entry_type.value,
                     "worker_id": worker_id,
                 },
+                duration_ms=0,
             )
+            await self._emitter.emit(event)
         except Exception:
             pass
         
@@ -165,7 +170,7 @@ class ScratchpadManager:
         
         # Emit trace event
         try:
-            await emit_trace(
+            event = TraceEvent(
                 event_type=TraceEventType.SCRATCHPAD_COMPACTED,
                 component=TraceComponent.ORCHESTRATOR,
                 message="Scratchpad compacted",
@@ -175,7 +180,9 @@ class ScratchpadManager:
                     "scratchpad_id": str(scratchpad.scratchpad_id),
                     "entry_count": len(scratchpad.entries),
                 },
+                duration_ms=0,
             )
+            await self._emitter.emit(event)
         except Exception:
             pass
         
@@ -192,13 +199,15 @@ class ScratchpadManager:
         
         # Emit trace event
         try:
-            await emit_trace(
+            event = TraceEvent(
                 event_type=TraceEventType.SCRATCHPAD_DELETED,
                 component=TraceComponent.ORCHESTRATOR,
                 message="Scratchpad deleted",
                 level=TraceLevel.INFO,
                 data={"task_id": str(task_id)},
+                duration_ms=0,
             )
+            await self._emitter.emit(event)
         except Exception:
             pass
 

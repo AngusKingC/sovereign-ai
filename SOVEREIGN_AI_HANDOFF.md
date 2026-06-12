@@ -71,15 +71,53 @@ Every file spec that uses schemas MUST include:
 > that references those models."
 
 **4. Baseline confirmation gate**
-Every prompt spec MUST open with:
-> "Before writing any code, confirm the baseline: run the full test suite and
-> paste the last 10 lines of output. Do not proceed until baseline is confirmed."
+Every prompt spec MUST state the known baseline from the previous prompt's closing
+test run. Do NOT instruct Devin to re-run the full suite before starting — the
+previous prompt already confirmed it. The baseline run happens between file changes
+and at the end of the prompt, not at the start.
+
+Format:
+> "The confirmed baseline from the previous prompt is: {N} passed, 23 skipped,
+> 0 failed. Do not run the suite now — proceed directly to the pre-edit checklist.
+> Run the suite only after each individual file change."
 
 **5. Memory entries at the top**
 All active memory entries are listed at the top of every spec, before the goal
 and file instructions. They are labelled "active for this prompt" — not "save
 these now." Saving happens mid-prompt when problems are solved, or at the end
 of the previous prompt's closing steps.
+
+**6. Pre-edit rules confirmation (mandatory before any file work begins)**
+Every prompt spec MUST include this instruction block immediately after the
+baseline confirmation gate, before any file work begins:
+
+> "Before touching any file, re-read
+> `C:\Users\King\.codeium\windsurf\memories\global_rules.md` in full.
+> Then paste the following checklist with all boxes checked — do not edit
+> any file until you have pasted it:
+>
+> PRE-EDIT CHECKLIST
+> [ ] I have read global_rules.md in full
+> [ ] I will fix each production file and its test file together as one unit
+>     before moving to the next
+> [ ] I will run the full test suite after each production+test pair and
+>     confirm zero new failures before proceeding
+> [ ] All emitters in files I touch are constructor-injected —
+>     no global emit_trace()
+> [ ] TraceEvent is imported from core/observability.py — not core/schemas.py
+> [ ] I am not expanding scope beyond the files listed in this prompt"
+
+**7. Per-file pre-edit statement (mandatory before each individual file)**
+Every prompt spec MUST include this line immediately before each individual
+file's instructions:
+
+> "Before editing this file, state which global_rules.md rules apply to it
+> and confirm its test file is included in this same step."
+
+This forces an explicit retrieval and acknowledgement at the moment of each
+edit, not just once at the start of the prompt. A model that has to articulate
+which rules apply to a file before touching it is far less likely to violate
+them than one relying on passive recall from earlier in the session.
 
 ---
 

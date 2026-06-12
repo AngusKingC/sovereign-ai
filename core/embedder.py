@@ -13,7 +13,9 @@ from core.observability import (
     TraceEventType,
     TraceComponent,
     TraceLevel,
-    emit_trace,
+    TraceEvent,
+    TraceEmitter,
+    MemoryTraceEmitter,
 )
 
 
@@ -23,17 +25,20 @@ class OllamaEmbedder:
     def __init__(
         self,
         base_url: str = "http://localhost:11434",
-        model: str = "nomic-embed-text"
+        model: str = "nomic-embed-text",
+        emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the Ollama embedder.
         
         Args:
             base_url: Base URL of the Ollama server
             model: Name of the embedding model to use
+            emitter: TraceEmitter for observability
         """
         self.base_url = base_url
         self.model = model
         self._client: httpx.AsyncClient | None = None
+        self._emitter = emitter or MemoryTraceEmitter()
     
     def _ensure_client(self) -> None:
         """Ensure HTTP client is initialized."""
@@ -57,16 +62,21 @@ class OllamaEmbedder:
 
         try:
             # Emit embedding request event
-            await emit_trace(
-                event_type=TraceEventType.EMBEDDING_REQUEST,
-                component=TraceComponent.EMBEDDER,
-                message="Embedding request started",
-                level=TraceLevel.INFO,
-                data={
-                    "model": self.model,
-                    "input_length": input_length,
-                },
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.EMBEDDING_REQUEST,
+                    component=TraceComponent.EMBEDDER,
+                    message="Embedding request started",
+                    level=TraceLevel.INFO,
+                    data={
+                        "model": self.model,
+                        "input_length": input_length,
+                    },
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             self._ensure_client()
             
@@ -91,25 +101,29 @@ class OllamaEmbedder:
             duration_ms = int((time.perf_counter() - start_time) * 1000)
 
             # Emit embedding complete event
-            await emit_trace(
-                event_type=TraceEventType.EMBEDDING_COMPLETE,
-                component=TraceComponent.EMBEDDER,
-                message="Embedding request completed",
-                level=TraceLevel.INFO,
-                data={
-                    "model": self.model,
-                    "input_length": input_length,
-                    "embedding_dimension": len(embedding),
-                },
-                duration_ms=duration_ms,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.EMBEDDING_COMPLETE,
+                    component=TraceComponent.EMBEDDER,
+                    message="Embedding request completed",
+                    level=TraceLevel.INFO,
+                    data={
+                        "model": self.model,
+                        "input_length": input_length,
+                        "embedding_dimension": len(embedding),
+                    },
+                    duration_ms=duration_ms,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
             
             return embedding
         except Exception as e:
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             # Emit error event (wrapped to avoid crashing main path)
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.EMBEDDING_ERROR,
                     component=TraceComponent.EMBEDDER,
                     message="Embedding request failed",
@@ -122,6 +136,7 @@ class OllamaEmbedder:
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass  # Trace failure should not crash main path
             if isinstance(e, httpx.ConnectError):

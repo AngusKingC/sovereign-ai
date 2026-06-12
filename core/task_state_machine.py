@@ -14,7 +14,9 @@ from core.observability import (
     TraceComponent,
     TraceEventType,
     TraceLevel,
-    emit_trace,
+    TraceEvent,
+    TraceEmitter,
+    MemoryTraceEmitter,
 )
 from core.exceptions import InvalidStateTransitionError
 
@@ -37,9 +39,10 @@ class TaskStateMachine:
         TaskStatus.DENIED: [],  # Terminal state
     }
 
-    def __init__(self, memory_router: "MemoryRouter") -> None:
+    def __init__(self, memory_router: "MemoryRouter", emitter: TraceEmitter | None = None) -> None:
         """Initialize the task state machine with memory router for persistence."""
         self.memory_router = memory_router
+        self._emitter = emitter or MemoryTraceEmitter()
 
     async def transition(
         self,
@@ -71,7 +74,7 @@ class TaskStateMachine:
         # Validate the transition is legal
         if not self.can_transition(task, to_state):
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.ORCHESTRATOR,
                     message=f"Invalid state transition attempted",
@@ -81,7 +84,9 @@ class TaskStateMachine:
                         "from_state": from_state.value,
                         "to_state": to_state.value,
                     },
+                    duration_ms=0,
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
             raise InvalidStateTransitionError(
@@ -108,7 +113,7 @@ class TaskStateMachine:
 
         # Emit trace event
         try:
-            await emit_trace(
+            event = TraceEvent(
                 event_type=TraceEventType.OPERATION_COMPLETE,
                 component=TraceComponent.ORCHESTRATOR,
                 message=f"Task state transition: {from_state.value} -> {to_state.value}",
@@ -120,7 +125,9 @@ class TaskStateMachine:
                     "actor": actor,
                     "reason": reason,
                 },
+                duration_ms=0,
             )
+            await self._emitter.emit(event)
         except Exception:
             pass
 
@@ -145,13 +152,15 @@ class TaskStateMachine:
             )
         except Exception as e:
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.ORCHESTRATOR,
                     message="Failed to persist state transition",
                     level=TraceLevel.WARNING,
                     data={"error": str(e)},
+                    duration_ms=0,
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
 
@@ -222,7 +231,7 @@ class TaskStateMachine:
             
             # Emit trace event
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_COMPLETE,
                     component=TraceComponent.ORCHESTRATOR,
                     message=f"Task checkpoint saved: {task_id} at step {step}",
@@ -232,13 +241,15 @@ class TaskStateMachine:
                         "step": step,
                         "state": state.value,
                     },
+                    duration_ms=0,
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
         except Exception as e:
             # Checkpoint failure must never crash the task
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.ORCHESTRATOR,
                     message=f"Failed to checkpoint task: {task_id}",
@@ -247,7 +258,9 @@ class TaskStateMachine:
                         "task_id": str(task_id),
                         "error": str(e),
                     },
+                    duration_ms=0,
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
 
@@ -285,7 +298,7 @@ class TaskStateMachine:
 
             # Emit trace event
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_COMPLETE,
                     component=TraceComponent.ORCHESTRATOR,
                     message=f"Loaded {len(checkpoints)} task checkpoints",
@@ -293,7 +306,9 @@ class TaskStateMachine:
                     data={
                         "checkpoint_count": len(checkpoints),
                     },
+                    duration_ms=0,
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
 
@@ -301,7 +316,7 @@ class TaskStateMachine:
         except Exception as e:
             # Load failure must never crash the daemon
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.ORCHESTRATOR,
                     message="Failed to load task checkpoints",
@@ -309,7 +324,9 @@ class TaskStateMachine:
                     data={
                         "error": str(e),
                     },
+                    duration_ms=0,
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
             return []

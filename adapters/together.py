@@ -16,7 +16,9 @@ from core.observability import (
     TraceEventType,
     TraceComponent,
     TraceLevel,
-    emit_trace,
+    TraceEvent,
+    TraceEmitter,
+    MemoryTraceEmitter,
 )
 
 if TYPE_CHECKING:
@@ -33,12 +35,14 @@ class TogetherAdapter(LLMAdapter):
         api_key: str,
         model_name: str = "mistralai/Mixtral-8x7B-Instruct-v0.1",
         temperature: float = 0.1,
+        emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the Together AI adapter with API configuration."""
         self.api_key = api_key
         self._model_name = model_name
         self.temperature = temperature
         self._client: AsyncOpenAI | None = None
+        self._emitter = emitter or MemoryTraceEmitter()
 
     def _ensure_client(self) -> None:
         """Ensure Together AI client is initialized (uses OpenAI-compatible API)."""
@@ -72,18 +76,23 @@ class TogetherAdapter(LLMAdapter):
 
         try:
             # Emit adapter call start event
-            await emit_trace(
-                event_type=TraceEventType.ADAPTER_CALL,
-                component=TraceComponent.ADAPTER,
-                message="Together adapter generation started",
-                level=TraceLevel.INFO,
-                data={
-                    "adapter_name": "together",
-                    "model_name": self._model_name,
-                    "prompt_length": prompt_length,
-                    "temperature": temperature or self.temperature,
-                },
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.ADAPTER_CALL,
+                    component=TraceComponent.ADAPTER,
+                    message="Together adapter generation started",
+                    level=TraceLevel.INFO,
+                    data={
+                        "adapter_name": "together",
+                        "model_name": self._model_name,
+                        "prompt_length": prompt_length,
+                        "temperature": temperature or self.temperature,
+                    },
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             self._ensure_client()
 
@@ -103,20 +112,24 @@ class TogetherAdapter(LLMAdapter):
             response_length = len(response.choices[0].message.content)
 
             # Emit adapter response event
-            await emit_trace(
-                event_type=TraceEventType.ADAPTER_RESPONSE,
-                component=TraceComponent.ADAPTER,
-                message="Together adapter generation completed",
-                level=TraceLevel.INFO,
-                data={
-                    "adapter_name": "together",
-                    "model_name": self._model_name,
-                    "prompt_length": prompt_length,
-                    "response_length": response_length,
-                    "tokens_used": response.usage.total_tokens if response.usage else 0,
-                },
-                duration_ms=duration_ms,
-            )
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.ADAPTER_RESPONSE,
+                    component=TraceComponent.ADAPTER,
+                    message="Together adapter generation completed",
+                    level=TraceLevel.INFO,
+                    data={
+                        "adapter_name": "together",
+                        "model_name": self._model_name,
+                        "prompt_length": prompt_length,
+                        "response_length": response_length,
+                        "tokens_used": response.usage.total_tokens if response.usage else 0,
+                    },
+                    duration_ms=duration_ms,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
             return LLMResponse(
                 content=response.choices[0].message.content,
@@ -129,7 +142,7 @@ class TogetherAdapter(LLMAdapter):
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             # Emit error event (wrapped to avoid crashing main path)
             try:
-                await emit_trace(
+                event = TraceEvent(
                     event_type=TraceEventType.ADAPTER_ERROR,
                     component=TraceComponent.ADAPTER,
                     message="Together adapter generation failed",
@@ -143,6 +156,7 @@ class TogetherAdapter(LLMAdapter):
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass  # Trace failure should not crash main path
             raise RuntimeError(f"Together AI generation failed: {e}")
