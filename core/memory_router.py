@@ -44,6 +44,11 @@ class MemoryBackend(ABC):
         """Write data to memory."""
         raise NotImplementedError
 
+    @abstractmethod
+    async def list_keys(self, prefix: str) -> list[str]:
+        """List all keys matching the given prefix."""
+        raise NotImplementedError
+
 
 class ScopedMemoryRouter:
     """Memory router with scope-based key prefixing and access control."""
@@ -310,3 +315,57 @@ class MemoryRouter:
             success=True,
         )
         await self.emitter.emit(event)
+
+    async def list_keys(self, prefix: str) -> list[str]:
+        """
+        List all keys matching the given prefix from all backends.
+
+        Args:
+            prefix: The key prefix to match
+
+        Returns:
+            List of matching keys from all backends
+        """
+        import time
+
+        start_time = time.perf_counter()
+        all_keys = []
+
+        for backend_name, backend in self.backends.items():
+            try:
+                keys = await backend.list_keys(prefix)
+                all_keys.extend(keys)
+            except Exception as e:
+                event = TraceEvent(
+                    event_id=uuid4(),
+                    timestamp=datetime.utcnow(),
+                    layer=Layer.L0,
+                    component=str(TraceComponent.MEMORY_ROUTER),
+                    event_type=EventType.MEMORY_QUERY,
+                    payload={
+                        "prefix": prefix,
+                        "backend": backend_name,
+                        "error": str(e),
+                    },
+                    duration_ms=0,
+                    success=False,
+                )
+                await self.emitter.emit(event)
+
+        duration_ms = int((time.perf_counter() - start_time) * 1000)
+        event = TraceEvent(
+            event_id=uuid4(),
+            timestamp=datetime.utcnow(),
+            layer=Layer.L0,
+            component=str(TraceComponent.MEMORY_ROUTER),
+            event_type=EventType.MEMORY_QUERY,
+            payload={
+                "prefix": prefix,
+                "key_count": len(all_keys),
+            },
+            duration_ms=duration_ms,
+            success=True,
+        )
+        await self.emitter.emit(event)
+
+        return all_keys

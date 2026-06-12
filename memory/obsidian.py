@@ -191,6 +191,11 @@ class ObsidianBackend(MemoryBackend):
                 pass  # Trace failure should not crash main path
             raise
 
+    async def list_keys(self, prefix: str) -> list[str]:
+        """List all keys matching the given prefix."""
+        # Stub implementation - returns empty list for now
+        return []
+
     def _data_to_markdown(self, data: dict[str, Any]) -> str:
         """Convert data dictionary to markdown format."""
         lines = ["# Memory Entry\n"]

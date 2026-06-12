@@ -2,8 +2,6 @@
 Tests for escalation flow in Orchestrator.
 
 Tests the full escalation path: decision created → submitted to ApprovalGate → approved → re-routed → denied → task marked DENIED.
-
-NOTE: Escalation logic is currently disabled in orchestrator.py. These tests are skipped until the escalation logic is re-implemented.
 """
 
 import pytest
@@ -17,7 +15,6 @@ from core.orchestrator import Orchestrator
 from core.exceptions import CrossScopeAccessError
 
 
-@pytest.mark.skip(reason="Escalation logic is currently disabled in orchestrator.py")
 class TestEscalationFlow:
     """Test suite for escalation flow in Orchestrator."""
     
@@ -35,7 +32,8 @@ class TestEscalationFlow:
     def mock_state_machine(self):
         """Create a mock task state machine."""
         state_machine = AsyncMock()
-        state_machine.transition = AsyncMock(return_value=None)
+        # Return the task unchanged from transition to preserve task object
+        state_machine.transition = AsyncMock(side_effect=lambda task, *args, **kwargs: task)
         state_machine.can_transition = AsyncMock(return_value=True)
         return state_machine
     
@@ -47,13 +45,23 @@ class TestEscalationFlow:
         return gate
     
     @pytest.fixture
-    def orchestrator(self, mock_memory_router, mock_state_machine, mock_approval_gate):
+    def mock_escalation_engine(self):
+        """Create a mock escalation engine."""
+        engine = AsyncMock()
+        engine.evaluate = AsyncMock()
+        engine.request_approval = AsyncMock()
+        engine.execute_escalation = AsyncMock()
+        return engine
+
+    @pytest.fixture
+    def orchestrator(self, mock_memory_router, mock_state_machine, mock_approval_gate, mock_escalation_engine):
         """Create an orchestrator with mock dependencies."""
-        with patch('core.orchestrator.TaskStateMachine', return_value=mock_state_machine):
+        with patch('core.task_state_machine.TaskStateMachine', return_value=mock_state_machine):
             orch = Orchestrator(
                 memory_router=mock_memory_router,
                 cloud_fallback_model="gpt-4o",
                 approval_gate=mock_approval_gate,
+                escalation_engine=mock_escalation_engine,
             )
             # Replace the state_machine with our mock
             orch.state_machine = mock_state_machine
@@ -72,83 +80,109 @@ class TestEscalationFlow:
         )
     
     @pytest.mark.asyncio
-    async def test_orchestrator_creates_escalation_decision_when_no_worker_meets_minimum_score(self, orchestrator, task):
-        """Test that EscalationDecision is created when no worker meets minimum routing score."""
-        # Register a worker with low score
+    async def test_escalation_engine_evaluate_called_after_worker_execution(self, orchestrator, task, mock_escalation_engine):
+        """Test that EscalationEngine.evaluate() is called after worker execution."""
+        # Register a worker
         mock_worker = AsyncMock()
         mock_worker.profile = MagicMock()
         mock_worker.profile.preferred_complexity = 0.5
         mock_worker.profile.capabilities = ["test"]
         mock_worker.profile.status = "active"
+        mock_worker.run = AsyncMock(return_value=WorkerOutput(
+            task_id=task.task_id,
+            worker_id="worker1",
+            content="Test output",
+            confidence=0.3,  # Low confidence to trigger escalation
+            model_used="test-model",
+            metadata={},
+        ))
         orchestrator.register_worker("worker1", mock_worker)
         
-        # Route the task (should trigger escalation due to low score)
+        # Configure escalation engine to return escalation decision
+        mock_escalation_engine.evaluate = AsyncMock(return_value=EscalationDecision(
+            task_id=task.task_id,
+            should_escalate=True,
+            reasons=["Low confidence"],
+            suggested_model="gpt-4o",
+            tier="cloud",
+        ))
+        
+        # Process task
         with patch('core.orchestrator.emit_trace', AsyncMock()):
-            result = await orchestrator.route_task(task)
+            result = await orchestrator.process_task(task, "worker1")
         
-        # Verify escalation metadata in response
-        assert "escalation" in result.metadata
-        escalation_data = result.metadata["escalation"]
-        assert escalation_data["task_id"] == str(task.task_id)
-        assert escalation_data["escalation_tier"] == EscalationTier.CLOUD.value
-        assert escalation_data["to_model"] == "gpt-4o"
-    
+        # Verify evaluate was called
+        assert mock_escalation_engine.evaluate.called
+        call_args = mock_escalation_engine.evaluate.call_args
+        assert call_args[0][0] == task
+        assert call_args[0][1].confidence == 0.3
+
     @pytest.mark.asyncio
-    async def test_escalation_decision_tier_is_cloud_when_no_better_local_model_exists(self, orchestrator, task):
-        """Test that EscalationDecision tier is CLOUD when no better local model exists."""
-        # Register a worker with low score
+    async def test_escalation_not_triggered_when_worker_output_has_high_confidence(self, orchestrator, task, mock_escalation_engine):
+        """Test that escalation is not triggered when worker output has high confidence."""
+        # Register a worker
         mock_worker = AsyncMock()
         mock_worker.profile = MagicMock()
         mock_worker.profile.preferred_complexity = 0.5
         mock_worker.profile.capabilities = ["test"]
         mock_worker.profile.status = "active"
+        mock_worker.run = AsyncMock(return_value=WorkerOutput(
+            task_id=task.task_id,
+            worker_id="worker1",
+            content="Test output",
+            confidence=0.9,  # High confidence - no escalation
+            model_used="test-model",
+            metadata={},
+        ))
         orchestrator.register_worker("worker1", mock_worker)
         
-        # Route the task
+        # Configure escalation engine to return no escalation
+        mock_escalation_engine.evaluate = AsyncMock(return_value=EscalationDecision(
+            task_id=task.task_id,
+            should_escalate=False,
+            reasons=[],
+            suggested_model="",
+            tier="local",
+        ))
+        
+        # Process task
         with patch('core.orchestrator.emit_trace', AsyncMock()):
-            result = await orchestrator.route_task(task)
+            result = await orchestrator.process_task(task, "worker1")
         
-        # Verify escalation tier is CLOUD
-        escalation_data = result.metadata["escalation"]
-        assert escalation_data["escalation_tier"] == EscalationTier.CLOUD.value
-    
+        # Verify evaluate was called but request_approval was not
+        assert mock_escalation_engine.evaluate.called
+        assert not mock_escalation_engine.request_approval.called
+
     @pytest.mark.asyncio
-    async def test_escalation_decision_created_trace_event_emitted_with_correct_fields(self, orchestrator, task):
-        """Test that escalation_decision_created trace event is emitted with correct fields."""
-        # Register a worker with low score
+    async def test_escalation_request_approval_called_when_should_escalate_true(self, orchestrator, task, mock_escalation_engine, mock_approval_gate):
+        """Test that request_approval is called when should_escalate is True."""
+        # Register a worker
         mock_worker = AsyncMock()
         mock_worker.profile = MagicMock()
         mock_worker.profile.preferred_complexity = 0.5
         mock_worker.profile.capabilities = ["test"]
         mock_worker.profile.status = "active"
+        mock_worker.run = AsyncMock(return_value=WorkerOutput(
+            task_id=task.task_id,
+            worker_id="worker1",
+            content="Test output",
+            confidence=0.3,
+            model_used="test-model",
+            metadata={},
+        ))
         orchestrator.register_worker("worker1", mock_worker)
         
-        # Mock emit_trace to capture calls
-        with patch('core.orchestrator.emit_trace', AsyncMock()) as mock_emit:
-            await orchestrator.route_task(task)
-            
-            # Verify trace event was called
-            assert mock_emit.called
-            call_args = mock_emit.call_args
-            assert call_args[1]["event_type"].value == "ESCALATION_TRIGGERED"
-            assert call_args[1]["component"].value == "ORCHESTRATOR"
-            assert "task_id" in call_args[1]["data"]
-            assert "escalation_tier" in call_args[1]["data"]
-            assert "to_model" in call_args[1]["data"]
-    
-    @pytest.mark.asyncio
-    async def test_approval_gate_request_approval_called_with_correct_approval_request(self, orchestrator, task, mock_approval_gate):
-        """Test that ApprovalGate.request_approval is called with correct ApprovalRequest."""
-        # Register a worker with low score
-        mock_worker = AsyncMock()
-        mock_worker.profile = MagicMock()
-        mock_worker.profile.preferred_complexity = 0.5
-        mock_worker.profile.capabilities = ["test"]
-        mock_worker.profile.status = "active"
-        orchestrator.register_worker("worker1", mock_worker)
+        # Configure escalation engine to return escalation decision
+        mock_escalation_engine.evaluate = AsyncMock(return_value=EscalationDecision(
+            task_id=task.task_id,
+            should_escalate=True,
+            reasons=["Low confidence"],
+            suggested_model="gpt-4o",
+            tier="cloud",
+        ))
         
-        # Mock approval response - approved
-        mock_approval_gate.request_approval = AsyncMock(return_value=ApprovalResponse(
+        # Configure approval gate to approve
+        mock_approval_gate.request = AsyncMock(return_value=ApprovalResponse(
             request_id=str(uuid4()),
             task_id=str(task.task_id),
             approved=True,
@@ -157,311 +191,126 @@ class TestEscalationFlow:
             approved_at=datetime.utcnow(),
         ))
         
-        # Route the task
+        # Process task
         with patch('core.orchestrator.emit_trace', AsyncMock()):
-            result = await orchestrator.route_task(task)
+            result = await orchestrator.process_task(task, "worker1")
         
-        # Verify ApprovalGate.request_approval was called
-        assert mock_approval_gate.request_approval.called
-        call_args = mock_approval_gate.request_approval.call_args
-        approval_request = call_args[0][0]
-        assert approval_request.action_type == ApprovalActionType.CLOUD_ESCALATION
-        assert approval_request.task_id == str(task.task_id)
-        assert "Escalate task" in approval_request.action_description
-        assert approval_request.risk_level == "high"
-    
+        # Verify request_approval was called
+        assert mock_escalation_engine.request_approval.called
+
     @pytest.mark.asyncio
-    async def test_on_approval_decision_approved_set_to_true(self, orchestrator, task, mock_approval_gate):
-        """Test that decision.approved is set to True on approval."""
-        # Register a worker with low score
+    async def test_escalation_execute_escalation_called_when_approved(self, orchestrator, task, mock_escalation_engine, mock_approval_gate):
+        """Test that execute_escalation is called when approval is granted."""
+        # Register a worker
         mock_worker = AsyncMock()
         mock_worker.profile = MagicMock()
         mock_worker.profile.preferred_complexity = 0.5
         mock_worker.profile.capabilities = ["test"]
         mock_worker.profile.status = "active"
+        mock_worker.run = AsyncMock(return_value=WorkerOutput(
+            task_id=task.task_id,
+            worker_id="worker1",
+            content="Test output",
+            confidence=0.3,
+            model_used="test-model",
+            metadata={},
+        ))
         orchestrator.register_worker("worker1", mock_worker)
         
-        # Mock approval response - approved
-        mock_approval_gate.request_approval = AsyncMock(return_value=ApprovalResponse(
-            request_id=str(uuid4()),
-            task_id=str(task.task_id),
-            approved=True,
-            decision_reason="Approved for testing",
-            approved_by="test_user",
-            approved_at=datetime.utcnow(),
+        # Configure escalation engine
+        mock_escalation_engine.evaluate = AsyncMock(return_value=EscalationDecision(
+            task_id=task.task_id,
+            should_escalate=True,
+            reasons=["Low confidence"],
+            suggested_model="gpt-4o",
+            tier="cloud",
+        ))
+        mock_escalation_engine.request_approval = AsyncMock(return_value=True)
+        mock_escalation_engine.execute_escalation = AsyncMock(return_value=WorkerOutput(
+            task_id=task.task_id,
+            worker_id="cloud",
+            content="Escalated output",
+            confidence=0.8,
+            model_used="gpt-4o",
+            metadata={"escalated": True},
         ))
         
-        # Route the task
+        # Process task
         with patch('core.orchestrator.emit_trace', AsyncMock()):
-            result = await orchestrator.route_task(task)
+            result = await orchestrator.process_task(task, "worker1")
         
-        # Verify decision.approved is True in response metadata
-        escalation_data = result.metadata["escalation"]
-        assert escalation_data["approved"] is True
-    
-    @pytest.mark.asyncio
-    async def test_on_approval_task_redispatched_to_to_model(self, orchestrator, task, mock_approval_gate):
-        """Test that task is re-dispatched to to_model on approval."""
-        # Register a worker with low score
-        mock_worker = AsyncMock()
-        mock_worker.profile = MagicMock()
-        mock_worker.profile.preferred_complexity = 0.5
-        mock_worker.profile.capabilities = ["test"]
-        mock_worker.profile.status = "active"
-        orchestrator.register_worker("worker1", mock_worker)
-        
-        # Mock approval response - approved
-        mock_approval_gate.request_approval = AsyncMock(return_value=ApprovalResponse(
-            request_id=str(uuid4()),
-            task_id=str(task.task_id),
-            approved=True,
-            decision_reason="Approved for testing",
-            approved_by="test_user",
-            approved_at=datetime.utcnow(),
-        ))
-        
-        # Route the task
-        with patch('core.orchestrator.emit_trace', AsyncMock()):
-            result = await orchestrator.route_task(task)
-        
-        # Verify response indicates re-dispatch to cloud model
+        # Verify execute_escalation was called
+        assert mock_escalation_engine.execute_escalation.called
         assert result.worker_id == "cloud"
-        assert result.model_used == "gpt-4o"
-        assert "escalated" in result.content.lower()
-    
+
     @pytest.mark.asyncio
-    async def test_on_approval_strategic_context_escalation_history_updated(self, orchestrator, task, mock_approval_gate, mock_memory_router):
-        """Test that StrategicContext.escalation_history is updated on approval."""
-        # Register a worker with low score
+    async def test_escalation_denied_sets_metadata_when_approval_denied(self, orchestrator, task, mock_escalation_engine, mock_approval_gate):
+        """Test that escalation_denied metadata is set when approval is denied."""
+        # Register a worker
         mock_worker = AsyncMock()
         mock_worker.profile = MagicMock()
         mock_worker.profile.preferred_complexity = 0.5
         mock_worker.profile.capabilities = ["test"]
         mock_worker.profile.status = "active"
+        mock_worker.run = AsyncMock(return_value=WorkerOutput(
+            task_id=task.task_id,
+            worker_id="worker1",
+            content="Test output",
+            confidence=0.3,
+            model_used="test-model",
+            metadata={},
+        ))
         orchestrator.register_worker("worker1", mock_worker)
         
-        # Mock approval response - approved
-        mock_approval_gate.request_approval = AsyncMock(return_value=ApprovalResponse(
-            request_id=str(uuid4()),
-            task_id=str(task.task_id),
-            approved=True,
-            decision_reason="Approved for testing",
-            approved_by="test_user",
-            approved_at=datetime.utcnow(),
+        # Configure escalation engine
+        mock_escalation_engine.evaluate = AsyncMock(return_value=EscalationDecision(
+            task_id=task.task_id,
+            should_escalate=True,
+            reasons=["Low confidence"],
+            suggested_model="gpt-4o",
+            tier="cloud",
         ))
+        mock_escalation_engine.request_approval = AsyncMock(return_value=False)
         
-        # Route the task
+        # Process task
         with patch('core.orchestrator.emit_trace', AsyncMock()):
-            result = await orchestrator.route_task(task)
+            result = await orchestrator.process_task(task, "worker1")
         
-        # Verify set_global_context was called
-        assert mock_memory_router.set_global_context.called
-        call_args = mock_memory_router.set_global_context.call_args
-        context = call_args[0][0]
-        assert "approved" in context.escalation_history[-1].lower()
-    
+        # Verify escalation_denied metadata is set
+        assert result.metadata.get("escalation_denied") is True
+        assert result.metadata.get("denied_reason") == "User denied escalation"
+
     @pytest.mark.asyncio
-    async def test_on_approval_escalation_approved_trace_event_emitted(self, orchestrator, task, mock_approval_gate):
-        """Test that escalation_approved trace event is emitted on approval."""
-        # Register a worker with low score
+    async def test_escalation_error_does_not_crash_task_processing(self, orchestrator, task, mock_escalation_engine):
+        """Test that escalation errors do not crash task processing."""
+        # Register a worker
         mock_worker = AsyncMock()
         mock_worker.profile = MagicMock()
         mock_worker.profile.preferred_complexity = 0.5
         mock_worker.profile.capabilities = ["test"]
         mock_worker.profile.status = "active"
+        mock_worker.run = AsyncMock(return_value=WorkerOutput(
+            task_id=task.task_id,
+            worker_id="worker1",
+            content="Test output",
+            confidence=0.3,
+            model_used="test-model",
+            metadata={},
+        ))
         orchestrator.register_worker("worker1", mock_worker)
         
-        # Mock approval response - approved
-        mock_approval_gate.request_approval = AsyncMock(return_value=ApprovalResponse(
-            request_id=str(uuid4()),
-            task_id=str(task.task_id),
-            approved=True,
-            decision_reason="Approved for testing",
-            approved_by="test_user",
-            approved_at=datetime.utcnow(),
-        ))
+        # Configure escalation engine to raise exception
+        mock_escalation_engine.evaluate = AsyncMock(side_effect=Exception("Test error"))
         
-        # Route the task
-        with patch('core.orchestrator.emit_trace', AsyncMock()) as mock_emit:
-            await orchestrator.route_task(task)
-            
-            # Verify trace event was emitted
-            assert mock_emit.called
-            # Check for escalation approved message
-            found_approved = False
-            for call in mock_emit.call_args_list:
-                if "approved" in call[1]["message"].lower():
-                    found_approved = True
-                    break
-            assert found_approved
-    
-    @pytest.mark.asyncio
-    async def test_on_denial_task_transitioned_to_task_status_denied(self, orchestrator, task, mock_approval_gate, mock_state_machine):
-        """Test that task is transitioned to TaskStatus.DENIED on denial."""
-        # Register a worker with low score
-        mock_worker = AsyncMock()
-        mock_worker.profile = MagicMock()
-        mock_worker.profile.preferred_complexity = 0.5
-        mock_worker.profile.capabilities = ["test"]
-        mock_worker.profile.status = "active"
-        orchestrator.register_worker("worker1", mock_worker)
-        
-        # Mock approval response - denied
-        mock_approval_gate.request_approval = AsyncMock(return_value=ApprovalResponse(
-            request_id=str(uuid4()),
-            task_id=str(task.task_id),
-            approved=False,
-            decision_reason="Denied for testing",
-            approved_by="test_user",
-            approved_at=datetime.utcnow(),
-        ))
-        
-        # Route the task
+        # Process task - should not raise
         with patch('core.orchestrator.emit_trace', AsyncMock()):
-            result = await orchestrator.route_task(task)
+            result = await orchestrator.process_task(task, "worker1")
         
-        # Verify state_machine.transition was called with DENIED
-        assert mock_state_machine.transition.called
-        call_args = mock_state_machine.transition.call_args
-        assert call_args[0][1] == TaskStatus.DENIED
-        assert "denied" in call_args[0][2].lower()
-    
-    @pytest.mark.asyncio
-    async def test_on_denial_escalation_denied_trace_event_emitted(self, orchestrator, task, mock_approval_gate):
-        """Test that escalation_denied trace event is emitted on denial."""
-        # Register a worker with low score
-        mock_worker = AsyncMock()
-        mock_worker.profile = MagicMock()
-        mock_worker.profile.preferred_complexity = 0.5
-        mock_worker.profile.capabilities = ["test"]
-        mock_worker.profile.status = "active"
-        orchestrator.register_worker("worker1", mock_worker)
-        
-        # Mock approval response - denied
-        mock_approval_gate.request_approval = AsyncMock(return_value=ApprovalResponse(
-            request_id=str(uuid4()),
-            task_id=str(task.task_id),
-            approved=False,
-            decision_reason="Denied for testing",
-            approved_by="test_user",
-            approved_at=datetime.utcnow(),
-        ))
-        
-        # Route the task
-        with patch('core.orchestrator.emit_trace', AsyncMock()) as mock_emit:
-            await orchestrator.route_task(task)
-            
-            # Verify trace event was emitted
-            assert mock_emit.called
-            # Check for escalation denied message
-            found_denied = False
-            for call in mock_emit.call_args_list:
-                if "denied" in call[1]["message"].lower():
-                    found_denied = True
-                    break
-            assert found_denied
-    
-    @pytest.mark.asyncio
-    async def test_on_denial_orchestrator_returns_gracefully_no_raise(self, orchestrator, task, mock_approval_gate):
-        """Test that orchestrator returns gracefully on denial without raising."""
-        # Register a worker with low score
-        mock_worker = AsyncMock()
-        mock_worker.profile = MagicMock()
-        mock_worker.profile.preferred_complexity = 0.5
-        mock_worker.profile.capabilities = ["test"]
-        mock_worker.profile.status = "active"
-        orchestrator.register_worker("worker1", mock_worker)
-        
-        # Mock approval response - denied
-        mock_approval_gate.request_approval = AsyncMock(return_value=ApprovalResponse(
-            request_id=str(uuid4()),
-            task_id=str(task.task_id),
-            approved=False,
-            decision_reason="Denied for testing",
-            approved_by="test_user",
-            approved_at=datetime.utcnow(),
-        ))
-        
-        # Route the task - should not raise
-        with patch('core.orchestrator.emit_trace', AsyncMock()):
-            result = await orchestrator.route_task(task)
-        
-        # Verify response indicates denial
-        assert result.metadata.get("denied") is True
-        assert result.metadata.get("denied_reason") == "Denied for testing"
+        # Should return original worker output
+        assert result.worker_id == "worker1"
     
     @pytest.mark.asyncio
     async def test_escalation_tier_enum_values_match_expected_strings(self):
         """Test that EscalationTier enum values match expected strings."""
         assert EscalationTier.LOCAL_UPGRADE.value == "local_upgrade"
         assert EscalationTier.CLOUD.value == "cloud"
-    
-    @pytest.mark.asyncio
-    async def test_cloud_fallback_model_constructor_param_respected_in_escalation_decision_to_model(self, mock_memory_router, mock_state_machine):
-        """Test that cloud_fallback_model constructor param is respected in EscalationDecision.to_model."""
-        # Create orchestrator with custom cloud_fallback_model
-        with patch('core.orchestrator.TaskStateMachine', return_value=mock_state_machine):
-            orch = Orchestrator(
-                memory_router=mock_memory_router,
-                cloud_fallback_model="claude-3-opus",
-                approval_gate=None,  # No approval gate for this test
-            )
-            orch.state_machine = mock_state_machine
-        
-        # Register a worker with low score
-        mock_worker = AsyncMock()
-        mock_worker.profile = MagicMock()
-        mock_worker.profile.preferred_complexity = 0.5
-        mock_worker.profile.capabilities = ["test"]
-        mock_worker.profile.status = "active"
-        orch.register_worker("worker1", mock_worker)
-        
-        # Create a task
-        task = Task(
-            task_id=uuid4(),
-            intent="Test task",
-            complexity_score=0.9,
-            priority="normal",
-            current_state=TaskStatus.RECEIVED,
-            created_at=datetime.utcnow(),
-        )
-        
-        # Route the task
-        with patch('core.orchestrator.emit_trace', AsyncMock()):
-            result = await orch.route_task(task)
-        
-        # Verify to_model uses custom cloud_fallback_model
-        escalation_data = result.metadata["escalation"]
-        assert escalation_data["to_model"] == "claude-3-opus"
-    
-    @pytest.mark.asyncio
-    async def test_unexpected_exception_during_escalation_emits_escalation_error_trace_and_returns_error_response(self, orchestrator, task, mock_approval_gate):
-        """Test that unexpected exception during escalation emits escalation_error trace and returns error response without raising."""
-        # Register a worker with low score
-        mock_worker = AsyncMock()
-        mock_worker.profile = MagicMock()
-        mock_worker.profile.preferred_complexity = 0.5
-        mock_worker.profile.capabilities = ["test"]
-        mock_worker.profile.status = "active"
-        orchestrator.register_worker("worker1", mock_worker)
-        
-        # Mock approval gate to raise exception
-        mock_approval_gate.request_approval = AsyncMock(side_effect=Exception("Test exception"))
-        
-        # Route the task - should not raise
-        with patch('core.orchestrator.emit_trace', AsyncMock()) as mock_emit:
-            result = await orchestrator.route_task(task)
-        
-        # Verify error response
-        assert "error" in result.metadata
-        assert result.metadata["error"] == "Test exception"
-        
-        # Verify trace event was emitted
-        assert mock_emit.called
-        # Check for escalation error message
-        found_error = False
-        for call in mock_emit.call_args_list:
-            if "error" in call[1]["message"].lower():
-                found_error = True
-                break
-        assert found_error

@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from core.scratchpad import ScratchpadManager
     from core.orchestrator_improvement import OrchestratorImprovementLoop
     from core.approval_gate import ApprovalGate, ApprovalRequest
+    from core.escalation import EscalationEngine
 
 
 class Orchestrator:
@@ -35,12 +36,14 @@ class Orchestrator:
         improvement_loop: "OrchestratorImprovementLoop | None" = None,
         cloud_fallback_model: str = "gpt-4o",
         approval_gate: "ApprovalGate | None" = None,
+        escalation_engine: "EscalationEngine | None" = None,
     ) -> None:
         """Initialize the orchestrator with dependencies."""
         self.memory_router = memory_router
         self.improvement_loop = improvement_loop
         self.cloud_fallback_model = cloud_fallback_model
         self.approval_gate = approval_gate
+        self.escalation_engine = escalation_engine
         self.workers: dict[str, "WorkerBase"] = {}
         self.pending_approval_queue: list[Task] = []
         
@@ -111,6 +114,28 @@ class Orchestrator:
         
         try:
             output = await worker.run(task)
+            
+            # Escalation check if escalation_engine is configured
+            if self.escalation_engine:
+                try:
+                    decision = await self.escalation_engine.evaluate(task, output, [self.cloud_fallback_model])
+                    if decision.should_escalate:
+                        # Request approval for escalation
+                        if self.approval_gate:
+                            approved = await self.escalation_engine.request_approval(task, decision)
+                            if approved:
+                                # Execute escalation
+                                output = await self.escalation_engine.execute_escalation(task, decision)
+                            else:
+                                # Escalation denied
+                                output.metadata["escalation_denied"] = True
+                                output.metadata["denied_reason"] = "User denied escalation"
+                        else:
+                            # No approval gate - escalate automatically
+                            output = await self.escalation_engine.execute_escalation(task, decision)
+                except Exception:
+                    # Escalation error should not crash task processing
+                    pass
             
             # Transition to VALIDATING after worker execution
             task = await self.state_machine.transition(

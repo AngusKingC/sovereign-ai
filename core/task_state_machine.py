@@ -253,19 +253,36 @@ class TaskStateMachine:
 
     async def load_checkpoints(self) -> list[dict]:
         """Load all task checkpoints for resume after daemon restart.
-        
+
         Returns:
             List of checkpoint dicts with keys: task_id, step, state, checkpointed_at
-            
+
         Wrapped in try-except — returns empty list on failure, never raises.
         """
         try:
-            # Create a mock task to query memory router for all checkpoints
-            # This is a workaround since MemoryRouter doesn't have a direct key-based query
-            # In a real implementation, we'd need to add a method to MemoryRouter to query by key pattern
-            # For now, we'll return empty list and the daemon will need to be enhanced with proper key-based queries
+            # Use list_keys to find all checkpoint keys
+            checkpoint_keys = await self.memory_router.list_keys("checkpoint:")
             checkpoints = []
-            
+
+            # Fetch each checkpoint from memory router
+            for key in checkpoint_keys:
+                try:
+                    # Create a task to fetch the checkpoint data
+                    task = Task(
+                        task_id=key.split(":")[1] if ":" in key else key,
+                        intent=key,
+                        complexity_score=0,
+                        priority="medium",
+                        current_state=TaskStatus.RECEIVED,
+                        created_at=datetime.utcnow(),
+                    )
+                    memory = await self.memory_router.fetch(task)
+                    if memory:
+                        checkpoints.extend(memory)
+                except Exception:
+                    # Individual checkpoint fetch failure should not stop the whole load
+                    pass
+
             # Emit trace event
             try:
                 await emit_trace(
@@ -279,7 +296,7 @@ class TaskStateMachine:
                 )
             except Exception:
                 pass
-            
+
             return checkpoints
         except Exception as e:
             # Load failure must never crash the daemon

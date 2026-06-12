@@ -18,15 +18,17 @@ from core.observability import (
     TraceEventType,
     TraceLevel,
     MemoryTraceEmitter,
-    emit_trace,
+    TraceEvent,
 )
 from core.schemas import TaskStatus
 
 if TYPE_CHECKING:
+    from core.observability import TraceEmitter
     from core.orchestrator import Orchestrator
     from core.memory_router import MemoryRouter
     from core.approval_gate import ApprovalGate
     from core.task_state_machine import TaskStateMachine
+    from core.event_trigger import TriggerEngine
 
 
 class TaskScheduleType(str, Enum):
@@ -58,14 +60,16 @@ class MonitorDaemon:
         memory_router: "MemoryRouter",
         approval_gate: "ApprovalGate | None",
         task_state_machine: "TaskStateMachine",
-        emitter: MemoryTraceEmitter,
+        emitter: "TraceEmitter | None" = None,
+        trigger_engine: "TriggerEngine | None" = None,
     ) -> None:
         """Initialize the monitor daemon with dependencies."""
         self.orchestrator = orchestrator
         self.memory_router = memory_router
         self.approval_gate = approval_gate
         self.task_state_machine = task_state_machine
-        self.emitter = emitter
+        self._emitter = emitter or MemoryTraceEmitter()
+        self.trigger_engine = trigger_engine
         self._running = False
         self._scheduled_tasks: dict[str, ScheduledTask] = {}
         self._background_task: asyncio.Task | None = None
@@ -96,17 +100,20 @@ class MonitorDaemon:
         
         # Emit trace event
         try:
-            await emit_trace(
+            from datetime import datetime
+            event = TraceEvent(
                 event_type=TraceEventType.OPERATION_COMPLETE,
                 component=TraceComponent.ORCHESTRATOR,
-                message=f"Task scheduled: {scheduled_task.task_id} ({scheduled_task.schedule_type.value})",
                 level=TraceLevel.INFO,
+                message=f"Task scheduled: {scheduled_task.task_id} ({scheduled_task.schedule_type.value})",
                 data={
                     "task_id": scheduled_task.task_id,
                     "schedule_type": scheduled_task.schedule_type.value,
                     "enabled": scheduled_task.enabled,
                 },
+                duration_ms=0,
             )
+            await self._emitter.emit(event)
         except Exception:
             pass
 
@@ -139,17 +146,30 @@ class MonitorDaemon:
         
         # Emit trace event
         try:
-            await emit_trace(
+            from datetime import datetime
+            event = TraceEvent(
                 event_type=TraceEventType.OPERATION_COMPLETE,
                 component=TraceComponent.ORCHESTRATOR,
-                message=f"Task unscheduled: {task_id}",
                 level=TraceLevel.INFO,
+                message=f"Task unscheduled: {task_id}",
                 data={
                     "task_id": task_id,
                 },
+                duration_ms=0,
             )
+            await self._emitter.emit(event)
         except Exception:
             pass
+
+    async def ingest_metric(self, metric_name: str, value: float) -> None:
+        """Ingest a metric value and evaluate triggers.
+
+        Args:
+            metric_name: Name of the metric
+            value: Value of the metric
+        """
+        if self.trigger_engine:
+            await self.trigger_engine.ingest_metric(metric_name, value)
 
     async def start(self) -> None:
         """Start the daemon. Never blocks.
@@ -173,15 +193,18 @@ class MonitorDaemon:
         
         # Emit trace event
         try:
-            await emit_trace(
+            from datetime import datetime
+            event = TraceEvent(
                 event_type=TraceEventType.OPERATION_COMPLETE,
                 component=TraceComponent.ORCHESTRATOR,
-                message="Monitor daemon started",
                 level=TraceLevel.INFO,
+                message="Monitor daemon started",
                 data={
                     "scheduled_tasks_count": len(self._scheduled_tasks),
                 },
+                duration_ms=0,
             )
+            await self._emitter.emit(event)
         except Exception:
             pass
 
@@ -202,36 +225,87 @@ class MonitorDaemon:
         
         # Emit trace event
         try:
-            await emit_trace(
+            from datetime import datetime
+            event = TraceEvent(
                 event_type=TraceEventType.OPERATION_COMPLETE,
                 component=TraceComponent.ORCHESTRATOR,
-                message="Monitor daemon stopped",
                 level=TraceLevel.INFO,
+                message="Monitor daemon stopped",
+                data={},
+                duration_ms=0,
             )
+            await self._emitter.emit(event)
         except Exception:
             pass
 
     async def _restore_queue(self) -> None:
         """Restore queue from MemoryRouter.
-        
+
         Reads daemon_task:* from MemoryRouter, restores enabled tasks, skips disabled tasks.
         """
-        # NOTE: This is a stub implementation. In a real implementation, we'd need to add
-        # a method to MemoryRouter to query by key pattern. For now, we'll emit a trace event
-        # indicating that queue restoration is not fully implemented.
         try:
+            # Use list_keys to find all daemon task keys
+            daemon_task_keys = await self.memory_router.list_keys("daemon_task:")
+
+            for key in daemon_task_keys:
+                try:
+                    # Create a task to fetch the scheduled task data
+                    from core.schemas import Task
+                    task = Task(
+                        task_id=key.split(":")[1] if ":" in key else key,
+                        intent=key,
+                        complexity_score=0,
+                        priority="medium",
+                        current_state=TaskStatus.RECEIVED,
+                        created_at=datetime.utcnow(),
+                    )
+                    memory = await self.memory_router.fetch(task)
+                    if memory:
+                        # Parse the scheduled task from memory
+                        for entry in memory:
+                            if "content" in entry:
+                                import json
+                                scheduled_task = ScheduledTask.model_validate_json(entry["content"])
+                                # Only restore enabled tasks
+                                if scheduled_task.enabled:
+                                    self._scheduled_tasks[scheduled_task.task_id] = scheduled_task
+                except Exception:
+                    # Individual task restoration failure should not stop the whole restore
+                    pass
+
             # Emit trace event
-            await emit_trace(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.ORCHESTRATOR,
-                message="Queue restoration not fully implemented (requires key-based query in MemoryRouter)",
-                level=TraceLevel.WARNING,
-                data={
-                    "scheduled_tasks_count": len(self._scheduled_tasks),
-                },
-            )
-        except Exception:
-            pass
+            try:
+                from datetime import datetime
+                event = TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.ORCHESTRATOR,
+                    level=TraceLevel.INFO,
+                    message=f"Queue restoration completed: {len(self._scheduled_tasks)} tasks restored",
+                    data={
+                        "scheduled_tasks_count": len(self._scheduled_tasks),
+                    },
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
+        except Exception as e:
+            # Queue restoration failure should not crash the daemon
+            try:
+                from datetime import datetime
+                event = TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.ORCHESTRATOR,
+                    level=TraceLevel.WARNING,
+                    message=f"Queue restoration failed: {str(e)}",
+                    data={
+                        "error": str(e),
+                    },
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
 
     async def _run_loop(self) -> None:
         """Background loop that dispatches tasks.
@@ -267,6 +341,10 @@ class MonitorDaemon:
                         # Stub for conditional tasks
                         pass
                 
+                # Evaluate schedule triggers
+                if self.trigger_engine:
+                    await self.trigger_engine.evaluate_schedule_triggers()
+                
                 # Sleep for 1 second
                 await asyncio.sleep(1)
             except asyncio.CancelledError:
@@ -301,16 +379,19 @@ class MonitorDaemon:
             # NOTE: This is a stub - we need to get the actual Task object from somewhere
             # For now, we'll emit a trace event indicating that dispatch is not fully implemented
             try:
-                await emit_trace(
+                from datetime import datetime
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_COMPLETE,
                     component=TraceComponent.ORCHESTRATOR,
-                    message=f"Task dispatch not fully implemented (requires Task object retrieval): {scheduled_task.task_id}",
                     level=TraceLevel.WARNING,
+                    message=f"Task dispatch not fully implemented (requires Task object retrieval): {scheduled_task.task_id}",
                     data={
                         "task_id": scheduled_task.task_id,
                         "schedule_type": scheduled_task.schedule_type.value,
                     },
+                    duration_ms=0,
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
             
@@ -323,30 +404,36 @@ class MonitorDaemon:
             
             # Emit trace event
             try:
-                await emit_trace(
+                from datetime import datetime
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_COMPLETE,
                     component=TraceComponent.ORCHESTRATOR,
-                    message=f"Task dispatched: {scheduled_task.task_id}",
                     level=TraceLevel.INFO,
+                    message=f"Task dispatched: {scheduled_task.task_id}",
                     data={
                         "task_id": scheduled_task.task_id,
                         "schedule_type": scheduled_task.schedule_type.value,
                     },
+                    duration_ms=0,
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass
         except Exception as e:
             # Dispatch error should not crash the daemon
             try:
-                await emit_trace(
+                from datetime import datetime
+                event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.ORCHESTRATOR,
-                    message=f"Task dispatch failed: {scheduled_task.task_id}",
                     level=TraceLevel.ERROR,
+                    message=f"Task dispatch failed: {scheduled_task.task_id}",
                     data={
                         "task_id": scheduled_task.task_id,
                         "error": str(e),
                     },
+                    duration_ms=0,
                 )
+                await self._emitter.emit(event)
             except Exception:
                 pass

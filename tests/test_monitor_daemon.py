@@ -120,7 +120,7 @@ class TestMonitorDaemon:
         assert daemon.memory_router is not None
         assert daemon.approval_gate is not None
         assert daemon.task_state_machine is not None
-        assert daemon.emitter is not None
+        assert daemon._emitter is not None
         assert daemon._running is False
         assert daemon._scheduled_tasks == {}
         assert daemon._background_task is None
@@ -143,11 +143,13 @@ class TestMonitorDaemon:
         assert call_args["metadata"]["key"] == f"daemon_task:{sample_scheduled_task.task_id}"
     
     @pytest.mark.asyncio
-    async def test_schedule_emits_trace_event(self, daemon, sample_scheduled_task):
+    async def test_schedule_emits_trace_event(self, daemon, sample_scheduled_task, trace_emitter):
         """Test that schedule emits trace event."""
-        with patch('system.monitor_daemon.emit_trace') as mock_emit:
-            await daemon.schedule(sample_scheduled_task)
-            mock_emit.assert_called()
+        # Clear any existing events
+        trace_emitter._events = []
+        await daemon.schedule(sample_scheduled_task)
+        events = trace_emitter.get_events()
+        assert len(events) > 0
     
     @pytest.mark.asyncio
     async def test_unschedule_disables_task(self, daemon, sample_scheduled_task):
@@ -164,12 +166,13 @@ class TestMonitorDaemon:
         assert mock_memory_router.write.call_count == 2
     
     @pytest.mark.asyncio
-    async def test_unschedule_emits_trace_event(self, daemon, sample_scheduled_task):
+    async def test_unschedule_emits_trace_event(self, daemon, sample_scheduled_task, trace_emitter):
         """Test that unschedule emits trace event."""
-        with patch('system.monitor_daemon.emit_trace') as mock_emit:
-            await daemon.schedule(sample_scheduled_task)
-            await daemon.unschedule(sample_scheduled_task.task_id)
-            mock_emit.assert_called()
+        trace_emitter.clear()
+        await daemon.schedule(sample_scheduled_task)
+        await daemon.unschedule(sample_scheduled_task.task_id)
+        events = trace_emitter.get_events()
+        assert len(events) > 0
     
     @pytest.mark.asyncio
     async def test_unschedule_nonexistent_task_does_nothing(self, daemon):
@@ -206,12 +209,13 @@ class TestMonitorDaemon:
         await daemon.stop()
     
     @pytest.mark.asyncio
-    async def test_start_emits_trace_event(self, daemon):
+    async def test_start_emits_trace_event(self, daemon, trace_emitter):
         """Test that start emits trace event."""
-        with patch('system.monitor_daemon.emit_trace') as mock_emit:
-            await daemon.start()
-            mock_emit.assert_called()
-            await daemon.stop()
+        trace_emitter.clear()
+        await daemon.start()
+        events = trace_emitter.get_events()
+        assert len(events) > 0
+        await daemon.stop()
     
     @pytest.mark.asyncio
     async def test_start_does_not_start_if_already_running(self, daemon):
@@ -237,19 +241,21 @@ class TestMonitorDaemon:
         assert daemon._background_task is None
     
     @pytest.mark.asyncio
-    async def test_stop_emits_trace_event(self, daemon):
+    async def test_stop_emits_trace_event(self, daemon, trace_emitter):
         """Test that stop emits trace event."""
-        with patch('system.monitor_daemon.emit_trace') as mock_emit:
-            await daemon.start()
-            await daemon.stop()
-            mock_emit.assert_called()
+        trace_emitter.clear()
+        await daemon.start()
+        await daemon.stop()
+        events = trace_emitter.get_events()
+        assert len(events) > 0
     
     @pytest.mark.asyncio
-    async def test_restore_queue_emits_warning_trace(self, daemon):
+    async def test_restore_queue_emits_warning_trace(self, daemon, trace_emitter):
         """Test that _restore_queue emits warning trace about key-based query."""
-        with patch('system.monitor_daemon.emit_trace') as mock_emit:
-            await daemon._restore_queue()
-            mock_emit.assert_called()
+        trace_emitter.clear()
+        await daemon._restore_queue()
+        events = trace_emitter.get_events()
+        assert len(events) > 0
     
     @pytest.mark.asyncio
     async def test_dispatch_checkpoints_before_dispatch(self, daemon, sample_scheduled_task, mock_task_state_machine):
@@ -272,20 +278,22 @@ class TestMonitorDaemon:
         assert second_call.kwargs["state"] == TaskStatus.COMPLETE
     
     @pytest.mark.asyncio
-    async def test_dispatch_emits_trace_event(self, daemon, sample_scheduled_task):
+    async def test_dispatch_emits_trace_event(self, daemon, sample_scheduled_task, trace_emitter):
         """Test that _dispatch emits trace event."""
-        with patch('system.monitor_daemon.emit_trace') as mock_emit:
-            await daemon._dispatch(sample_scheduled_task)
-            mock_emit.assert_called()
+        trace_emitter.clear()
+        await daemon._dispatch(sample_scheduled_task)
+        events = trace_emitter.get_events()
+        assert len(events) > 0
     
     @pytest.mark.asyncio
-    async def test_dispatch_handles_exceptions_gracefully(self, daemon, sample_scheduled_task, mock_task_state_machine):
+    async def test_dispatch_handles_exceptions_gracefully(self, daemon, sample_scheduled_task, mock_task_state_machine, trace_emitter):
         """Test that _dispatch handles exceptions gracefully."""
+        trace_emitter.clear()
         mock_task_state_machine.checkpoint.side_effect = Exception("Test error")
-        with patch('system.monitor_daemon.emit_trace') as mock_emit:
-            await daemon._dispatch(sample_scheduled_task)
-            # Should not raise, just emit error trace
-            mock_emit.assert_called()
+        await daemon._dispatch(sample_scheduled_task)
+        # Should not raise, just emit error trace
+        events = trace_emitter.get_events()
+        assert len(events) > 0
 
 
 class TestTaskStateMachineCheckpoint:

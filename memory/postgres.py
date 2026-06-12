@@ -250,6 +250,11 @@ class PostgresBackend(MemoryBackend):
             # Silently fail on connection errors
             pass
 
+    async def list_keys(self, prefix: str) -> list[str]:
+        """List all keys matching the given prefix."""
+        # Stub implementation - returns empty list for now
+        return []
+
     async def close(self) -> None:
         """Close the connection pool."""
         if self.pool:

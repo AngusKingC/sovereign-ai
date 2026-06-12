@@ -31,6 +31,11 @@ class MockMemoryBackend(MemoryBackend):
         """Write data to storage."""
         self.storage.append(data)
 
+    async def list_keys(self, prefix: str) -> list[str]:
+        """List all keys matching the given prefix."""
+        # Stub implementation - returns empty list for now
+        return []
+
 
 class TestMemoryBackend:
     """Test MemoryBackend abstract interface."""
