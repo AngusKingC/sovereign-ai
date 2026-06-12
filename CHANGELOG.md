@@ -4705,5 +4705,45 @@ Each SKILL.md must declare:
 
 **Checkpoint**: prompt-27 created and pushed to remote
 
-**Next Steps**: Prompt 28 - TBD
+## Prompt 26.5: Setup Wizard (First-Run Configuration)
+
+**Summary**: Implemented first-run interactive setup wizard using Rich. Automatically runs on first launch when no config exists, walks user through configuration (LLM adapter, model, Postgres, Qdrant, Obsidian vault, Telegram, approval gate mode). Writes jarvis.config.yaml for structured settings and .env for API keys. Subsequent launches load config silently. jarvis setup --reconfigure re-runs wizard. jarvis doctor diagnoses connection issues without reconfiguring. CLI layer addition only — no core/ changes.
+
+**Files Modified**:
+- `cli/setup_wizard.py` (new file): SetupWizard class with config_exists(), run(), save(), load(), run_doctor() methods. Uses Rich Console and Prompt.ask() for interactive wizard. Splits config into jarvis.config.yaml (non-secret) and .env (API keys only). Emits trace events on save/load/doctor.
+- `cli/main.py`: Added --setup, --reconfigure, --doctor command-line arguments. Added first-run check that triggers wizard when no config exists. Wrapped SetupWizard import in try/except to ensure CLI starts even if wizard fails.
+- `tests/test_setup_wizard.py` (new file): 16 comprehensive tests covering config_exists(), run(), save(), load(), run_doctor(), trace events, and CLI integration. All mocks use tmp_path for file operations, no live network calls.
+
+**Implementation Notes**:
+- SetupWizard uses constructor-injected emitter (MemoryTraceEmitter default) - follows global_rules.md Rule 2
+- TraceEvent imported from core/observability.py with correct fields (event_type, component, level, message, data, duration_ms)
+- All trace calls wrapped in try-except to avoid crashing main path
+- save() method splits config: non-secret values to jarvis.config.yaml, API keys to .env only
+- Never writes API keys to jarvis.config.yaml
+- Does not write empty API key entries to .env
+- run_doctor() checks Ollama (httpx), Postgres (asyncpg), Qdrant (httpx), Obsidian (Path.exists)
+- CLI first-run check wrapped in try/except — if SetupWizard cannot be imported, CLI continues without it
+- --setup and --reconfigure flags trigger wizard regardless of existing config
+- --doctor flag runs diagnostic checks without reconfiguring
+- Test mocks use tmp_path fixture for all file operations — never writes to C:\Jarvis during tests
+- Mocked all network calls (httpx.get) and asyncpg connections in tests
+- Test for run_re_runs_when_user_confirms_no required accounting for API key prompts when adapter is not ollama
+
+**Testing Results**:
+- Baseline: 535 passed, 23 skipped, 3 warnings
+- After implementation: 551 passed, 23 skipped, 3 warnings (+16 new tests)
+- All new tests pass, no regressions in existing tests
+
+**Architecture Compliance**:
+- CLI layer addition only — no core/ changes
+- SetupWizard imports only from cli/ and core/ (observability)
+- Constructor injection for emitter
+- No circular imports
+- Uses correct TraceEvent schema fields from core/observability.py
+- All I/O operations use tmp_path in tests
+- Wrapped in try/except to ensure CLI starts even if wizard fails
+
+**Checkpoint**: prompt-26-5 created and pushed to remote
+
+**Next Steps**: Prompt 27.5 - Core Skills: Terminal, Web Search, Code Execution
 

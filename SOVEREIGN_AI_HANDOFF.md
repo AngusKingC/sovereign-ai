@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-12 — post Prompt 27 completion. Emitter injection refactored in MonitorDaemon, key-based query (list_keys) added to MemoryRouter and all backends, full load_checkpoints() and _restore_queue() implemented using list_keys. Event trigger system created with TriggerType, TriggerOperator, EventTrigger, and TriggerEngine classes supporting threshold, schedule, and change triggers. TriggerEngine integrated into MonitorDaemon with ingest_metric() method and schedule trigger evaluation in background loop. 27 new tests added for event trigger system.
+**Last updated**: 2026-06-12 — post Prompt 26.5 completion. First-run interactive setup wizard implemented using Rich. Automatically runs on first launch when no config exists, walks user through configuration (LLM adapter, model, Postgres, Qdrant, Obsidian vault, Telegram, approval gate mode). Writes jarvis.config.yaml for structured settings and .env for API keys. jarvis setup --reconfigure re-runs wizard. jarvis doctor diagnoses connection issues. 16 new tests added for setup wizard.
 
 ---
 
@@ -304,18 +304,18 @@ This single prompt closes more of the integration gap than any other.
 ## Current State
 
 ### Test Baseline
-- **535 passed, 23 skipped, 3 warnings** (as of Prompt 27 / checkpoint prompt-27)
+- **551 passed, 23 skipped, 3 warnings** (as of Prompt 26.5 / checkpoint prompt-26-5)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
 - 3 remaining warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
-### Known Issues from Prompt 27
-- None — all debt from Prompt 26 resolved (escalation logic re-wired, list_keys added to MemoryRouter, load_checkpoints and _restore_queue fully implemented)
+### Known Issues from Prompt 26.5
+- None — all debt from Prompt 27 resolved (escalation logic re-wired, list_keys added to MemoryRouter, load_checkpoints and _restore_queue fully implemented)
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-27`
+- Latest checkpoint tag: `prompt-26-5`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -360,9 +360,10 @@ This single prompt closes more of the integration gap than any other.
 ### CLI
 - `cli/tui.py` — TUI, DI complete
 - `cli/rich_cli.py` — Rich terminal interface
-- `cli/main.py` — entry point, constructs TraceEmitter and CommandRegistry
+- `cli/main.py` — entry point, constructs TraceEmitter and CommandRegistry, first-run setup wizard, setup/doctor commands
 - `cli/adapter_factory.py` — create_adapter(), create_worker()
 - `cli/command_history.py` — persistent history, tab completion
+- `cli/setup_wizard.py` — SetupWizard class, interactive first-run configuration, jarvis.config.yaml and .env generation
 
 ### System Layer
 - `system/profiler.py` — SystemProfiler
@@ -416,6 +417,7 @@ This single prompt closes more of the integration gap than any other.
 | 25 | Tiered Memory Compaction | 488 |
 | 26 | Monitor Daemon + Task Checkpointing | 501 |
 | 27 | Emitter Injection, Key-Based Query, and Event Trigger System | 535 |
+| 26.5 | Setup Wizard (First-Run Configuration) | 551 |
 
 ---
 
@@ -646,7 +648,7 @@ full implementation requires key-pattern querying in MemoryRouter.
 ---
 
 #### Prompt 26.5 — Setup Wizard (New — added 2026-06-11)
-**Status**: Queued
+**Status**: DONE
 
 First-run interactive setup wizard using Rich terminal UI.
 Triggered automatically when no config file exists.
@@ -696,7 +698,7 @@ Integrated into MonitorDaemon with ingest_metric() method and schedule trigger e
 ---
 
 #### Prompt 27.5 — Core Skills: Terminal, Web Search, Code Execution (New — added 2026-06-11)
-**Status**: Queued
+**Status**: IN PROGRESS
 
 Table-stakes skills. Without these Jarvis is not a usable product.
 Hermes ships all three as built-in tools on day one.

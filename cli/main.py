@@ -47,9 +47,64 @@ Examples:
         action="store_true",
         help="Run in non-interactive mode"
     )
-    
+
+    parser.add_argument(
+        "--setup",
+        action="store_true",
+        help="Run setup wizard"
+    )
+
+    parser.add_argument(
+        "--reconfigure",
+        action="store_true",
+        help="Re-run setup wizard (ignore existing config)"
+    )
+
+    parser.add_argument(
+        "--doctor",
+        action="store_true",
+        help="Run doctor to check service status"
+    )
+
     args = parser.parse_args()
-    
+
+    # Handle setup/doctor commands
+    if args.setup or args.reconfigure or args.doctor:
+        try:
+            from cli.setup_wizard import SetupWizard
+            wizard = SetupWizard()
+
+            if args.doctor:
+                wizard.run_doctor()
+                return
+
+            # Setup or reconfigure
+            if args.reconfigure or not wizard.config_exists():
+                config = wizard.run()
+                wizard.save(config)
+                print("Configuration saved successfully.")
+            else:
+                print("Configuration already exists. Use --reconfigure to override.")
+                config = wizard.load()
+
+            return
+        except Exception as e:
+            print(f"Setup wizard failed: {e}")
+            # Continue to normal CLI startup if wizard fails
+
+    # First-run check (only if not explicitly running setup)
+    try:
+        from cli.setup_wizard import SetupWizard
+        wizard = SetupWizard()
+        if not wizard.config_exists():
+            print("No configuration found. Running setup wizard...")
+            config = wizard.run()
+            wizard.save(config)
+            print("Configuration saved successfully.")
+    except Exception:
+        # If SetupWizard cannot be imported or fails, continue without it
+        pass
+
     # Determine mode
     if args.rich:
         # Use Rich-based CLI
