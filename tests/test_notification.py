@@ -268,3 +268,74 @@ class TestNotificationSystem:
             assert not hasattr(event, "layer")
             assert not hasattr(event, "payload")
             assert not hasattr(event, "success")
+
+    async def test_telegram_gateway_called_when_set_and_notification_is_requires_action(self, emitter):
+        """Test that telegram gateway is called when set and notification is REQUIRES_ACTION."""
+        from unittest.mock import AsyncMock
+
+        mock_gateway = AsyncMock()
+        mock_gateway.send_notification = AsyncMock(return_value=True)
+
+        notification_system = NotificationSystem(
+            approval_gate=None,
+            telegram_gateway=mock_gateway,
+            emitter=emitter,
+        )
+
+        notification = Notification(
+            type=NotificationType.REQUIRES_ACTION,
+            title="Test Action",
+            message="Test message",
+            source="test",
+        )
+        await notification_system.notify(notification)
+
+        mock_gateway.send_notification.assert_called_once_with(notification)
+
+    async def test_telegram_gateway_not_called_when_none(self, emitter):
+        """Test that telegram gateway is not called when None."""
+        from unittest.mock import AsyncMock
+
+        mock_gateway = AsyncMock()
+        mock_gateway.send_notification = AsyncMock(return_value=True)
+
+        notification_system = NotificationSystem(
+            approval_gate=None,
+            telegram_gateway=None,
+            emitter=emitter,
+        )
+
+        notification = Notification(
+            type=NotificationType.REQUIRES_ACTION,
+            title="Test Action",
+            message="Test message",
+            source="test",
+        )
+        await notification_system.notify(notification)
+
+        # Gateway should not be called since it's None
+        assert mock_gateway.send_notification.call_count == 0
+
+    async def test_telegram_gateway_not_called_for_info_notifications(self, emitter):
+        """Test that telegram gateway is not called for INFO notifications."""
+        from unittest.mock import AsyncMock
+
+        mock_gateway = AsyncMock()
+        mock_gateway.send_notification = AsyncMock(return_value=True)
+
+        notification_system = NotificationSystem(
+            approval_gate=None,
+            telegram_gateway=mock_gateway,
+            emitter=emitter,
+        )
+
+        notification = Notification(
+            type=NotificationType.INFO,
+            title="Test Info",
+            message="Test message",
+            source="test",
+        )
+        await notification_system.notify(notification)
+
+        # Gateway should not be called for INFO notifications
+        assert mock_gateway.send_notification.call_count == 0

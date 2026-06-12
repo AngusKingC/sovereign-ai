@@ -51,16 +51,19 @@ class NotificationSystem:
     def __init__(
         self,
         approval_gate: "ApprovalGate | None" = None,
+        telegram_gateway: "TelegramGateway | None" = None,
         emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the notification system.
 
         Args:
             approval_gate: Optional approval gate for action-request notifications
+            telegram_gateway: Optional Telegram gateway for outbound notifications
             emitter: Trace emitter for observability
         """
         self._emitter = emitter or MemoryTraceEmitter()
         self._approval_gate = approval_gate
+        self._telegram_gateway = telegram_gateway
         self._queue: list[Notification] = []
 
     async def notify(self, notification: Notification) -> None:
@@ -188,6 +191,13 @@ class NotificationSystem:
                 except Exception:
                     pass
                 await self._deliver(notification)
+
+        # Send to Telegram gateway if set and notification is REQUIRES_ACTION or URGENT
+        if self._telegram_gateway is not None and notification.type in (NotificationType.REQUIRES_ACTION, NotificationType.URGENT):
+            try:
+                await self._telegram_gateway.send_notification(notification)
+            except Exception:
+                pass
 
     async def _deliver(self, notification: Notification) -> None:
         """

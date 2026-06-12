@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-12 — post Prompt 28 completion. Notification system implemented with urgency-based routing (INFO, WARNING, URGENT, REQUIRES_ACTION), ApprovalGate integration for action requests, queue management for non-urgent notifications. 14 new tests added. Class-level pytestmark used for async tests per Mistake Pattern 18.
+**Last updated**: 2026-06-12 — post Prompt 28.5 completion. Telegram Gateway implemented with httpx-based API calls, emoji prefix mapping, command extraction, and NotificationSystem integration for REQUIRES_ACTION and URGENT notifications. 18 new tests added (14 gateway tests + 3 integration tests + 1 from empty __init__.py). Class-level pytestmark used for async tests per Mistake Pattern 18.
 
 ---
 
@@ -342,18 +342,18 @@ This single prompt closes more of the integration gap than any other.
 ## Current State
 
 ### Test Baseline
-- **599 passed, 23 skipped, 8 warnings** (as of Prompt 28 / checkpoint prompt-28)
+- **617 passed, 23 skipped, 10 warnings** (as of Prompt 28.5 / checkpoint prompt-28-5)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
-- 8 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless; PytestUnraisableExceptionWarning for unclosed asyncio transports in subprocess tests — Windows-specific, harmless
+- 10 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless; PytestUnraisableExceptionWarning for unclosed asyncio transports in subprocess tests — Windows-specific, harmless
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
-### Known Issues from Prompt 28
-- None — notification system implemented with full test coverage
+### Known Issues from Prompt 28.5
+- None — Telegram gateway implemented with full test coverage and NotificationSystem integration
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-28`
+- Latest checkpoint tag: `prompt-28-5`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -458,6 +458,7 @@ This single prompt closes more of the integration gap than any other.
 | 26.5 | Setup Wizard (First-Run Configuration) | 551 |
 | 27.5 | Core Skills: Terminal, Web Search, Code Execution | 585 |
 | 28 | Interrupt and Notification Layer | 599 |
+| 28.5 | Telegram Gateway | 617 |
 
 ---
 
@@ -784,7 +785,7 @@ Non-urgent queues and surfaces at natural break points.
 ---
 
 #### Prompt 28.5 — Telegram Gateway
-**Status**: IN PROGRESS
+**Status**: DONE
 
 Deliver notifications from the NotificationSystem to mobile via Telegram.
 Critical for sailing use case — AIS/weather alerts reachable on the water.
@@ -874,7 +875,7 @@ Tests: minimum 8 per skill (24 total).
 ---
 
 #### Prompt 29 — Resource Budgeting
-**Status**: Queued
+**Status**: IN PROGRESS
 
 Create `core/resource_budget.py`.
 Prevent exponential resource usage in multi-worker mode.
