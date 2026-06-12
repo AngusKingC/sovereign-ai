@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-12 — post Prompt 27.5 completion. Three table-stakes skills implemented: Terminal (shell command execution with approval gating), Web Search (SearXNG/Brave Search with structured results), Code Execution (Python subprocess execution with approval gating). 33 new tests added. Windows compatibility fixes applied (timeout command, multiline code). Async test decorators used per-method in 27.5 — class-level pytestmark required from Prompt 28 onward per global_rules.md.
+**Last updated**: 2026-06-12 — post Prompt 28 completion. Notification system implemented with urgency-based routing (INFO, WARNING, URGENT, REQUIRES_ACTION), ApprovalGate integration for action requests, queue management for non-urgent notifications. 14 new tests added. Class-level pytestmark used for async tests per Mistake Pattern 18.
 
 ---
 
@@ -342,18 +342,18 @@ This single prompt closes more of the integration gap than any other.
 ## Current State
 
 ### Test Baseline
-- **585 passed, 23 skipped, 8 warnings** (as of Prompt 27.5 / checkpoint prompt-27-5)
+- **599 passed, 23 skipped, 8 warnings** (as of Prompt 28 / checkpoint prompt-28)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
 - 8 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless; PytestUnraisableExceptionWarning for unclosed asyncio transports in subprocess tests — Windows-specific, harmless
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
-### Known Issues from Prompt 27.5
-- None — all three core skills implemented with full test coverage
+### Known Issues from Prompt 28
+- None — notification system implemented with full test coverage
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-27-5`
+- Latest checkpoint tag: `prompt-28`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -457,6 +457,7 @@ This single prompt closes more of the integration gap than any other.
 | 27 | Emitter Injection, Key-Based Query, and Event Trigger System | 535 |
 | 26.5 | Setup Wizard (First-Run Configuration) | 551 |
 | 27.5 | Core Skills: Terminal, Web Search, Code Execution | 585 |
+| 28 | Interrupt and Notification Layer | 599 |
 
 ---
 
@@ -772,7 +773,7 @@ Tests: minimum 8 per skill (24 total). Target: exceed Prompt 27 baseline.
 ---
 
 #### Prompt 28 — Interrupt and Notification Layer
-**Status**: IN PROGRESS
+**Status**: DONE
 
 `core/notification.py`.
 Types: info, warning, urgent, requires-action.
@@ -783,7 +784,7 @@ Non-urgent queues and surfaces at natural break points.
 ---
 
 #### Prompt 28.5 — Telegram Gateway
-**Status**: Queued
+**Status**: IN PROGRESS
 
 Deliver notifications from the NotificationSystem to mobile via Telegram.
 Critical for sailing use case — AIS/weather alerts reachable on the water.

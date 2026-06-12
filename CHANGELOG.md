@@ -4789,3 +4789,38 @@ Each SKILL.md must declare:
 **Checkpoint**: prompt-27-5 created and pushed to remote
 
 **Next Steps**: Prompt 28 - [TBD]
+---
+
+## Phase 1: Foundation and Core Architecture
+
+### 2026-06-12 - Prompt 28: Interrupt and Notification Layer
+**Implementation**: Notification system with urgency-based routing and ApprovalGate integration
+
+**Files Created**:
+- **core/notification.py** - NotificationSystem with NotificationType enum, Notification Pydantic model, urgency-based routing
+- **tests/test_notification.py** - 14 tests covering all notification types, approval gate integration, queue management, trace events
+
+**Implementation Notes**:
+- No issues encountered during implementation. All tests passed on first run.
+- Class-level pytestmark used for async test class per Mistake Pattern 18 (not per-method decorators).
+- Constructor-injected emitter pattern followed per global_rules.md.
+- TraceEvent imported from core/observability.py only.
+- ApprovalGate integration via constructor injection for REQUIRES_ACTION notifications.
+- Domain exceptions raised outside try-except blocks.
+
+**Testing Results**:
+- Baseline: 585 passed, 23 skipped, 8 warnings
+- After implementation: 599 passed, 23 skipped, 8 warnings (+14 new tests)
+- All new tests pass, no regressions in existing tests
+- Final test count: 599 passed (585 baseline + 14 notification tests)
+
+**Architecture Compliance**:
+- Core layer addition only — no skills/ or adapters/ changes
+- Constructor injection for emitter
+- TraceEvent fields correct: event_type, component, level, message, data, duration_ms (from core/observability.py)
+- ApprovalGate integration via constructor injection
+- Clean Architecture: imports only from core/ (observability, approval_gate)
+
+**Checkpoint**: prompt-28 created and pushed to remote
+
+**Next Steps**: Prompt 28.5 - Telegram Gateway
