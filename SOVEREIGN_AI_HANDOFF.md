@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-12 — post Prompt 28.5 completion. Telegram Gateway implemented with httpx-based API calls, emoji prefix mapping, command extraction, and NotificationSystem integration for REQUIRES_ACTION and URGENT notifications. 18 new tests added (14 gateway tests + 3 integration tests + 1 from empty __init__.py). Class-level pytestmark used for async tests per Mistake Pattern 18.
+**Last updated**: 2026-06-12 — post Prompt 29 completion. ResourceManager KV cache fix implemented with kv_cache_budget_mb parameter (default 1024MB), available_vram_mb() async method, and warning trace event for low VRAM. ResourceBudget class created with BudgetCheckResult dataclass and async budget check methods (token, worker, VRAM, all). 20 new tests added (6 resource_manager + 14 resource_budget). Test baseline: 637 passed, 23 skipped, 10 warnings.
 
 ---
 
@@ -342,18 +342,18 @@ This single prompt closes more of the integration gap than any other.
 ## Current State
 
 ### Test Baseline
-- **617 passed, 23 skipped, 10 warnings** (as of Prompt 28.5 / checkpoint prompt-28-5)
+- **637 passed, 23 skipped, 10 warnings** (as of Prompt 29 / checkpoint prompt-29)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
 - 10 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless; PytestUnraisableExceptionWarning for unclosed asyncio transports in subprocess tests — Windows-specific, harmless
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
-### Known Issues from Prompt 28.5
-- None — Telegram gateway implemented with full test coverage and NotificationSystem integration
+### Known Issues from Prompt 29
+- None — KV cache fix and Resource Budget implemented with full test coverage
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-28-5`
+- Latest checkpoint tag: `prompt-29`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -380,6 +380,8 @@ This single prompt closes more of the integration gap than any other.
 - `core/orchestrator_improvement.py` — OrchestratorImprovementLoop, orchestrator self-improvement
 - `core/evaluator.py` — OutputEvaluator, LLM-as-Judge automated output evaluation
 - `core/memory_compactor.py` — MemoryCompactor, MemoryTier enum, TieredMemoryEntry, background compaction
+- `core/notification.py` — NotificationSystem, NotificationType enum, urgency-based routing
+- `core/resource_budget.py` — ResourceBudget, BudgetCheckResult, async budget checks (token, worker, VRAM, all)
 
 ### Memory Layer
 - `memory/obsidian.py` — Markdown vault storage
@@ -406,7 +408,7 @@ This single prompt closes more of the integration gap than any other.
 ### System Layer
 - `system/profiler.py` — SystemProfiler
 - `system/model_registry.py` — ModelRegistry, seed data, HW-fit recommendation
-- `system/resource_manager.py` — ResourceManager, eviction priority queue
+- `system/resource_manager.py` — ResourceManager, eviction priority queue, KV cache budget (kv_cache_budget_mb parameter, available_vram_mb() async method)
 - `system/model_acquisition.py` — ModelAcquisition, HuggingFace integration
 - `system/monitor_daemon.py` — MonitorDaemon, ScheduledTask, TaskScheduleType, persistent background scheduler
 
@@ -459,6 +461,7 @@ This single prompt closes more of the integration gap than any other.
 | 27.5 | Core Skills: Terminal, Web Search, Code Execution | 585 |
 | 28 | Interrupt and Notification Layer | 599 |
 | 28.5 | Telegram Gateway | 617 |
+| 29 | ResourceManager KV Cache Fix and Resource Budget | 637 |
 
 ---
 
@@ -875,7 +878,7 @@ Tests: minimum 8 per skill (24 total).
 ---
 
 #### Prompt 29 — Resource Budgeting
-**Status**: IN PROGRESS
+**Status**: DONE
 
 Create `core/resource_budget.py`.
 Prevent exponential resource usage in multi-worker mode.
@@ -892,7 +895,7 @@ Approval gate integration: budget overrun requires user approval.
 ---
 
 #### Prompt 29.5 — Developer Skills: Git, Docker, HTTP Client (New — added 2026-06-11)
-**Status**: Queued
+**Status**: IN PROGRESS
 
 Files:
 - `skills/git/` — Git operations
@@ -1078,7 +1081,6 @@ Tests: minimum 12.
 | No tests for session postgres | core/session.py | Prompt 11 debt |
 | No tests for command_history | cli/command_history.py | Prompt 12 debt |
 | Qdrant hardcoded vector size 768 | memory/qdrant.py | Latent bug — fix before Phase 6 |
-| ResourceManager missing KV cache buffer | system/resource_manager.py | OOM risk on 6GB card — fix before Prompt 29 |
 | Model registry may seed oversized models | system/model_registry.py | Standardise on Qwen 2.5 7B Q4_K_M — fix in Prompt 16.5 |
 | WorkerPersistence not passed to WorkerFactory in CLI | cli/tui.py, cli/rich_cli.py | Intentional deferral — requires CLI refactor |
 | WorkerPersistence in TYPE_CHECKING block | core/worker_factory.py | Verify no runtime issues in future prompt |

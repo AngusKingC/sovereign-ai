@@ -466,7 +466,116 @@ class TestResourceManager:
         
         from core.observability import TraceEventType
         event_types = [event.event_type for event in events]
-        
+
         assert TraceEventType.RESOURCE_PIN in event_types
         assert TraceEventType.RESOURCE_UNPIN in event_types
+
+    async def test_available_vram_mb_returns_total_minus_loaded_minus_kv_cache_budget(self) -> None:
+        """Test that available_vram_mb returns total minus loaded minus kv_cache_budget."""
+        mock_router = MockMemoryRouter()
+        manager = ResourceManager(mock_router, kv_cache_budget_mb=1024, emitter=MemoryTraceEmitter())
+
+        total_vram_mb = 24000
+        loaded_model_vram_gb = 5.0
+
+        available = await manager.available_vram_mb(total_vram_mb, loaded_model_vram_gb)
+
+        # 24000 - (5.0 * 1024) - 1024 = 24000 - 5120 - 1024 = 17856
+        assert available == 17856
+
+    async def test_available_vram_mb_floors_at_0_when_usage_exceeds_total(self) -> None:
+        """Test that available_vram_mb floors at 0 when usage exceeds total."""
+        mock_router = MockMemoryRouter()
+        manager = ResourceManager(mock_router, kv_cache_budget_mb=1024, emitter=MemoryTraceEmitter())
+
+        total_vram_mb = 6000
+        loaded_model_vram_gb = 6.0  # 6GB = 6144MB, exceeds total
+
+        available = await manager.available_vram_mb(total_vram_mb, loaded_model_vram_gb)
+
+        # Should floor at 0
+        assert available == 0
+
+    async def test_model_fit_check_uses_available_vram_mb_not_raw_total(self) -> None:
+        """Test that model fit check uses available_vram_mb() not raw total."""
+        mock_router = MockMemoryRouter()
+        manager = ResourceManager(mock_router, kv_cache_budget_mb=2048, emitter=MemoryTraceEmitter())
+
+        registry = MockModelRegistry()
+        registry.add_model(
+            ModelEntry(
+                model_id="test/model:7b",
+                name="Test Model",
+                source=ModelSource.OLLAMA,
+                quantisation_variants=[
+                    QuantisationVariant(
+                        name="Q4_K_M",
+                        size_on_disk_gb=4.0,
+                        vram_required_gb=5.0,
+                        ram_required_gb=8.0,
+                        quality_score=0.8,
+                        speed_score=0.9,
+                    )
+                ],
+            )
+        )
+
+        system_profile = SystemProfile(
+            gpu=GPUInfo(total_vram_mb=24000, available_vram_mb=12000),
+            ram=RAMInfo(total_mb=32000, available_mb=16000),
+        )
+
+        with patch('system.profiler.SystemProfiler') as mock_profiler_class:
+            mock_profiler = Mock()
+            mock_profiler.get_cached = AsyncMock(return_value=system_profile)
+            mock_profiler_class.return_value = mock_profiler
+
+            # With 2GB KV cache budget, available VRAM is less than raw available
+            can_load, reason = await manager.can_load("test/model:7b", "Q4_K_M", registry)
+
+        # Should still fit because 5GB < (12GB - 2GB)
+        assert can_load is True
+        assert "fits in available VRAM" in reason
+
+    async def test_warning_trace_event_emitted_when_available_vram_below_threshold(self) -> None:
+        """Test that warning trace event is emitted when available VRAM is below threshold."""
+        mock_router = MockMemoryRouter()
+        emitter = MemoryTraceEmitter()
+        manager = ResourceManager(mock_router, kv_cache_budget_mb=1024, emitter=emitter)
+
+        total_vram_mb = 24000
+        loaded_model_vram_gb = 22.5  # Leaves very little after KV cache budget (0 available)
+
+        available = await manager.available_vram_mb(total_vram_mb, loaded_model_vram_gb)
+
+        events = emitter.get_events()
+        warning_events = [e for e in events if e.level.upper() == "WARNING" and "critically low" in e.message]
+
+        assert len(warning_events) > 0
+        assert warning_events[0].data["available_mb"] == available
+        assert "threshold_mb" in warning_events[0].data
+
+    async def test_no_warning_emitted_when_vram_is_healthy(self) -> None:
+        """Test that no warning is emitted when VRAM is healthy."""
+        mock_router = MockMemoryRouter()
+        emitter = MemoryTraceEmitter()
+        manager = ResourceManager(mock_router, kv_cache_budget_mb=1024, emitter=emitter)
+
+        total_vram_mb = 24000
+        loaded_model_vram_gb = 5.0  # Healthy amount
+
+        available = await manager.available_vram_mb(total_vram_mb, loaded_model_vram_gb)
+
+        events = emitter.get_events()
+        warning_events = [e for e in events if e.level.upper() == "WARNING" and "critically low" in e.message]
+
+        # Should not emit warning for healthy VRAM
+        assert len(warning_events) == 0
+
+    async def test_default_kv_cache_budget_mb_is_1024(self) -> None:
+        """Test that default kv_cache_budget_mb is 1024."""
+        mock_router = MockMemoryRouter()
+        manager = ResourceManager(mock_router, emitter=MemoryTraceEmitter())
+
+        assert manager._kv_cache_budget_mb == 1024
 

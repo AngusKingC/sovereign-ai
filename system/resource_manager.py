@@ -41,14 +41,57 @@ class ResourceManager:
         self,
         memory_router: "MemoryRouter",
         approval_callback: ApprovalCallback | None = None,
+        kv_cache_budget_mb: int = 1024,
         emitter: TraceEmitter | None = None,
     ) -> None:
-        """Initialize the resource manager with memory router and optional approval callback."""
+        """Initialize the resource manager with memory router and optional approval callback.
+
+        Args:
+            memory_router: Memory router for persistence
+            approval_callback: Optional callback for user approval on pinned model eviction
+            kv_cache_budget_mb: Reserved VRAM for KV cache overhead (default 1GB)
+            emitter: Trace emitter for observability
+        """
         self.memory_router = memory_router
         self.approval_callback = approval_callback
+        self._kv_cache_budget_mb = kv_cache_budget_mb
         self._loaded_models: dict[str, LoadedModel] = {}
         self._ollama_api_url = "http://localhost:11434"
         self._emitter = emitter or MemoryTraceEmitter()
+
+    async def available_vram_mb(self, total_vram_mb: int, loaded_model_vram_mb: float) -> int:
+        """Calculate available VRAM after accounting for loaded models and KV cache budget.
+
+        Args:
+            total_vram_mb: Total VRAM in MB
+            loaded_model_vram_mb: VRAM used by loaded models in GB
+
+        Returns:
+            Available VRAM in MB, floored at 0
+        """
+        available = total_vram_mb - int(loaded_model_vram_mb * 1024) - self._kv_cache_budget_mb
+        result = max(0, available)
+
+        # Emit warning if available VRAM is critically low
+        threshold_mb = int(self._kv_cache_budget_mb * 0.25)
+        if result < threshold_mb:
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.SYSTEM,
+                    level=TraceLevel.WARNING,
+                    message="VRAM critically low",
+                    data={
+                        "available_mb": result,
+                        "threshold_mb": threshold_mb,
+                    },
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
+
+        return result
 
     async def snapshot(self, system_profile: SystemProfile) -> ResourceSnapshot:
         """Query current live resource state from SystemProfiler and Ollama API."""
@@ -198,15 +241,21 @@ class ResourceManager:
 
             snapshot = await self.snapshot(system_profile)
 
+            # Calculate available VRAM accounting for KV cache budget
+            total_vram_mb = int(system_profile.gpu.total_vram_mb)
+            loaded_model_vram_mb = snapshot.vram_used_gb
+            available_vram_mb = await self.available_vram_mb(total_vram_mb, loaded_model_vram_mb)
+            available_vram_gb = available_vram_mb / 1024
+
             # Check VRAM first
-            if variant.vram_required_gb <= snapshot.vram_available_gb:
-                return True, f"Model fits in available VRAM ({variant.vram_required_gb}GB <= {snapshot.vram_available_gb}GB)"
+            if variant.vram_required_gb <= available_vram_gb:
+                return True, f"Model fits in available VRAM ({variant.vram_required_gb}GB <= {available_vram_gb}GB)"
 
             # Check RAM fallback
             if variant.ram_required_gb <= snapshot.ram_available_gb:
                 return True, f"Model fits in available RAM ({variant.ram_required_gb}GB <= {snapshot.ram_available_gb}GB)"
 
-            return False, f"Model does not fit in available VRAM ({variant.vram_required_gb}GB > {snapshot.vram_available_gb}GB) or RAM ({variant.ram_required_gb}GB > {snapshot.ram_available_gb}GB)"
+            return False, f"Model does not fit in available VRAM ({variant.vram_required_gb}GB > {available_vram_gb}GB) or RAM ({variant.ram_required_gb}GB > {snapshot.ram_available_gb}GB)"
         except Exception as e:
             try:
                 event = TraceEvent(
@@ -346,8 +395,14 @@ class ResourceManager:
 
             snapshot = await self.snapshot(system_profile)
 
+            # Calculate available VRAM accounting for KV cache budget
+            total_vram_mb = int(system_profile.gpu.total_vram_mb)
+            loaded_model_vram_mb = snapshot.vram_used_gb
+            available_vram_mb = await self.available_vram_mb(total_vram_mb, loaded_model_vram_mb)
+            available_vram_gb = available_vram_mb / 1024
+
             # Check if fits without eviction
-            if variant.vram_required_gb <= snapshot.vram_available_gb:
+            if variant.vram_required_gb <= available_vram_gb:
                 try:
                     event = TraceEvent(
                         event_type=TraceEventType.RESOURCE_LOAD_APPROVED,
@@ -371,7 +426,7 @@ class ResourceManager:
 
             # Calculate eviction candidates
             models_to_evict = []
-            vram_to_free = variant.vram_required_gb - snapshot.vram_available_gb
+            vram_to_free = variant.vram_required_gb - available_vram_gb
 
             # Sort loaded models by eviction priority: idle time first, then task priority, pinned last
             eviction_candidates = sorted(

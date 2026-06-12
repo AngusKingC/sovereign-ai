@@ -4866,3 +4866,48 @@ Each SKILL.md must declare:
 **Checkpoint**: prompt-28-5 to be created and pushed
 
 **Next Steps**: Prompt 29: ResourceManager KV Cache Fix (flagged in technical debt as OOM risk before Prompt 29)
+---
+
+## Phase 1: Foundation and Core Architecture
+
+### 2026-06-12 - Prompt 29: ResourceManager KV Cache Fix and Resource Budget
+**Implementation**: Two-part implementation - KV cache budget fix in ResourceManager and new ResourceBudget class for multi-worker resource enforcement
+
+**Part 1 - KV Cache Fix (system/resource_manager.py)**:
+**Files Modified**:
+- **system/resource_manager.py** - Added kv_cache_budget_mb parameter (default 1024MB), added available_vram_mb() async method, updated can_load() and request_load() to use available_vram_mb() instead of raw vram_available_gb, added warning trace event when available VRAM below 25% of kv_cache_budget_mb
+- **tests/test_resource_manager.py** - Added 6 new tests covering available_vram_mb calculation, floor at 0, model fit check usage, warning emission, no warning when healthy, default value
+
+**Part 2 - Resource Budget (core/resource_budget.py)**:
+**Files Created**:
+- **core/resource_budget.py** - ResourceBudget class with BudgetCheckResult dataclass, async methods: check_token_budget, check_worker_budget, check_vram_budget, check_all, record_token_usage. Constructor-injected emitter and optional ResourceManager dependency.
+- **tests/test_resource_budget.py** - 14 tests covering all budget check methods, session-level token tracking, trace events on approval/denial
+
+**Implementation Notes**:
+- **Test failure 1**: available_vram_mb was initially sync method but needed to be async to emit trace events. Fixed by making method async and updating all call sites to await.
+- **Test failure 2**: Warning trace event test failed due to case mismatch - event level is "warning" (lowercase) but test checked for "WARNING" (uppercase). Fixed by using .upper() == "WARNING" for case-insensitive comparison.
+- **Test failure 3**: Session limit test failed because token request (6000) exceeded per-task limit (8192) before session limit check. Fixed by using token request within per-task limit but exceeding session remaining (6000 used, 60000 already used = 66000 > 65536).
+- **Test failure 4**: Session accumulation test expected tokens_available to be session remaining (20536) but actual was min(per-task, session remaining) = 8192. Fixed test expectation to match correct behavior (tokens_available is minimum of all applicable limits).
+- **Architecture**: ResourceBudget imports only from core/ (observability) and stdlib. ResourceManager import in TYPE_CHECKING block to avoid circular import.
+- **Security**: No model names or token content logged in trace event data per spec requirement.
+
+**Testing Results**:
+- Baseline: 617 passed, 23 skipped, 10 warnings
+- After Part 1 (KV cache fix): 623 passed, 23 skipped, 10 warnings (+6 new tests)
+- After Part 2 (Resource Budget): 637 passed, 23 skipped, 10 warnings (+14 new tests)
+- All new tests pass, no regressions in existing tests
+- Final test count: 637 passed (617 baseline + 6 resource_manager + 14 resource_budget)
+
+**Architecture Compliance**:
+- system/ layer modification for KV cache budget fix
+- core/ layer addition for ResourceBudget class
+- Constructor injection for emitter in both ResourceManager and ResourceBudget
+- Optional ResourceManager dependency in ResourceBudget (TYPE_CHECKING block to avoid circular import)
+- TraceEvent imported from core/observability.py only
+- Clean Architecture: ResourceBudget imports only from core/ (observability) and stdlib
+- No sensitive data logged in trace events
+
+**Checkpoint**: prompt-29 to be created and pushed to remote
+
+**Next Steps**: Prompt 30 - [TBD]
+---
