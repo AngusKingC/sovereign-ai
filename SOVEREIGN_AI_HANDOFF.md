@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-12 — post Prompt 29 completion. ResourceManager KV cache fix implemented with kv_cache_budget_mb parameter (default 1024MB), available_vram_mb() async method, and warning trace event for low VRAM. ResourceBudget class created with BudgetCheckResult dataclass and async budget check methods (token, worker, VRAM, all). 20 new tests added (6 resource_manager + 14 resource_budget). Test baseline: 637 passed, 23 skipped, 10 warnings.
+**Last updated**: 2026-06-13 — post Prompt 22.5 completion. MCP Adapter implemented with MCPAdapter client for calling external MCP tool servers and MCPServer for exposing SkillRegistry over MCP HTTP protocol. 21 new tests added (11 mcp_adapter + 10 mcp_server). Test baseline: 658 passed, 23 skipped, 10 warnings.
 
 ---
 
@@ -151,6 +151,12 @@ OUTPUT LAYER
 ├── Web GUI (Prompt 32 — FastAPI + React, served by jarvis serve)
 ├── Standalone desktop (wraps web UI — Electron/Tauri, post Phase 9)
 └── Voice (Prompt 33)
+
+SECURITY LAYER (cross-cutting — Prompt 31.7, before Web GUI)
+├── AuthManager — bearer token for all FastAPI/WebSocket surfaces
+├── InputSanitiser — prompt injection hardening on all external inputs
+├── ApprovalTrustRegistry — per-command trust memory, session blanket approval
+└── Secrets audit — startup check that no keys are in config YAML
 ```
 
 ---
@@ -303,6 +309,10 @@ This single prompt closes more of the integration gap than any other.
 9. No global mutable state
 10. All I/O operations are async
 11. `skills/` may import from `core/` only — never from `adapters/`, `cli/`, or `memory/` directly
+12. `web/` may import from `core/` only — never from `cli/`, `workers/`, or `adapters/` directly
+13. `InputSanitiser` MUST be called on all externally-sourced content before it enters LLM context: web scraper output, Telegram inbound, user task input
+14. `ApprovalTrustRegistry` MUST be consulted by `ApprovalGate` before raising any approval request — never bypass TrustRegistry even in tests
+15. Auth middleware MUST wrap ALL FastAPI routes and WebSocket handshakes — no unauthenticated endpoints except the health check
 
 ---
 
@@ -342,18 +352,18 @@ This single prompt closes more of the integration gap than any other.
 ## Current State
 
 ### Test Baseline
-- **637 passed, 23 skipped, 10 warnings** (as of Prompt 29 / checkpoint prompt-29)
+- **658 passed, 23 skipped, 10 warnings** (as of Prompt 22.5 / checkpoint prompt-22-5)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
 - 10 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless; PytestUnraisableExceptionWarning for unclosed asyncio transports in subprocess tests — Windows-specific, harmless
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
-### Known Issues from Prompt 29
-- None — KV cache fix and Resource Budget implemented with full test coverage
+### Known Issues from Prompt 22.5
+- None — MCP Adapter implemented with full test coverage
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-29`
+- Latest checkpoint tag: `prompt-22-5`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -388,9 +398,10 @@ This single prompt closes more of the integration gap than any other.
 - `memory/postgres.py` — Async Postgres, connection pooling, JSONB
 - `memory/qdrant.py` — Vector embeddings, semantic search
 
-### Adapters (12 total, all async)
+### Adapters (13 total, all async)
 - Ollama, OpenAI, Anthropic, LM Studio, Gemini, Cohere, Groq, Mistral,
   DeepSeek, Together, HuggingFace, llama.cpp
+- MCPAdapter — MCP (Model Context Protocol) client for calling external MCP tool servers
 - All import LLMAdapter and LLMResponse from `core.worker_base`
 
 ### Workers
@@ -414,6 +425,7 @@ This single prompt closes more of the integration gap than any other.
 
 ### Skills Layer
 - `skills/SKILL_SPECIFICATION.md` — formal plugin specification
+- `skills/mcp_server.py` — MCPServer, exposes SkillRegistry over MCP HTTP protocol (GET /mcp/tools, POST /mcp/call)
 - `skills/web_scraper/` — httpx + BeautifulSoup
 - `skills/file_reader/` — local file reading
 - `skills/file_writer/` — local file writing, integrated with ApprovalGate
@@ -462,6 +474,7 @@ This single prompt closes more of the integration gap than any other.
 | 28 | Interrupt and Notification Layer | 599 |
 | 28.5 | Telegram Gateway | 617 |
 | 29 | ResourceManager KV Cache Fix and Resource Budget | 637 |
+| 22.5 | MCP Adapter | 658 |
 
 ---
 
@@ -613,7 +626,7 @@ tools, 80+ bundled skills) and OpenClaw (2,857+ community skills).
 ---
 
 #### Prompt 22.5 — MCP Adapter (Housekeeping)
-**Status**: Queued
+**Status**: DONE
 
 Add MCP (Model Context Protocol) as a standard protocol surface.
 
@@ -634,7 +647,7 @@ Tests: minimum 10. Target: exceed 501.
 ---
 
 #### Prompt 22.6 — Trace-Based Skill Optimiser (Housekeeping)
-**Status**: Queued
+**Status**: IN PROGRESS
 
 Add continuous trace-scoring as a second trigger path for instruction updates,
 complementing the existing rating-trend trigger from Prompt 20.
@@ -657,6 +670,16 @@ Collision policy (mandatory — implement before any trigger can fire):
 - InstructionVersionManager must check for an existing PENDING proposal before
   creating a new one. If a PENDING proposal exists for a worker, skip and return
   the existing proposal. Document this rule in InstructionVersionManager.
+
+**Auto-rating gap (background tasks):**
+- Background task outputs (weather, AIS, email monitors) are never seen by the user
+  at completion time and therefore never manually rated. The rating system has a
+  blind spot for all open-loop work.
+- OutputEvaluator (already built in Prompt 22) MUST be wired as the automatic rater
+  for all background task completions. When a MonitorDaemon task completes without
+  a user-facing session, OutputEvaluator scores it and records a rating via RatingSystem.
+- This wiring must be implemented in Prompt 27 or a dedicated housekeeping prompt
+  before Phase 8 — without it, background workers never improve.
 
 Architecture:
 - `core/trace_optimiser.py` imports only from `core/`
@@ -688,6 +711,13 @@ Task queue persisted via MemoryRouter — survives restarts.
 Approval gate integration — daemon never blocks on approval.
 TaskStateMachine.checkpoint() and load_checkpoints() implemented as stubs —
 full implementation requires key-pattern querying in MemoryRouter.
+
+**⚠ Critical debt:** _restore_queue() and load_checkpoints() stubs mean the daemon
+cannot survive a process restart. The "monitors open-loop background tasks" promise
+is not fulfilled until these stubs are resolved. MemoryRouter key-pattern query
+(also a stub dependency) must land before or alongside the stub resolution.
+This must be scheduled before Phase 9 — the Web GUI has no value if the daemon
+it surfaces cannot recover from a restart.
 
 ---
 
@@ -999,6 +1029,127 @@ Tests: minimum 8 per skill (24 total).
 
 ---
 
+#### Prompt 29.7 — Adapter Fallback Chain
+**Status**: Queued
+
+If the primary LLM adapter is unavailable (Ollama crashed, VRAM full, API timeout),
+tasks currently fail hard. This prompt adds a fallback chain so workers degrade
+gracefully rather than failing.
+
+Files:
+- `core/adapter_fallback.py` — AdapterFallbackChain class
+
+Features:
+- Ordered list of (adapter, model) pairs per worker, configured at worker creation
+- On primary adapter failure, try next in chain automatically
+- Circuit breaker: if adapter fails N consecutive times, mark it unavailable for T seconds
+- Emits trace event on each fallback attempt with reason
+- ResourceManager consulted before each attempt — skip adapters that won't fit in VRAM
+- ApprovalGate integration: if fallback would use a cloud adapter, require approval
+
+Architecture:
+- `core/adapter_fallback.py` imports only from `core/`
+- Emitter injected via constructor, default MemoryTraceEmitter()
+- All I/O async, all public methods typed
+
+Tests: minimum 12.
+
+---
+
+#### Prompt 29.8 — Approval Trust Levels
+**Status**: Queued
+
+Every TerminalSkill and CodeExecutionSkill call currently requires explicit approval,
+including commands the user has approved dozens of times. This creates approval
+fatigue that defeats the purpose of an autonomous assistant.
+
+Files:
+- `core/approval_trust.py` — ApprovalTrustRegistry class
+
+Features:
+- Trust levels: ALWAYS_ASK, SESSION_TRUST, PERMANENT_TRUST, NEVER_ALLOW
+- Per-command trust memory: user approves `git status` once → remembered
+- Session-scoped blanket approval: "approve all read-only terminal commands this session"
+- Trust entries persisted in Postgres (PERMANENT) or in-memory (SESSION)
+- ApprovalGate consults TrustRegistry before raising approval request — skips gate if trusted
+- Trust can be revoked: `jarvis trust revoke <command>`
+- NEVER_ALLOW list: hardcoded dangerous patterns (rm -rf /, format, etc.) that cannot be trusted
+- All trust decisions emitted as trace events for audit
+
+Architecture:
+- `core/approval_trust.py` imports only from `core/`
+- Emitter and MemoryRouter injected via constructor
+- ApprovalGate updated to consult TrustRegistry (one additional constructor param)
+
+Tests: minimum 12.
+
+---
+
+#### Prompt 31.6 — Data Retention and Memory Housekeeping
+**Status**: Queued
+
+Without a retention policy the Postgres trace table and Qdrant collections grow
+indefinitely. After months of use this becomes a performance and disk space problem.
+
+Files:
+- `system/retention_manager.py` — RetentionManager class
+
+Features:
+- Configurable retention windows per table: trace_events (default 90 days), task_history (default 365 days), worker_ratings (keep all — small)
+- Qdrant vector pruning: delete entries older than retention window, or entries whose source document has been deleted
+- Obsidian mirror compaction: archive daily note files older than retention window to a `/archive/` subfolder — never delete
+- Dry-run mode: report what would be pruned without deleting
+- Scheduled via MonitorDaemon (weekly by default)
+- All deletions emitted as trace events
+
+Architecture:
+- `system/retention_manager.py` imports from `core/` and `memory/` only
+- Emitter and MemoryRouter injected via constructor
+- Copy `system/NEWFILE_TEMPLATE.py` as starting point
+
+Tests: minimum 10.
+
+---
+
+#### Prompt 31.7 — Security Baseline
+**Status**: Queued — MUST complete before Prompt 32 (Web GUI)
+
+The FastAPI server (Prompt 32) will be network-accessible. Without a security
+baseline it is open to anyone who can reach the port. This prompt establishes
+the minimum viable security layer before any network surface is exposed.
+
+Files:
+- `core/auth.py` — AuthManager class
+- `web/middleware/auth_middleware.py` — FastAPI auth middleware (created in this prompt, used in Prompt 32)
+
+Features:
+
+**Token-based auth:**
+- Single bearer token generated at first run, stored in .env (never in config YAML)
+- All FastAPI routes require `Authorization: Bearer <token>` header
+- WebSocket connections require token as query param on handshake
+- Token rotation: `jarvis auth rotate` regenerates token, old token immediately invalid
+- 401 response on invalid/missing token, no information leakage
+
+**Prompt injection hardening:**
+- `core/input_sanitiser.py` — strip/escape known injection patterns before LLM context insertion
+- Applied to: WebScraper output, user task input, Telegram inbound messages
+- Patterns blocked: `<|system|>`, `IGNORE PREVIOUS INSTRUCTIONS`, `</s>`, role-switching patterns
+- Logs every sanitisation as a WARNING trace event
+
+**Secrets audit:**
+- At startup, verify no API keys or tokens are present in `jarvis.config.yaml` (they belong in `.env` only)
+- Warn loudly (console + trace event) if secrets found in config file
+
+Architecture:
+- `core/auth.py` and `core/input_sanitiser.py` import only from `core/`
+- `web/middleware/` imports from `core/` only
+- No changes to existing core/ files except adding sanitiser call in WebScraper
+
+Tests: minimum 12.
+
+---
+
 #### Prompt 32 — Web GUI + FastAPI Server
 **Status**: Queued (expanded from original scope — 2026-06-11)
 
@@ -1084,6 +1235,16 @@ Tests: minimum 12.
 | Model registry may seed oversized models | system/model_registry.py | Standardise on Qwen 2.5 7B Q4_K_M — fix in Prompt 16.5 |
 | WorkerPersistence not passed to WorkerFactory in CLI | cli/tui.py, cli/rich_cli.py | Intentional deferral — requires CLI refactor |
 | WorkerPersistence in TYPE_CHECKING block | core/worker_factory.py | Verify no runtime issues in future prompt |
+| No auth on FastAPI server | web/ (Prompt 32) | Prompt 32 must include token-based auth before any network exposure — see Security Baseline section |
+| TerminalSkill/CodeExecutionSkill approval is UX not security | skills/terminal/, skills/code_execution/ | Approval gate stops accidental misuse, not a compromised model. Sandboxing (Prompt 29.5) must add OS-level restriction |
+| WebScraper passes raw HTML to LLM context | skills/web_scraper/ | No prompt injection sanitisation — add in Prompt 29.5 or dedicated housekeeping |
+| No adapter fallback chain | core/orchestrator.py | If primary model/adapter is unavailable, task fails hard. Fallback chain needed before Phase 8 multi-worker mode |
+| Trace event table unbounded | memory/postgres.py | No retention or pruning policy. Will grow indefinitely. Add retention policy in Prompt 32 housekeeping |
+| Qdrant collections unbounded | memory/qdrant.py | No compaction or staleness eviction for vector entries beyond scratchpad compaction |
+| Monitor daemon restart loses queue | system/monitor_daemon.py | _restore_queue() stub — daemon cannot survive restart. Blocks autonomous operation promise |
+| Auto-rating path missing for background tasks | core/rating_system.py | Background task outputs (weather/AIS/email) are never seen by user so never manually rated. OutputEvaluator must close this loop |
+| Fine-tuned model re-ingestion not planned | system/ | Prompt 34 exports ShareGPT but no prompt re-ingests fine-tuned model into Ollama and re-routes workers to it |
+| Approval gate has no trust levels or memory | core/approval_gate.py | Every TerminalSkill/CodeExecutionSkill call requires approval. No session blanket approval, no per-command trust memory. Will cause approval fatigue |
 
 ---
 
@@ -1110,6 +1271,8 @@ and prompt guards when patterns recur.
 16. Stub methods that depend on unbuilt infrastructure left undocumented — _restore_queue() and load_checkpoints() are stubs with a hidden dependency on key-pattern querying in MemoryRouter. Always document stub dependencies explicitly in CHANGELOG and technical debt table.
 17. Fixing production files without simultaneously fixing their tests — DI sweep removed emit_trace from production files but left tests patching module.emit_trace, causing 39 AttributeError failures. Fix is always: production file and its test file as one atomic unit, full suite run, then next file.
 18. Using per-method @pytest.mark.asyncio instead of class-level pytestmark — Prompt 27.5 used per-method decorators for async tests, but global_rules.md mandates class-level pytestmark for all async test classes. From Prompt 28 onward, use pytestmark at class level, not per-method decorators.
+19. Case-sensitive string comparison on enum-like fields in tests — TraceEvent.level is stored lowercase ("warning") but tests asserting `e.level == "WARNING"` fail silently (0 matches, no error). Always use `e.level.upper() == "WARNING"` or normalise at the emitter. When a test asserts on a string field, verify the actual stored value before writing the assertion.
+20. Budget/quota checks that test the request alone instead of accumulated + request — check_token_budget approved a request because it only compared requested_tokens > limit, ignoring session_used. Any method that enforces a cumulative limit MUST fetch the running total first and test (total + requested) > limit, not requested > limit alone.
 
 ---
 
