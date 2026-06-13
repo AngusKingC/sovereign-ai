@@ -5301,3 +5301,86 @@ Each SKILL.md must declare:
 
 **Next Steps**: Prompt 29.8 - TBD
 ---
+
+## Prompt 29.8 - Approval Trust Levels (2026-06-13)
+
+**Objective**: Add trust registry so the approval gate can skip the prompt entirely for previously-approved commands, while keeping a hardcoded NEVER_ALLOW list for genuinely dangerous operations.
+
+**Files Created**:
+- `core/approval_trust.py` - ApprovalTrustRegistry class with trust levels and NEVER_ALLOW patterns
+- `tests/test_approval_trust.py` - Comprehensive test suite (15 tests)
+
+**Files Modified**:
+- `core/observability.py` - Added enum values: TraceComponent.APPROVAL_TRUST, TraceEventType.TRUST_GRANTED, TRUST_REVOKED, TRUST_BLOCKED
+- `core/approval_gate.py` - Added trust_registry parameter to constructor, integrated trust check in request_approval(), added always_approve hook in respond()
+- `tests/test_approval_gate.py` - Added 2 tests for trust registry integration
+
+**Implementation Details**:
+- **ApprovalTrustRegistry class**:
+  - Constructor accepts: memory_router, emitter
+  - Trust levels enum: ALWAYS_ASK (default), SESSION_TRUST (process lifetime), PERMANENT_TRUST (persisted via MemoryRouter), NEVER_ALLOW (hardcoded dangerous patterns)
+  - NEVER_ALLOW patterns: rm -rf /, rm -rf ~, format, mkfs, dd if=, :(){:|:&};:, shutdown, reboot, del /f /s /q C:\
+  - get_trust_level(): Checks NEVER_ALLOW first, then Postgres (PERMANENT), then session dict. Returns ALWAYS_ASK if not found. Raises ApprovalDeniedError for NEVER_ALLOW patterns.
+  - set_trust(): Writes to session dict (SESSION) or persists via MemoryRouter (PERMANENT). Emits trace event.
+  - revoke_trust(): Removes from session dict and Postgres. Emits trace event.
+  - is_trusted(): Returns True if SESSION_TRUST or PERMANENT_TRUST, False if ALWAYS_ASK. Raises ApprovalDeniedError if NEVER_ALLOW.
+  - get_all_trusted(): Returns list of trusted commands with level and source.
+- **ApprovalGate integration**:
+  - Added trust_registry parameter to constructor (default None for backward compatibility)
+  - Modified request_approval(): Check trust_registry.is_trusted() before proceeding. If trusted, return approved immediately. If NEVER_ALLOW, raise ApprovalDeniedError immediately. Otherwise proceed through existing gate logic.
+  - Modified respond(): Added always_approve parameter (default False). If True and approved, call trust_registry.set_trust() to set PERMANENT_TRUST for the command.
+- **Trace events**:
+  - TRUST_GRANTED: Emitted when set_trust() is called
+  - TRUST_REVOKED: Emitted when revoke_trust() is called
+  - TRUST_BLOCKED: Emitted when command matches NEVER_ALLOW pattern
+
+**Test Coverage**:
+- ApprovalTrustRegistry tests (15 tests):
+  1. get_trust_level() returns ALWAYS_ASK for unknown command
+  2. get_trust_level() returns SESSION_TRUST after set_trust(scope="session")
+  3. get_trust_level() returns PERMANENT_TRUST after set_trust(scope="permanent")
+  4. set_trust() persists to MemoryRouter for PERMANENT scope
+  5. set_trust() does NOT persist to MemoryRouter for SESSION scope
+  6. revoke_trust() removes from session dict
+  7. revoke_trust() calls MemoryRouter delete for PERMANENT trust
+  8. is_trusted() returns True for SESSION_TRUST
+  9. is_trusted() returns True for PERMANENT_TRUST
+  10. is_trusted() returns False for ALWAYS_ASK
+  11. is_trusted() raises ApprovalDeniedError for NEVER_ALLOW pattern (rm -rf /)
+  12. get_trust_level() raises ApprovalDeniedError for blocked pattern
+  13. Trace event emitted on set_trust()
+  14. Trace event emitted on revoke_trust()
+  15. Trace event emitted on NEVER_ALLOW block
+- ApprovalGate integration tests (2 tests):
+  1. test_approval_gate_skips_gate_when_command_is_trusted
+  2. test_approval_gate_raises_on_never_allow
+- Total: 17 new tests
+
+**Testing Results**:
+- Baseline: 750 passed, 23 skipped, 12 warnings (from Prompt 29.7)
+- After approval_trust.py + tests: 765 passed, 23 skipped, 10 warnings (+15 tests)
+- After approval_gate.py + tests: 767 passed, 23 skipped, 12 warnings (+2 tests)
+- Final: 767 passed, 23 skipped, 12 warnings (exceeded expected 750+14 by 3, met minimum 17 new tests)
+- All new tests pass with zero new failures
+
+**Implementation Notes**:
+- No test failures encountered during implementation.
+- Trust registry integration was straightforward — added optional parameter to ApprovalGate constructor for backward compatibility.
+- Command extraction from ApprovalRequest: Check action_parameters["command"] first, then fall back to action_description.
+- Trace event emission wrapped in try-except to avoid crashing main code paths if emitter fails.
+- MemoryRouter scoped_write() used for persisting PERMANENT_TRUST commands with scope="approval_trust".
+- MockMemoryRouter in tests uses scoped_read() and scoped_write() to simulate real MemoryRouter behavior.
+
+**Architecture Compliance**:
+- ApprovalTrustRegistry uses constructor-injected emitter
+- ApprovalTrustRegistry uses TraceEventType and TraceComponent enum values
+- ApprovalTrustRegistry imports only from core/ (no imports from adapters/, workers/, skills/, system/, cli/, or web/)
+- All trace events use correct fields: event_type, component, level, message, data, duration_ms
+- No global emit_trace() usage in ApprovalTrustRegistry
+- All tests use class-level pytestmark = pytest.mark.asyncio
+- All tests mock external dependencies (MemoryRouter, emitter)
+
+**Checkpoint**: prompt-29-8 to be created and pushed to remote
+
+**Next Steps**: Prompt 30 - Multi-Worker Mode
+---

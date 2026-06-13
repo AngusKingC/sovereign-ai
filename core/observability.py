@@ -62,6 +62,9 @@ class TraceComponent(str, Enum):
     CLIPBOARD_SKILL = "clipboard_skill"
     CALCULATOR_SKILL = "calculator_skill"
 
+    # Approval
+    APPROVAL_TRUST = "approval_trust"
+
 
 class TraceEventType(str, Enum):
     """Types of trace events."""
@@ -102,6 +105,11 @@ class TraceEventType(str, Enum):
     EMBEDDING_REQUEST = "embedding_request"
     EMBEDDING_COMPLETE = "embedding_complete"
     EMBEDDING_ERROR = "embedding_error"
+    
+    # Approval trust events
+    TRUST_GRANTED = "trust_granted"
+    TRUST_REVOKED = "trust_revoked"
+    TRUST_BLOCKED = "trust_blocked"
     
     # Worker events
     WORKER_PROMPT_BUILD = "worker_prompt_build"

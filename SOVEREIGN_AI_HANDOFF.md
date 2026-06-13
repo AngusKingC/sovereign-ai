@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-13 — post Prompt 29.7 completion. Adapter Fallback Chain implemented with circuit breaker pattern for graceful degradation. Test baseline: 750 passed, 23 skipped, 12 warnings (from 734 passed, +16 new tests).
+**Last updated**: 2026-06-13 — post Prompt 29.8 completion. Approval Trust Levels implemented with trust registry for command approval fatigue reduction. Test baseline: 767 passed, 23 skipped, 12 warnings (from 750 passed, +17 new tests).
 
 ---
 
@@ -352,18 +352,18 @@ This single prompt closes more of the integration gap than any other.
 ## Current State
 
 ### Test Baseline
-- **750 passed, 23 skipped, 12 warnings** (as of Prompt 29.7 / checkpoint prompt-29-7)
+- **767 passed, 23 skipped, 12 warnings** (as of Prompt 29.8 / checkpoint prompt-29-8)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
 - 12 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 4 async decorator marks on sync methods (test_adapter_fallback.py, test_model_evaluator.py) — harmless; PytestUnraisableExceptionWarning for unclosed asyncio transports in subprocess tests — Windows-specific, harmless
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
-### Known Issues from Prompt 29.7
-- None — Adapter Fallback Chain implementation completed successfully
+### Known Issues from Prompt 29.8
+- None — Approval Trust Levels implementation completed successfully
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-29-7`
+- Latest checkpoint tag: `prompt-29-8`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -375,14 +375,15 @@ This single prompt closes more of the integration gap than any other.
 - `core/handlers.py` — QueryHandler, DI complete
 - `core/embedder.py` — OllamaEmbedder
 - `core/escalation.py` — EscalationEngine with evaluate(), request_approval(), execute_escalation() (wiring to orchestrator disabled — debt)
-- `core/observability.py` — TraceEmitter, MemoryTraceEmitter, ConsoleTraceEmitter, TraceComponent.ADAPTER_FALLBACK_CHAIN, TraceEventType.ADAPTER_FALLBACK, ADAPTER_UNAVAILABLE, CIRCUIT_BREAKER_OPEN, CIRCUIT_BREAKER_RESET
+- `core/observability.py` — TraceEmitter, MemoryTraceEmitter, ConsoleTraceEmitter, TraceComponent.ADAPTER_FALLBACK_CHAIN, TraceComponent.APPROVAL_TRUST, TraceEventType.ADAPTER_FALLBACK, ADAPTER_UNAVAILABLE, CIRCUIT_BREAKER_OPEN, CIRCUIT_BREAKER_RESET, TRUST_GRANTED, TRUST_REVOKED, TRUST_BLOCKED
 - `core/commands.py` — CommandRegistry, DI complete
 - `core/exceptions.py` — InvalidStateTransitionError, WorkerNotFoundError, ApprovalDeniedError, CrossScopeAccessError
 - `core/task_state_machine.py` — validated transitions, DENIED terminal state, full history tracking, checkpoint()/load_checkpoints() stubs
 - `core/scratchpad.py` — ScratchpadManager, per-task ephemeral working memory
 - `core/session.py` — SessionManager, Postgres persistence
 - `core/skill_registry.py` — skill discovery, validation, query
-- `core/approval_gate.py` — ApprovalGate, ApprovalRequest, ApprovalResponse, ApprovalScope, session-scoped pre-authorisation, write-through Postgres cache
+- `core/approval_gate.py` — ApprovalGate, ApprovalRequest, ApprovalResponse, ApprovalScope, session-scoped pre-authorisation, write-through Postgres cache, trust_registry parameter for command trust levels
+- `core/approval_trust.py` — ApprovalTrustRegistry with trust levels (ALWAYS_ASK, SESSION_TRUST, PERMANENT_TRUST, NEVER_ALLOW) and command trust persistence
 - `core/worker_factory.py` — WorkerFactory, DynamicWorkerProfile, PlaceholderWorker, rule-based worker creation
 - `core/rating_system.py` — RatingSystem, worker rating persistence, trend analysis
 - `core/instruction_generator.py` — InstructionGenerator, LLM-based instruction file generation
@@ -483,6 +484,7 @@ This single prompt closes more of the integration gap than any other.
 | 29.5 | Developer Skills: Git, Docker, HTTP Client | 704 (+28 new tests) |
 | 29.6 | Productivity Skills: PDF, Spreadsheet, Clipboard, Calculator | 734 (+30 new tests) |
 | 29.7 | Adapter Fallback Chain | 750 (+16 new tests) |
+| 29.8 | Approval Trust Levels | 767 (+17 new tests) |
 
 ---
 
@@ -1095,7 +1097,7 @@ Tests: minimum 12 (16 implemented).
 ---
 
 #### Prompt 29.8 — Approval Trust Levels
-**Status**: IN PROGRESS
+**Status**: DONE
 
 Every TerminalSkill and CodeExecutionSkill call currently requires explicit approval,
 including commands the user has approved dozens of times. This creates approval
@@ -1119,7 +1121,41 @@ Architecture:
 - Emitter and MemoryRouter injected via constructor
 - ApprovalGate updated to consult TrustRegistry (one additional constructor param)
 
-Tests: minimum 12.
+Tests: minimum 12 (17 implemented).
+
+---
+
+#### Prompt 30 — Multi-Worker Mode
+**Status**: IN PROGRESS
+
+Route same task to top N workers concurrently.
+Resource budget enforced — only dispatch if budget allows.
+ResourceManager consulted for live memory state.
+Responses surfaced side by side. User selection feeds rating system.
+
+---
+
+#### Prompt 30.5 — Environment and Media Skills: Home Assistant, Screenshot, TTS, Transcription (New — added 2026-06-11)
+**Status**: Queued
+
+Files:
+- `skills/home_assistant/` — HomeAssistantSkill
+- `skills/screenshot/` — ScreenshotSkill
+- `skills/tts/` — TTSSkill
+- `skills/transcription/` — TranscriptionSkill
+
+Features:
+- Home Assistant: list entities, call services (lights, switches, climate, sensors)
+- Screenshot: screen capture, pass to vision model
+- TTS: local Piper TTS (no API key, CPU) or ElevenLabs
+- Transcription: local Whisper (no API key, CPU), transcribe voice/audio
+
+Architecture:
+- All skills import from `core/` and `skills/base.py` only
+- Emitter injected via constructor
+- All I/O async, all public methods typed
+
+Tests: minimum 8 (2 per skill).
 
 ---
 

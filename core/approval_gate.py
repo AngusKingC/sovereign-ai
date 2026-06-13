@@ -24,6 +24,7 @@ from core.exceptions import ApprovalDeniedError, WorkerNotFoundError
 if TYPE_CHECKING:
     from core.task_state_machine import TaskStateMachine
     from core.memory_router import MemoryRouter
+    from core.approval_trust import ApprovalTrustRegistry
 
 
 class ApprovalActionType(str, Enum):
@@ -122,6 +123,7 @@ class ApprovalGate:
         state_machine: "TaskStateMachine",
         memory_router: "MemoryRouter",
         emitter: TraceEmitter | None = None,
+        trust_registry: "ApprovalTrustRegistry | None" = None,
     ) -> None:
         """Initialize the approval gate.
         
@@ -129,12 +131,14 @@ class ApprovalGate:
             state_machine: TaskStateMachine for state transitions
             memory_router: MemoryRouter for persistence
             emitter: TraceEmitter for observability
+            trust_registry: ApprovalTrustRegistry for command trust levels (optional)
         """
         from core.observability import NullTraceEmitter
         
         self.state_machine = state_machine
         self.memory_router = memory_router
         self.emitter = emitter if emitter is not None else NullTraceEmitter()
+        self.trust_registry = trust_registry
         
         # In-memory cache for scopes (keyed by session_id)
         self._scope_cache: dict[str, list[ApprovalScope]] = {}
@@ -247,6 +251,31 @@ class ApprovalGate:
         from core.schemas import Task, TaskStatus
         from core.exceptions import InvalidStateTransitionError
         
+        # Check trust registry if available
+        if self.trust_registry is not None:
+            # Extract command from action_description or action_parameters
+            command = request.action_description
+            if "command" in request.action_parameters:
+                command = request.action_parameters["command"]
+            
+            try:
+                is_trusted = await self.trust_registry.is_trusted(command)
+                if is_trusted:
+                    # Skip gate, return approved automatically
+                    return ApprovalResponse(
+                        request_id=request.request_id,
+                        task_id=request.task_id,
+                        approved=True,
+                        decision_reason="Command trusted by trust registry",
+                        approved_by="trust_registry",
+                    )
+            except ApprovalDeniedError:
+                # NEVER_ALLOW pattern matched, raise immediately
+                raise
+            except Exception:
+                # Trust check failed, proceed with normal gate logic
+                pass
+        
         # Add to pending queue
         self._pending_requests[request.request_id] = request
         
@@ -340,13 +369,14 @@ class ApprovalGate:
             approved_by="system",
         )
     
-    async def respond(self, request_id: str, approved: bool, responder: str) -> ApprovalResponse:
+    async def respond(self, request_id: str, approved: bool, responder: str, always_approve: bool = False) -> ApprovalResponse:
         """Respond to a pending approval request.
         
         Args:
             request_id: The request ID to respond to
             approved: Whether the request is approved
             responder: User ID responding to the request
+            always_approve: If True and approved, set trust for this command
             
         Returns:
             ApprovalResponse with the decision
@@ -358,6 +388,7 @@ class ApprovalGate:
         """
         from core.schemas import Task, TaskStatus
         from core.exceptions import InvalidStateTransitionError
+        from core.approval_trust import TrustLevel
         
         # Check if request exists
         if request_id not in self._pending_requests:
@@ -370,6 +401,17 @@ class ApprovalGate:
             request.status = "approved"
             request.approved_by = responder
             request.approved_at = datetime.utcnow()
+            
+            # Set trust if always_approve is True and trust_registry is available
+            if always_approve and self.trust_registry is not None:
+                command = request.action_description
+                if "command" in request.action_parameters:
+                    command = request.action_parameters["command"]
+                try:
+                    await self.trust_registry.set_trust(command, TrustLevel.PERMANENT_TRUST, scope="permanent")
+                except Exception:
+                    # Trust setting failed, but approval still succeeds
+                    pass
         else:
             request.status = "denied"
             request.approved_by = responder

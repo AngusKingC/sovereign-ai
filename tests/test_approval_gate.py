@@ -13,6 +13,7 @@ from core.approval_gate import (
 )
 from core.observability import MemoryTraceEmitter
 from core.exceptions import ApprovalDeniedError, WorkerNotFoundError
+from core.approval_trust import ApprovalTrustRegistry, TrustLevel
 
 
 class MockMemoryRouter:
@@ -440,3 +441,68 @@ class TestApprovalGate:
         events = emitter.get_events()
         assert len(events) > 0
         assert any("scope_id" in event.data for event in events)
+
+    async def test_approval_gate_skips_gate_when_command_is_trusted(self) -> None:
+        """Test gate returns approved without prompting when trust_registry says trusted."""
+        mock_router = MockMemoryRouter()
+        mock_state_machine = MockStateMachine()
+        emitter = MemoryTraceEmitter()
+        trust_emitter = MemoryTraceEmitter()
+        
+        # Create trust registry and set a trusted command
+        trust_registry = ApprovalTrustRegistry(memory_router=None, emitter=trust_emitter)
+        await trust_registry.set_trust("git status", TrustLevel.PERMANENT_TRUST, scope="permanent")
+        
+        # Create gate with trust registry
+        gate = ApprovalGate(mock_state_machine, mock_router, emitter, trust_registry=trust_registry)
+        
+        request = ApprovalRequest(
+            request_id="apr_123",
+            task_id="task_abc",
+            session_id="sess_xyz",
+            action_type=ApprovalActionType.SHELL_COMMAND,
+            action_description="git status",
+            action_parameters={"command": "git status"},
+            risk_level="low",
+            reason_for_approval="Git command",
+            expires_at=datetime.utcnow() + timedelta(seconds=300),
+        )
+        
+        response = await gate.request_approval(request)
+        
+        # Should return approved immediately without adding to pending queue
+        assert response.approved is True
+        assert response.approved_by == "trust_registry"
+        assert "apr_123" not in gate._pending_requests
+
+    async def test_approval_gate_raises_on_never_allow(self) -> None:
+        """Test gate raises ApprovalDeniedError when trust_registry returns NEVER_ALLOW."""
+        mock_router = MockMemoryRouter()
+        mock_state_machine = MockStateMachine()
+        emitter = MemoryTraceEmitter()
+        trust_emitter = MemoryTraceEmitter()
+        
+        # Create trust registry
+        trust_registry = ApprovalTrustRegistry(memory_router=None, emitter=trust_emitter)
+        
+        # Create gate with trust registry
+        gate = ApprovalGate(mock_state_machine, mock_router, emitter, trust_registry=trust_registry)
+        
+        request = ApprovalRequest(
+            request_id="apr_123",
+            task_id="task_abc",
+            session_id="sess_xyz",
+            action_type=ApprovalActionType.SHELL_COMMAND,
+            action_description="rm -rf /",
+            action_parameters={"command": "rm -rf /"},
+            risk_level="critical",
+            reason_for_approval="Dangerous command",
+            expires_at=datetime.utcnow() + timedelta(seconds=300),
+        )
+        
+        # Should raise ApprovalDeniedError immediately
+        with pytest.raises(ApprovalDeniedError):
+            await gate.request_approval(request)
+        
+        # Should not add to pending queue
+        assert "apr_123" not in gate._pending_requests
