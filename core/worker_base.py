@@ -76,12 +76,14 @@ class WorkerBase(ABC):
         memory_router: "MemoryRouter",
         scratchpad_manager: "ScratchpadManager | None" = None,
         emitter: "TraceEmitter | None" = None,
+        fallback_chain: Any = None,
     ) -> None:
         """Initialize the worker with dependencies."""
         self.profile = profile
         self.llm = llm
         self.memory_router = memory_router
         self.scratchpad_manager = scratchpad_manager
+        self.fallback_chain = fallback_chain
         self.current_task_id: str | None = None
         if emitter is None:
             from core.observability import ConsoleTraceEmitter
@@ -161,11 +163,21 @@ class WorkerBase(ABC):
 
         # Step 3: LLM_CALLED
         start_time = time.perf_counter()
-        llm_response = await self.llm.generate(
-            messages=prompt,
-            temperature=0.1,
-            max_tokens=2048,
-        )
+        
+        # Use fallback chain if available, otherwise call adapter directly
+        if self.fallback_chain is not None:
+            llm_response = await self.fallback_chain.execute(
+                prompt,
+                temperature=0.1,
+                max_tokens=2048,
+            )
+        else:
+            llm_response = await self.llm.generate(
+                messages=prompt,
+                temperature=0.1,
+                max_tokens=2048,
+            )
+        
         duration_ms = int((time.perf_counter() - start_time) * 1000)
         await self.emitter.emit(TraceEvent(
             event_type=TraceEventType.ADAPTER_CALL,

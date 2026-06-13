@@ -511,3 +511,70 @@ class TestOrchestrator:
         output = asyncio.run(orchestrator.route_task(task))
         assert output.worker_id == "active_worker"
 
+    def test_fallback_chain_injected_into_worker_on_registration(self, memory_router, trace_emitter):
+        """Test that fallback chain is injected into worker when registered."""
+        from core.adapter_fallback import AdapterFallbackChain
+
+        # Create a mock fallback chain
+        primary_adapter = MockLLMAdapter()
+        fallback_adapter = MockLLMAdapter()
+        fallback_chain = AdapterFallbackChain(
+            adapters=[(primary_adapter, "model1"), (fallback_adapter, "model2")],
+            emitter=trace_emitter,
+        )
+
+        # Create orchestrator with fallback chain
+        orchestrator = Orchestrator(
+            memory_router=memory_router,
+            fallback_chain=fallback_chain,
+            emitter=trace_emitter,
+        )
+
+        # Create and register a worker
+        profile = WorkerProfile(
+            worker_id="worker1",
+            worker_type="test",
+            depth_preference=0.5,
+            speculation_tolerance=0.5,
+            source_skepticism=0.5,
+            verbosity=0.5,
+            preferred_model="mock-model",
+            escalation_threshold=0.8,
+            capabilities=["test"],
+            preferred_complexity=0.5,
+        )
+        llm = MockLLMAdapter()
+        worker = EchoWorker(profile=profile, llm=llm, memory_router=memory_router)
+
+        orchestrator.register_worker("worker1", worker)
+
+        # Verify fallback chain was injected
+        assert worker.fallback_chain is not None
+        assert worker.fallback_chain == fallback_chain
+
+    def test_orchestrator_works_without_fallback_chain(self, orchestrator, memory_router, sample_task):
+        """Test that orchestrator works normally when fallback_chain is None (backward compatibility)."""
+        profile = WorkerProfile(
+            worker_id="worker1",
+            worker_type="test",
+            depth_preference=0.5,
+            speculation_tolerance=0.5,
+            source_skepticism=0.5,
+            verbosity=0.5,
+            preferred_model="mock-model",
+            escalation_threshold=0.8,
+            capabilities=["test"],
+            preferred_complexity=0.5,
+        )
+        llm = MockLLMAdapter()
+        worker = EchoWorker(profile=profile, llm=llm, memory_router=memory_router)
+
+        orchestrator.register_worker("worker1", worker)
+
+        import asyncio
+
+        output = asyncio.run(orchestrator.route_task(sample_task))
+        assert output.worker_id == "worker1"
+        # Verify worker does not have fallback chain
+        assert worker.fallback_chain is None
+

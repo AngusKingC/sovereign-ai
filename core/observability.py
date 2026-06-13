@@ -38,6 +38,7 @@ class TraceComponent(str, Enum):
     
     # Adapters
     ADAPTER = "adapter"
+    ADAPTER_FALLBACK_CHAIN = "adapter_fallback_chain"
     
     # Interfaces
     CLI = "cli"
@@ -87,6 +88,10 @@ class TraceEventType(str, Enum):
     ADAPTER_CALL = "adapter_call"
     ADAPTER_RESPONSE = "adapter_response"
     ADAPTER_ERROR = "adapter_error"
+    ADAPTER_FALLBACK = "adapter_fallback"
+    ADAPTER_UNAVAILABLE = "adapter_unavailable"
+    CIRCUIT_BREAKER_OPEN = "circuit_breaker_open"
+    CIRCUIT_BREAKER_RESET = "circuit_breaker_reset"
     
     # Memory events
     MEMORY_ACCESS = "memory_access"

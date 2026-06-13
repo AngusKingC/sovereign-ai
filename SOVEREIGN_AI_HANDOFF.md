@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-13 — post Prompt 29.6 completion. Productivity Skills: PDF, Spreadsheet, Clipboard, Calculator created with full test coverage. Test baseline: 734 passed, 23 skipped, 8 warnings (from 704 passed, +30 new tests).
+**Last updated**: 2026-06-13 — post Prompt 29.7 completion. Adapter Fallback Chain implemented with circuit breaker pattern for graceful degradation. Test baseline: 750 passed, 23 skipped, 12 warnings (from 734 passed, +16 new tests).
 
 ---
 
@@ -352,30 +352,30 @@ This single prompt closes more of the integration gap than any other.
 ## Current State
 
 ### Test Baseline
-- **734 passed, 23 skipped, 8 warnings** (as of Prompt 29.6 / checkpoint prompt-29-6)
+- **750 passed, 23 skipped, 12 warnings** (as of Prompt 29.7 / checkpoint prompt-29-7)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
-- 8 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless; PytestUnraisableExceptionWarning for unclosed asyncio transports in subprocess tests — Windows-specific, harmless
+- 12 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 4 async decorator marks on sync methods (test_adapter_fallback.py, test_model_evaluator.py) — harmless; PytestUnraisableExceptionWarning for unclosed asyncio transports in subprocess tests — Windows-specific, harmless
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
-### Known Issues from Prompt 29.6
-- None — Productivity Skills implementation completed successfully
+### Known Issues from Prompt 29.7
+- None — Adapter Fallback Chain implementation completed successfully
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-29-6`
+- Latest checkpoint tag: `prompt-29-7`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
 ### Core Layer
 - `core/schemas.py` — all Pydantic models including TaskStatus.DENIED, EvaluatorScore, EvaluationRecord, OrchestratorMetrics
 - `core/memory_router.py` — MemoryBackend ABC, MemoryRouter with tracing, scoped_write/read, get/set_global_context, compactor integration
-- `core/worker_base.py` — LLMResponse, LLMAdapter Protocol, WorkerBase ABC (DI)
-- `core/orchestrator.py` — routing with scoring algorithm, deregister_worker, mark_task_completed integration, DI complete (escalation engine integration disabled in Prompt 26 — debt)
+- `core/worker_base.py` — LLMResponse, LLMAdapter Protocol, WorkerBase ABC (DI), fallback_chain parameter for adapter fallback chain
+- `core/orchestrator.py` — routing with scoring algorithm, deregister_worker, mark_task_completed integration, DI complete (escalation engine integration disabled in Prompt 26 — debt), fallback_chain parameter and worker injection
 - `core/handlers.py` — QueryHandler, DI complete
 - `core/embedder.py` — OllamaEmbedder
 - `core/escalation.py` — EscalationEngine with evaluate(), request_approval(), execute_escalation() (wiring to orchestrator disabled — debt)
-- `core/observability.py` — TraceEmitter, MemoryTraceEmitter, ConsoleTraceEmitter
+- `core/observability.py` — TraceEmitter, MemoryTraceEmitter, ConsoleTraceEmitter, TraceComponent.ADAPTER_FALLBACK_CHAIN, TraceEventType.ADAPTER_FALLBACK, ADAPTER_UNAVAILABLE, CIRCUIT_BREAKER_OPEN, CIRCUIT_BREAKER_RESET
 - `core/commands.py` — CommandRegistry, DI complete
 - `core/exceptions.py` — InvalidStateTransitionError, WorkerNotFoundError, ApprovalDeniedError, CrossScopeAccessError
 - `core/task_state_machine.py` — validated transitions, DENIED terminal state, full history tracking, checkpoint()/load_checkpoints() stubs
@@ -393,6 +393,7 @@ This single prompt closes more of the integration gap than any other.
 - `core/notification.py` — NotificationSystem, NotificationType enum, urgency-based routing
 - `core/resource_budget.py` — ResourceBudget, BudgetCheckResult, async budget checks (token, worker, VRAM, all)
 - `core/trace_optimiser.py` — TraceOptimiser, continuous trace-scoring as second trigger path for instruction updates, collision-prevention policy
+- `core/adapter_fallback.py` — AdapterFallbackChain with circuit breaker pattern for graceful degradation
 
 ### Memory Layer
 - `memory/obsidian.py` — Markdown vault storage
@@ -481,6 +482,7 @@ This single prompt closes more of the integration gap than any other.
 | 22.8 | Real Embeddings + Qdrant Vector Validation | 676 (partial no-op - embedding already done, only fixed hardcoded vector_size) |
 | 29.5 | Developer Skills: Git, Docker, HTTP Client | 704 (+28 new tests) |
 | 29.6 | Productivity Skills: PDF, Spreadsheet, Clipboard, Calculator | 734 (+30 new tests) |
+| 29.7 | Adapter Fallback Chain | 750 (+16 new tests) |
 
 ---
 
@@ -1066,7 +1068,7 @@ Tests: minimum 8 per skill (24 total).
 ---
 
 #### Prompt 29.7 — Adapter Fallback Chain
-**Status**: IN PROGRESS
+**Status**: DONE
 
 If the primary LLM adapter is unavailable (Ollama crashed, VRAM full, API timeout),
 tasks currently fail hard. This prompt adds a fallback chain so workers degrade
@@ -1088,12 +1090,12 @@ Architecture:
 - Emitter injected via constructor, default MemoryTraceEmitter()
 - All I/O async, all public methods typed
 
-Tests: minimum 12.
+Tests: minimum 12 (16 implemented).
 
 ---
 
 #### Prompt 29.8 — Approval Trust Levels
-**Status**: Queued
+**Status**: IN PROGRESS
 
 Every TerminalSkill and CodeExecutionSkill call currently requires explicit approval,
 including commands the user has approved dozens of times. This creates approval

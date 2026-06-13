@@ -5214,5 +5214,90 @@ Each SKILL.md must declare:
 
 **Checkpoint**: prompt-29-6 to be created and pushed to remote
 
-**Next Steps**: Prompt 29.7 - OS-Level Sandbox for TerminalSkill and CodeExecutionSkill (Housekeeping)
+**Next Steps**: Prompt 29.7 - Adapter Fallback Chain
+---
+
+## Prompt 29.7 - Adapter Fallback Chain (2026-06-13)
+
+**Objective**: Implement Adapter Fallback Chain with circuit breaker pattern for graceful degradation when adapters fail (Ollama crashed, VRAM full, API timeout).
+
+**Files Created**:
+- `core/adapter_fallback.py` - AdapterFallbackChain class with circuit breaker logic
+- `tests/test_adapter_fallback.py` - Comprehensive test suite (14 tests)
+
+**Files Modified**:
+- `core/observability.py` - Added enum values: TraceComponent.ADAPTER_FALLBACK_CHAIN, TraceEventType.ADAPTER_FALLBACK, TraceEventType.ADAPTER_UNAVAILABLE, TraceEventType.CIRCUIT_BREAKER_OPEN, TraceEventType.CIRCUIT_BREAKER_RESET
+- `core/worker_base.py` - Added fallback_chain parameter to constructor, wired fallback_chain.execute() in run() method
+- `core/orchestrator.py` - Added fallback_chain parameter to constructor, inject fallback_chain into workers during registration
+- `tests/test_orchestrator.py` - Added 2 tests for fallback chain integration
+
+**Implementation Details**:
+- **AdapterFallbackChain class**:
+  - Constructor accepts: adapters list, resource_manager, approval_gate, emitter, failure_threshold, circuit_breaker_timeout
+  - Internal state: failure_counts dict, circuit_open_since dict
+  - execute() method: Iterates adapters with circuit breaker, VRAM check, approval gate, fallback logic
+  - is_available(): Check if adapter is available (circuit breaker not open or timeout elapsed)
+  - reset_circuit_breaker(): Manually reset circuit breaker, emits reset trace event
+  - get_status(): Returns status list for all adapters (index, adapter, model, failures, circuit_open, resets_in_seconds)
+  - _get_adapter_name(): Extract adapter name from instance
+  - _is_cloud_adapter(): Check if adapter appears to be cloud adapter (Gemini, OpenAI, Anthropic, OpenRouter)
+- **WorkerBase integration**:
+  - Added fallback_chain parameter to constructor (default None for backward compatibility)
+  - Modified run() method: Use fallback_chain.execute() if available, otherwise call adapter directly
+- **Orchestrator integration**:
+  - Added fallback_chain parameter to constructor (default None for backward compatibility)
+  - Modified register_worker() to inject fallback_chain into worker if worker has fallback_chain attribute
+- **Trace events**:
+  - ADAPTER_FALLBACK: Emitted when adapter fails and falling back to next adapter
+  - ADAPTER_UNAVAILABLE: Emitted when adapter skipped due to VRAM constraints or approval denial
+  - CIRCUIT_BREAKER_OPEN: Emitted when circuit breaker opens for an adapter
+  - CIRCUIT_BREAKER_RESET: Emitted when circuit breaker is reset (manually or timeout)
+
+**Test Coverage**:
+- AdapterFallbackChain tests (14 tests):
+  1. execute() calls primary adapter and returns result on success
+  2. execute() falls back to second adapter when primary raises
+  3. execute() falls back through full chain and raises RuntimeError when all adapters fail
+  4. execute() opens circuit breaker after failure_threshold consecutive failures
+  5. execute() skips adapter with open circuit breaker
+  6. execute() resets circuit breaker after timeout elapses and retries adapter
+  7. execute() skips adapter when VRAM check fails (resource_manager provided)
+  8. execute() skips VRAM check when resource_manager is None
+  9. execute() requests approval before cloud adapter fallback when approval_gate provided
+  10. execute() skips cloud adapter when approval denied
+  11. is_available() returns correct status for open and closed circuit breakers
+  12. get_status() returns correct status list for all adapters
+  13. reset_circuit_breaker() clears failure count and emits reset trace event
+  14. Trace event emitted on fallback with correct failed adapter name
+- Orchestrator integration tests (2 tests):
+  1. test_fallback_chain_injected_into_worker_on_registration
+  2. test_orchestrator_works_without_fallback_chain (backward compatibility)
+- Total: 16 new tests
+
+**Testing Results**:
+- Baseline: 734 passed, 23 skipped, 8 warnings (from Prompt 29.6)
+- After adapter_fallback.py + tests: 748 passed, 23 skipped, 10 warnings (+14 tests)
+- After orchestrator integration: 750 passed, 23 skipped, 12 warnings (+2 tests)
+- Final: 750 passed, 23 skipped, 12 warnings (exceeded expected 734+16 by 0, met minimum 16 new tests)
+- All new tests pass with zero new failures
+
+**Implementation Notes**:
+- Initial test failures: Circuit breaker tests expected fallback adapter to fail, but fallback was set to succeed. Fixed by making fallback succeed in tests to properly verify circuit breaker behavior (primary fails, fallback succeeds, circuit breaker opens for primary).
+- VRAM check test failure: MockResourceManager returned same result for all models. Fixed by implementing per-model VRAM check results in MockResourceManager.
+- Fallback chain signature mismatch: AdapterFallbackChain.execute() expects prompt string, but LLMAdapter.generate() expects messages list. Resolved by passing prompt string directly to fallback_chain.execute() and letting it handle adapter-specific message formatting internally.
+- Worker integration: Initially tried to inject fallback_chain at orchestrator level, but realized worker needs to use it. Added fallback_chain parameter to WorkerBase constructor and wired it into run() method.
+- Backward compatibility: Both Orchestrator and WorkerBase default fallback_chain to None, ensuring existing code continues to work without modification.
+
+**Architecture Compliance**:
+- AdapterFallbackChain uses constructor-injected emitter
+- AdapterFallbackChain uses TraceEventType and TraceComponent enum values
+- AdapterFallbackChain imports only from core/ (no imports from adapters/, workers/, skills/, system/)
+- All trace events use correct fields: event_type, component, level, message, data, duration_ms
+- No global emit_trace() usage in AdapterFallbackChain
+- All tests use class-level pytestmark = pytest.mark.asyncio
+- All tests mock external dependencies (adapters, resource_manager, approval_gate)
+
+**Checkpoint**: prompt-29-7 to be created and pushed to remote
+
+**Next Steps**: Prompt 29.8 - TBD
 ---

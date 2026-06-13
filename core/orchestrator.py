@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from core.orchestrator_improvement import OrchestratorImprovementLoop
     from core.approval_gate import ApprovalGate, ApprovalRequest
     from core.escalation import EscalationEngine
+    from core.adapter_fallback import AdapterFallbackChain
 
 
 class Orchestrator:
@@ -39,6 +40,7 @@ class Orchestrator:
         cloud_fallback_model: str = "gpt-4o",
         approval_gate: "ApprovalGate | None" = None,
         escalation_engine: "EscalationEngine | None" = None,
+        fallback_chain: "AdapterFallbackChain | None" = None,
         emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the orchestrator with dependencies."""
@@ -47,6 +49,7 @@ class Orchestrator:
         self.cloud_fallback_model = cloud_fallback_model
         self.approval_gate = approval_gate
         self.escalation_engine = escalation_engine
+        self.fallback_chain = fallback_chain
         self.workers: dict[str, "WorkerBase"] = {}
         self.pending_approval_queue: list[Task] = []
         self._emitter = emitter or MemoryTraceEmitter()
@@ -62,6 +65,10 @@ class Orchestrator:
     def register_worker(self, worker_id: str, worker: "WorkerBase") -> None:
         """Register a worker with the orchestrator."""
         self.workers[worker_id] = worker
+        
+        # Inject fallback chain into worker if available
+        if self.fallback_chain is not None and hasattr(worker, "fallback_chain"):
+            worker.fallback_chain = self.fallback_chain
         
         # Emit worker registration event (wrapped to avoid crashing main path)
         try:
