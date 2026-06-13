@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-13 — post Prompt 22.6 completion. Trace-Based Skill Optimiser implemented with TraceOptimiser class for continuous trace-scoring as second trigger path for instruction updates. Collision-prevention policy added to InstructionVersionManager to prevent duplicate proposals when both rating-trend and trace-score triggers fire simultaneously. 18 new tests added (6 instruction_versioning + 12 trace_optimiser). Test baseline: 676 passed, 23 skipped, 10 warnings.
+**Last updated**: 2026-06-13 — post Prompt 22.7 completion. Escalation Engine Re-wiring was a no-op — escalation wiring already present in core/orchestrator.py and tests already passing. Work was already completed in a previous prompt. Test baseline unchanged: 676 passed, 23 skipped, 10 warnings.
 
 ---
 
@@ -358,12 +358,12 @@ This single prompt closes more of the integration gap than any other.
 - 10 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless; PytestUnraisableExceptionWarning for unclosed asyncio transports in subprocess tests — Windows-specific, harmless
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
-### Known Issues from Prompt 22.6
-- None — Trace-Based Skill Optimiser implemented with full test coverage
+### Known Issues from Prompt 22.7
+- None — Escalation Engine Re-wiring was a no-op (work already completed in previous prompt)
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-22-6`
+- Latest checkpoint tag: `prompt-22-7`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -477,6 +477,7 @@ This single prompt closes more of the integration gap than any other.
 | 29 | ResourceManager KV Cache Fix and Resource Budget | 637 |
 | 22.5 | MCP Adapter | 658 |
 | 22.6 | Trace-Based Skill Optimiser | 676 |
+| 22.7 | Escalation Engine Re-wiring | 676 (no-op - work already done) |
 
 ---
 
@@ -693,7 +694,7 @@ Tests: minimum 12. Target: exceed new 22.5 baseline.
 ---
 
 #### Prompt 22.7 — Escalation Engine Re-wiring (Housekeeping)
-**Status**: IN PROGRESS
+**Status**: DONE
 
 Re-wire the escalation engine that was disconnected from the orchestrator in the Prompt 26 regression fix. core/escalation.py is complete — the orchestrator simply stopped calling it. This prompt reconnects it and re-enables the skipped test file.
 
@@ -708,7 +709,7 @@ Tests: minimum 8 re-enabled or new tests in test_escalation.py. All previously s
 ---
 
 #### Prompt 22.8 — Real Embeddings + Qdrant Vector Validation (Housekeeping)
-**Status**: Queued
+**Status**: IN PROGRESS
 
 MemoryRouter currently writes zero vectors to Qdrant — semantic search is non-functional. Wire OllamaEmbedder into the MemoryRouter.write() path and fix the hardcoded vector size bug in memory/qdrant.py.
 

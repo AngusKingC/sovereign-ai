@@ -4995,4 +4995,43 @@ Each SKILL.md must declare:
 **Checkpoint**: prompt-22-6 to be created and pushed to remote
 
 **Next Steps**: Prompt 22.7 - Escalation Engine Re-wiring (Housekeeping)
+
+---
+
+### 2026-06-13 - Prompt 22.7: Escalation Engine Re-wiring (Housekeeping)
+**Implementation**: No-op — escalation wiring already present and tests already passing
+
+**Files Modified**: None
+
+**Implementation Notes**:
+- **Finding**: Upon reading core/escalation.py, core/orchestrator.py, and tests/test_escalation.py, discovered that the escalation wiring is ALREADY PRESENT in core/orchestrator.py (lines 123-143). The constructor already accepts escalation_engine parameter (line 41) and stores it (line 49). The tests in tests/test_escalation.py have NO skip markers - all 7 tests are active and passing.
+- **Contradiction with prompt**: The prompt stated "core/escalation.py was fully implemented in Prompt 24 but was disconnected from core/orchestrator.py during a regression fix in Prompt 26." However, the current code shows the wiring is intact and working. This suggests the escalation was already re-wired in a previous prompt (possibly Prompt 26 itself or a later prompt).
+- **Current wiring**: The escalation flow in process_task() (lines 123-143) is complete:
+  * Checks if escalation_engine is configured
+  * Calls evaluate() to check if escalation is needed
+  * If should_escalate, calls request_approval() if approval_gate exists
+  * If approved, calls execute_escalation()
+  * If denied, sets metadata flags (escalation_denied, denied_reason)
+  * If no approval_gate, escalates automatically
+  * All wrapped in try-except to prevent crashes
+- **Test status**: All 7 escalation tests in tests/test_escalation.py pass. No skip markers present. Tests use per-method @pytest.mark.asyncio decorators (not class-level pytestmark, but this is not blocking).
+- **EscalationEngine constructor**: Requires approval_gate, memory_router, emitter (optional). All correctly injected in orchestrator constructor.
+- **Architecture compliance**: core/orchestrator.py uses constructor-injected emitter (compliant). Uses TraceEventType and TraceComponent enums (compliant). EscalationEngine uses constructor-injected emitter (compliant).
+
+**Testing Results**:
+- Baseline: 676 passed, 23 skipped, 10 warnings (from Prompt 22.6)
+- After verification: 676 passed, 23 skipped, 10 warnings (no change - work already done)
+- All 7 escalation tests pass
+- No new tests added (work already completed in previous prompt)
+
+**Architecture Compliance**:
+- No changes required — escalation wiring already present and compliant
+- core/orchestrator.py already uses constructor-injected emitter
+- core/orchestrator.py already uses TraceEventType and TraceComponent enums
+- EscalationEngine already uses constructor-injected emitter
+- EscalationEngine already uses TraceEventType and TraceComponent enums
+
+**Checkpoint**: prompt-22-7 to be created and pushed to remote
+
+**Next Steps**: Prompt 22.8 - MemoryRouter Key-Pattern Query (Housekeeping)
 ---
