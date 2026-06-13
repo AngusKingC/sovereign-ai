@@ -50,19 +50,39 @@ class InstructionVersionManager:
         self.emitter = emitter if emitter is not None else MemoryTraceEmitter()
         self.trend_threshold = trend_threshold
         self.min_ratings = min_ratings
+        self._pending_proposals: dict[str, VersionUpdateProposal] = {}
     
     async def check_and_trigger_update(
         self,
         profile: DynamicWorkerProfile
     ) -> VersionUpdateProposal | None:
         """Check if an instruction update is needed and trigger proposal if so.
-        
+
         Args:
             profile: Worker profile to check for update eligibility
-            
+
         Returns:
             VersionUpdateProposal if update needed, None otherwise
         """
+        # Collision policy: only one PENDING proposal per worker at a time.
+        # If a PENDING proposal exists (from rating-trend trigger or trace-score trigger),
+        # return it immediately. New proposals queue only after the existing one is resolved.
+        # This prevents duplicate proposals when both trigger paths fire simultaneously.
+        if profile.worker_id in self._pending_proposals:
+            existing_proposal = self._pending_proposals[profile.worker_id]
+            try:
+                await self.emitter.emit(TraceEvent(
+                    event_type=TraceEventType.PROPOSAL_COLLISION_SKIPPED,
+                    component=TraceComponent.INSTRUCTION_VERSIONING,
+                    level=TraceLevel.INFO,
+                    message=f"Skipped duplicate proposal for worker {profile.worker_id}",
+                    data={"worker_id": profile.worker_id},
+                    duration_ms=0
+                ))
+            except Exception:
+                pass
+            return existing_proposal
+
         # Check rating trend
         rating_trend = await self.rating_system.get_trend(profile.worker_id, window=10)
         
@@ -104,6 +124,9 @@ class InstructionVersionManager:
             status="pending",
             created_at=datetime.now()
         )
+
+        # Track pending proposal for collision prevention
+        self._pending_proposals[profile.worker_id] = proposal
         
         # Store proposal
         await self.memory_router.write(
@@ -218,6 +241,10 @@ class InstructionVersionManager:
             },
             collection="version_update_proposals"
         )
+
+        # Clear pending proposal tracking
+        if proposal.worker_id in self._pending_proposals:
+            del self._pending_proposals[proposal.worker_id]
         
         # Emit trace event
         try:
@@ -236,7 +263,59 @@ class InstructionVersionManager:
             pass
         
         return new_instruction
-    
+
+    async def reject_update(
+        self,
+        proposal: VersionUpdateProposal
+    ) -> None:
+        """Reject a proposed instruction update.
+
+        Args:
+            proposal: VersionUpdateProposal to reject
+
+        Raises:
+            ValueError: If proposal status is not "pending"
+        """
+        # Verify proposal status
+        if proposal.status != "pending":
+            raise ValueError(f"Cannot reject proposal with status {proposal.status}")
+
+        # Update proposal status
+        proposal = proposal.model_copy(update={"status": "rejected"})
+        await self.memory_router.write(
+            {
+                "type": "version_update_proposal",
+                "proposal_id": proposal.proposal_id,
+                "worker_id": proposal.worker_id,
+                "current_version": proposal.current_version,
+                "proposed_content": proposal.proposed_content,
+                "trigger_reason": proposal.trigger_reason,
+                "rating_trend": proposal.rating_trend,
+                "status": proposal.status,
+                "created_at": proposal.created_at.isoformat()
+            },
+            collection="version_update_proposals"
+        )
+
+        # Clear pending proposal tracking
+        if proposal.worker_id in self._pending_proposals:
+            del self._pending_proposals[proposal.worker_id]
+
+        # Emit trace event
+        try:
+            await self.emitter.emit(TraceEvent(
+                event_type=TraceEventType.OPERATION_COMPLETE,
+                component=TraceComponent.SYSTEM,
+                message=f"Instruction update rejected for worker {proposal.worker_id}",
+                level=TraceLevel.INFO,
+                data={
+                    "worker_id": proposal.worker_id,
+                    "proposal_id": proposal.proposal_id
+                }
+            ))
+        except Exception:
+            pass
+
     async def rollback(
         self,
         worker_id: str,

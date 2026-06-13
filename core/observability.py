@@ -48,6 +48,10 @@ class TraceComponent(str, Enum):
     COMMAND_REGISTRY = "command_registry"
     COMMAND_HANDLER = "command_handler"
 
+    # Instruction versioning
+    INSTRUCTION_VERSIONING = "instruction_versioning"
+    TRACE_OPTIMISER = "trace_optimiser"
+
 
 class TraceEventType(str, Enum):
     """Types of trace events."""
@@ -136,6 +140,11 @@ class TraceEventType(str, Enum):
     # System events
     SYSTEM_STATUS = "system_status"
     RESOURCE_USAGE = "resource_usage"
+
+    # Instruction versioning events
+    PROPOSAL_COLLISION_SKIPPED = "proposal_collision_skipped"
+    TRACE_SCORE_COMPUTED = "trace_score_computed"
+    TRACE_UPDATE_TRIGGERED = "trace_update_triggered"
 
 
 class TraceEvent(BaseModel):

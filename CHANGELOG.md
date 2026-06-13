@@ -4951,4 +4951,48 @@ Each SKILL.md must declare:
 **Checkpoint**: prompt-22-5 to be created and pushed to remote
 
 **Next Steps**: Prompt 22.6 - [TBD]
+
+---
+
+### 2026-06-13 - Prompt 22.6: Trace-Based Skill Optimiser
+**Implementation**: Continuous trace-scoring as second trigger path for instruction updates, collision-prevention policy for dual-trigger system
+
+**Files Modified**:
+- **core/instruction_versioning.py** - Added collision-prevention policy to check_and_trigger_update(). Added _pending_proposals dict to track pending proposals per worker. Added reject_update() method to handle proposal rejection. Added TraceEventType.PROPOSAL_COLLISION_SKIPPED emission when collision detected.
+- **core/observability.py** - Added new enum values: TraceEventType.PROPOSAL_COLLISION_SKIPPED, TRACE_SCORE_COMPUTED, TRACE_UPDATE_TRIGGERED; TraceComponent.INSTRUCTION_VERSIONING, TRACE_OPTIMISER.
+
+**Files Created**:
+- **core/trace_optimiser.py** - TraceOptimiser class with score_recent_traces() and check_and_trigger_update() methods. Computes composite trace score from tool call success rate (70%) and error penalty (30%). Triggers instruction updates when score falls below threshold (default 0.65). Constructor-injected emitter, MemoryRouter, InstructionVersionManager.
+- **tests/test_trace_optimiser.py** - 12 tests covering trace scoring, threshold crossing, collision handling, error cases, and trace event emissions.
+
+**Files Modified**:
+- **tests/test_instruction_versioning.py** - Added 6 tests: 3 collision-prevention tests (returns existing proposal, emits collision-skipped event, creates new proposal when no pending), 3 reject_update tests (sets status to rejected, clears pending tracking, raises on non-pending status).
+
+**Implementation Notes**:
+- **Test failure 1**: Collision-skipped event test failed because event was not being captured by emitter. Root cause: TraceEvent schema requires enum values for event_type and component, but initial implementation used raw strings. Fixed by adding new enum values to TraceEventType and TraceComponent in core/observability.py and using enum values in collision guard.
+- **Test failure 2**: Floating point precision issue in score calculation test (0.7899999999999999 vs 0.79). Fixed by using approximate comparison with tolerance (abs(score - 0.79) < 0.01).
+- **Test failure 3**: VersionUpdateProposal validation errors in trace_optimiser tests due to missing created_at field. Fixed by adding datetime import and created_at=datetime.now() to all VersionUpdateProposal constructions in tests.
+- **Architecture**: TraceOptimiser imports only from core/ (memory_router, instruction_versioning, observability, schemas, worker_factory). No imports from adapters/, workers/, skills/, or system/.
+- **Collision policy**: InstructionVersionManager now tracks pending proposals in _pending_proposals dict. When check_and_trigger_update() is called, it first checks if a PENDING proposal exists for the worker. If yes, returns existing proposal and emits PROPOSAL_COLLISION_SKIPPED event. This prevents duplicate proposals when both rating-trend trigger (Prompt 20) and trace-score trigger (this prompt) fire simultaneously.
+- **Trace scoring algorithm**: score_recent_traces() reads last n traces from MemoryRouter, computes tool call success rate (events with "tool_call", "skill_call", or "mcp_tool_call" in event_type and level=="info"), computes error penalty (events with level=="error"), composite score = (success_rate * 0.7) + ((1.0 - error_penalty) * 0.3). Returns 1.0 if fewer than min_traces exist (fail safe). Returns 1.0 on MemoryRouter errors (fail safe).
+- **Auto-rating gap**: Background task outputs (weather, AIS, email monitors) are never seen by the user at completion time and therefore never manually rated. OutputEvaluator must be wired as automatic rater for MonitorDaemon completions before Phase 8. Logged as technical debt in SOVEREIGN_AI_HANDOFF.md.
+
+**Testing Results**:
+- Baseline: 658 passed, 23 skipped, 10 warnings (from Prompt 22.5)
+- After instruction_versioning changes: 664 passed, 23 skipped, 8 warnings (+6 new tests)
+- After trace_optimiser implementation: 676 passed, 23 skipped, 10 warnings (+12 new tests)
+- All new tests pass, no regressions in existing tests
+- Final test count: 676 passed (658 baseline + 6 versioning + 12 optimiser)
+
+**Architecture Compliance**:
+- core/ layer addition for TraceOptimiser
+- Constructor injection for emitter in both TraceOptimiser and InstructionVersionManager (already compliant)
+- TraceEvent imported from core/observability.py only
+- Clean Architecture: TraceOptimiser imports only from core/ (memory_router, instruction_versioning, observability, schemas, worker_factory). No imports from adapters/, workers/, skills/, or system/.
+- Collision-prevention policy implemented in InstructionVersionManager before any trigger can fire (dual-trigger safety)
+- No sensitive data logged in trace events
+
+**Checkpoint**: prompt-22-6 to be created and pushed to remote
+
+**Next Steps**: Prompt 22.7 - Escalation Engine Re-wiring (Housekeeping)
 ---

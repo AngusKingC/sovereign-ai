@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-13 — post Prompt 22.5 completion. MCP Adapter implemented with MCPAdapter client for calling external MCP tool servers and MCPServer for exposing SkillRegistry over MCP HTTP protocol. 21 new tests added (11 mcp_adapter + 10 mcp_server). Test baseline: 658 passed, 23 skipped, 10 warnings.
+**Last updated**: 2026-06-13 — post Prompt 22.6 completion. Trace-Based Skill Optimiser implemented with TraceOptimiser class for continuous trace-scoring as second trigger path for instruction updates. Collision-prevention policy added to InstructionVersionManager to prevent duplicate proposals when both rating-trend and trace-score triggers fire simultaneously. 18 new tests added (6 instruction_versioning + 12 trace_optimiser). Test baseline: 676 passed, 23 skipped, 10 warnings.
 
 ---
 
@@ -352,18 +352,18 @@ This single prompt closes more of the integration gap than any other.
 ## Current State
 
 ### Test Baseline
-- **658 passed, 23 skipped, 10 warnings** (as of Prompt 22.5 / checkpoint prompt-22-5)
+- **676 passed, 23 skipped, 10 warnings** (as of Prompt 22.6 / checkpoint prompt-22-6)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
 - 10 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless; PytestUnraisableExceptionWarning for unclosed asyncio transports in subprocess tests — Windows-specific, harmless
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
-### Known Issues from Prompt 22.5
-- None — MCP Adapter implemented with full test coverage
+### Known Issues from Prompt 22.6
+- None — Trace-Based Skill Optimiser implemented with full test coverage
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-22-5`
+- Latest checkpoint tag: `prompt-22-6`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -392,6 +392,7 @@ This single prompt closes more of the integration gap than any other.
 - `core/memory_compactor.py` — MemoryCompactor, MemoryTier enum, TieredMemoryEntry, background compaction
 - `core/notification.py` — NotificationSystem, NotificationType enum, urgency-based routing
 - `core/resource_budget.py` — ResourceBudget, BudgetCheckResult, async budget checks (token, worker, VRAM, all)
+- `core/trace_optimiser.py` — TraceOptimiser, continuous trace-scoring as second trigger path for instruction updates, collision-prevention policy
 
 ### Memory Layer
 - `memory/obsidian.py` — Markdown vault storage
@@ -475,6 +476,7 @@ This single prompt closes more of the integration gap than any other.
 | 28.5 | Telegram Gateway | 617 |
 | 29 | ResourceManager KV Cache Fix and Resource Budget | 637 |
 | 22.5 | MCP Adapter | 658 |
+| 22.6 | Trace-Based Skill Optimiser | 676 |
 
 ---
 
@@ -647,7 +649,7 @@ Tests: minimum 10. Target: exceed 501.
 ---
 
 #### Prompt 22.6 — Trace-Based Skill Optimiser (Housekeeping)
-**Status**: IN PROGRESS
+**Status**: DONE
 
 Add continuous trace-scoring as a second trigger path for instruction updates,
 complementing the existing rating-trend trigger from Prompt 20.
@@ -687,6 +689,36 @@ Architecture:
 - All trace calls wrapped in try-except
 
 Tests: minimum 12. Target: exceed new 22.5 baseline.
+
+---
+
+#### Prompt 22.7 — Escalation Engine Re-wiring (Housekeeping)
+**Status**: IN PROGRESS
+
+Re-wire the escalation engine that was disconnected from the orchestrator in the Prompt 26 regression fix. core/escalation.py is complete — the orchestrator simply stopped calling it. This prompt reconnects it and re-enables the skipped test file.
+
+Files to modify:
+- `core/orchestrator.py` — re-wire EscalationEngine calls at the correct points in the task execution flow
+- `tests/test_escalation.py` — remove skip markers, fix any tests broken by the Prompt 26 removal
+
+Architecture constraint: no changes to core/escalation.py — the implementation is correct. Only the wiring in orchestrator.py and the test file are in scope.
+
+Tests: minimum 8 re-enabled or new tests in test_escalation.py. All previously skipped escalation tests must pass.
+
+---
+
+#### Prompt 22.8 — Real Embeddings + Qdrant Vector Validation (Housekeeping)
+**Status**: Queued
+
+MemoryRouter currently writes zero vectors to Qdrant — semantic search is non-functional. Wire OllamaEmbedder into the MemoryRouter.write() path and fix the hardcoded vector size bug in memory/qdrant.py.
+
+Files to modify:
+- `memory/qdrant.py` — fix hardcoded vector size 768; derive from embedder output at collection creation time
+- `core/memory_router.py` — wire OllamaEmbedder into the write() path so vectors are real embeddings, not zeros
+
+Architecture constraint: OllamaEmbedder already exists — do not rebuild it. Only the wiring and the Qdrant collection initialisation are in scope.
+
+Tests: minimum 8. Cover: real embedding vector written on memory_router.write(), Qdrant collection created with correct vector size from embedder, zero-vector write path removed, semantic search returns results when embeddings match.
 
 ---
 
@@ -1223,8 +1255,9 @@ Tests: minimum 12.
 | google.generativeai FutureWarning | adapters/gemini.py | Do not touch until Phase 9 |
 | RuntimeWarning coroutine never awaited | skills/web_scraper tests | Do not touch |
 | llama.cpp tests skipped | tests/test_llama_cpp_adapter.py | Missing dependency |
-| Escalation logic removed from orchestrator | core/orchestrator.py | Removed in Prompt 26 regression fix — re-wire correctly in future prompt |
-| test_escalation.py skipped | tests/test_escalation.py | Skipped in Prompt 26 — re-enable when escalation re-wired |
+| Escalation logic removed from orchestrator | core/orchestrator.py | Removed in Prompt 26 regression fix — scheduled for re-wiring in Prompt 22.7 |
+| test_escalation.py skipped | tests/test_escalation.py | Skipped in Prompt 26 — re-enable in Prompt 22.7 |
+| MemoryRouter writes zero vectors | core/memory_router.py | OllamaEmbedder not wired into write() path — semantic search non-functional. Fix in Prompt 22.8 |
 | _restore_queue() stub | system/monitor_daemon.py | Requires key-pattern querying in MemoryRouter |
 | load_checkpoints() stub | core/task_state_machine.py | Same dependency as above |
 | MemoryRouter key-pattern query | core/memory_router.py | Needed for stubs above — add in Prompt 27 or dedicated housekeeping |
@@ -1242,7 +1275,7 @@ Tests: minimum 12.
 | Trace event table unbounded | memory/postgres.py | No retention or pruning policy. Will grow indefinitely. Add retention policy in Prompt 32 housekeeping |
 | Qdrant collections unbounded | memory/qdrant.py | No compaction or staleness eviction for vector entries beyond scratchpad compaction |
 | Monitor daemon restart loses queue | system/monitor_daemon.py | _restore_queue() stub — daemon cannot survive restart. Blocks autonomous operation promise |
-| Auto-rating path missing for background tasks | core/rating_system.py | Background task outputs (weather/AIS/email) are never seen by user so never manually rated. OutputEvaluator must close this loop |
+| Auto-rating path missing for background tasks | core/rating_system.py | Background task outputs (weather/AIS/email) are never seen by user so never manually rated. OutputEvaluator must be wired as automatic rater for MonitorDaemon completions before Phase 8. Logged in Prompt 22.6. |
 | Fine-tuned model re-ingestion not planned | system/ | Prompt 34 exports ShareGPT but no prompt re-ingests fine-tuned model into Ollama and re-routes workers to it |
 | Approval gate has no trust levels or memory | core/approval_gate.py | Every TerminalSkill/CodeExecutionSkill call requires approval. No session blanket approval, no per-command trust memory. Will cause approval fatigue |
 
@@ -1273,6 +1306,7 @@ and prompt guards when patterns recur.
 18. Using per-method @pytest.mark.asyncio instead of class-level pytestmark — Prompt 27.5 used per-method decorators for async tests, but global_rules.md mandates class-level pytestmark for all async test classes. From Prompt 28 onward, use pytestmark at class level, not per-method decorators.
 19. Case-sensitive string comparison on enum-like fields in tests — TraceEvent.level is stored lowercase ("warning") but tests asserting `e.level == "WARNING"` fail silently (0 matches, no error). Always use `e.level.upper() == "WARNING"` or normalise at the emitter. When a test asserts on a string field, verify the actual stored value before writing the assertion.
 20. Budget/quota checks that test the request alone instead of accumulated + request — check_token_budget approved a request because it only compared requested_tokens > limit, ignoring session_used. Any method that enforces a cumulative limit MUST fetch the running total first and test (total + requested) > limit, not requested > limit alone.
+21. TraceEventType enums vs raw strings — Prompt 22.5 used TraceEventType.OPERATION_COMPLETE and TraceComponent.ADAPTER enum values rather than raw strings (e.g. "mcp_discover"). Both work if the enum is defined in core/observability.py, but raw strings are the pattern used across all other components. Before writing any new trace emission, verify whether the codebase uses enum or string literals for event_type and component — do not mix them within a prompt. If enums are used, import TraceEventType and TraceComponent from core/observability.py, never define them locally.
 
 ---
 

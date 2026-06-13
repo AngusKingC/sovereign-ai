@@ -494,3 +494,168 @@ class TestInstructionVersionManager:
             "rolled back" in event.message
             for event in events
         )
+
+    @pytest.mark.asyncio
+    async def test_check_and_trigger_update_returns_existing_pending_proposal(
+        self, version_manager, mock_rating_system, mock_instruction_generator, sample_profile, sample_instruction_file
+    ):
+        """Test that check_and_trigger_update returns existing PENDING proposal without creating a new one when one already exists."""
+        # Create a pending proposal manually
+        existing_proposal = VersionUpdateProposal(
+            proposal_id="existing-proposal",
+            worker_id="test-worker",
+            current_version=1,
+            proposed_content="# Existing Proposal",
+            trigger_reason="rating trend -0.8",
+            rating_trend=-0.8,
+            status="pending",
+            created_at=datetime.now()
+        )
+        version_manager._pending_proposals["test-worker"] = existing_proposal
+
+        # Call check_and_trigger_update - should return existing proposal without creating new one
+        result = await version_manager.check_and_trigger_update(sample_profile)
+
+        assert result is existing_proposal
+        assert result.proposal_id == "existing-proposal"
+        # Verify no new proposal was created (mock not called)
+        assert mock_instruction_generator.update_instruction_file.call_count == 0
+
+    @pytest.mark.asyncio
+    async def test_check_and_trigger_update_emits_collision_skipped_event(
+        self, version_manager, mock_rating_system, sample_profile, emitter
+    ):
+        """Test that check_and_trigger_update emits proposal_collision_skipped trace event when skipping."""
+        # Create a pending proposal manually
+        existing_proposal = VersionUpdateProposal(
+            proposal_id="existing-proposal",
+            worker_id="test-worker",
+            current_version=1,
+            proposed_content="# Existing Proposal",
+            trigger_reason="rating trend -0.8",
+            rating_trend=-0.8,
+            status="pending",
+            created_at=datetime.now()
+        )
+        version_manager._pending_proposals["test-worker"] = existing_proposal
+
+        # Call check_and_trigger_update
+        result = await version_manager.check_and_trigger_update(sample_profile)
+
+        # Verify collision guard was hit
+        assert result is existing_proposal
+
+        # Verify collision-skipped event was emitted
+        events = emitter.get_events()
+        if len(events) == 0:
+            # Check version_manager's emitter directly
+            events = version_manager.emitter.get_events()
+        assert len(events) > 0
+        assert any(
+            event.event_type == TraceEventType.PROPOSAL_COLLISION_SKIPPED and
+            event.component == TraceComponent.INSTRUCTION_VERSIONING and
+            "Skipped duplicate proposal" in event.message
+            for event in events
+        )
+
+    @pytest.mark.asyncio
+    async def test_check_and_trigger_update_creates_new_proposal_when_no_pending_exists(
+        self, version_manager, mock_rating_system, mock_instruction_generator, sample_profile, sample_instruction_file
+    ):
+        """Test that check_and_trigger_update creates a new proposal normally when no PENDING proposal exists."""
+        mock_rating_system.get_trend.return_value = -0.8
+        mock_rating_system.get_ratings.return_value = [
+            WorkerRating(
+                rating_id=f"rating-{i}",
+                worker_id="test-worker",
+                task_id=f"task-{i}",
+                score=5,
+                model_used="qwen2.5-coder:7b",
+                instruction_file_version=1,
+                created_at=datetime.now()
+            )
+            for i in range(10)
+        ]
+        mock_instruction_generator.get_instruction_file.return_value = sample_instruction_file
+        mock_instruction_generator.update_instruction_file.return_value = InstructionFile(
+            worker_id="test-worker",
+            version=2,
+            content="# Updated Instruction",
+            obsidian_path="workers/test-worker_INSTRUCTION.md",
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+
+        result = await version_manager.check_and_trigger_update(sample_profile)
+
+        assert isinstance(result, VersionUpdateProposal)
+        assert result.worker_id == "test-worker"
+        assert result.status == "pending"
+        # Verify proposal was tracked in _pending_proposals
+        assert "test-worker" in version_manager._pending_proposals
+
+    @pytest.mark.asyncio
+    async def test_reject_update_sets_proposal_status_to_rejected(
+        self, version_manager, mock_memory_router
+    ):
+        """Test that reject_update sets proposal status to rejected."""
+        proposal = VersionUpdateProposal(
+            proposal_id="proposal-1",
+            worker_id="test-worker",
+            current_version=1,
+            proposed_content="# Updated Instruction",
+            trigger_reason="rating trend -0.8",
+            rating_trend=-0.8,
+            status="pending",
+            created_at=datetime.now()
+        )
+
+        await version_manager.reject_update(proposal)
+
+        # Verify proposal status was updated
+        assert mock_memory_router.write.call_count >= 1
+        status_call = [call for call in mock_memory_router.write.call_args_list
+                      if call[0][0].get("type") == "version_update_proposal"]
+        assert len(status_call) >= 1
+        assert status_call[-1][0][0]["status"] == "rejected"
+
+    @pytest.mark.asyncio
+    async def test_reject_update_clears_pending_proposal_tracking(
+        self, version_manager, mock_memory_router
+    ):
+        """Test that reject_update clears pending proposal tracking."""
+        proposal = VersionUpdateProposal(
+            proposal_id="proposal-1",
+            worker_id="test-worker",
+            current_version=1,
+            proposed_content="# Updated Instruction",
+            trigger_reason="rating trend -0.8",
+            rating_trend=-0.8,
+            status="pending",
+            created_at=datetime.now()
+        )
+        version_manager._pending_proposals["test-worker"] = proposal
+
+        await version_manager.reject_update(proposal)
+
+        # Verify pending proposal was cleared
+        assert "test-worker" not in version_manager._pending_proposals
+
+    @pytest.mark.asyncio
+    async def test_reject_update_raises_if_proposal_status_is_not_pending(
+        self, version_manager
+    ):
+        """Test that reject_update raises if proposal status is not pending."""
+        proposal = VersionUpdateProposal(
+            proposal_id="proposal-1",
+            worker_id="test-worker",
+            current_version=1,
+            proposed_content="# Updated Instruction",
+            trigger_reason="rating trend -0.8",
+            rating_trend=-0.8,
+            status="approved",  # Not pending
+            created_at=datetime.now()
+        )
+
+        with pytest.raises(ValueError, match="Cannot reject proposal with status approved"):
+            await version_manager.reject_update(proposal)
