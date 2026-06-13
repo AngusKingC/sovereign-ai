@@ -56,6 +56,10 @@ class TraceComponent(str, Enum):
     GIT_SKILL = "git_skill"
     DOCKER_SKILL = "docker_skill"
     HTTP_CLIENT_SKILL = "http_client_skill"
+    PDF_SKILL = "pdf_skill"
+    SPREADSHEET_SKILL = "spreadsheet_skill"
+    CLIPBOARD_SKILL = "clipboard_skill"
+    CALCULATOR_SKILL = "calculator_skill"
 
 
 class TraceEventType(str, Enum):
@@ -155,6 +159,10 @@ class TraceEventType(str, Enum):
     GIT_COMMAND = "git_command"
     DOCKER_COMMAND = "docker_command"
     HTTP_REQUEST = "http_request"
+    PDF_OPERATION = "pdf_operation"
+    SPREADSHEET_OPERATION = "spreadsheet_operation"
+    CLIPBOARD_OPERATION = "clipboard_operation"
+    CALCULATOR_OPERATION = "calculator_operation"
 
 
 class TraceEvent(BaseModel):

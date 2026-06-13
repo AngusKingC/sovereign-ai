@@ -1,0 +1,1 @@
+"""Spreadsheet skill module."""

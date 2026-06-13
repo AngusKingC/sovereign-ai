@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-13 — post Prompt 29.5 completion. Developer Skills: Git, Docker, HTTP Client created with full test coverage. Test baseline: 704 passed, 23 skipped, 12 warnings (from 676 passed, +28 new tests).
+**Last updated**: 2026-06-13 — post Prompt 29.6 completion. Productivity Skills: PDF, Spreadsheet, Clipboard, Calculator created with full test coverage. Test baseline: 734 passed, 23 skipped, 8 warnings (from 704 passed, +30 new tests).
 
 ---
 
@@ -352,18 +352,18 @@ This single prompt closes more of the integration gap than any other.
 ## Current State
 
 ### Test Baseline
-- **704 passed, 23 skipped, 12 warnings** (as of Prompt 29.5 / checkpoint prompt-29-5)
+- **734 passed, 23 skipped, 8 warnings** (as of Prompt 29.6 / checkpoint prompt-29-6)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
-- 12 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless; PytestUnraisableExceptionWarning for unclosed asyncio transports in subprocess tests — Windows-specific, harmless
+- 8 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless; PytestUnraisableExceptionWarning for unclosed asyncio transports in subprocess tests — Windows-specific, harmless
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
-### Known Issues from Prompt 29.5
-- None — Developer Skills implementation completed successfully
+### Known Issues from Prompt 29.6
+- None — Productivity Skills implementation completed successfully
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-29-5`
+- Latest checkpoint tag: `prompt-29-6`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -480,6 +480,7 @@ This single prompt closes more of the integration gap than any other.
 | 22.7 | Escalation Engine Re-wiring | 676 (no-op - work already done) |
 | 22.8 | Real Embeddings + Qdrant Vector Validation | 676 (partial no-op - embedding already done, only fixed hardcoded vector_size) |
 | 29.5 | Developer Skills: Git, Docker, HTTP Client | 704 (+28 new tests) |
+| 29.6 | Productivity Skills: PDF, Spreadsheet, Clipboard, Calculator | 734 (+30 new tests) |
 
 ---
 
@@ -982,7 +983,7 @@ Tests: minimum 8 per skill (24 total).
 ---
 
 #### Prompt 29.6 — Productivity Skills: PDF, Spreadsheet, Clipboard, Calculator (New — added 2026-06-11)
-**Status**: IN PROGRESS
+**Status**: DONE
 
 Files:
 - `skills/pdf/` — PDF reading and generation
@@ -1065,7 +1066,7 @@ Tests: minimum 8 per skill (24 total).
 ---
 
 #### Prompt 29.7 — Adapter Fallback Chain
-**Status**: Queued
+**Status**: IN PROGRESS
 
 If the primary LLM adapter is unavailable (Ollama crashed, VRAM full, API timeout),
 tasks currently fail hard. This prompt adds a fallback chain so workers degrade

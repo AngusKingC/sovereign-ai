@@ -5133,5 +5133,86 @@ Each SKILL.md must declare:
 
 **Checkpoint**: prompt-29-5 to be created and pushed to remote
 
-**Next Steps**: Prompt 29.6 - OS-Level Sandbox for TerminalSkill and CodeExecutionSkill (Housekeeping)
+**Next Steps**: Prompt 29.6 - Productivity Skills: PDF, Spreadsheet, Clipboard, Calculator (Housekeeping)
+
+---
+
+### 2026-06-13 - Prompt 29.6: Productivity Skills: PDF, Spreadsheet, Clipboard, Calculator (Housekeeping)
+**Implementation**: Created four productivity skills with full test coverage
+
+**Files Created**:
+- **requirements.txt** - Added pdfplumber>=0.10.0, openpyxl>=3.1.0, pyperclip>=1.8.0
+- **core/observability.py** - Added TraceComponent enum values: PDF_SKILL, SPREADSHEET_SKILL, CLIPBOARD_SKILL, CALCULATOR_SKILL. Added TraceEventType enum values: PDF_OPERATION, SPREADSHEET_OPERATION, CLIPBOARD_OPERATION, CALCULATOR_OPERATION.
+- **skills/pdf/__init__.py** - Empty module init
+- **skills/pdf/skill.py** - PdfSkill class with methods: extract_text(), extract_pages(), page_count(), generate(). Uses pdfplumber for reading, reportlab/fpdf2 for generation. Uses constructor-injected emitter and optional ApprovalGate for write operations.
+- **tests/skills/test_pdf_skill.py** - 8 tests covering all PdfSkill methods, approval gate integration, trace events, and error handling. Uses class-level pytestmark = pytest.mark.asyncio. Mocks pdfplumber and reportlab.
+- **skills/spreadsheet/__init__.py** - Empty module init
+- **skills/spreadsheet/skill.py** - SpreadsheetSkill class with methods: read_csv(), write_csv(), read_excel(), write_excel(), sheet_names(). Uses openpyxl for Excel and built-in csv module for CSV. Uses constructor-injected emitter and optional ApprovalGate for write operations.
+- **tests/skills/test_spreadsheet_skill.py** - 8 tests covering all SpreadsheetSkill methods, approval gate integration, trace events, and error handling. Uses class-level pytestmark = pytest.mark.asyncio. Mocks openpyxl and csv.
+- **skills/clipboard/__init__.py** - Empty module init
+- **skills/clipboard/skill.py** - ClipboardSkill class with methods: read(), write(), clear(). Uses pyperclip. Uses constructor-injected emitter and optional ApprovalGate for write operations. Uses asyncio.get_event_loop().run_in_executor() to avoid blocking.
+- **tests/skills/test_clipboard_skill.py** - 6 tests covering all ClipboardSkill methods, approval gate integration, trace events, and error handling. Uses class-level pytestmark = pytest.mark.asyncio. Mocks pyperclip.
+- **skills/calculator/__init__.py** - Empty module init
+- **skills/calculator/skill.py** - CalculatorSkill class with methods: calculate(), convert_units(), supported_conversions(). Uses Python's built-in math module and safe AST-based expression evaluator (no eval()). No ApprovalGate — read-only and side-effect free. Uses constructor-injected emitter.
+- **tests/skills/test_calculator_skill.py** - 8 tests covering all CalculatorSkill methods, trace events, and error handling. Uses class-level pytestmark = pytest.mark.asyncio.
+
+**Implementation Notes**:
+- **SKILL_SPECIFICATION.md findings**: Same as before — defines generic skill architecture with SKILL.md metadata files and a single execute() method. The prompt required specific method signatures for each skill, so I followed the prompt's specific API requirements rather than the generic spec.
+- **Architecture compliance**: All four skills use constructor-injected emitter (compliant with global_rules.md). All four skills use TraceEventType and TraceComponent enum values (compliant). All four skills import only from core/ (compliant with Clean Architecture). All I/O operations are async (compliant).
+- **PdfSkill implementation**:
+  - Initial test failure due to incorrect patching — patched `skills.pdf.skill.pdfplumber.open` instead of `pdfplumber.open`. Fixed by patching at the correct import location.
+  - Also patched `skills.pdf.skill.os.path.exists` instead of `os.path.exists`. Fixed by patching at the correct import location.
+  - Also patched `skills.pdf.skill.SimpleDocTemplate` instead of `reportlab.platypus.SimpleDocTemplate`. Fixed by patching at the correct import location.
+  - Read-only operations (extract_text, extract_pages, page_count) do not require approval.
+  - Write operation (generate) requires ApprovalGate approval.
+  - extract_text() raises FileNotFoundError outside try-except if file does not exist (compliant with global_rules.md).
+  - extract_text() on encrypted/unreadable PDF returns empty string — does not raise.
+- **SpreadsheetSkill implementation**:
+  - Uses openpyxl for Excel (.xlsx) and built-in csv module for CSV.
+  - Read-only operations (read_csv, read_excel, sheet_names) do not require approval.
+  - Write operations (write_csv, write_excel) require ApprovalGate approval.
+  - read_csv() and read_excel() raise FileNotFoundError outside try-except if file does not exist (compliant with global_rules.md).
+- **ClipboardSkill implementation**:
+  - Uses pyperclip for clipboard operations.
+  - All methods are synchronous operations wrapped in async using asyncio.get_event_loop().run_in_executor(None, ...) to avoid blocking.
+  - Read-only operation (read) does not require approval.
+  - Write operations (write, clear) require ApprovalGate approval.
+  - read() handles pyperclip error gracefully — returns empty string, does not raise.
+- **CalculatorSkill implementation**:
+  - No external library required — uses Python's built-in math module.
+  - Safe expression evaluator using AST (not eval()) to prevent code injection.
+  - Rejects dangerous expressions (import, exec, eval, __, open, file).
+  - Supports basic arithmetic, parentheses, and math functions (abs, round, min, max, sum, sqrt, sin, cos, tan, log, log10, exp, pi, e).
+  - Unit conversions: length (mm, cm, m, km, in, ft, mi), weight (g, kg, lb, oz), temperature (C, F, K).
+  - No ApprovalGate — calculator is read-only and side-effect free.
+- **Test coverage**:
+  - PdfSkill: 8 tests (met minimum 8)
+  - SpreadsheetSkill: 8 tests (met minimum 8)
+  - ClipboardSkill: 6 tests (met minimum 6)
+  - CalculatorSkill: 8 tests (met minimum 8)
+  - Total: 30 new tests
+  - All tests use class-level pytestmark = pytest.mark.asyncio (compliant with global_rules.md).
+  - All tests mock external dependencies (pdfplumber, openpyxl, pyperclip).
+  - All tests verify trace events are emitted with correct enum values.
+
+**Testing Results**:
+- Baseline: 704 passed, 23 skipped, 12 warnings (from Prompt 29.5)
+- After pdf skill: 712 passed, 23 skipped, 10 warnings (+8 tests)
+- After spreadsheet skill: 720 passed, 23 skipped, 10 warnings (+8 tests)
+- After clipboard skill: 726 passed, 23 skipped, 8 warnings (+6 tests)
+- After calculator skill: 734 passed, 23 skipped, 8 warnings (+8 tests)
+- Final: 734 passed, 23 skipped, 8 warnings (exceeded expected 734+ by 0, met minimum 30 new tests)
+- All new tests pass with zero new failures
+
+**Architecture Compliance**:
+- All four skills use constructor-injected emitter
+- All four skills use TraceEventType and TraceComponent enum values
+- All four skills import only from core/
+- All four skills use async I/O
+- All test classes use class-level pytestmark = pytest.mark.asyncio
+- All tests mock external dependencies
+
+**Checkpoint**: prompt-29-6 to be created and pushed to remote
+
+**Next Steps**: Prompt 29.7 - OS-Level Sandbox for TerminalSkill and CodeExecutionSkill (Housekeeping)
 ---
