@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-13 — post Prompt 22.7 completion. Escalation Engine Re-wiring was a no-op — escalation wiring already present in core/orchestrator.py and tests already passing. Work was already completed in a previous prompt. Test baseline unchanged: 676 passed, 23 skipped, 10 warnings.
+**Last updated**: 2026-06-13 — post Prompt 22.8 completion. Real Embeddings + Qdrant Vector Validation was a partial no-op — embedding wiring already present in QdrantBackend, only fixed hardcoded vector_size default. MemoryRouter does not write vectors (delegates to backends). Test baseline unchanged: 676 passed, 23 skipped, 10 warnings.
 
 ---
 
@@ -358,12 +358,12 @@ This single prompt closes more of the integration gap than any other.
 - 10 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 2 async decorator marks on sync methods in test_model_evaluator.py — harmless; PytestUnraisableExceptionWarning for unclosed asyncio transports in subprocess tests — Windows-specific, harmless
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
-### Known Issues from Prompt 22.7
-- None — Escalation Engine Re-wiring was a no-op (work already completed in previous prompt)
+### Known Issues from Prompt 22.8
+- None — Real Embeddings + Qdrant Vector Validation was a partial no-op (embedding work already done, only fixed hardcoded vector_size)
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-22-7`
+- Latest checkpoint tag: `prompt-22-8`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -478,6 +478,7 @@ This single prompt closes more of the integration gap than any other.
 | 22.5 | MCP Adapter | 658 |
 | 22.6 | Trace-Based Skill Optimiser | 676 |
 | 22.7 | Escalation Engine Re-wiring | 676 (no-op - work already done) |
+| 22.8 | Real Embeddings + Qdrant Vector Validation | 676 (partial no-op - embedding already done, only fixed hardcoded vector_size) |
 
 ---
 
@@ -709,7 +710,7 @@ Tests: minimum 8 re-enabled or new tests in test_escalation.py. All previously s
 ---
 
 #### Prompt 22.8 — Real Embeddings + Qdrant Vector Validation (Housekeeping)
-**Status**: IN PROGRESS
+**Status**: DONE
 
 MemoryRouter currently writes zero vectors to Qdrant — semantic search is non-functional. Wire OllamaEmbedder into the MemoryRouter.write() path and fix the hardcoded vector size bug in memory/qdrant.py.
 

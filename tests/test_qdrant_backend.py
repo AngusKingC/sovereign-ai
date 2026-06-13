@@ -23,9 +23,9 @@ class TestQdrantBackend:
     def qdrant_backend(self):
         """Create a qdrant backend with test configuration."""
         return QdrantBackend(
+            vector_size=768,
             url="http://localhost:6333",
             collection_name="test_memory_vectors",
-            vector_size=768,
         )
 
     @pytest.fixture
@@ -87,12 +87,12 @@ class TestQdrantBackend:
 
     def test_collection_name_configuration(self, qdrant_backend):
         """Test that collection name is configurable."""
-        custom_backend = QdrantBackend(collection_name="custom_collection")
+        custom_backend = QdrantBackend(vector_size=768, collection_name="custom_collection")
         assert custom_backend.collection_name == "custom_collection"
 
     def test_url_configuration(self, qdrant_backend):
         """Test that URL is configurable."""
-        custom_backend = QdrantBackend(url="http://custom:6333")
+        custom_backend = QdrantBackend(vector_size=768, url="http://custom:6333")
         assert custom_backend.url == "http://custom:6333"
 
     @pytest.mark.asyncio
@@ -102,7 +102,7 @@ class TestQdrantBackend:
         mock_embedder.embed = AsyncMock(return_value=[0.1] * 768)
         mock_embedder.close = AsyncMock()
         
-        backend = QdrantBackend(embedder=mock_embedder)
+        backend = QdrantBackend(vector_size=768, embedder=mock_embedder)
         
         data = {"content": "test content", "task_id": str(uuid4())}
         
@@ -124,7 +124,7 @@ class TestQdrantBackend:
         mock_embedder.embed = AsyncMock(return_value=[0.1] * 768)
         mock_embedder.close = AsyncMock()
         
-        backend = QdrantBackend(embedder=mock_embedder)
+        backend = QdrantBackend(vector_size=768, embedder=mock_embedder)
         
         task = Task(
             task_id=uuid4(),
@@ -153,7 +153,7 @@ class TestQdrantBackend:
         mock_embedder.embed = AsyncMock(side_effect=RuntimeError("Embedder failed"))
         mock_embedder.close = AsyncMock()
         
-        backend = QdrantBackend(embedder=mock_embedder)
+        backend = QdrantBackend(vector_size=768, embedder=mock_embedder)
         
         data = {"content": "test content", "task_id": str(uuid4())}
         
@@ -180,7 +180,7 @@ class TestQdrantBackend:
         mock_embedder.embed = AsyncMock(side_effect=RuntimeError("Embedder failed"))
         mock_embedder.close = AsyncMock()
         
-        backend = QdrantBackend(embedder=mock_embedder)
+        backend = QdrantBackend(vector_size=768, embedder=mock_embedder)
         
         task = Task(
             task_id=uuid4(),

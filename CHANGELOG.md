@@ -5033,5 +5033,40 @@ Each SKILL.md must declare:
 
 **Checkpoint**: prompt-22-7 to be created and pushed to remote
 
-**Next Steps**: Prompt 22.8 - MemoryRouter Key-Pattern Query (Housekeeping)
+**Next Steps**: Prompt 22.8 - Real Embeddings + Qdrant Vector Validation (Housekeeping)
+
+---
+
+### 2026-06-13 - Prompt 22.8: Real Embeddings + Qdrant Vector Validation (Housekeeping)
+**Implementation**: Partial no-op — embedding wiring already present, only fixed hardcoded vector_size
+
+**Files Modified**:
+- **memory/qdrant.py** - Moved vector_size to first parameter position and removed hardcoded default (was `vector_size: int = 768`, now `vector_size: int` as required parameter). Forces callers to provide vector_size explicitly.
+- **tests/test_qdrant_backend.py** - Updated all QdrantBackend constructor calls to pass vector_size explicitly (fixture and 4 test methods).
+
+**Implementation Notes**:
+- **Finding**: Upon reading memory/qdrant.py, core/memory_router.py, core/embedder.py, and test files, discovered that the embedding work was ALREADY COMPLETED in a previous prompt. QdrantBackend already uses OllamaEmbedder (line 42: `self.embedder = embedder if embedder is not None else OllamaEmbedder()`). The embedder is called in write() (line 246) and fetch() (line 119). Zero vector is only a fallback on embedder failure (lines 261, 134).
+- **Contradiction with prompt**: The prompt stated "MemoryRouter currently writes zero vectors to Qdrant — semantic search is entirely non-functional" and asked to "wire OllamaEmbedder into the MemoryRouter write path". However, MemoryRouter does NOT write vectors - it delegates to backends. The embedding work is already done in QdrantBackend itself.
+- **MemoryRouter role**: MemoryRouter.write() (lines 269-317) simply calls `await backend.write(data)` - no embedding logic in MemoryRouter. This is correct architecture - backends handle their own embedding.
+- **Only issue fixed**: Hardcoded vector_size=768 default in QdrantBackend constructor. Made it a required parameter (moved to first position) to force callers to provide it explicitly. This prevents silent mismatches between embedder output dimension and Qdrant collection vector size.
+- **Test coverage**: tests/test_qdrant_backend.py already had comprehensive tests for embedder integration (test_write_calls_embedder_with_correct_text, test_fetch_calls_embedder_with_task_intent, test_embedder_failure_during_write_falls_back_to_zero_vector, test_embedder_failure_during_fetch_falls_back_to_zero_vector). All tests passed before and after the fix.
+- **Architecture compliance**: memory/qdrant.py uses constructor-injected emitter (compliant). Uses TraceEventType and TraceComponent enums (compliant). QdrantBackend uses constructor-injected emitter (compliant).
+- **No MemoryRouter changes needed**: MemoryRouter does not write vectors - it delegates to backends. The embedding work is already done in QdrantBackend. No changes to core/memory_router.py were required.
+
+**Testing Results**:
+- Baseline: 676 passed, 23 skipped, 10 warnings (from Prompt 22.7)
+- After qdrant changes: 676 passed, 23 skipped, 10 warnings (no change - only parameter reordering)
+- All 12 qdrant backend tests pass
+- No new tests added (embedding work already tested in previous prompt)
+
+**Architecture Compliance**:
+- No changes to core/memory_router.py (not needed - embedding already in QdrantBackend)
+- memory/qdrant.py uses constructor-injected emitter
+- memory/qdrant.py uses TraceEventType and TraceComponent enums
+- QdrantBackend uses constructor-injected emitter
+- QdrantBackend uses TraceEventType and TraceComponent enums
+
+**Checkpoint**: prompt-22-8 to be created and pushed to remote
+
+**Next Steps**: Prompt 29.5 - OS-Level Sandbox for TerminalSkill and CodeExecutionSkill (Housekeeping)
 ---

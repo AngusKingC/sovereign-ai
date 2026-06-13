@@ -29,9 +29,9 @@ class QdrantBackend(MemoryBackend):
 
     def __init__(
         self,
+        vector_size: int,
         url: str = "http://localhost:6333",
         collection_name: str = "memory_vectors",
-        vector_size: int = 768,
         embedder: OllamaEmbedder | None = None,
         emitter: TraceEmitter | None = None,
     ) -> None:
