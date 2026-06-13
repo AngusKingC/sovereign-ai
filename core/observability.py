@@ -52,6 +52,11 @@ class TraceComponent(str, Enum):
     INSTRUCTION_VERSIONING = "instruction_versioning"
     TRACE_OPTIMISER = "trace_optimiser"
 
+    # Skills
+    GIT_SKILL = "git_skill"
+    DOCKER_SKILL = "docker_skill"
+    HTTP_CLIENT_SKILL = "http_client_skill"
+
 
 class TraceEventType(str, Enum):
     """Types of trace events."""
@@ -145,6 +150,11 @@ class TraceEventType(str, Enum):
     PROPOSAL_COLLISION_SKIPPED = "proposal_collision_skipped"
     TRACE_SCORE_COMPUTED = "trace_score_computed"
     TRACE_UPDATE_TRIGGERED = "trace_update_triggered"
+
+    # Skill events
+    GIT_COMMAND = "git_command"
+    DOCKER_COMMAND = "docker_command"
+    HTTP_REQUEST = "http_request"
 
 
 class TraceEvent(BaseModel):

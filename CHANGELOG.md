@@ -5069,4 +5069,69 @@ Each SKILL.md must declare:
 **Checkpoint**: prompt-22-8 to be created and pushed to remote
 
 **Next Steps**: Prompt 29.5 - OS-Level Sandbox for TerminalSkill and CodeExecutionSkill (Housekeeping)
+
+---
+
+### 2026-06-13 - Prompt 29.5: Developer Skills: Git, Docker, HTTP Client (Housekeeping)
+**Implementation**: Created three developer skills with full test coverage
+
+**Files Created**:
+- **core/observability.py** - Added TraceComponent enum values: GIT_SKILL, DOCKER_SKILL, HTTP_CLIENT_SKILL. Added TraceEventType enum values: GIT_COMMAND, DOCKER_COMMAND, HTTP_REQUEST.
+- **skills/git/__init__.py** - Empty module init
+- **skills/git/skill.py** - GitSkill class with methods: status(), diff(), commit(), push(), pull(), log(), branch_list(). Uses constructor-injected emitter and optional ApprovalGate for write operations. Uses asyncio.create_subprocess_exec for git commands.
+- **tests/skills/__init__.py** - Empty test module init
+- **tests/skills/test_git_skill.py** - 11 tests covering all GitSkill methods, approval gate integration, trace events, and error handling. Uses class-level pytestmark = pytest.mark.asyncio. Mocks asyncio.create_subprocess_exec.
+- **skills/docker/__init__.py** - Empty module init
+- **skills/docker/skill.py** - DockerSkill class with methods: list_containers(), start(), stop(), logs(), exec_command(). Uses constructor-injected emitter and optional ApprovalGate for write operations. Uses asyncio.create_subprocess_exec for docker commands.
+- **tests/skills/test_docker_skill.py** - 9 tests covering all DockerSkill methods, approval gate integration, trace events, and error handling. Uses class-level pytestmark = pytest.mark.asyncio. Mocks asyncio.create_subprocess_exec.
+- **skills/http_client/__init__.py** - Empty module init
+- **skills/http_client/skill.py** - HttpClientSkill class with methods: get(), post(), put(), delete(). Uses constructor-injected emitter and optional ApprovalGate for write operations. Uses httpx.AsyncClient for HTTP requests.
+- **tests/skills/test_http_client_skill.py** - 8 tests covering all HttpClientSkill methods, approval gate integration, trace events, and error handling. Uses class-level pytestmark = pytest.mark.asyncio. Mocks httpx.AsyncClient at skills.http_client.skill.httpx.AsyncClient.
+
+**Implementation Notes**:
+- **SKILL_SPECIFICATION.md findings**: The spec defines a generic skill architecture with SKILL.md metadata files and a single execute() method. However, the prompt required specific method signatures (status, diff, commit, etc.) for each skill. I followed the prompt's specific API requirements rather than the generic spec, as the prompt was more detailed and tailored to this implementation.
+- **Architecture compliance**: All three skills use constructor-injected emitter (compliant with global_rules.md). All three skills use TraceEventType and TraceComponent enum values (compliant). All three skills import only from core/ (compliant with Clean Architecture). All I/O operations are async (compliant).
+- **GitSkill implementation**: 
+  - Git status parsing required understanding git status --porcelain format: first column is index status, second column is working tree status. " M file" = unstaged, "M  file" = staged, "MM file" = both.
+  - Initial test failure due to incorrect parsing logic - fixed by using correct --porcelain format and stripping whitespace from filenames.
+  - Write operations (commit, push, pull) require ApprovalGate approval before executing subprocess.
+  - Read-only operations (status, diff, log, branch_list) do not require approval.
+- **DockerSkill implementation**:
+  - Uses docker ps --format json for list_containers() to return structured data.
+  - Write operations (start, stop, exec) require ApprovalGate approval before executing subprocess.
+  - Read-only operations (list_containers, logs) do not require approval.
+- **HttpClientSkill implementation**:
+  - Initial implementation error: used httpx._eventloop.current_time() which doesn't exist. Fixed by using asyncio.get_event_loop().time() (consistent with GitSkill and DockerSkill).
+  - Write operations (post, put, delete) require ApprovalGate approval before making HTTP request.
+  - Read-only operations (get) do not require approval.
+  - Trace events do not log request body or response body (security best practice).
+  - HTTP error status codes (4xx/5xx) are handled by returning dict with status_code, not raising exceptions.
+- **Test coverage**: 
+  - GitSkill: 11 tests (exceeded minimum 10)
+  - DockerSkill: 9 tests (met minimum 9)
+  - HttpClientSkill: 8 tests (met minimum 8)
+  - Total: 28 new tests
+  - All tests use class-level pytestmark = pytest.mark.asyncio (compliant with global_rules.md).
+  - All tests mock external dependencies (asyncio.create_subprocess_exec for git/docker, httpx.AsyncClient for http_client).
+  - All tests verify trace events are emitted with correct enum values.
+
+**Testing Results**:
+- Baseline: 676 passed, 23 skipped, 10 warnings (from Prompt 22.8)
+- After git skill: 687 passed, 23 skipped, 10 warnings (+11 tests)
+- After docker skill: 696 passed, 23 skipped, 8 warnings (+9 tests)
+- After http_client skill: 704 passed, 23 skipped, 12 warnings (+8 tests)
+- Final: 704 passed, 23 skipped, 12 warnings (exceeded expected 704+ by 0, met minimum 28 new tests)
+- All new tests pass with zero new failures
+
+**Architecture Compliance**:
+- All three skills use constructor-injected emitter
+- All three skills use TraceEventType and TraceComponent enum values
+- All three skills import only from core/
+- All three skills use async I/O
+- All test classes use class-level pytestmark = pytest.mark.asyncio
+- All tests mock external dependencies
+
+**Checkpoint**: prompt-29-5 to be created and pushed to remote
+
+**Next Steps**: Prompt 29.6 - OS-Level Sandbox for TerminalSkill and CodeExecutionSkill (Housekeeping)
 ---

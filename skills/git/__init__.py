@@ -1,0 +1,1 @@
+"""Git skill module."""
