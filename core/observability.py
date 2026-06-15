@@ -73,6 +73,7 @@ class TraceComponent(str, Enum):
 
     # Retention
     RETENTION = "retention"
+    RETENTION_MANAGER = "retention_manager"
 
 
 class TraceEventType(str, Enum):
@@ -208,6 +209,10 @@ class TraceEventType(str, Enum):
     RETENTION_RECORD_ARCHIVED = "retention_record_archived"
     RETENTION_RECORD_DELETED = "retention_record_deleted"
     RETENTION_RULE_ADDED = "retention_rule_added"
+    RETENTION_TRACE_EVENTS_PRUNED = "retention_trace_events_pruned"
+    RETENTION_TASK_HISTORY_PRUNED = "retention_task_history_pruned"
+    RETENTION_QDRANT_PRUNED = "retention_qdrant_pruned"
+    RETENTION_OBSIDIAN_ARCHIVED = "retention_obsidian_archived"
 
 
 class TraceEvent(BaseModel):

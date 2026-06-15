@@ -244,7 +244,7 @@ class TestRetentionEngine:
                 "id": str(uuid4()),
                 "scope": "global",
                 "data_type": "task",
-                "created_at": datetime.utcnow() - timedelta(hours=1),
+                "created_at": datetime.utcnow() - timedelta(minutes=30),
             }
         ])
         
