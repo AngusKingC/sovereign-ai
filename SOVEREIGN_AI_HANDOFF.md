@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-15 — post Prompt 31 completion. Worker-to-Worker Communication implemented with A2A protocol, circular dependency detection, and sub-task priority inheritance. Test baseline: 847 passed, 23 skipped, 12 warnings (from 827 passed, +20 new tests).
+**Last updated**: 2026-06-15 — post Prompt 31.5 completion. Data Retention and Memory Housekeeping implemented with RetentionEngine and RetentionDaemon for scheduled cleanup of expired data. Test baseline: 867 passed, 23 skipped, 10 warnings (from 847 passed, +20 new tests).
 
 ---
 
@@ -488,6 +488,7 @@ This single prompt closes more of the integration gap than any other.
 | 30 | Multi-Worker Mode | 795 (+28 new tests) |
 | 30.5 | Environment and Media Skills | 827 (+32 new tests) |
 | 31 | Worker-to-Worker Communication | 847 (+20 new tests) |
+| 31.5 | Data Retention and Memory Housekeeping | 867 (+20 new tests) |
 
 ---
 
@@ -1045,7 +1046,41 @@ A2A-standard task envelope schema:
 
 ---
 
-#### Prompt 31.5 — Marine Specialist Skills: Passage Planner, Tidal, VHF (New — added 2026-06-11)
+#### Prompt 31.5 — Data Retention and Memory Housekeeping
+**Status**: DONE
+
+The memory layer accumulates data indefinitely — Postgres rows, Qdrant vectors, Obsidian notes, scratchpad entries. This prompt adds a RetentionPolicy engine that enforces configurable TTLs, archives expired data, and runs as a background daemon.
+
+Files:
+- `core/retention.py` — RetentionRule, RetentionReport Pydantic models and RetentionEngine class
+- `system/retention_daemon.py` — RetentionDaemon class for scheduled retention runs
+- `tests/test_retention.py` — 20 tests covering all retention functionality
+
+Features:
+- RetentionEngine enforces configurable TTLs on memory data with scope and data_type filtering
+- RetentionEngine.run() applies all rules, scans for expired records, archives (if archive=True), deletes, and accumulates counts
+- RetentionEngine.run() catches per-record errors and appends to report.errors without aborting the entire run
+- RetentionEngine._scan() is a stub for Phase 10 — calls memory_router.fetch() and filters in Python based on TTL
+- RetentionEngine._archive() writes to "archive:{scope}:{data_type}:{id}" key via memory router
+- RetentionEngine._delete() writes deletion marker (stub for Phase 10)
+- RetentionDaemon runs RetentionEngine on configurable schedule (default: hourly)
+- RetentionDaemon.start() launches background loop task and emits COMPONENT_START event
+- RetentionDaemon.stop() cancels task and emits COMPONENT_STOP event
+- RetentionDaemon.run_once() runs engine.run() once without starting daemon
+
+Architecture:
+- All classes use constructor-injected emitters (no global emit_trace())
+- All trace events use correct fields from core/observability.py (event_type, component, level, message, data, duration_ms)
+- All imports only from core/ (Clean Architecture compliance)
+- All tests use class-level pytestmark = pytest.mark.asyncio
+- All tests mock MemoryRouter (never use real router instance)
+- All tests check trace events via emitter.get_events()
+
+Tests: 20 implemented.
+
+---
+
+#### Prompt 31.6 — Marine Specialist Skills: Passage Planner, Tidal, VHF (New — added 2026-06-11)
 **Status**: Queued
 
 Files:
@@ -1255,7 +1290,7 @@ Tests: minimum 12.
 ---
 
 #### Prompt 32 — Web GUI + FastAPI Server
-**Status**: Queued (expanded from original scope — 2026-06-11)
+**Status**: IN PROGRESS
 
 `web/` layer — FastAPI server + WebSockets + React or plain HTML frontend.
 

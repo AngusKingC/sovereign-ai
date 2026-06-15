@@ -5580,3 +5580,44 @@ Each SKILL.md must declare:
 
 **Next Steps**: Prompt 31.5 - Data Retention and Memory Housekeeping
 ---
+
+## Prompt 31.5 - Data Retention and Memory Housekeeping
+
+**Summary**: Implemented data retention and memory housekeeping with RetentionEngine and RetentionDaemon for scheduled cleanup of expired data.
+
+**Files Changed**:
+- `core/observability.py` - Added TraceComponent.RETENTION and 5 retention trace event types (RETENTION_RUN_STARTED, RETENTION_RUN_COMPLETED, RETENTION_RECORD_ARCHIVED, RETENTION_RECORD_DELETED, RETENTION_RULE_ADDED)
+- `core/retention.py` (new) - Created RetentionRule, RetentionReport Pydantic models and RetentionEngine class with run(), _scan(), _archive(), _delete(), get_rules(), add_rule() methods
+- `system/retention_daemon.py` (new) - Created RetentionDaemon class with start(), stop(), _loop(), run_once() methods for scheduled retention runs
+- `tests/test_retention.py` (new) - Created 20 tests covering RetentionRule, RetentionReport, RetentionEngine, and RetentionDaemon
+
+**Implementation Details**:
+- RetentionEngine enforces configurable TTLs on memory data with scope and data_type filtering
+- RetentionEngine.run() applies all rules, scans for expired records, archives (if archive=True), deletes, and accumulates counts
+- RetentionEngine.run() catches per-record errors and appends to report.errors without aborting the entire run
+- RetentionEngine._scan() is a stub for Phase 10 - calls memory_router.fetch() and filters in Python based on TTL
+- RetentionEngine._archive() writes to "archive:{scope}:{data_type}:{id}" key via memory router
+- RetentionEngine._delete() writes deletion marker (stub for Phase 10)
+- RetentionDaemon runs RetentionEngine on configurable schedule (default: hourly)
+- RetentionDaemon.start() launches background loop task and emits COMPONENT_START event
+- RetentionDaemon.stop() cancels task and emits COMPONENT_STOP event
+- RetentionDaemon.run_once() runs engine.run() once without starting daemon
+- All classes use constructor-injected emitters (no global emit_trace())
+- All trace events use correct fields from core/observability.py (event_type, component, level, message, data, duration_ms)
+- All imports only from core/ (Clean Architecture compliance)
+- All tests use class-level pytestmark = pytest.mark.asyncio
+- All tests mock MemoryRouter (never use real router instance)
+- All tests check trace events via emitter.get_events()
+
+**Test Results**: 867 passed, 23 skipped, 10 warnings (from 847 passed, +20 new tests)
+
+**Implementation Notes**:
+- Initial test failure: test_retention_engine_run_catches_per_record_errors_and_appends_to_report_errors and test_retention_engine_run_never_aborts_entire_run_due_to_single_record_failure failed because _archive() and _delete() had try/except blocks that swallowed exceptions before they could reach run(). Fixed by removing try/except from _archive() and _delete() to let exceptions propagate to run() for proper error handling.
+- Second test failure: test_retention_engine_scan_returns_empty_list_when_no_records_exceed_ttl failed because the test used a record exactly 1 hour old with a 3600-second TTL, which was at the boundary. Fixed by using a record 30 minutes old to ensure it's clearly within the TTL window.
+- No other problems encountered - implementation proceeded smoothly after these fixes.
+
+**Checkpoint**: prompt-31-5 to be created and pushed to remote
+
+**Next Steps**: Prompt 32 - (to be determined)
+
+---
