@@ -82,6 +82,9 @@ class TraceComponent(str, Enum):
     # Web
     WEB = "web"
 
+    # Voice
+    VOICE = "voice"
+
 
 class TraceEventType(str, Enum):
     """Types of trace events."""
@@ -235,6 +238,13 @@ class TraceEventType(str, Enum):
     WEB_WEBSOCKET_CONNECTED = "web_websocket_connected"
     WEB_WEBSOCKET_DISCONNECTED = "web_websocket_disconnected"
     WEB_TASK_SUBMITTED = "web_task_submitted"
+
+    # Voice events
+    VOICE_WAKE_WORD_DETECTED = "voice_wake_word_detected"
+    VOICE_COMMAND_RECEIVED = "voice_command_received"
+    VOICE_LISTENING_STARTED = "voice_listening_started"
+    VOICE_LISTENING_STOPPED = "voice_listening_stopped"
+    VOICE_NOTIFICATION_SENT = "voice_notification_sent"
 
 
 class TraceEvent(BaseModel):

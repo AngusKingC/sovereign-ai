@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-15 — post Prompt 31.7 completion. Security baseline implemented with token-based authentication (AuthManager), prompt injection hardening (InputSanitiser), and FastAPI auth middleware (AuthMiddleware). Also includes secrets audit at startup. Test baseline: 907 passed, 23 skipped, 12 warnings (from 882 passed, +25 new tests).
+**Last updated**: 2026-06-15 — post Prompt 32 completion. Web GUI + FastAPI Server implemented with REST and WebSocket endpoints. Auth middleware from Prompt 31.7 is wired in. Test baseline: 922 passed, 23 skipped, 55 warnings (from 907 passed, +15 new tests).
 
 ---
 
@@ -490,6 +490,8 @@ This single prompt closes more of the integration gap than any other.
 | 31 | Worker-to-Worker Communication | 847 (+20 new tests) |
 | 31.5 | Data Retention and Memory Housekeeping | 867 (+20 new tests) |
 | 31.6 | Data Retention Manager | 882 (+15 new tests) |
+| 31.7 | Security Baseline | 907 (+25 new tests) |
+| 32 | Web GUI + FastAPI Server | 922 (+15 new tests) |
 
 ---
 
@@ -1270,7 +1272,7 @@ Tests: minimum 12.
 ---
 
 #### Prompt 32 — Web GUI + FastAPI Server
-**Status**: IN PROGRESS
+**Status**: DONE
 
 `web/` layer — FastAPI server + WebSockets + React or plain HTML frontend.
 
@@ -1297,7 +1299,7 @@ Architecture:
 ---
 
 #### Prompt 33 — Voice Interface
-**Status**: Queued
+**Status**: IN PROGRESS
 
 Wake word detection, Whisper STT, TTS.
 Voice notifications for open loop events.

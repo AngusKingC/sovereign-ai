@@ -5721,3 +5721,54 @@ Each SKILL.md must declare:
 **Next Steps**: Prompt 32 - Web GUI and FastAPI Server
 
 ---
+
+## Prompt 32 — Web GUI + FastAPI Server (2026-06-15)
+
+**Summary**: Implemented FastAPI web server and minimal web UI with REST and WebSocket endpoints. Auth middleware from Prompt 31.7 is wired in. A jarvis serve CLI command starts the server.
+
+**Files Created**:
+- `web/server.py` - FastAPI server with create_app() factory function, REST and WebSocket endpoints
+- `web/static/index.html` - Plain HTML web UI with Chat, Workers, Tasks, Trace tabs
+- `cli/serve.py` - CLI command to start the web server with uvicorn
+- `tests/test_web_server.py` - 15 tests for web server endpoints
+
+**Files Modified**:
+- `core/observability.py` - Added TraceComponent.WEB and web trace event types (WEB_REQUEST_RECEIVED, WEB_WEBSOCKET_CONNECTED, WEB_WEBSOCKET_DISCONNECTED, WEB_TASK_SUBMITTED)
+
+**Implementation Details**:
+- **web/server.py**: Factory function create_app() returns configured FastAPI app. Routes include GET /health (no auth), GET /api/tasks (auth), POST /api/tasks (auth), GET /api/workers (auth), GET /api/trace (auth), WebSocket /ws (auth via query param). AuthMiddleware wired in via app.add_middleware(). Startup event calls SecretsAudit. Static files mounted at /static.
+- **web/static/index.html**: Plain HTML with navigation tabs (Chat, Workers, Tasks, Trace). Chat tab connects via WebSocket to /ws?token=<token>. Workers and Tasks tabs populated via REST API. Trace tab auto-refreshes every 5 seconds. Token stored in localStorage. Minimal dark theme styling.
+- **cli/serve.py**: Typer CLI command with host, port, reload options. Instantiates AuthManager, prints token on first run. Creates minimal Orchestrator with MemoryRouter. Starts server with uvicorn.run().
+- **tests/test_web_server.py**: 15 tests using fastapi.testclient.TestClient. Mock orchestrator and auth_manager. Tests cover health endpoint, auth requirements, task/worker/trace endpoints, WebSocket connection and message handling.
+
+**Implementation Notes**:
+- **Test Failure**: Initial test run had 1 failure in test_get_trace_returns_events_with_at_most_100. The test was using Mock objects instead of proper TraceEvent objects. Fixed by constructing TraceEvent instances with required fields (event_id, event_type, component, level, message, data, duration_ms, timestamp).
+- **Test Warnings**: All 15 tests have pytest.mark.asyncio on class level but are synchronous functions. This is intentional for TestClient usage and matches the pattern in other test files. The warnings are cosmetic and don't affect test execution.
+- **Orchestrator Instantiation**: cli/serve.py creates a minimal Orchestrator with only MemoryRouter. Full dependency wiring (improvement_loop, approval_gate, escalation_engine, fallback_chain, a2a_router) is deferred to future prompts when the full dependency tree is available.
+- **WebSocket Auth**: WebSocket endpoint accepts token via ?token=<value> query param for compatibility with browser WebSocket API. AuthMiddleware already handles this case.
+
+**Testing Results**:
+- **Before**: 907 passed, 23 skipped, 12 warnings
+- **After**: 922 passed, 23 skipped, 55 warnings
+- **New Tests**: 15 tests in tests/test_web_server.py
+- **Command**: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
+- **Test Duration**: ~67 seconds
+
+**Architecture Compliance**:
+- All new files follow Clean Architecture layer boundaries
+- `web/server.py` imports only from core/ and web/
+- `cli/serve.py` imports from core/, web/, and typer/uvicorn
+- All emitters are constructor-injected, no global emit_trace() calls
+- TraceEvent imported from core/observability.py, not core/schemas.py
+- FastAPI app created via factory function, never at module level
+
+**Rationale**:
+- Web GUI required before exposing FastAPI server for broader use
+- Factory pattern for FastAPI app enables testing with TestClient
+- Plain HTML UI provides immediate functionality without build step complexity
+- WebSocket support enables real-time task submission
+- Auth middleware from Prompt 31.7 provides security baseline
+
+**Checkpoint**: prompt-32 created and pushed to remote
+
+**Next Steps**: Prompt 33 - Voice Interface
