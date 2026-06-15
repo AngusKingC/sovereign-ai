@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jarvis Web UI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #444;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+            border-bottom: none;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: #3a3a3a;
+            border-bottom: 1px solid #3a3a3a;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #444;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #2a2a2a;
+        }
+        #chat-input {
+            width: 70%;
+            padding: 10px;
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+            color: #e0e0e0;
+            margin-right: 10px;
+        }
+        #send-btn {
+            padding: 10px 20px;
+            background-color: #3a3a3a;
+            border: 1px solid #444;
+            color: #e0e0e0;
+            cursor: pointer;
+        }
+        #send-btn:hover {
+            background-color: #4a4a4a;
+        }
+        #chat-history {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #444;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #2a2a2a;
+        }
+        .chat-message {
+            margin-bottom: 10px;
+            padding: 5px;
+            border-left: 3px solid #3a3a3a;
+            padding-left: 10px;
+        }
+        #trace-log {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #444;
+            padding: 10px;
+            background-color: #2a2a2a;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .trace-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-left: 2px solid #444;
+            padding-left: 10px;
+        }
+        .trace-entry.warning {
+            border-left-color: #ff6600;
+        }
+        .trace-entry.error {
+            border-left-color: #ff0000;
+        }
+    </style>
+</head>
+<body>
+    <h1>Jarvis Web UI</h1>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('chat')">Chat</div>
+        <div class="tab" onclick="switchTab('workers')">Workers</div>
+        <div class="tab" onclick="switchTab('tasks')">Tasks</div>
+        <div class="tab" onclick="switchTab('trace')">Trace</div>
+    </div>
+
+    <div id="chat" class="tab-content active">
+        <div id="chat-history"></div>
+        <div>
+            <input type="text" id="chat-input" placeholder="Enter your message...">
+            <button id="send-btn" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <div id="workers" class="tab-content">
+        <table>
+            <thead>
+                <tr>
+                    <th>Worker ID</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="workers-table">
+            </tbody>
+        </table>
+    </div>
+
+    <div id="tasks" class="tab-content">
+        <table>
+            <thead>
+                <tr>
+                    <th>Task ID</th>
+                    <th>Intent</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                </tr>
+            </thead>
+            <tbody id="tasks-table">
+            </tbody>
+        </table>
+    </div>
+
+    <div id="trace" class="tab-content">
+        <div id="trace-log"></div>
+    </div>
+
+    <script>
+        let token = localStorage.getItem('jarvis_token');
+        let ws = null;
+
+        function getToken() {
+            if (!token) {
+                token = prompt('Enter your auth token:');
+                if (token) {
+                    localStorage.setItem('jarvis_token', token);
+                }
+            }
+            return token;
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+            
+            if (tabId === 'workers') {
+                loadWorkers();
+            } else if (tabId === 'tasks') {
+                loadTasks();
+            } else if (tabId === 'trace') {
+                loadTrace();
+            } else if (tabId === 'chat') {
+                connectWebSocket();
+            }
+        }
+
+        async function loadWorkers() {
+            const response = await fetch('/api/workers', {
+                headers: {
+                    'Authorization': `Bearer ${getToken()}`
+                }
+            });
+            const data = await response.json();
+            const tbody = document.getElementById('workers-table');
+            tbody.innerHTML = '';
+            data.workers.forEach(worker => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${worker.id || 'N/A'}</td>
+                    <td>${worker.type || 'N/A'}</td>
+                    <td>${worker.status || 'N/A'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function loadTasks() {
+            const response = await fetch('/api/tasks', {
+                headers: {
+                    'Authorization': `Bearer ${getToken()}`
+                }
+            });
+            const data = await response.json();
+            const tbody = document.getElementById('tasks-table');
+            tbody.innerHTML = '';
+            data.tasks.forEach(task => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${task.id || 'N/A'}</td>
+                    <td>${task.intent || 'N/A'}</td>
+                    <td>${task.status || 'N/A'}</td>
+                    <td>${task.priority || 'N/A'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function loadTrace() {
+            const response = await fetch('/api/trace', {
+                headers: {
+                    'Authorization': `Bearer ${getToken()}`
+                }
+            });
+            const data = await response.json();
+            const log = document.getElementById('trace-log');
+            log.innerHTML = '';
+            data.events.forEach(event => {
+                const entry = document.createElement('div');
+                entry.className = `trace-entry ${event.level}`;
+                entry.textContent = `[${event.timestamp}] ${event.level}: ${event.message}`;
+                log.appendChild(entry);
+            });
+        }
+
+        function connectWebSocket() {
+            if (ws) {
+                ws.close();
+            }
+            
+            const wsUrl = `ws://localhost:7000/ws?token=${getToken()}`;
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                addChatMessage('Connected to Jarvis', 'system');
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                addChatMessage(`Task submitted: ${data.task_id}`, 'system');
+            };
+            
+            ws.onclose = () => {
+                addChatMessage('Disconnected from Jarvis', 'system');
+            };
+            
+            ws.onerror = () => {
+                addChatMessage('Connection error', 'error');
+            };
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            addChatMessage(message, 'user');
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ intent: message }));
+                input.value = '';
+            } else {
+                addChatMessage('Not connected to WebSocket', 'error');
+            }
+        }
+
+        function addChatMessage(message, type) {
+            const history = document.getElementById('chat-history');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-message';
+            msgDiv.textContent = `[${type}] ${message}`;
+            history.appendChild(msgDiv);
+            history.scrollTop = history.scrollHeight;
+        }
+
+        // Auto-refresh trace every 5 seconds
+        setInterval(() => {
+            if (document.getElementById('trace').classList.contains('active')) {
+                loadTrace();
+            }
+        }, 5000);
+
+        // Initialize
+        getToken();
+        connectWebSocket();
+    </script>
+</body>
+</html>

@@ -79,6 +79,9 @@ class TraceComponent(str, Enum):
     AUTH = "auth"
     SECURITY = "security"
 
+    # Web
+    WEB = "web"
+
 
 class TraceEventType(str, Enum):
     """Types of trace events."""
@@ -226,6 +229,12 @@ class TraceEventType(str, Enum):
     AUTH_TOKEN_REJECTED = "auth_token_rejected"
     INPUT_SANITISED = "input_sanitised"
     SECRETS_AUDIT_WARNING = "secrets_audit_warning"
+
+    # Web events
+    WEB_REQUEST_RECEIVED = "web_request_received"
+    WEB_WEBSOCKET_CONNECTED = "web_websocket_connected"
+    WEB_WEBSOCKET_DISCONNECTED = "web_websocket_disconnected"
+    WEB_TASK_SUBMITTED = "web_task_submitted"
 
 
 class TraceEvent(BaseModel):
