@@ -71,6 +71,9 @@ class TraceComponent(str, Enum):
     # A2A
     A2A = "a2a"
 
+    # Retention
+    RETENTION = "retention"
+
 
 class TraceEventType(str, Enum):
     """Types of trace events."""
@@ -198,6 +201,13 @@ class TraceEventType(str, Enum):
     A2A_SUBMIT_FAILED = "a2a_submit_failed"
     A2A_CIRCULAR_DEPENDENCY_DETECTED = "a2a_circular_dependency_detected"
     A2A_CHILDREN_CANCELLED = "a2a_children_cancelled"
+
+    # Retention events
+    RETENTION_RUN_STARTED = "retention_run_started"
+    RETENTION_RUN_COMPLETED = "retention_run_completed"
+    RETENTION_RECORD_ARCHIVED = "retention_record_archived"
+    RETENTION_RECORD_DELETED = "retention_record_deleted"
+    RETENTION_RULE_ADDED = "retention_rule_added"
 
 
 class TraceEvent(BaseModel):
