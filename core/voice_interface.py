@@ -49,11 +49,15 @@ class VoiceInterface:
         self,
         config: VoiceConfig | None = None,
         emitter: TraceEmitter | None = None,
+        transcription_skill=None,   # TranscriptionSkill | None
+        tts_skill=None,             # TTSSkill | None
     ):
         """Initialize the voice interface."""
         self._config = config or VoiceConfig()
         self._emitter = emitter or MemoryTraceEmitter()
         self._listening = False
+        self._transcription_skill = transcription_skill
+        self._tts_skill = tts_skill
 
     async def detect_wake_word(self, audio_bytes: bytes) -> bool:
         """
@@ -65,8 +69,8 @@ class VoiceInterface:
         Returns:
             True if wake word detected, False otherwise
         """
-        # Stub implementation: transcribe and check for wake word
-        transcript = await self._transcribe_stub(audio_bytes)
+        # Transcribe and check for wake word
+        transcript = await self._transcribe(audio_bytes)
         detected = self._config.wake_word.lower() in transcript.lower()
 
         if detected:
@@ -85,18 +89,19 @@ class VoiceInterface:
 
         return detected
 
-    async def _transcribe_stub(self, audio_bytes: bytes) -> str:
+    async def _transcribe(self, audio_bytes: bytes) -> str:
         """
-        Stub for STT — delegates to TranscriptionSkill in Prompt 33.5.
+        Transcribe audio bytes to text using TranscriptionSkill.
 
         Args:
             audio_bytes: Audio data as bytes
 
         Returns:
-            Transcribed text (empty string in this stub)
+            Transcribed text (empty string if no skill injected)
         """
-        # Real implementation wired in Prompt 33.5
-        return ""
+        if self._transcription_skill is not None:
+            return await self._transcription_skill.transcribe_bytes(audio_bytes)
+        return ""  # Preserves stub behaviour for tests that don't inject the skill
 
     async def process_command(self, audio_bytes: bytes) -> VoiceCommand | None:
         """
@@ -108,7 +113,7 @@ class VoiceInterface:
         Returns:
             VoiceCommand if transcript is valid, None otherwise
         """
-        transcript = await self._transcribe_stub(audio_bytes)
+        transcript = await self._transcribe(audio_bytes)
 
         if not transcript or len(transcript) < self._config.noise_threshold:
             return None
@@ -174,11 +179,16 @@ class VoiceInterface:
 
     async def notify(self, message: str) -> None:
         """
-        Stub for TTS output notification — real TTS wired in Prompt 33.5.
+        Speak a message using TTS or fall back to console output.
 
         Args:
             message: Message to speak
         """
+        if self._tts_skill is not None:
+            await self._tts_skill.speak(message)
+        else:
+            print(f"[VOICE] {message}")
+
         try:
             event = TraceEvent(
                 event_type=TraceEventType.VOICE_NOTIFICATION_SENT,

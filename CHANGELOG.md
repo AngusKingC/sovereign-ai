@@ -5772,3 +5772,99 @@ Each SKILL.md must declare:
 **Checkpoint**: prompt-32 created and pushed to remote
 
 **Next Steps**: Prompt 33 - Voice Interface
+
+---
+
+## Prompt 33 — Voice Interface (2026-06-15)
+
+**Summary**: Implemented voice interface with wake word detection, STT stub, TTS stub, and voice daemon for background processing. Real audio capture and Whisper STT wired in Prompt 33.5. Same approval gates and observability as text interface.
+
+**Files Created**:
+- `core/voice_interface.py` - VoiceInterface class with VoiceConfig, VoiceCommand models, wake word detection stub, STT stub, TTS stub
+- `system/voice_daemon.py` - VoiceDaemon class for background voice loop and command submission to orchestrator
+- `tests/test_voice.py` - 20 tests for voice interface and voice daemon
+
+**Files Modified**:
+- `core/observability.py` - Added TraceComponent.VOICE and voice trace event types (VOICE_WAKE_WORD_DETECTED, VOICE_COMMAND_RECEIVED, VOICE_LISTENING_STARTED, VOICE_LISTENING_STOPPED, VOICE_NOTIFICATION_SENT)
+
+**Implementation Details**:
+- **core/voice_interface.py**: VoiceConfig Pydantic model with wake_word, wake_word_sensitivity, stt_model, tts_voice, noise_threshold, silence_timeout_ms, enabled. VoiceCommand Pydantic model with command_id, transcript, confidence, detected_at, wake_word_detected. VoiceInterface class with detect_wake_word(), _transcribe_stub(), process_command(), start_listening(), stop_listening(), notify(). All methods emit trace events. Stub implementations for _transcribe_stub() and notify() — real implementations wired in Prompt 33.5.
+- **system/voice_daemon.py**: VoiceDaemon class with start(), stop(), _loop(), _get_audio_chunk(), _submit_command(), run_once(). Background daemon that runs voice loop, detects wake word, processes commands, submits to orchestrator. Stub implementation for _get_audio_chunk() — real microphone capture wired in Prompt 33.5. run_once() for testing and one-shot use.
+- **tests/test_voice.py**: 20 tests covering VoiceConfig validation, VoiceCommand validation, VoiceInterface wake word detection, command processing, listening state, notifications, VoiceDaemon start/stop, run_once, command submission. All mocks — no real audio, no real Whisper, no real Piper.
+
+**Implementation Notes**:
+- **Test Failure**: Initial test run had 2 failures in VoiceDaemon tests (test_run_once_submits_command_to_orchestrator_when_wake_word_detected and test_submit_command_creates_task_from_command_transcript_and_submits_to_orchestrator). The issue was that Task model requires task_id, complexity_score, priority, and created_at fields in addition to intent and status. Fixed by updating _submit_command() to include all required fields: task_id=command.command_id, complexity_score=0.5, priority="normal", created_at=command.detected_at.
+- **Stub Pattern**: _transcribe_stub() and _get_audio_chunk() are stub methods that return empty string/bytes. This allows tests to mock these methods without touching real audio or Whisper. Real implementations will be wired in Prompt 33.5.
+- **Privacy**: Trace events never include transcript text or notification message text — only lengths. This prevents sensitive voice data from appearing in trace logs.
+- **Architecture Compliance**: core/voice_interface.py imports only from core/. system/voice_daemon.py imports from core/ and system/. All emitters are constructor-injected. TraceEvent imported from core/observability.py, not core/schemas.py.
+
+**Testing Results**:
+- **Before**: 922 passed, 23 skipped, 55 warnings
+- **After**: 942 passed, 23 skipped, 55 warnings
+- **New Tests**: 20 tests in tests/test_voice.py
+- **Command**: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
+- **Test Duration**: ~67 seconds
+
+**Architecture Compliance**:
+- All new files follow Clean Architecture layer boundaries
+- `core/voice_interface.py` imports only from core/
+- `system/voice_daemon.py` imports from core/ and system/
+- All emitters are constructor-injected, no global emit_trace() calls
+- TraceEvent imported from core/observability.py, not core/schemas.py
+- No pytest.mark.asyncio at class level — only on individual async test methods
+
+**Rationale**:
+- Voice interface required before exposing real audio capture and Whisper STT
+- Stub pattern enables testing without real audio hardware or Whisper installation
+- Privacy-first design — transcript text never appears in trace logs
+- Voice daemon provides background processing for continuous listening
+- Same approval gates and observability as text interface
+
+**Checkpoint**: prompt-33 created and pushed to remote
+
+**Next Steps**: Prompt 33.5 - Voice Audio Capture and Whisper STT
+
+---
+
+## Prompt 33.5 - Voice Interface Enhancements (Audio Capture and STT Wiring)
+
+**Summary**: Wired real audio capture and Whisper STT into the voice interface. Created `system/audio_capture.py` to isolate PyAudio interactions, modified `core/voice_interface.py` to replace stubs with real implementations of transcription and TTS notification, and updated `system/voice_daemon.py` to integrate the new `AudioCapture` class. Added comprehensive test coverage for the new audio capture component and updated voice interface tests.
+
+**Files Created**:
+- `system/audio_capture.py` - PyAudio-based microphone capture with lazy initialization, graceful failure handling, and trace events
+- `tests/test_audio_capture.py` - 10 new tests covering AudioConfig defaults, AudioCapture availability checks, capture success/failure paths, and resource cleanup
+
+**Files Modified**:
+- `core/voice_interface.py` - Added `transcription_skill` and `tts_skill` constructor parameters, replaced `_transcribe_stub()` with `_transcribe()` that delegates to TranscriptionSkill, updated `notify()` to call TTSSkill.speak() or fall back to print
+- `system/voice_daemon.py` - Added `audio_capture` constructor parameter, replaced `_get_audio_chunk()` stub with real implementation that delegates to AudioCapture
+- `tests/test_voice.py` - Updated existing tests to use `_transcribe` instead of `_transcribe_stub`, added 5 new tests covering skill delegation and fallback behavior
+
+**Implementation Notes**:
+- Test failure after modifying `core/voice_interface.py`: Tests were patching `_transcribe_stub` but the method was renamed to `_transcribe`. Fixed by updating all test patches to use the new method name.
+- Test failure in `test_audio_capture.py`: Initial test attempted to patch `_get_pa` with ImportError, but the implementation catches ImportError inside `_get_pa` and converts it to SkillExecutionError. Fixed by patching `_get_pa` to raise SkillExecutionError directly.
+- PyAudio is lazy-initialized in `_get_pa()` to avoid import errors when the module is not installed. This is the only file in the project that imports pyaudio.
+- All audio I/O is isolated behind the AudioCapture abstraction, ensuring tests remain fully mockable without requiring real microphone hardware.
+- VoiceInterface and VoiceDaemon preserve stub behavior when skills are not injected, ensuring backward compatibility with existing tests.
+
+**Test Results**:
+- Baseline (post-Prompt 33): 942 passed, 23 skipped, 55 warnings
+- Post-Prompt 33.5: 957 passed, 23 skipped, 55 warnings
+- Added 15 new tests (10 for audio capture, 5 for voice interface wiring)
+- All tests pass, zero failures, warning count unchanged
+
+**Architecture Decisions**:
+- Constructor injection for transcription_skill, tts_skill, and audio_capture enables testing without real dependencies
+- Graceful failure pattern: AudioCapture raises SkillExecutionError with install instructions when pyaudio is unavailable
+- Fallback behavior: VoiceInterface.notify() prints to console when TTS skill is not injected, preserving existing behavior
+- Trace events include byte counts and metadata, never audio content or transcript text (privacy-first design)
+
+**Compliance**:
+- All emitters are constructor-injected, no global emit_trace() calls
+- TraceEvent imported from core/observability.py, not core/schemas.py
+- duration_ms cast to int in all trace events
+- event_type and level compared as strings due to use_enum_values=True
+- No pytest.mark.asyncio at class level — only on individual async test methods
+
+**Checkpoint**: prompt-33-5 created and pushed to remote
+
+**Next Steps**: Prompt 34 - (as specified in project roadmap)

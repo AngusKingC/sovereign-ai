@@ -27,12 +27,14 @@ class VoiceDaemon:
         voice_interface: VoiceInterface,
         orchestrator,
         approval_gate,
+        audio_capture=None,   # AudioCapture | None
         emitter: TraceEmitter | None = None,
     ):
         """Initialize the voice daemon."""
         self._voice = voice_interface
         self._orchestrator = orchestrator
         self._approval_gate = approval_gate
+        self._audio_capture = audio_capture
         self._emitter = emitter or MemoryTraceEmitter()
         self._running = False
         self._task: asyncio.Task | None = None
@@ -105,13 +107,14 @@ class VoiceDaemon:
 
     async def _get_audio_chunk(self) -> bytes:
         """
-        Stub for microphone capture — real audio capture wired in Prompt 33.5.
+        Capture audio chunk using AudioCapture.
 
         Returns:
-            Audio data as bytes (empty bytes in this stub)
+            Audio data as bytes (empty bytes if no AudioCapture injected)
         """
-        # Real implementation wired in Prompt 33.5
-        return b""
+        if self._audio_capture is not None:
+            return await self._audio_capture.capture_chunk()
+        return b""  # Preserves stub behaviour
 
     async def _submit_command(self, command: VoiceCommand) -> None:
         """

@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-15 — post Prompt 32 completion. Web GUI + FastAPI Server implemented with REST and WebSocket endpoints. Auth middleware from Prompt 31.7 is wired in. Test baseline: 922 passed, 23 skipped, 55 warnings (from 907 passed, +15 new tests).
+**Last updated**: 2026-06-15 — post Prompt 33.5 completion. Voice interface enhancements with real audio capture and Whisper STT wiring. Test baseline: 957 passed, 23 skipped, 55 warnings (from 942 passed, +15 new tests).
 
 ---
 
@@ -492,6 +492,8 @@ This single prompt closes more of the integration gap than any other.
 | 31.6 | Data Retention Manager | 882 (+15 new tests) |
 | 31.7 | Security Baseline | 907 (+25 new tests) |
 | 32 | Web GUI + FastAPI Server | 922 (+15 new tests) |
+| 33 | Voice Interface | 942 (+20 new tests) |
+| 33.5 | Voice Interface Enhancements (Audio Capture and STT Wiring) | 957 (+15 new tests) |
 
 ---
 
@@ -1299,11 +1301,20 @@ Architecture:
 ---
 
 #### Prompt 33 — Voice Interface
-**Status**: IN PROGRESS
+**Status**: DONE
 
 Wake word detection, Whisper STT, TTS.
 Voice notifications for open loop events.
 Same approval gates and observability as text interface.
+
+---
+
+#### Prompt 33.5 — Voice Audio Capture and Whisper STT
+**Status**: DONE
+
+Real audio capture via PyAudio, Whisper STT wiring, TTS notification.
+AudioCapture class isolates PyAudio interactions.
+VoiceInterface and VoiceDaemon updated with skill injection.
 
 ---
 
@@ -1312,7 +1323,7 @@ Same approval gates and observability as text interface.
 ---
 
 #### Prompt 34 — Trajectory Export / Fine-tuning Pipeline
-**Status**: Queued
+**Status**: IN PROGRESS
 
 Close the self-improvement loop at the model weights level.
 

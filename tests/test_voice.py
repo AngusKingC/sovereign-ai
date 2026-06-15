@@ -79,21 +79,21 @@ class TestVoiceInterface:
     @pytest.mark.asyncio
     async def test_detect_wake_word_returns_true_when_transcript_contains_wake_word_case_insensitive(self):
         """detect_wake_word() returns True when transcript contains wake word (case-insensitive)."""
-        with patch.object(self.voice, "_transcribe_stub", return_value="Jarvis, turn on the lights"):
+        with patch.object(self.voice, "_transcribe", return_value="Jarvis, turn on the lights"):
             result = await self.voice.detect_wake_word(b"audio")
             assert result is True
 
     @pytest.mark.asyncio
     async def test_detect_wake_word_returns_false_when_transcript_does_not_contain_wake_word(self):
         """detect_wake_word() returns False when transcript does not contain wake word."""
-        with patch.object(self.voice, "_transcribe_stub", return_value="turn on the lights"):
+        with patch.object(self.voice, "_transcribe", return_value="turn on the lights"):
             result = await self.voice.detect_wake_word(b"audio")
             assert result is False
 
     @pytest.mark.asyncio
     async def test_detect_wake_word_emits_trace_event_when_wake_word_detected(self):
         """detect_wake_word() emits trace event when wake word detected."""
-        with patch.object(self.voice, "_transcribe_stub", return_value="Jarvis, turn on the lights"):
+        with patch.object(self.voice, "_transcribe", return_value="Jarvis, turn on the lights"):
             await self.voice.detect_wake_word(b"audio")
 
         events = self.emitter.get_events()
@@ -105,7 +105,7 @@ class TestVoiceInterface:
     @pytest.mark.asyncio
     async def test_detect_wake_word_does_not_emit_trace_event_when_wake_word_not_detected(self):
         """detect_wake_word() does NOT emit trace event when wake word not detected."""
-        with patch.object(self.voice, "_transcribe_stub", return_value="turn on the lights"):
+        with patch.object(self.voice, "_transcribe", return_value="turn on the lights"):
             await self.voice.detect_wake_word(b"audio")
 
         events = self.emitter.get_events()
@@ -114,7 +114,7 @@ class TestVoiceInterface:
     @pytest.mark.asyncio
     async def test_process_command_returns_voice_command_with_correct_transcript(self):
         """process_command() returns VoiceCommand with correct transcript."""
-        with patch.object(self.voice, "_transcribe_stub", return_value="hello world"):
+        with patch.object(self.voice, "_transcribe", return_value="hello world"):
             command = await self.voice.process_command(b"audio")
 
         assert command is not None
@@ -124,7 +124,7 @@ class TestVoiceInterface:
     @pytest.mark.asyncio
     async def test_process_command_returns_none_when_transcript_is_empty(self):
         """process_command() returns None when transcript is empty."""
-        with patch.object(self.voice, "_transcribe_stub", return_value=""):
+        with patch.object(self.voice, "_transcribe", return_value=""):
             command = await self.voice.process_command(b"audio")
 
         assert command is None
@@ -132,7 +132,7 @@ class TestVoiceInterface:
     @pytest.mark.asyncio
     async def test_process_command_emits_trace_event_with_transcript_length_not_transcript_text(self):
         """process_command() emits trace event with transcript length (not transcript text)."""
-        with patch.object(self.voice, "_transcribe_stub", return_value="hello world"):
+        with patch.object(self.voice, "_transcribe", return_value="hello world"):
             await self.voice.process_command(b"audio")
 
         events = self.emitter.get_events()
@@ -181,6 +181,43 @@ class TestVoiceInterface:
         assert events[0].data["message_length"] == 11
         assert "message" not in events[0].data
 
+    @pytest.mark.asyncio
+    async def test_transcribe_delegates_to_transcription_skill_when_skill_is_set(self):
+        """_transcribe() delegates to transcription_skill.transcribe_bytes() when skill is set."""
+        mock_skill = AsyncMock()
+        mock_skill.transcribe_bytes.return_value = "hello world"
+        voice = VoiceInterface(emitter=self.emitter, transcription_skill=mock_skill)
+
+        result = await voice._transcribe(b"audio")
+
+        assert result == "hello world"
+        mock_skill.transcribe_bytes.assert_called_once_with(b"audio")
+
+    @pytest.mark.asyncio
+    async def test_transcribe_returns_empty_string_when_no_transcription_skill_injected(self):
+        """_transcribe() returns "" when no transcription skill injected."""
+        result = await self.voice._transcribe(b"audio")
+
+        assert result == ""
+
+    @pytest.mark.asyncio
+    async def test_notify_calls_tts_skill_speak_when_skill_is_set(self):
+        """notify() calls tts_skill.speak() when skill is set."""
+        mock_skill = AsyncMock()
+        voice = VoiceInterface(emitter=self.emitter, tts_skill=mock_skill)
+
+        await voice.notify("hello world")
+
+        mock_skill.speak.assert_called_once_with("hello world")
+
+    @pytest.mark.asyncio
+    async def test_notify_falls_back_to_print_when_no_tts_skill_injected(self):
+        """notify() falls back to print when no TTS skill injected."""
+        with patch("builtins.print") as mock_print:
+            await self.voice.notify("hello world")
+
+            mock_print.assert_called_once_with("[VOICE] hello world")
+
 
 class TestVoiceDaemon:
     """Tests for VoiceDaemon class."""
@@ -218,7 +255,7 @@ class TestVoiceDaemon:
     @pytest.mark.asyncio
     async def test_run_once_submits_command_to_orchestrator_when_wake_word_detected(self):
         """run_once() submits command to orchestrator when wake word detected."""
-        with patch.object(self.voice, "_transcribe_stub", return_value="Jarvis, turn on the lights"):
+        with patch.object(self.voice, "_transcribe", return_value="Jarvis, turn on the lights"):
             command = await self.daemon.run_once(b"audio")
 
         assert command is not None
@@ -229,7 +266,7 @@ class TestVoiceDaemon:
     @pytest.mark.asyncio
     async def test_run_once_returns_none_when_wake_word_not_detected(self):
         """run_once() returns None when wake word not detected."""
-        with patch.object(self.voice, "_transcribe_stub", return_value="turn on the lights"):
+        with patch.object(self.voice, "_transcribe", return_value="turn on the lights"):
             command = await self.daemon.run_once(b"audio")
 
         assert command is None
@@ -246,3 +283,21 @@ class TestVoiceDaemon:
         submitted_task = self.orchestrator.submit_task.call_args[0][0]
         assert isinstance(submitted_task, Task)
         assert submitted_task.intent == "hello world"
+
+    @pytest.mark.asyncio
+    async def test_get_audio_chunk_delegates_to_audio_capture_when_set(self):
+        """VoiceDaemon._get_audio_chunk() delegates to audio_capture.capture_chunk() when set."""
+        mock_capture = AsyncMock()
+        mock_capture.capture_chunk.return_value = b"audio_data"
+        daemon = VoiceDaemon(
+            voice_interface=self.voice,
+            orchestrator=self.orchestrator,
+            approval_gate=self.approval_gate,
+            audio_capture=mock_capture,
+            emitter=self.emitter,
+        )
+
+        result = await daemon._get_audio_chunk()
+
+        assert result == b"audio_data"
+        mock_capture.capture_chunk.assert_called_once()
