@@ -75,3 +75,18 @@ class CrossScopeAccessError(Exception):
         super().__init__(self.message)
 
 
+class SkillExecutionError(Exception):
+    """Raised when a skill fails to execute."""
+    
+    def __init__(self, skill_name: str, message: str | None = None) -> None:
+        """Initialize the skill execution error.
+        
+        Args:
+            skill_name: The name of the skill that failed
+            message: Optional additional message
+        """
+        self.skill_name = skill_name
+        self.message = message or f"Skill '{skill_name}' execution failed"
+        super().__init__(self.message)
+
+
