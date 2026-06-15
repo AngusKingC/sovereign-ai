@@ -75,6 +75,10 @@ class TraceComponent(str, Enum):
     RETENTION = "retention"
     RETENTION_MANAGER = "retention_manager"
 
+    # Security
+    AUTH = "auth"
+    SECURITY = "security"
+
 
 class TraceEventType(str, Enum):
     """Types of trace events."""
@@ -213,6 +217,15 @@ class TraceEventType(str, Enum):
     RETENTION_TASK_HISTORY_PRUNED = "retention_task_history_pruned"
     RETENTION_QDRANT_PRUNED = "retention_qdrant_pruned"
     RETENTION_OBSIDIAN_ARCHIVED = "retention_obsidian_archived"
+
+    # Security events
+    AUTH_TOKEN_CREATED = "auth_token_created"
+    AUTH_TOKEN_LOADED = "auth_token_loaded"
+    AUTH_TOKEN_ROTATED = "auth_token_rotated"
+    AUTH_TOKEN_VALIDATED = "auth_token_validated"
+    AUTH_TOKEN_REJECTED = "auth_token_rejected"
+    INPUT_SANITISED = "input_sanitised"
+    SECRETS_AUDIT_WARNING = "secrets_audit_warning"
 
 
 class TraceEvent(BaseModel):

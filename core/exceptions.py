@@ -112,3 +112,12 @@ class CircularDependencyError(SovereignError):
         super().__init__(self.message)
 
 
+class AuthenticationError(SovereignError):
+    """Raised when authentication fails."""
+    pass
+
+
+class TokenNotFoundError(SovereignError):
+    """Raised when no auth token is present and one is required."""
+    pass
+
