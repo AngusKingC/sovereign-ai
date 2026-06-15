@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-13 — post Prompt 29.8 completion. Approval Trust Levels implemented with trust registry for command approval fatigue reduction. Test baseline: 767 passed, 23 skipped, 12 warnings (from 750 passed, +17 new tests).
+**Last updated**: 2026-06-15 — post Prompt 30 completion. Multi-Worker Mode implemented with parallel/sequential dispatch, resource budget checks, VRAM management, and rating system integration. Test baseline: 795 passed, 23 skipped, 14 warnings (from 767 passed, +28 new tests).
 
 ---
 
@@ -485,6 +485,7 @@ This single prompt closes more of the integration gap than any other.
 | 29.6 | Productivity Skills: PDF, Spreadsheet, Clipboard, Calculator | 734 (+30 new tests) |
 | 29.7 | Adapter Fallback Chain | 750 (+16 new tests) |
 | 29.8 | Approval Trust Levels | 767 (+17 new tests) |
+| 30 | Multi-Worker Mode | 795 (+28 new tests) |
 
 ---
 
@@ -1126,17 +1127,44 @@ Tests: minimum 12 (17 implemented).
 ---
 
 #### Prompt 30 — Multi-Worker Mode
-**Status**: IN PROGRESS
+**Status**: DONE
 
 Route same task to top N workers concurrently.
 Resource budget enforced — only dispatch if budget allows.
 ResourceManager consulted for live memory state.
 Responses surfaced side by side. User selection feeds rating system.
 
+Files:
+- `core/multi_worker.py` — MultiWorkerDispatcher class
+- `core/observability.py` — Added MULTI_WORKER trace events
+- `core/orchestrator.py` — Added get_top_candidates() method
+- `system/resource_manager.py` — Added release_model() and ensure_model() methods
+
+Features:
+- MultiWorkerDispatcher supports parallel (concurrent) and sequential (one-at-a-time) dispatch modes
+- Parallel mode: dispatches all workers concurrently, records failures without aborting
+- Sequential mode: dispatches workers one at a time, ensures/releases model VRAM around each worker
+- Resource budget checks filter eligible workers before dispatch
+- Orchestrator model VRAM released before dispatch (best-effort)
+- Worker model VRAM ensured/released in sequential mode (best-effort)
+- Results stored in-memory keyed by UUID
+- Rating system records winner (1.0) and non-winner (0.9) ratings
+- get_top_candidates() returns top n workers ordered by routing score
+- release_model() marks adapter's model as lowest eviction priority
+- ensure_model() restores adapter's model to normal priority, attempts reload if evicted
+
+Architecture:
+- MultiWorkerDispatcher uses constructor-injected emitter
+- MultiWorkerDispatcher imports only from `core/`
+- All trace events use correct fields: event_type, component, level, message, data, duration_ms
+- No global emit_trace() usage
+
+Tests: 25 new tests (20 for multi_worker, 2 for orchestrator, 3 for resource_manager).
+
 ---
 
 #### Prompt 30.5 — Environment and Media Skills: Home Assistant, Screenshot, TTS, Transcription (New — added 2026-06-11)
-**Status**: Queued
+**Status**: IN PROGRESS
 
 Files:
 - `skills/home_assistant/` — HomeAssistantSkill

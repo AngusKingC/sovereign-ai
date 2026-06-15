@@ -65,6 +65,9 @@ class TraceComponent(str, Enum):
     # Approval
     APPROVAL_TRUST = "approval_trust"
 
+    # Multi-worker
+    MULTI_WORKER = "multi_worker"
+
 
 class TraceEventType(str, Enum):
     """Types of trace events."""
@@ -110,6 +113,15 @@ class TraceEventType(str, Enum):
     TRUST_GRANTED = "trust_granted"
     TRUST_REVOKED = "trust_revoked"
     TRUST_BLOCKED = "trust_blocked"
+    
+    # Multi-worker events
+    MULTI_WORKER_DISPATCH_STARTED = "multi_worker_dispatch_started"
+    MULTI_WORKER_ORCHESTRATOR_MODEL_RELEASED = "multi_worker_orchestrator_model_released"
+    MULTI_WORKER_WORKER_FAILED = "multi_worker_worker_failed"
+    MULTI_WORKER_WORKER_MODEL_ENSURED = "multi_worker_worker_model_ensured"
+    MULTI_WORKER_WORKER_MODEL_RELEASED = "multi_worker_worker_model_released"
+    MULTI_WORKER_DISPATCH_COMPLETED = "multi_worker_dispatch_completed"
+    MULTI_WORKER_WINNER_SELECTED = "multi_worker_winner_selected"
     
     # Worker events
     WORKER_PROMPT_BUILD = "worker_prompt_build"

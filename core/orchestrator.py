@@ -93,6 +93,62 @@ class Orchestrator:
         except Exception:
             pass  # Trace failure should not crash main path
 
+    async def get_top_candidates(self, task: str, n: int) -> list[str]:
+        """Returns IDs of the top n registered workers ordered by routing score for this task.
+        
+        Args:
+            task: The task string to score workers against
+            n: Maximum number of worker IDs to return
+            
+        Returns:
+            List of worker IDs ordered by routing score (highest first)
+        """
+        from core.schemas import Task, TaskPriority, WorkerStatus
+        from datetime import datetime
+        from uuid import uuid4
+        
+        # Create a minimal task object for scoring
+        # Use a simple complexity score of 0.5 for all tasks when called with a string
+        task_obj = Task(
+            task_id=uuid4(),
+            intent=task,
+            complexity_score=0.5,
+            priority=TaskPriority.NORMAL,
+            created_at=datetime.utcnow(),
+        )
+        
+        # Score each worker using the existing algorithm
+        scored_workers = []
+        intent_words = set(word.lower() for word in task.lower().split())
+        
+        for worker_id, worker in self.workers.items():
+            # Skip workers that are not ACTIVE (if they have a status attribute)
+            if hasattr(worker.profile, 'status'):
+                if worker.profile.status != WorkerStatus.ACTIVE:
+                    continue
+            
+            score = 0
+            
+            # +2 points for complexity match (within 0.1 tolerance)
+            if abs(task_obj.complexity_score - worker.profile.preferred_complexity) < 0.1:
+                score += 2
+            
+            # +1 point for each matching capability keyword
+            capabilities_lower = [cap.lower() for cap in worker.profile.capabilities]
+            for word in intent_words:
+                for capability in capabilities_lower:
+                    if word in capability or capability in word:
+                        score += 1
+                        break  # Count each word only once per worker
+            
+            scored_workers.append((score, worker_id))
+        
+        # Sort by score descending, then by registration order
+        scored_workers.sort(key=lambda x: (-x[0], list(self.workers.keys()).index(x[1])))
+        
+        # Return top n worker IDs
+        return [worker_id for _, worker_id in scored_workers[:n]]
+
     async def process_task(self, task: Task, worker_id: str) -> WorkerOutput:
         """
         Process a task by routing it to the specified worker.

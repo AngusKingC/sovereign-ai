@@ -579,3 +579,95 @@ class TestResourceManager:
 
         assert manager._kv_cache_budget_mb == 1024
 
+    async def test_release_model_marks_adapter_as_evictable(self) -> None:
+        """Test that release_model marks adapter's model as evictable."""
+        mock_router = MockMemoryRouter()
+        emitter = MemoryTraceEmitter()
+        manager = ResourceManager(mock_router, emitter=emitter)
+
+        # Record a loaded model
+        await manager.record_load(
+            model_id="test/model:7b",
+            adapter_name="ollama",
+            quantisation="Q4_K_M",
+            vram_used_gb=5.0,
+            ram_used_gb=8.0,
+        )
+
+        # Pin the model
+        await manager.pin_model("test/model:7b")
+
+        # Create a mock adapter with model_id
+        mock_adapter = Mock()
+        mock_adapter.model_id = "test/model:7b"
+
+        # Release the model
+        await manager.release_model(mock_adapter)
+
+        # Check that model is marked as evictable (is_pinned=False, last_used_at=datetime.min)
+        loaded_models = await manager.get_loaded_models()
+        model = loaded_models[0]
+        assert model.is_pinned is False
+        assert model.last_used_at == datetime.min
+
+        # Check trace event was emitted
+        events = emitter.get_events()
+        release_events = [e for e in events if "marked as evictable" in e.message]
+        assert len(release_events) > 0
+
+    async def test_release_model_is_noop_for_untracked_adapter(self) -> None:
+        """Test that release_model is no-op for untracked adapter."""
+        mock_router = MockMemoryRouter()
+        emitter = MemoryTraceEmitter()
+        manager = ResourceManager(mock_router, emitter=emitter)
+
+        # Create a mock adapter with model_id that is not tracked
+        mock_adapter = Mock()
+        mock_adapter.model_id = "untracked/model:7b"
+
+        # Release the model (should be no-op)
+        await manager.release_model(mock_adapter)
+
+        # Check that no models are loaded
+        loaded_models = await manager.get_loaded_models()
+        assert len(loaded_models) == 0
+
+    async def test_ensure_model_raises_priority(self) -> None:
+        """Test that ensure_model restores adapter's model to normal priority."""
+        mock_router = MockMemoryRouter()
+        emitter = MemoryTraceEmitter()
+        manager = ResourceManager(mock_router, emitter=emitter)
+
+        # Record a loaded model
+        await manager.record_load(
+            model_id="test/model:7b",
+            adapter_name="ollama",
+            quantisation="Q4_K_M",
+            vram_used_gb=5.0,
+            ram_used_gb=8.0,
+        )
+
+        # Pin the model
+        await manager.pin_model("test/model:7b")
+
+        # Verify model is pinned
+        loaded_models = await manager.get_loaded_models()
+        assert loaded_models[0].is_pinned is True
+
+        # Create a mock adapter with model_id
+        mock_adapter = Mock()
+        mock_adapter.model_id = "test/model:7b"
+
+        # Ensure the model
+        await manager.ensure_model(mock_adapter)
+
+        # Check that model priority is restored (is_pinned=False)
+        loaded_models = await manager.get_loaded_models()
+        model = loaded_models[0]
+        assert model.is_pinned is False
+
+        # Check trace event was emitted
+        events = emitter.get_events()
+        ensure_events = [e for e in events if "priority restored" in e.message]
+        assert len(ensure_events) > 0
+

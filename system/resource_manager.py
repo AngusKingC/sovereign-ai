@@ -811,6 +811,172 @@ class ResourceManager:
                 pass
             return False
 
+    async def release_model(self, adapter) -> None:
+        """Marks the adapter's model as lowest eviction priority — first candidate if VRAM is needed.
+        
+        Args:
+            adapter: The adapter whose model should be marked as evictable
+            
+        No-op if adapter is not tracked.
+        """
+        try:
+            # Try to get model_id from adapter
+            model_id = getattr(adapter, "model_id", None)
+            if model_id is None:
+                # Adapter might not have model_id attribute, try other common attributes
+                model_id = getattr(adapter, "model_name", None)
+            
+            if model_id is None or model_id not in self._loaded_models:
+                # No-op if adapter is not tracked
+                return
+            
+            # Mark model as lowest eviction priority by setting is_pinned=False
+            # and updating last_used_at to a very old time
+            self._loaded_models[model_id].is_pinned = False
+            self._loaded_models[model_id].last_used_at = datetime.min
+            await self._persist_loaded_state()
+            
+            # Emit trace event
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.RESOURCE_EVICT,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Model {model_id} marked as evictable",
+                    level=TraceLevel.INFO,
+                    data={"model_id": model_id},
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
+        except Exception as e:
+            # Release failure should not crash
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.SYSTEM,
+                    message="Failed to release model",
+                    level=TraceLevel.WARNING,
+                    data={"error": str(e)},
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
+
+    async def ensure_model(self, adapter) -> None:
+        """Restores adapter's model to normal eviction priority.
+        
+        Args:
+            adapter: The adapter whose model should be ensured
+            
+        If model has been evicted, attempt reload (best-effort). If reload not supported,
+        emit warning trace event and return without error.
+        """
+        try:
+            # Try to get model_id from adapter
+            model_id = getattr(adapter, "model_id", None)
+            if model_id is None:
+                # Adapter might not have model_id attribute, try other common attributes
+                model_id = getattr(adapter, "model_name", None)
+            
+            if model_id is None:
+                # No model_id available, emit warning and return
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.OPERATION_WARNING,
+                        component=TraceComponent.SYSTEM,
+                        message="Cannot ensure model: adapter has no model_id",
+                        level=TraceLevel.WARNING,
+                        data={},
+                        duration_ms=0,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
+                return
+            
+            if model_id in self._loaded_models:
+                # Model is tracked, restore normal priority
+                self._loaded_models[model_id].is_pinned = False
+                self._loaded_models[model_id].last_used_at = datetime.now()
+                await self._persist_loaded_state()
+            else:
+                # Model has been evicted or not tracked, attempt reload if supported
+                # Check if adapter has a reload method
+                if hasattr(adapter, "reload"):
+                    try:
+                        await adapter.reload()
+                        # Record the load if successful
+                        vram_used_gb = getattr(adapter, "vram_used_gb", 0.0)
+                        ram_used_gb = getattr(adapter, "ram_used_gb", 0.0)
+                        adapter_name = getattr(adapter, "__class__.__name__", "unknown")
+                        quantisation = getattr(adapter, "quantisation", "unknown")
+                        
+                        await self.record_load(
+                            model_id,
+                            adapter_name,
+                            quantisation,
+                            vram_used_gb,
+                            ram_used_gb,
+                        )
+                    except Exception as e:
+                        # Reload failed, emit warning
+                        try:
+                            event = TraceEvent(
+                                event_type=TraceEventType.OPERATION_WARNING,
+                                component=TraceComponent.SYSTEM,
+                                message=f"Failed to reload model {model_id}",
+                                level=TraceLevel.WARNING,
+                                data={"error": str(e)},
+                                duration_ms=0,
+                            )
+                            await self._emitter.emit(event)
+                        except Exception:
+                            pass
+                else:
+                    # Reload not supported, emit warning and return
+                    try:
+                        event = TraceEvent(
+                            event_type=TraceEventType.OPERATION_WARNING,
+                            component=TraceComponent.SYSTEM,
+                            message=f"Model {model_id} evicted and reload not supported",
+                            level=TraceLevel.WARNING,
+                            data={"model_id": model_id},
+                            duration_ms=0,
+                        )
+                        await self._emitter.emit(event)
+                    except Exception:
+                        pass
+            
+            # Emit trace event
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.RESOURCE_PIN,
+                    component=TraceComponent.SYSTEM,
+                    message=f"Model {model_id} priority restored",
+                    level=TraceLevel.INFO,
+                    data={"model_id": model_id},
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
+        except Exception as e:
+            # Ensure failure should not crash
+            try:
+                event = TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.SYSTEM,
+                    message="Failed to ensure model",
+                    level=TraceLevel.WARNING,
+                    data={"error": str(e)},
+                    duration_ms=0,
+                )
+                await self._emitter.emit(event)
+            except Exception:
+                pass
+
     async def _persist_loaded_state(self) -> None:
         """Persist loaded model state to storage."""
         try:

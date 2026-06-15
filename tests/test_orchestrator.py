@@ -578,3 +578,111 @@ class TestOrchestrator:
         # Verify worker does not have fallback chain
         assert worker.fallback_chain is None
 
+    def test_get_top_candidates_returns_n_highest_scored_workers(self, orchestrator, memory_router):
+        """Test that get_top_candidates returns the n highest scored workers."""
+        # Create 3 workers with different capabilities
+        profile1 = WorkerProfile(
+            worker_id="worker1",
+            worker_type="test",
+            depth_preference=0.5,
+            speculation_tolerance=0.5,
+            source_skepticism=0.5,
+            verbosity=0.5,
+            preferred_model="mock-model",
+            escalation_threshold=0.8,
+            capabilities=["python", "coding"],
+            preferred_complexity=0.5,
+        )
+        llm1 = MockLLMAdapter()
+        worker1 = EchoWorker(profile=profile1, llm=llm1, memory_router=memory_router)
+
+        profile2 = WorkerProfile(
+            worker_id="worker2",
+            worker_type="test",
+            depth_preference=0.5,
+            speculation_tolerance=0.5,
+            source_skepticism=0.5,
+            verbosity=0.5,
+            preferred_model="mock-model",
+            escalation_threshold=0.8,
+            capabilities=["python", "data"],
+            preferred_complexity=0.5,
+        )
+        llm2 = MockLLMAdapter()
+        worker2 = EchoWorker(profile=profile2, llm=llm2, memory_router=memory_router)
+
+        profile3 = WorkerProfile(
+            worker_id="worker3",
+            worker_type="test",
+            depth_preference=0.5,
+            speculation_tolerance=0.5,
+            source_skepticism=0.5,
+            verbosity=0.5,
+            preferred_model="mock-model",
+            escalation_threshold=0.8,
+            capabilities=["writing", "text"],
+            preferred_complexity=0.5,
+        )
+        llm3 = MockLLMAdapter()
+        worker3 = EchoWorker(profile=profile3, llm=llm3, memory_router=memory_router)
+
+        orchestrator.register_worker("worker1", worker1)
+        orchestrator.register_worker("worker2", worker2)
+        orchestrator.register_worker("worker3", worker3)
+
+        import asyncio
+
+        # Task with "python" keyword should match worker1 and worker2
+        candidates = asyncio.run(orchestrator.get_top_candidates("python task", 2))
+        
+        # Should return 2 workers
+        assert len(candidates) == 2
+        # Should return the highest scored workers (worker1 and worker2 both have "python" capability)
+        assert "worker1" in candidates or "worker2" in candidates
+
+    def test_get_top_candidates_returns_all_when_fewer_than_n_registered(self, orchestrator, memory_router):
+        """Test that get_top_candidates returns all workers when fewer than n are registered."""
+        # Create only 2 workers
+        profile1 = WorkerProfile(
+            worker_id="worker1",
+            worker_type="test",
+            depth_preference=0.5,
+            speculation_tolerance=0.5,
+            source_skepticism=0.5,
+            verbosity=0.5,
+            preferred_model="mock-model",
+            escalation_threshold=0.8,
+            capabilities=["test"],
+            preferred_complexity=0.5,
+        )
+        llm1 = MockLLMAdapter()
+        worker1 = EchoWorker(profile=profile1, llm=llm1, memory_router=memory_router)
+
+        profile2 = WorkerProfile(
+            worker_id="worker2",
+            worker_type="test",
+            depth_preference=0.5,
+            speculation_tolerance=0.5,
+            source_skepticism=0.5,
+            verbosity=0.5,
+            preferred_model="mock-model",
+            escalation_threshold=0.8,
+            capabilities=["test"],
+            preferred_complexity=0.5,
+        )
+        llm2 = MockLLMAdapter()
+        worker2 = EchoWorker(profile=profile2, llm=llm2, memory_router=memory_router)
+
+        orchestrator.register_worker("worker1", worker1)
+        orchestrator.register_worker("worker2", worker2)
+
+        import asyncio
+
+        # Request 5 workers but only 2 are registered
+        candidates = asyncio.run(orchestrator.get_top_candidates("test task", 5))
+        
+        # Should return all 2 workers
+        assert len(candidates) == 2
+        assert "worker1" in candidates
+        assert "worker2" in candidates
+
