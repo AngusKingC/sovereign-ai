@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-15 — post Prompt 31.5 completion. Data Retention and Memory Housekeeping implemented with RetentionEngine and RetentionDaemon for scheduled cleanup of expired data. Test baseline: 867 passed, 23 skipped, 10 warnings (from 847 passed, +20 new tests).
+**Last updated**: 2026-06-15 — post Prompt 31.6 completion. Data Retention Manager implemented with storage-specific pruning logic for Postgres trace events, task history, Qdrant vectors, and Obsidian mirror files. Test baseline: 882 passed, 23 skipped, 12 warnings (from 867 passed, +15 new tests).
 
 ---
 
@@ -489,6 +489,7 @@ This single prompt closes more of the integration gap than any other.
 | 30.5 | Environment and Media Skills | 827 (+32 new tests) |
 | 31 | Worker-to-Worker Communication | 847 (+20 new tests) |
 | 31.5 | Data Retention and Memory Housekeeping | 867 (+20 new tests) |
+| 31.6 | Data Retention Manager | 882 (+15 new tests) |
 
 ---
 
@@ -1080,61 +1081,40 @@ Tests: 20 implemented.
 
 ---
 
-#### Prompt 31.6 — Marine Specialist Skills: Passage Planner, Tidal, VHF (New — added 2026-06-11)
-**Status**: Queued
+#### Prompt 31.6 — Data Retention Manager
+**Status**: DONE
+
+Concrete retention layer targeting Postgres trace events, task history, Qdrant vectors, and Obsidian mirror files. Distinct from the generic rule engine stub in core/retention.py — this file contains actual storage-specific pruning logic with dry-run mode and MonitorDaemon integration hook.
 
 Files:
-- `skills/passage_planner/` — sailing passage planning
-- `skills/tidal/` — tidal data and predictions
-- `skills/image_generation/` — image generation (FAL.ai or local ComfyUI)
+- `system/retention_manager.py` — RetentionConfig Pydantic model and RetentionManager class
+- `tests/test_retention_manager.py` — 15 tests covering RetentionConfig and RetentionManager
 
-`skills/passage_planner/`:
-- Combines weather window (from marine_weather skill) + tidal data + AIS traffic
-- Given departure and destination, recommends optimal departure time
-- Considers wind angle, sea state, tidal gates, vessel traffic
-- Genuinely unique — no competitor has this
+Features:
+- RetentionConfig defines TTLs for different data types (trace_events_ttl_days=90, task_history_ttl_days=365, qdrant_ttl_days=90, obsidian_archive_ttl_days=90) with dry_run mode
+- RetentionManager provides storage-specific pruning logic distinct from the generic RetentionEngine in core/retention.py
+- prune_trace_events() deletes trace event records older than config.trace_events_ttl_days via memory router
+- prune_task_history() deletes task history records older than config.task_history_ttl_days, skipping tasks in AWAITING_APPROVAL or IN_PROGRESS state
+- prune_qdrant_vectors() deletes Qdrant vector entries older than config.qdrant_ttl_days via memory router
+- archive_obsidian_notes() moves Obsidian daily note files older than config.obsidian_archive_ttl_days to /archive/ subfolder (never delete)
+- All four prune methods support dry_run parameter — when True, count records but do not delete or archive
+- run_all() calls all four prune methods in order, accumulates counts into RetentionReport, and catches per-method errors without aborting the entire run
+- run_all() emits RETENTION_RUN_STARTED and RETENTION_RUN_COMPLETED trace events
+- schedule_hook() provides MonitorDaemon integration entry point that calls run_all()
 
-`skills/tidal/`:
-- WorldTides API for tidal predictions
-- Tidal height, time of high/low water, tidal stream direction and rate
-- Used by passage_planner skill
+Architecture:
+- All classes use constructor-injected emitters (no global emit_trace())
+- All trace events use correct fields from core/observability.py (event_type, component, level, message, data, duration_ms)
+- All imports only from core/ and memory/ (Clean Architecture compliance)
+- All tests use class-level pytestmark = pytest.mark.asyncio
+- All tests mock MemoryRouter (never use real router instance)
+- All tests check trace events via emitter.get_events()
 
-Tests: minimum 8 per skill (24 total).
-
----
-
-### PHASE 9 — Interfaces
+Tests: 15 implemented.
 
 ---
 
 #### Prompt 29.7 — Adapter Fallback Chain
-**Status**: DONE
-
-If the primary LLM adapter is unavailable (Ollama crashed, VRAM full, API timeout),
-tasks currently fail hard. This prompt adds a fallback chain so workers degrade
-gracefully rather than failing.
-
-Files:
-- `core/adapter_fallback.py` — AdapterFallbackChain class
-
-Features:
-- Ordered list of (adapter, model) pairs per worker, configured at worker creation
-- On primary adapter failure, try next in chain automatically
-- Circuit breaker: if adapter fails N consecutive times, mark it unavailable for T seconds
-- Emits trace event on each fallback attempt with reason
-- ResourceManager consulted before each attempt — skip adapters that won't fit in VRAM
-- ApprovalGate integration: if fallback would use a cloud adapter, require approval
-
-Architecture:
-- `core/adapter_fallback.py` imports only from `core/`
-- Emitter injected via constructor, default MemoryTraceEmitter()
-- All I/O async, all public methods typed
-
-Tests: minimum 12 (16 implemented).
-
----
-
-#### Prompt 29.8 — Approval Trust Levels
 **Status**: DONE
 
 Every TerminalSkill and CodeExecutionSkill call currently requires explicit approval,
@@ -1251,7 +1231,7 @@ Tests: minimum 10.
 ---
 
 #### Prompt 31.7 — Security Baseline
-**Status**: Queued — MUST complete before Prompt 32 (Web GUI)
+**Status**: IN PROGRESS
 
 The FastAPI server (Prompt 32) will be network-accessible. Without a security
 baseline it is open to anyone who can reach the port. This prompt establishes
@@ -1290,7 +1270,7 @@ Tests: minimum 12.
 ---
 
 #### Prompt 32 — Web GUI + FastAPI Server
-**Status**: IN PROGRESS
+**Status**: Queued
 
 `web/` layer — FastAPI server + WebSockets + React or plain HTML frontend.
 

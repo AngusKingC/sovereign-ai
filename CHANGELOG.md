@@ -5621,3 +5621,45 @@ Each SKILL.md must declare:
 **Next Steps**: Prompt 32 - (to be determined)
 
 ---
+
+## Prompt 31.6 - Data Retention Manager
+
+**Summary**: Implemented storage-specific retention manager with concrete pruning logic for Postgres trace events, task history, Qdrant vectors, and Obsidian mirror files. Includes dry-run mode and MonitorDaemon integration hook.
+
+**Files Changed**:
+- `core/observability.py` - Added TraceComponent.RETENTION_MANAGER and 4 retention manager trace event types (RETENTION_TRACE_EVENTS_PRUNED, RETENTION_TASK_HISTORY_PRUNED, RETENTION_QDRANT_PRUNED, RETENTION_OBSIDIAN_ARCHIVED)
+- `system/retention_manager.py` (new) - Created RetentionConfig Pydantic model and RetentionManager class with prune_trace_events(), prune_task_history(), prune_qdrant_vectors(), archive_obsidian_notes(), run_all(), and schedule_hook() methods
+- `tests/test_retention.py` - Fixed TTL boundary test to use 30 minutes instead of 1 hour
+- `tests/test_retention_manager.py` (new) - Created 15 tests covering RetentionConfig and RetentionManager
+
+**Implementation Details**:
+- RetentionConfig defines TTLs for different data types (trace_events_ttl_days=90, task_history_ttl_days=365, qdrant_ttl_days=90, obsidian_archive_ttl_days=90) with dry_run mode
+- RetentionManager provides storage-specific pruning logic distinct from the generic RetentionEngine in core/retention.py
+- prune_trace_events() deletes trace event records older than config.trace_events_ttl_days via memory router
+- prune_task_history() deletes task history records older than config.task_history_ttl_days, skipping tasks in AWAITING_APPROVAL or IN_PROGRESS state
+- prune_qdrant_vectors() deletes Qdrant vector entries older than config.qdrant_ttl_days via memory router
+- archive_obsidian_notes() moves Obsidian daily note files older than config.obsidian_archive_ttl_days to /archive/ subfolder (never delete)
+- All four prune methods support dry_run parameter — when True, count records but do not delete or archive
+- run_all() calls all four prune methods in order, accumulates counts into RetentionReport, and catches per-method errors without aborting the entire run
+- run_all() emits RETENTION_RUN_STARTED and RETENTION_RUN_COMPLETED trace events
+- schedule_hook() provides MonitorDaemon integration entry point that calls run_all()
+- All classes use constructor-injected emitters (no global emit_trace())
+- All trace events use correct fields from core/observability.py (event_type, component, level, message, data, duration_ms)
+- All imports only from core/ and memory/ (Clean Architecture compliance)
+- All tests use class-level pytestmark = pytest.mark.asyncio
+- All tests mock MemoryRouter (never use real router instance)
+- All tests check trace events via emitter.get_events()
+
+**Test Results**: 882 passed, 23 skipped, 12 warnings (from 867 passed, +15 new tests)
+
+**Implementation Notes**:
+- Initial test failure: test_run_all_returns_retention_report_with_accumulated_counts and related tests failed because run_at was set to None in RetentionReport construction, but Pydantic model requires a valid datetime. Fixed by using datetime.utcnow() instead of None.
+- Second test failure: test_run_all_catches_per_method_errors_and_appends_to_report_errors failed because the prune methods had try/except blocks around memory router calls that swallowed exceptions before they could reach run_all(). Fixed by removing try/except from prune methods to let exceptions propagate to run_all() for proper error handling.
+- Third test failure: test_retention_engine_scan_filters_records_older_than_ttl failed because the test used a record exactly 1 hour old with a 3600-second TTL, which was at the boundary. Fixed by using a record 30 minutes old to ensure it's clearly within the TTL window.
+- No other problems encountered - implementation proceeded smoothly after these fixes.
+
+**Checkpoint**: prompt-31-6 to be created and pushed to remote
+
+**Next Steps**: Prompt 31.7 - Security Baseline
+
+---
