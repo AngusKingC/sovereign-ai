@@ -5663,3 +5663,61 @@ Each SKILL.md must declare:
 **Next Steps**: Prompt 31.7 - Security Baseline
 
 ---
+
+## Prompt 31.7 - Security Baseline (2026-06-15)
+
+**Summary**: Implemented security baseline for FastAPI server including token-based authentication, prompt injection hardening, and FastAPI auth middleware. Also includes secrets audit at startup.
+
+**Files Created**:
+- `core/auth.py` - AuthManager class with token generation, validation, and rotation
+- `core/input_sanitiser.py` - InputSanitiser class for prompt injection detection and blocking
+- `web/middleware/auth_middleware.py` - AuthMiddleware and SecretsAudit classes
+- `web/__init__.py` - Web layer package initialization
+- `web/middleware/__init__.py` - Middleware package initialization
+- `tests/test_security.py` - Comprehensive test suite with 25 tests
+
+**Files Modified**:
+- `core/observability.py` - Added TraceComponent.AUTH and TraceComponent.SECURITY; added security trace event types (AUTH_TOKEN_CREATED, AUTH_TOKEN_LOADED, AUTH_TOKEN_ROTATED, AUTH_TOKEN_VALIDATED, AUTH_TOKEN_REJECTED, INPUT_SANITISED, SECRETS_AUDIT_WARNING)
+- `core/exceptions.py` - Added AuthenticationError and TokenNotFoundError exceptions
+
+**Implementation Details**:
+- **AuthManager**: Manages auth token lifecycle with `get_or_create_token()`, `validate_token()`, and `rotate_token()` methods. Token stored in `.env` file as `JARVIS_AUTH_TOKEN`, never in config YAML. Uses timing-safe comparison via `secrets.compare_digest()`. Emits trace events for token operations without logging token values.
+- **InputSanitiser**: Detects and blocks prompt injection patterns including triple backticks, XML tags, and instruction override phrases. Uses `chr()` to represent special characters to avoid JSON parsing issues. Emits WARNING trace events when patterns are blocked.
+- **AuthMiddleware**: FastAPI middleware that extracts token from `Authorization` header or `?token` query param for WebSockets. Validates token using AuthManager. Returns 401 on missing/invalid token. Exempts `/health` path from authentication.
+- **SecretsAudit**: Scans `jarvis.config.yaml` for keys containing secret-related words (api_key, token, secret, password, key). Emits WARNING trace events and prints to console for each secret found.
+
+**Implementation Notes**:
+- **JSON Parsing Issue**: Encountered JSON parsing errors when creating `core/input_sanitiser.py` due to backtick characters in BLOCKED_PATTERNS list. Resolved by using `chr()` function to represent special characters (chr(96) for backtick, chr(60) for `<`, chr(47) for `/`).
+- **Test Failures**: Initial test run had 7 failures and 1 error:
+  - Level comparison failures: Fixed by using string comparison directly instead of `.value` since `use_enum_values=True` in TraceEvent model config
+  - Starlette Request KeyError: Fixed by adding `query_string` to mock request scopes
+  - SecretsAudit false positives: Fixed by checking only key names before colon, not entire line
+  - Monkeypatch fixture error: Fixed by using manual call tracking instead of pytest-mock's `mocker` fixture
+- **Test Coverage**: Created 25 tests covering AuthManager (10 tests), InputSanitiser (7 tests), AuthMiddleware (4 tests), and SecretsAudit (4 tests)
+
+**Testing Results**:
+- **Before**: 882 passed, 23 skipped, 12 warnings
+- **After**: 907 passed, 23 skipped, 12 warnings
+- **New Tests**: 25 tests in `tests/test_security.py`
+- **Command**: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
+- **Test Duration**: ~66 seconds
+
+**Architecture Compliance**:
+- All new files follow Clean Architecture layer boundaries
+- `core/auth.py` and `core/input_sanitiser.py` import only from `core/`
+- `web/middleware/auth_middleware.py` imports from `core/` and uses Starlette for FastAPI integration
+- All emitters are constructor-injected, no global `emit_trace()` calls
+- TraceEvent imported from `core/observability.py`, not `core/schemas.py`
+
+**Rationale**:
+- Security baseline required before exposing FastAPI server in Prompt 32
+- Token-based auth provides simple, effective authentication for web API
+- Prompt injection hardening prevents LLM context poisoning attacks
+- Secrets audit ensures sensitive credentials are not committed to config files
+- Constructor-injected emitters maintain testability and observability
+
+**Checkpoint**: prompt-31-7 created and pushed to remote
+
+**Next Steps**: Prompt 32 - Web GUI and FastAPI Server
+
+---

@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-15 — post Prompt 31.6 completion. Data Retention Manager implemented with storage-specific pruning logic for Postgres trace events, task history, Qdrant vectors, and Obsidian mirror files. Test baseline: 882 passed, 23 skipped, 12 warnings (from 867 passed, +15 new tests).
+**Last updated**: 2026-06-15 — post Prompt 31.7 completion. Security baseline implemented with token-based authentication (AuthManager), prompt injection hardening (InputSanitiser), and FastAPI auth middleware (AuthMiddleware). Also includes secrets audit at startup. Test baseline: 907 passed, 23 skipped, 12 warnings (from 882 passed, +25 new tests).
 
 ---
 
@@ -1231,7 +1231,7 @@ Tests: minimum 10.
 ---
 
 #### Prompt 31.7 — Security Baseline
-**Status**: IN PROGRESS
+**Status**: DONE
 
 The FastAPI server (Prompt 32) will be network-accessible. Without a security
 baseline it is open to anyone who can reach the port. This prompt establishes
@@ -1270,7 +1270,7 @@ Tests: minimum 12.
 ---
 
 #### Prompt 32 — Web GUI + FastAPI Server
-**Status**: Queued
+**Status**: IN PROGRESS
 
 `web/` layer — FastAPI server + WebSockets + React or plain HTML frontend.
 
