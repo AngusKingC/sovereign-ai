@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-15 — post Prompt 30 completion. Multi-Worker Mode implemented with parallel/sequential dispatch, resource budget checks, VRAM management, and rating system integration. Test baseline: 795 passed, 23 skipped, 14 warnings (from 767 passed, +28 new tests).
+**Last updated**: 2026-06-15 — post Prompt 31 completion. Worker-to-Worker Communication implemented with A2A protocol, circular dependency detection, and sub-task priority inheritance. Test baseline: 847 passed, 23 skipped, 12 warnings (from 827 passed, +20 new tests).
 
 ---
 
@@ -486,6 +486,8 @@ This single prompt closes more of the integration gap than any other.
 | 29.7 | Adapter Fallback Chain | 750 (+16 new tests) |
 | 29.8 | Approval Trust Levels | 767 (+17 new tests) |
 | 30 | Multi-Worker Mode | 795 (+28 new tests) |
+| 30.5 | Environment and Media Skills | 827 (+32 new tests) |
+| 31 | Worker-to-Worker Communication | 847 (+20 new tests) |
 
 ---
 
@@ -1024,7 +1026,7 @@ Tests: minimum 8 per skill (32 total).
 ---
 
 #### Prompt 31 — Worker-to-Worker Communication
-**Status**: Queued
+**Status**: DONE
 
 Workers emit sub-task requests during execution.
 Orchestrator routes sub-tasks to specialist workers.
@@ -1164,7 +1166,7 @@ Tests: 25 new tests (20 for multi_worker, 2 for orchestrator, 3 for resource_man
 ---
 
 #### Prompt 30.5 — Environment and Media Skills: Home Assistant, Screenshot, TTS, Transcription (New — added 2026-06-11)
-**Status**: IN PROGRESS
+**Status**: DONE
 
 Files:
 - `skills/home_assistant/` — HomeAssistantSkill
@@ -1188,7 +1190,7 @@ Tests: minimum 8 (2 per skill).
 ---
 
 #### Prompt 31.6 — Data Retention and Memory Housekeeping
-**Status**: Queued
+**Status**: IN PROGRESS
 
 Without a retention policy the Postgres trace table and Qdrant collections grow
 indefinitely. After months of use this becomes a performance and disk space problem.

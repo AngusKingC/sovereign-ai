@@ -90,3 +90,25 @@ class SkillExecutionError(Exception):
         super().__init__(self.message)
 
 
+class SovereignError(Exception):
+    """Base exception for Sovereign AI framework errors."""
+    pass
+
+
+class CircularDependencyError(SovereignError):
+    """Raised when a circular A2A task dependency is detected."""
+    
+    def __init__(self, task_id: UUID, ancestor_task_id: UUID, message: str | None = None) -> None:
+        """Initialize the circular dependency error.
+        
+        Args:
+            task_id: The task that would create the circular dependency
+            ancestor_task_id: The ancestor task that would complete the circle
+            message: Optional additional message
+        """
+        self.task_id = task_id
+        self.ancestor_task_id = ancestor_task_id
+        self.message = message or f"Circular dependency detected: task {task_id} is already an ancestor of {ancestor_task_id}"
+        super().__init__(self.message)
+
+

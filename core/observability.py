@@ -68,6 +68,9 @@ class TraceComponent(str, Enum):
     # Multi-worker
     MULTI_WORKER = "multi_worker"
 
+    # A2A
+    A2A = "a2a"
+
 
 class TraceEventType(str, Enum):
     """Types of trace events."""
@@ -188,6 +191,13 @@ class TraceEventType(str, Enum):
     SPREADSHEET_OPERATION = "spreadsheet_operation"
     CLIPBOARD_OPERATION = "clipboard_operation"
     CALCULATOR_OPERATION = "calculator_operation"
+
+    # A2A events
+    A2A_SUBMIT_STARTED = "a2a_submit_started"
+    A2A_SUBMIT_COMPLETED = "a2a_submit_completed"
+    A2A_SUBMIT_FAILED = "a2a_submit_failed"
+    A2A_CIRCULAR_DEPENDENCY_DETECTED = "a2a_circular_dependency_detected"
+    A2A_CHILDREN_CANCELLED = "a2a_children_cancelled"
 
 
 class TraceEvent(BaseModel):

@@ -41,6 +41,7 @@ class Orchestrator:
         approval_gate: "ApprovalGate | None" = None,
         escalation_engine: "EscalationEngine | None" = None,
         fallback_chain: "AdapterFallbackChain | None" = None,
+        a2a_router: "A2ARouter | None" = None,
         emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the orchestrator with dependencies."""
@@ -50,6 +51,7 @@ class Orchestrator:
         self.approval_gate = approval_gate
         self.escalation_engine = escalation_engine
         self.fallback_chain = fallback_chain
+        self._a2a_router = a2a_router
         self.workers: dict[str, "WorkerBase"] = {}
         self.pending_approval_queue: list[Task] = []
         self._emitter = emitter or MemoryTraceEmitter()
@@ -595,3 +597,21 @@ class Orchestrator:
             )))
         except Exception:
             pass  # Trace failure should not crash main path
+
+    async def submit_subtask(self, request: "A2ARequest") -> "A2AResponse":
+        """
+        Submit an A2A sub-task request for routing.
+        
+        Args:
+            request: The A2A request to submit
+            
+        Returns:
+            A2AResponse with the result
+            
+        Raises:
+            RuntimeError: If A2A router is not configured
+        """
+        if self._a2a_router is None:
+            raise RuntimeError("A2A router not configured")
+        
+        return await self._a2a_router.submit(request)

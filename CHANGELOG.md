@@ -5443,3 +5443,140 @@ Each SKILL.md must declare:
 
 **Next Steps**: Prompt 30.5 - Multi-Worker Mode Integration
 ---
+
+## Prompt 30.5 — Environment and Media Skills (2026-06-15)
+
+**Summary**: Implemented four environment and media skills: Home Assistant, Screenshot, TTS, and Transcription. Each skill follows the skill plugin specification and includes comprehensive tests with constructor-injected emitters and trace event emission.
+
+**Files Changed**:
+- `core/exceptions.py` - Added SkillExecutionError for skill failure handling
+- `skills/home_assistant/__init__.py` - Created module
+- `skills/home_assistant/skill.py` - Created HomeAssistantSkill with REST API integration
+- `skills/home_assistant/SKILL.md` - Created skill metadata
+- `skills/screenshot/__init__.py` - Created module
+- `skills/screenshot/skill.py` - Created ScreenshotSkill with Pillow ImageGrab
+- `skills/screenshot/SKILL.md` - Created skill metadata
+- `skills/tts/__init__.py` - Created module
+- `skills/tts/skill.py` - Created TTSSkill with Piper TTS subprocess
+- `skills/tts/SKILL.md` - Created skill metadata
+- `skills/transcription/__init__.py` - Created module
+- `skills/transcription/skill.py` - Created TranscriptionSkill with faster-whisper
+- `skills/transcription/SKILL.md` - Created skill metadata
+- `tests/test_skill_home_assistant.py` - Created 8 tests
+- `tests/test_skill_screenshot.py` - Created 8 tests
+- `tests/test_skill_tts.py` - Created 8 tests
+- `tests/test_skill_transcription.py` - Created 8 tests
+
+**Implementation Details**:
+
+**Home Assistant Skill**:
+- Connects to Home Assistant via REST API (HA_BASE_URL, HA_TOKEN env vars)
+- Methods: get_states(), get_state(entity_id), call_service(domain, service, entity_id, **kwargs)
+- ApprovalGate integration for call_service() operations
+- Emits trace events on all operations
+- Graceful failure with SkillExecutionError when HA unreachable
+
+**Screenshot Skill**:
+- Captures screen using Pillow ImageGrab.grab()
+- Methods: capture(region), save(path, region)
+- ApprovalGate integration for all captures
+- Emits trace events on successful captures
+- Graceful failure with SkillExecutionError when display unavailable
+
+**TTS Skill**:
+- Text-to-speech using Piper TTS subprocess (PIPER_BIN, PIPER_VOICE env vars)
+- Methods: synthesise(text, voice), speak(text, voice)
+- No approval gate (read-only output)
+- Emits trace events with text length in data
+- Graceful failure with SkillExecutionError when Piper binary not found
+
+**Transcription Skill**:
+- Audio transcription using faster-whisper (WHISPER_MODEL env var)
+- Methods: transcribe(audio_path, language), transcribe_bytes(audio_bytes, language)
+- Lazy model loading (not instantiated at construction)
+- No approval gate (read-only)
+- Emits trace events with language and duration in data
+- Graceful failure with SkillExecutionError when faster-whisper not installed
+
+**Test Results**:
+- home_assistant: 8 tests passed
+- screenshot: 8 tests passed
+- tts: 8 tests passed
+- transcription: 8 tests passed
+- Total new tests: 32
+- Final baseline: 827 passed, 23 skipped, 10 warnings (from 795 passed, +32 new tests)
+- Zero regressions
+
+**Implementation Notes**:
+- Added SkillExecutionError to core/exceptions.py for consistent error handling across skills
+- All skills use constructor-injected emitters (MemoryTraceEmitter default)
+- All trace events use correct fields: event_type, component, level, message, data, duration_ms
+- All skills import only from core/ (Clean Architecture compliance)
+- All tests use class-level pytestmark = pytest.mark.asyncio
+- All tests mock external dependencies (httpx, PIL.ImageGrab, subprocess, faster-whisper)
+- Fixed test environment variable ordering: set env vars before creating skill instance (home_assistant tests)
+- Fixed test patch paths for ApprovalGate (use core.approval_gate.ApprovalGate not skills.home_assistant.skill.ApprovalGate)
+- Fixed test patch paths for PIL.Image (use PIL.Image not skills.screenshot.skill.Image)
+- Fixed test mock image save to actually write data to buffer (screenshot tests)
+- Fixed test assertion to access command list correctly (tts tests)
+
+**No Problems Encountered**: Implementation proceeded smoothly with all tests passing on first run after minor test fixes.
+
+**Checkpoint**: prompt-30-5 created and pushed to remote
+
+**Next Steps**: Prompt 31 - Worker-to-Worker Communication
+---
+
+## Prompt 31 — Worker-to-Worker Communication (2026-06-15)
+
+**Summary**: Implemented A2A (Agent-to-Agent) protocol for worker-to-worker communication with circular dependency detection and sub-task priority inheritance. Workers can now emit sub-task requests during execution, and the orchestrator routes sub-tasks to specialist workers.
+
+**Files Changed**:
+- `core/observability.py` - Added TraceComponent.A2A and A2A trace event types (A2A_SUBMIT_STARTED, A2A_SUBMIT_COMPLETED, A2A_SUBMIT_FAILED, A2A_CIRCULAR_DEPENDENCY_DETECTED, A2A_CHILDREN_CANCELLED)
+- `core/exceptions.py` - Added SovereignError base class and CircularDependencyError
+- `core/a2a_protocol.py` - Created A2ARequest, A2AResponse, and A2ARouter classes
+- `core/orchestrator.py` - Added a2a_router parameter and submit_subtask() method
+- `tests/test_a2a_protocol.py` - Created 20 tests covering all A2A functionality
+
+**Implementation Details**:
+
+**A2A Protocol**:
+- A2ARequest: task_id, input, metadata, requester_agent_id, parent_task_id, priority (defaults to TaskPriority.NORMAL)
+- A2AResponse: task_id, status (completed/failed/pending), output, artifacts, metadata
+- A2ARouter: Routes sub-tasks via orchestrator with circular dependency detection
+- Sub-tasks inherit priority from A2ARequest.priority
+- Child tasks registered under parent in _active_tasks dict
+- Circular dependency detection using DFS traversal of ancestry chain
+
+**Orchestrator Integration**:
+- Optional a2a_router parameter in constructor
+- submit_subtask() method delegates to A2ARouter.submit()
+- Raises RuntimeError if a2a_router not configured
+
+**Trace Events**:
+- A2A_SUBMIT_STARTED: Emitted when sub-task submission starts
+- A2A_SUBMIT_COMPLETED: Emitted when sub-task completes successfully
+- A2A_SUBMIT_FAILED: Emitted when sub-task fails
+- A2A_CIRCULAR_DEPENDENCY_DETECTED: Emitted when circular dependency detected
+- A2A_CHILDREN_CANCELLED: Emitted when child tasks cancelled
+
+**Test Results**:
+- 20 new tests (A2ARequest: 3, A2AResponse: 2, A2ARouter: 13, Orchestrator integration: 2)
+- Final baseline: 847 passed, 23 skipped, 12 warnings (from 827 passed, +20 new tests)
+- Zero regressions
+
+**Implementation Notes**:
+- Fixed trace event type comparison in tests: event_type is already a string due to use_enum_values=True in TraceEvent model config, so use e.event_type == "string" instead of e.event_type.value == "string"
+- Fixed circular dependency detection algorithm: Changed from single-path traversal to proper DFS traversal of all children to detect cycles in complex dependency graphs
+- Fixed circular dependency check direction: Check if parent_task_id is in ancestry of new_task_id (not the other way around) to detect cycles before adding edge
+- All A2A imports only from core/ (Clean Architecture compliance)
+- All tests use class-level pytestmark = pytest.mark.asyncio
+- All tests mock external dependencies (orchestrator, memory_router)
+- A2ARouter with no emitter defaults to MemoryTraceEmitter
+
+**No Problems Encountered**: Implementation proceeded smoothly with all tests passing after fixing trace event comparison and circular dependency detection logic.
+
+**Checkpoint**: prompt-31 to be created and pushed to remote
+
+**Next Steps**: Prompt 31.5 - Data Retention and Memory Housekeeping
+---
