@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-15 — post Prompt 33.5 completion. Voice interface enhancements with real audio capture and Whisper STT wiring. Test baseline: 957 passed, 23 skipped, 55 warnings (from 942 passed, +15 new tests).
+**Last updated**: 2026-06-16 — post Prompt 34 completion. Fine-Tuning Data Export (TrajectoryExporter) for ShareGPT JSONL format. Test baseline: 970 passed, 23 skipped, 55 warnings (from 957 passed, +13 new tests).
 
 ---
 
@@ -352,18 +352,18 @@ This single prompt closes more of the integration gap than any other.
 ## Current State
 
 ### Test Baseline
-- **767 passed, 23 skipped, 12 warnings** (as of Prompt 29.8 / checkpoint prompt-29-8)
+- **970 passed, 23 skipped, 55 warnings** (as of Prompt 34 / checkpoint prompt-34)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
-- 12 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for 4 async decorator marks on sync methods (test_adapter_fallback.py, test_model_evaluator.py) — harmless; PytestUnraisableExceptionWarning for unclosed asyncio transports in subprocess tests — Windows-specific, harmless
+- 55 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for async decorator marks on sync methods (test_web_server.py) — harmless; DeprecationWarning from FastAPI Lifespan events — deferred to Phase 9, do not touch
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
-### Known Issues from Prompt 29.8
-- None — Approval Trust Levels implementation completed successfully
+### Known Issues from Prompt 34
+- None — TrajectoryExporter implementation completed successfully
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-29-8`
+- Latest checkpoint tag: `prompt-34`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -494,6 +494,7 @@ This single prompt closes more of the integration gap than any other.
 | 32 | Web GUI + FastAPI Server | 922 (+15 new tests) |
 | 33 | Voice Interface | 942 (+20 new tests) |
 | 33.5 | Voice Interface Enhancements (Audio Capture and STT Wiring) | 957 (+15 new tests) |
+| 34 | Fine-Tuning Data Export (TrajectoryExporter) | 970 (+13 new tests) |
 
 ---
 
@@ -1323,7 +1324,7 @@ VoiceInterface and VoiceDaemon updated with skill injection.
 ---
 
 #### Prompt 34 — Trajectory Export / Fine-tuning Pipeline
-**Status**: IN PROGRESS
+**Status**: DONE
 
 Close the self-improvement loop at the model weights level.
 

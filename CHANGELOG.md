@@ -5868,3 +5868,50 @@ Each SKILL.md must declare:
 **Checkpoint**: prompt-33-5 created and pushed to remote
 
 **Next Steps**: Prompt 34 - (as specified in project roadmap)
+
+---
+
+## Prompt 34: Fine-Tuning Data Export (TrajectoryExporter)
+
+**Summary**: Implemented TrajectoryExporter class to export completed task trajectories in ShareGPT JSONL format for fine-tuning. The exporter filters tasks by complexity_score threshold, converts Task+WorkerOutput pairs to ShareGPT format, and writes to a JSONL file with async I/O.
+
+**Files Created**:
+- `system/trajectory_exporter.py` - TrajectoryExporter class with constructor-injected MemoryRouter and TraceEmitter
+- `tests/test_trajectory_exporter.py` - 13 tests covering initialization, ShareGPT conversion, filtering, JSONL writing, directory creation, and trace events
+
+**Implementation Notes**:
+- Fixed spec discrepancy: used `TaskStatus.COMPLETE` (not `COMPLETED`) to match actual enum value in core/schemas.py
+- Fixed spec discrepancy: used `output.content` (not `output.response`) to match actual WorkerOutput field
+- Fixed spec discrepancy: changed default min_rating from 4.0 to 0.5 to align with complexity_score range (0-1)
+- Fixed spec discrepancy: used existing TraceEventType enum values (OPERATION_START, OPERATION_COMPLETE) instead of custom event types
+- Added TaskStatus import to system/trajectory_exporter.py to fix NameError in filter_func
+- Used aiofiles for async file I/O as specified
+- Constructor injection for MemoryRouter and TraceEmitter, with MemoryTraceEmitter() as default
+- All public methods are typed (export() -> int, _to_sharegpt() -> dict)
+- Trace events include record_count and export_path in data field
+
+**Test Results**:
+- Baseline (post-Prompt 33.5): 957 passed, 23 skipped, 55 warnings
+- Post-Prompt 34: 970 passed, 23 skipped, 55 warnings
+- Added 13 new tests for TrajectoryExporter
+- All tests pass, zero failures, warning count unchanged
+- aiofiles already present in requirements.txt (no change needed)
+
+**Architecture Decisions**:
+- Pure function _to_sharegpt() for conversion logic, easy to test independently
+- Filter by TaskStatus.COMPLETE and complexity_score >= min_rating
+- Create export directory with parents=True if it doesn't exist
+- Write one JSON object per line (JSONL format) for streaming compatibility
+- Mock MemoryRouter.fetch() in tests with actual filter_func execution to properly test filtering behavior
+
+**Compliance**:
+- All emitters are constructor-injected, no global emit_trace() calls
+- TraceEvent imported from core/observability.py, not core/schemas.py
+- Used existing TraceEventType enum values, not custom strings
+- @pytest.mark.asyncio only on individual async test methods, not at class level
+- All I/O operations use aiofiles for async execution
+- Verified Task and WorkerOutput field names against core/schemas.py before use
+
+**Checkpoint**: prompt-34 (to be created)
+
+**Next Steps**: Prompt 35 - (as specified in project roadmap)
