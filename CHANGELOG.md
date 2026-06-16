@@ -5,6 +5,27 @@ This changelog documents all implementations, changes, and decisions made during
 
 ---
 
+## Process Fix — Tag Integrity Hardening (2026-06-16)
+
+**Problem**: The prompt-35 tag was created after partial prompt-35.5 code had
+been added to the working tree. The tag captured the wrong state, making
+`git reset --hard prompt-35` ineffective as a rollback mechanism.
+
+**Root cause**: The old closing steps updated CHANGELOG and SOVEREIGN_AI_HANDOFF
+first, then committed everything together and tagged. Any code present in the
+working tree at commit time was captured in the tag.
+
+**Fix**:
+- Code is now committed and tagged before docs are updated
+- A mandatory tag verification step (git show --stat) runs immediately after
+  tagging and before any docs work
+- Every prompt spec now includes a baseline tag verification at the start
+- Docs are committed separately after the tag is clean
+
+**Files changed**: SOVEREIGN_AI_HANDOFF.md, CHANGELOG.md
+
+---
+
 ## Phase 1: Foundation and Core Architecture
 
 ### 2026-06-08 - TraceEvent and emit_trace Import Fixes

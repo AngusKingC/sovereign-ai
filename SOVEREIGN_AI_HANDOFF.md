@@ -81,6 +81,12 @@ Format:
 > 0 failed. Do not run the suite now — proceed directly to the pre-edit checklist.
 > Run the suite only after each individual file change."
 
+Before stating the baseline, Claude must also include this tag verification instruction in every spec:
+
+> "Before writing any code, run `git show prompt-{N-1} --stat | head -30` and read the output.
+> Confirm the file list contains only files expected from Prompt N-1.
+> If any unexpected file or test class appears, stop and raise it with the user before proceeding."
+
 **5. Memory entries at the top**
 All active memory entries are listed at the top of every spec, before the goal
 and file instructions. They are labelled "active for this prompt" — not "save
@@ -332,20 +338,28 @@ This single prompt closes more of the integration gap than any other.
 ## Standard Prompt Closing Steps (Mandatory)
 
 1. Run full test suite — confirm zero regressions, count exceeds previous baseline. A higher count with failures does NOT satisfy this step.
-2. Merge feature branch into master
-3. Update `c:\Jarvis\CHANGELOG.md` — must include Implementation Notes documenting any problems hit mid-implementation and how they were resolved. A CHANGELOG entry with no implementation notes is only acceptable for trivial single-file changes.
-4. Update `SOVEREIGN_AI_HANDOFF.md` directly with these changes:
+2. git add . && git commit -m "checkpoint: prompt-{N}"
+3. git tag prompt-{N}
+4. Verify the tag is clean: run `git show prompt-{N} --stat` and confirm the file list contains only files modified in this prompt. If any unexpected file appears — especially any file from a future prompt or test class that should not exist yet — stop, delete the tag with `git tag -d prompt-{N}`, clean the working tree, and re-tag before continuing.
+5. Update c:\Jarvis\CHANGELOG.md — must include Implementation Notes documenting any problems hit mid-implementation and how they were resolved. A CHANGELOG entry with no implementation notes is only acceptable for trivial single-file changes.
+6. Update SOVEREIGN_AI_HANDOFF.md directly with these changes:
    - Add completed prompt row to Completed Prompts table
    - Update Current State section: test baseline, checkpoint tag, warnings count
    - Update Remaining Implementation Plan: mark this prompt DONE, mark next prompt IN PROGRESS
    - Do NOT modify: Recurring Mistake Patterns, Architecture Rules, Project Vision, or prompt spec content
    - Do NOT reformat or restructure any section — append/update only
-5. `git add . && git commit -m "checkpoint: prompt-{N}"`
-6. `git tag prompt-{N}`
-7. `git push origin master`
-8. `git push origin prompt-{N}`
-9. Update Memory 1 in memory files with new checkpoint and test baseline
-10. If any new problems were encountered and solved during this prompt, save solutions to memory files immediately — they should already be saved mid-prompt, but confirm here
+7. git add CHANGELOG.md SOVEREIGN_AI_HANDOFF.md
+8. git commit -m "docs: prompt-{N} changelog and handoff update"
+9. git push origin master
+10. git push origin prompt-{N}
+11. Update Memory 1 in memory files with new checkpoint and test baseline
+12. If any new problems were encountered and solved during this prompt, save solutions to memory files immediately — they should already be saved mid-prompt, but confirm here
+
+The critical changes from the old steps:
+
+Code is committed and tagged BEFORE docs are updated (old steps updated docs first, then committed everything together — this caused the tag to capture stale or next-prompt code)
+Step 4 is a mandatory tag verification before any docs work begins
+Docs are committed separately in steps 7–8 after the tag is already clean and pushed
 
 ---
 
