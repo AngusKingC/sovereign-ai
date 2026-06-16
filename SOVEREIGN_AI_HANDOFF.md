@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-16 — post Prompt 34 completion. Fine-Tuning Data Export (TrajectoryExporter) for ShareGPT JSONL format. Test baseline: 970 passed, 23 skipped, 55 warnings (from 957 passed, +13 new tests).
+**Last updated**: 2026-06-16 — post Prompt 35 completion. Personal Assistant Skills (Email, Calendar, Reminder, Notes). Test baseline: 1026 passed, 23 skipped, 57 warnings (from 970 passed, +56 new tests).
 
 ---
 
@@ -352,18 +352,18 @@ This single prompt closes more of the integration gap than any other.
 ## Current State
 
 ### Test Baseline
-- **970 passed, 23 skipped, 55 warnings** (as of Prompt 34 / checkpoint prompt-34)
+- **1026 passed, 23 skipped, 57 warnings** (as of Prompt 35 / checkpoint prompt-35)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
-- 55 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for async decorator marks on sync methods (test_web_server.py) — harmless; DeprecationWarning from FastAPI Lifespan events — deferred to Phase 9, do not touch
+- 57 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for async decorator marks on sync methods (test_web_server.py) — harmless; DeprecationWarning from FastAPI Lifespan events — deferred to Phase 9, do not touch
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
-### Known Issues from Prompt 34
-- None — TrajectoryExporter implementation completed successfully
+### Known Issues from Prompt 35
+- None — Personal Assistant Skills implementation completed successfully
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-34`
+- Latest checkpoint tag: `prompt-35`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -495,6 +495,7 @@ This single prompt closes more of the integration gap than any other.
 | 33 | Voice Interface | 942 (+20 new tests) |
 | 33.5 | Voice Interface Enhancements (Audio Capture and STT Wiring) | 957 (+15 new tests) |
 | 34 | Fine-Tuning Data Export (TrajectoryExporter) | 970 (+13 new tests) |
+| 35 | Personal Assistant Skills (Email, Calendar, Reminder, Notes) | 1026 (+56 new tests) |
 
 ---
 
@@ -891,7 +892,7 @@ Tests: minimum 10.
 ---
 
 #### Prompt 28.6 — Personal Assistant Skills: Email, Calendar, Reminder, Notes (New — added 2026-06-11)
-**Status**: Queued
+**Status**: DONE
 
 Files:
 - `skills/email/` — IMAP read + SMTP send

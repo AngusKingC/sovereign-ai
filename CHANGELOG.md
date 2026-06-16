@@ -5897,6 +5897,74 @@ Each SKILL.md must declare:
 - All tests pass, zero failures, warning count unchanged
 - aiofiles already present in requirements.txt (no change needed)
 
+**Checkpoint**: prompt-34 created and pushed to remote
+
+**Next Steps**: Prompt 35 - Personal Assistant Skills (as specified in project roadmap)
+
+---
+
+## Prompt 35: Personal Assistant Skills (Email, Calendar, Reminder, Notes)
+
+**Summary**: Implemented four personal assistant skills (Email, Calendar, Reminder, Notes) with constructor-injected emitters and approval gates. Each skill follows the same architectural pattern: constructor injection of TraceEmitter and optional ApprovalGate, async I/O with executors for blocking operations, proper error handling with SkillExecutionError, and comprehensive test coverage with mocked dependencies.
+
+**Files Created**:
+- `skills/email/__init__.py` - Email skill module
+- `skills/email/email_skill.py` - EmailSkill class with IMAP read and SMTP send operations
+- `tests/skills/test_email_skill.py` - 14 tests covering initialization, env var loading, inbox reading, sending, approval gating, and trace events
+- `skills/calendar/__init__.py` - Calendar skill module
+- `skills/calendar/calendar_skill.py` - CalendarSkill class with ICS file operations (get_upcoming, create_event, cancel_event)
+- `tests/skills/test_calendar_skill.py` - 14 tests covering initialization, env var loading, event parsing, filtering, sorting, approval gating, and trace events
+- `skills/reminder/__init__.py` - Reminder skill module
+- `skills/reminder/reminder_skill.py` - ReminderSkill class with MemoryRouter-backed operations (create, list_pending, mark_delivered, get_due)
+- `tests/skills/test_reminder_skill.py` - 12 tests covering initialization, storage schema, filtering, sorting, delivery marking, and trace events
+- `skills/notes/__init__.py` - Notes skill module
+- `skills/notes/notes_skill.py` - NotesSkill class with MemoryRouter-backed operations (create, list_all, get, update, delete, search_by_tag)
+- `tests/skills/test_notes_skill.py` - 16 tests covering initialization, storage schema, CRUD operations, tag search, approval gating, and trace events
+
+**Implementation Notes**:
+- Added icalendar>=5.0.0 to requirements.txt for ICS file parsing
+- EmailSkill: Fixed mock setup for IMAP fetch calls to handle both RFC822 and FLAGS criteria; used function-based mock instead of side_effect to avoid MagicMock wrapping issues
+- CalendarSkill: Fixed datetime comparison issue by stripping timezone info from parsed datetimes to match naive datetime.utcnow(); fixed test assertion to match actual error message format
+- ReminderSkill: Fixed missing timedelta import from datetime; removed spec=MemoryRouter from AsyncMock to allow mocking of scoped_read and scoped_write methods
+- NotesSkill: Used AsyncMock without spec to allow mocking of scoped_read, scoped_write, and scoped_delete methods
+- All skills use constructor-injected emitters with MemoryTraceEmitter() as default
+- All skills use optional approval gates with ApprovalRequest for write operations
+- Trace events use correct fields (event_type, component, level, message, data, duration_ms) and never log sensitive data (email bodies, note content, etc.)
+- All domain exceptions raised outside try-except blocks
+- All tests use unittest.mock.AsyncMock instead of pytest.AsyncMock
+
+**Test Results**:
+- Baseline (post-Prompt 34): 970 passed, 23 skipped, 55 warnings
+- Post-Prompt 35: 1026 passed, 23 skipped, 57 warnings
+- Added 56 new tests (14 for email, 14 for calendar, 12 for reminder, 16 for notes)
+- All tests pass, zero failures, warning count increased by 2 (from 55 to 57)
+- Test suite run after each file pair confirmed zero new failures:
+  - Email skill file pair: 984 passed (+14)
+  - Calendar skill file pair: 998 passed (+14)
+  - Reminder skill file pair: 1010 passed (+12)
+  - Notes skill file pair: 1026 passed (+16)
+
+**Architecture Decisions**:
+- EmailSkill uses asyncio executors for blocking imaplib and smtplib calls
+- CalendarSkill uses asyncio executors for blocking file I/O and icalendar parsing
+- ReminderSkill and NotesSkill use MemoryRouter for persistence (async by design)
+- Approval gates are optional for low-risk operations (reminder create, note create) but required for destructive operations (email send, calendar write/delete, note update/delete)
+- Environment variable fallback for credentials (EMAIL_IMAP_HOST, EMAIL_SMTP_HOST, EMAIL_USERNAME, EMAIL_PASSWORD, CALENDAR_ICS_PATH)
+
+**Compliance**:
+- All emitters are constructor-injected, no global emit_trace() calls
+- TraceEvent imported from core/observability.py, not core/schemas.py
+- duration_ms cast to int in all trace events
+- event_type and level compared as strings due to use_enum_values=True
+- No pytest.mark.asyncio at class level — only on individual async test methods
+- All production and test files fixed together as atomic units before running test suite
+- No domain exceptions raised inside try-except blocks
+
+**Checkpoint**: prompt-35 to be created and pushed to remote
+
+**Next Steps**: Prompt 36 - (as specified in project roadmap)
+
+
 **Architecture Decisions**:
 - Pure function _to_sharegpt() for conversion logic, easy to test independently
 - Filter by TaskStatus.COMPLETE and complexity_score >= min_rating
