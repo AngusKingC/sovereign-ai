@@ -6128,3 +6128,59 @@ working tree at commit time was captured in the tag.
 **Checkpoint**: prompt-35.5.1 created and verified with git show --stat
 
 **Next Steps**: Prompt 36 - (as specified in project roadmap)
+
+---
+
+## [2026-06-17 17:00] Prompt 35.5.2 — Integrity Check and Final Tag Creation
+
+**Scope**: Read-only filesystem and state integrity audit following the tooling instability saga in the previous session, followed by final checkpoint creation for the corrected test file.
+
+**Files Modified**:
+- adapters/ollama.py (8 lines changed - no actual changes, just line ending normalization)
+- tests/test_ollama_adapter.py (82 lines changed - user manually corrected the test file outside of Devin's tooling)
+
+**Changes Made**:
+- No code changes - this was a read-only audit followed by committing the user's manual correction
+- The test file was manually corrected by the user after multiple automated fix attempts failed
+- Byte-level verification confirmed adapters/ollama.py was already correct throughout the saga
+
+**Testing Results**:
+- Baseline (prompt-35.5.1): 1051 passed, 23 skipped, 56 warnings
+- Post-Prompt 35.5.2: 1051 passed, 23 skipped, 56 warnings
+- Test count unchanged - this was a checkpoint for existing corrected code
+- tests/test_ollama_adapter.py: 4 passed (TestThinkingExtraction class)
+- Full test suite: 1051 passed, 23 skipped, 56 warnings
+
+**Implementation Notes**:
+This prompt was a read-only audit to verify repo state after the previous session experienced repeated tooling instability while editing tests/test_ollama_adapter.py. The saga involved:
+- Wrong tag format in prompt-35.5: used `<thinking>` instead of `<think>` (spec deviation without documentation)
+- Wrong tag format again in prompt-35.5.1: used `<thought>` and falsely attributed it to "the original spec" (the spec actually specified `<think>` from the start)
+- A blind .replace() script that silently deleted all tags from the test file entirely
+- Multiple failed automated fix attempts including syntax errors and no-op edits
+- A reported angle-bracket-stripping bug in the edit tool
+- Byte-level verification confirming adapters/ollama.py was actually already correct with `<think>` tags throughout
+- The user manually applying the final corrected test file outside of Devin's tooling
+- The original session's tag-creation step apparently never completed (prompt-35.5.2 did not exist)
+
+The audit confirmed:
+- Git state: working tree had uncommitted changes to adapters/ollama.py and tests/test_ollama_adapter.py
+- Tag integrity: prompt-35.5.1 was the most recent tag (prompt-35.5.2 did not exist)
+- Test determinism: identical results on two consecutive runs (1051/23/56)
+- File integrity: all 9 files from last 3 prompts were valid UTF-8 with no truncation
+- Debris check: no leftover placeholders, debug artifacts, or half-finished edits
+- Fix structural check: all 4 test methods in TestThinkingExtraction correctly use `<think>` tags, the regex pattern in adapters/ollama.py is `r'<think>(.*?)</think>'`
+
+The audit revealed that the production file (adapters/ollama.py) was actually correct throughout the entire saga - the issue was only in the test file. The user manually corrected the test file, and this prompt committed that correction as prompt-35.5.2.
+
+**Architecture Decisions**:
+- None - this was a read-only audit and checkpoint operation
+
+**Compliance**:
+- All emitters are constructor-injected, no global emit_trace() calls
+- TraceEvent imported from core/observability.py, not core/schemas.py
+- TraceEvent constructed with correct fields: event_type, component, level, message, data, duration_ms
+- No pytest.mark.asyncio at class level — only on individual async test methods
+
+**Checkpoint**: prompt-35.5.2 created and verified with git show --stat (commit ab0469c)
+
+**Next Steps**: Prompt 36 - (as specified in project roadmap)

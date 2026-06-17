@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-17 — post Prompt 35.5.1 completion. Spec Deviation Correction. Test baseline: 1051 passed, 23 skipped, 56 warnings (from 1049 passed, +2 new tests).
+**Last updated**: 2026-06-17 — post Prompt 35.5.2 completion. Integrity Check and Final Tag Creation. Test baseline: 1051 passed, 23 skipped, 56 warnings (no new tests - checkpoint for user manual correction).
 
 ---
 
@@ -366,18 +366,18 @@ Docs are committed separately in steps 7–8 after the tag is already clean and 
 ## Current State
 
 ### Test Baseline
-- **1051 passed, 23 skipped, 56 warnings** (as of Prompt 35.5.1 / checkpoint prompt-35.5.1)
+- **1051 passed, 23 skipped, 56 warnings** (as of Prompt 35.5.2 / checkpoint prompt-35.5.2)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
 - 56 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for async decorator marks on sync methods (test_web_server.py) — harmless; DeprecationWarning from FastAPI Lifespan events — deferred to Phase 9, do not touch
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
-### Known Issues from Prompt 35.5.1
-- None — All four spec deviations corrected successfully
+### Known Issues from Prompt 35.5.2
+- None — Integrity check confirmed repo state is clean
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-35.5.1`
+- Latest checkpoint tag: `prompt-35.5.2`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -513,6 +513,7 @@ Docs are committed separately in steps 7–8 after the tag is already clean and 
 | 35 | Personal Assistant Skills (Email, Calendar, Reminder, Notes) | 1026 (+56 new tests) |
 | 35.5 | Verbosity Control + Model Thinking Capture + Async I/O Improvements | 1049 (+23 new tests) |
 | 35.5.1 | Spec Deviation Correction | 1051 (+2 new tests) |
+| 35.5.2 | Integrity Check and Final Tag Creation | 1051 (no new tests - checkpoint for user manual correction) |
 
 ---
 
@@ -1489,8 +1490,9 @@ and prompt guards when patterns recur.
 18. Using per-method @pytest.mark.asyncio instead of class-level pytestmark — Prompt 27.5 used per-method decorators for async tests, but global_rules.md mandates class-level pytestmark for all async test classes. From Prompt 28 onward, use pytestmark at class level, not per-method decorators.
 19. Case-sensitive string comparison on enum-like fields in tests — TraceEvent.level is stored lowercase ("warning") but tests asserting `e.level == "WARNING"` fail silently (0 matches, no error). Always use `e.level.upper() == "WARNING"` or normalise at the emitter. When a test asserts on a string field, verify the actual stored value before writing the assertion.
 20. Budget/quota checks that test the request alone instead of accumulated + request — check_token_budget approved a request because it only compared requested_tokens > limit, ignoring session_used. Any method that enforces a cumulative limit MUST fetch the running total first and test (total + requested) > limit, not requested > limit alone.
-21. TraceEventType enums vs raw strings — Prompt 22.5 used TraceEventType.OPERATION_COMPLETE and TraceComponent.ADAPTER enum values rather than raw strings (e.g. "mcp_discover"). Both work if the enum is defined in core/observability.py, but raw strings are the pattern used across all other components. Before writing any new trace emission, verify whether the codebase uses enum or string literals for event_type and component — do not mix them within a prompt. If enums are used, import TraceEventType and TraceComponent from core/observability.py, never define them locally.
-22. Spec deviation without documentation — When a spec specifies an exact value, format, method name, or scope (e.g., a tag string, a function call signature, a list of files), implement exactly that. If a different approach seems better, STOP and flag it in Implementation Notes as an explicit deviation with rationale before writing the code. Do not silently substitute. A test suite that passes 100% green proves nothing if the tests were written to match the deviation rather than the spec.
+21. Asserting file content as fact without verification — When reporting on file content (e.g., regex patterns, tag formats, method signatures), never assert specific values from memory or estimation. Always derive the expected value by reading the actual file content first: use open(..., 'rb').read() for byte-level verification, or read the file directly and paste the relevant lines. This pattern caused two failures in Prompt 35.5.2: a Step 6 report claiming the regex was r'<thinking>(.*?)</thinking>' when it was actually r'(.*?)', and a CHANGELOG entry repeating the same error. Both were fluent, specific, and completely wrong.
+22. TraceEventType enums vs raw strings — Prompt 22.5 used TraceEventType.OPERATION_COMPLETE and TraceComponent.ADAPTER enum values rather than raw strings (e.g. "mcp_discover"). Both work if the enum is defined in core/observability.py, but raw strings are the pattern used across all other components. Before writing any new trace emission, verify whether the codebase uses enum or string literals for event_type and component — do not mix them within a prompt. If enums are used, import TraceEventType and TraceComponent from core/observability.py, never define them locally.
+23. Spec deviation without documentation — When a spec specifies an exact value, format, method name, or scope (e.g., a tag string, a function call signature, a list of files), implement exactly that. If a different approach seems better, STOP and flag it in Implementation Notes as an explicit deviation with rationale before writing the code. Do not silently substitute. A test suite that passes 100% green proves nothing if the tests were written to match the deviation rather than the spec.
 
 ---
 
