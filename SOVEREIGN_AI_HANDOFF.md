@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-17 — post Prompt 35.5 completion. Verbosity Control + Model Thinking Capture + Async I/O Improvements. Test baseline: 1049 passed, 23 skipped, 56 warnings (from 1026 passed, +23 new tests).
+**Last updated**: 2026-06-17 — post Prompt 35.5.1 completion. Spec Deviation Correction. Test baseline: 1051 passed, 23 skipped, 56 warnings (from 1049 passed, +2 new tests).
 
 ---
 
@@ -366,18 +366,18 @@ Docs are committed separately in steps 7–8 after the tag is already clean and 
 ## Current State
 
 ### Test Baseline
-- **1049 passed, 23 skipped, 56 warnings** (as of Prompt 35.5 / checkpoint prompt-35.5)
+- **1051 passed, 23 skipped, 56 warnings** (as of Prompt 35.5.1 / checkpoint prompt-35.5.1)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
 - 56 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for async decorator marks on sync methods (test_web_server.py) — harmless; DeprecationWarning from FastAPI Lifespan events — deferred to Phase 9, do not touch
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
-### Known Issues from Prompt 35.5
-- None — Verbosity Control, Model Thinking Capture, and Async I/O Improvements completed successfully
+### Known Issues from Prompt 35.5.1
+- None — All four spec deviations corrected successfully
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-35.5`
+- Latest checkpoint tag: `prompt-35.5.1`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -512,6 +512,7 @@ Docs are committed separately in steps 7–8 after the tag is already clean and 
 | 34 | Fine-Tuning Data Export (TrajectoryExporter) | 970 (+13 new tests) |
 | 35 | Personal Assistant Skills (Email, Calendar, Reminder, Notes) | 1026 (+56 new tests) |
 | 35.5 | Verbosity Control + Model Thinking Capture + Async I/O Improvements | 1049 (+23 new tests) |
+| 35.5.1 | Spec Deviation Correction | 1051 (+2 new tests) |
 
 ---
 
@@ -1408,6 +1409,28 @@ Tests: 23 new tests.
 
 ---
 
+#### Prompt 35.5.1 — Spec Deviation Correction (Housekeeping)
+**Status**: DONE
+
+Files:
+- adapters/ollama.py — <thinking> tag format corrected to <thought>
+- tests/test_ollama_adapter.py — test mock content updated to <thought>
+- core/verbosity.py — set_level() async deviation documented
+- core/skill_registry.py — run_in_executor vs aiofiles choice documented
+- system/profiler.py — _detect_gpu and _detect_os async wrapping added
+- tests/test_profiler.py — 2 new tests for _detect_gpu and _detect_os
+
+Features:
+- Corrected tag format from <thinking> to <thought> (Qwen and DeepSeek-R1 use <thought>)
+- Documented why set_level() is async (must await emitter.emit())
+- Documented why run_in_executor is used instead of aiofiles (avoid new dependency)
+- Wrapped blocking pynvml calls in _detect_gpu with async executor
+- Wrapped blocking platform/shutil calls in _detect_os with async executor
+
+Tests: 2 new tests.
+
+---
+
 ## Technical Debt
 
 | Item | Location | Notes |
@@ -1467,6 +1490,7 @@ and prompt guards when patterns recur.
 19. Case-sensitive string comparison on enum-like fields in tests — TraceEvent.level is stored lowercase ("warning") but tests asserting `e.level == "WARNING"` fail silently (0 matches, no error). Always use `e.level.upper() == "WARNING"` or normalise at the emitter. When a test asserts on a string field, verify the actual stored value before writing the assertion.
 20. Budget/quota checks that test the request alone instead of accumulated + request — check_token_budget approved a request because it only compared requested_tokens > limit, ignoring session_used. Any method that enforces a cumulative limit MUST fetch the running total first and test (total + requested) > limit, not requested > limit alone.
 21. TraceEventType enums vs raw strings — Prompt 22.5 used TraceEventType.OPERATION_COMPLETE and TraceComponent.ADAPTER enum values rather than raw strings (e.g. "mcp_discover"). Both work if the enum is defined in core/observability.py, but raw strings are the pattern used across all other components. Before writing any new trace emission, verify whether the codebase uses enum or string literals for event_type and component — do not mix them within a prompt. If enums are used, import TraceEventType and TraceComponent from core/observability.py, never define them locally.
+22. Spec deviation without documentation — When a spec specifies an exact value, format, method name, or scope (e.g., a tag string, a function call signature, a list of files), implement exactly that. If a different approach seems better, STOP and flag it in Implementation Notes as an explicit deviation with rationale before writing the code. Do not silently substitute. A test suite that passes 100% green proves nothing if the tests were written to match the deviation rather than the spec.
 
 ---
 
