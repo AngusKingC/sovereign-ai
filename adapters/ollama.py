@@ -118,9 +118,9 @@ class OllamaAdapter(LLMAdapter):
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             response_length = len(data["message"]["content"])
 
-            # Extract <thought> content if present
+            # Extract <think> content if present
             raw_content = data["message"]["content"]
-            thinking_match = re.search(r'<thought>(.*?)</thought>', raw_content, re.DOTALL)
+            thinking_match = re.search(r'<think>(.*?)</think>', raw_content, re.DOTALL)
             if thinking_match:
                 thinking_content = thinking_match.group(1)
                 # Emit model thinking captured event
@@ -141,8 +141,8 @@ class OllamaAdapter(LLMAdapter):
                     await self._emitter.emit(event)
                 except Exception:
                     pass
-                # Strip <thought> tags from response
-                cleaned_content = re.sub(r'<thought>.*?</thought>', '', raw_content, flags=re.DOTALL).strip()
+                # Strip <think> tags from response
+                cleaned_content = re.sub(r'<think>.*?</think>', '', raw_content, flags=re.DOTALL).strip()
                 data["message"]["content"] = cleaned_content
 
             # Emit adapter response event
