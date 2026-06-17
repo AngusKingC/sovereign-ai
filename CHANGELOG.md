@@ -3,32 +3,17 @@
 ## Overview
 This changelog documents all implementations, changes, and decisions made during the development of the Sovereign AI Agent Framework.
 
----
-
-## Process Fix — Tag Integrity Hardening (2026-06-16)
-
-**Problem**: The prompt-35 tag was created after partial prompt-35.5 code had
-been added to the working tree. The tag captured the wrong state, making
-`git reset --hard prompt-35` ineffective as a rollback mechanism.
-
-**Root cause**: The old closing steps updated CHANGELOG and SOVEREIGN_AI_HANDOFF
-first, then committed everything together and tagged. Any code present in the
-working tree at commit time was captured in the tag.
-
-**Fix**:
-- Code is now committed and tagged before docs are updated
-- A mandatory tag verification step (git show --stat) runs immediately after
-  tagging and before any docs work
-- Every prompt spec now includes a baseline tag verification at the start
-- Docs are committed separately after the tag is clean
-
-**Files changed**: SOVEREIGN_AI_HANDOFF.md, CHANGELOG.md
+### CHANGELOG Rules
+- Entries are in chronological order — oldest at top, newest at bottom
+- New entries are always appended to the bottom of the file, never inserted at the top
+- Every entry date must include time: format YYYY-MM-DD HH:MM
+- Never prepend entries — always append
 
 ---
 
 ## Phase 1: Foundation and Core Architecture
 
-### 2026-06-08 - TraceEvent and emit_trace Import Fixes
+### 2026-06-08 21:18 - TraceEvent and emit_trace Import Fixes
 **Implementation**: Fixed missing imports across the codebase
 - **Root Cause**: Multiple files were using `emit_trace` and `TraceEvent` without importing them from `core.observability`, causing `NameError` exceptions during test execution
 - **Files Fixed**:
@@ -64,9 +49,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-## Phase 1: Foundation and Core Architecture
-
-### 2026-06-07 - Initial Project Setup
+### 2026-06-06 05:00 - Initial Project Setup
 **Implementation**: Project structure and dependencies
 - Created `requirements.txt` with core dependencies:
   - `pydantic>=2.0.0` - Data validation and serialization
@@ -87,7 +70,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Core Schema Definitions
+### 2026-06-06 04:00 - Core Schema Definitions
 **Implementation**: `core/schemas.py`
 - Implemented comprehensive Pydantic models for data contracts:
   - `Message` - Chat messages with role, content, timestamp
@@ -112,7 +95,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Memory Router Interface
+### 2026-06-06 03:00 - Memory Router Interface
 **Implementation**: `core/memory_router.py`
 - Defined `MemoryBackend` abstract base class
 - Implemented `MemoryRouter` class for governed memory access
@@ -133,7 +116,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Observability Layer
+### 2026-06-06 07:00 - Observability Layer
 **Implementation**: `observability/tracer.py`
 - Implemented `Tracer` class for distributed tracing
 - `TraceEvent` model for structured event data
@@ -146,7 +129,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Worker Base Interface
+### 2026-06-06 06:00 - Worker Base Interface
 **Implementation**: `core/worker_base.py`
 - Defined `LLMResponse` Pydantic model for LLM outputs
 - Defined `LLMAdapter` Protocol for LLM provider abstraction
@@ -167,7 +150,7 @@ working tree at commit time was captured in the tag.
 
 ## Phase 2: Memory Substrate Implementation
 
-### 2026-06-07 - Obsidian Backend
+### 2026-06-06 09:00 - Obsidian Backend
 **Implementation**: `memory/obsidian.py`
 - Implemented `ObsidianBackend` class for markdown vault storage
 - Methods:
@@ -194,7 +177,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - PostgreSQL Backend
+### 2026-06-06 08:00 - PostgreSQL Backend
 **Implementation**: `memory/postgres.py`
 - Implemented `PostgresBackend` class for structured data storage
 - Features:
@@ -221,7 +204,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Qdrant Backend
+### 2026-06-06 11:00 - Qdrant Backend
 **Implementation**: `memory/qdrant.py`
 - Implemented `QdrantBackend` class for vector embeddings and semantic search
 - Features:
@@ -247,7 +230,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Backend Router
+### 2026-06-06 10:00 - Backend Router
 **Implementation**: `memory/router.py`
 - Implemented `BackendRouter` class for intelligent backend selection
 - `DataType` enum for categorizing memory types:
@@ -277,7 +260,7 @@ working tree at commit time was captured in the tag.
 
 ## Phase 3: Agent Layer Implementation
 
-### 2026-06-07 - Orchestrator Stub
+### 2026-06-06 13:00 - Orchestrator Stub
 **Implementation**: `core/orchestrator.py`
 - Implemented `Orchestrator` class for task routing and coordination
 - Features:
@@ -295,7 +278,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Echo Worker
+### 2026-06-06 12:00 - Echo Worker
 **Implementation**: `workers/echo_worker.py`
 - Implemented `EchoWorker` as minimal concrete worker for testing
 - Implemented `MockLLMAdapter` for testing without real LLM
@@ -315,7 +298,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Integration Tests
+### 2026-06-06 16:00 - Integration Tests
 **Implementation**: `tests/test_integration.py`
 - Created comprehensive integration test suite with 9 tests
 - Fixtures:
@@ -341,7 +324,7 @@ working tree at commit time was captured in the tag.
 
 ## Phase 4: LLM Adapter Implementation
 
-### 2026-06-07 - LLM Adapter Base
+### 2026-06-06 15:00 - LLM Adapter Base
 **Implementation**: `adapters/base.py`
 - Defined `LLMAdapter` abstract base class for LLM provider abstraction
 - Updated to use `LLMResponse` from `core.worker_base` via TYPE_CHECKING
@@ -357,7 +340,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - llama.cpp Adapter (Attempted)
+### 2026-06-06 14:00 - llama.cpp Adapter (Attempted)
 **Implementation**: `adapters/llama_cpp.py`
 - Implemented `LlamaCppAdapter` for direct llama.cpp integration
 - Features:
@@ -378,7 +361,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - LM Studio Adapter
+### 2026-06-06 18:00 - LM Studio Adapter
 **Implementation**: `adapters/lm_studio.py`
 - Implemented `LMStudioAdapter` using LM Studio's local server API
 - Features:
@@ -407,7 +390,7 @@ working tree at commit time was captured in the tag.
 
 ## Phase 5: Testing and Quality Assurance
 
-### 2026-06-07 - Full Test Suite Execution
+### 2026-06-06 17:00 - Full Test Suite Execution
 **Implementation**: Comprehensive testing across all components
 - Total tests: 117 passing
 - Test breakdown:
@@ -515,7 +498,7 @@ working tree at commit time was captured in the tag.
 
 ## Phase 6: Documentation and Tooling
 
-### 2026-06-07 - Comprehensive Changelog Creation
+### 2026-06-06 21:00 - Comprehensive Changelog Creation
 **Implementation**: `CHANGELOG.md`
 - Created comprehensive changelog documenting all implementations
 - Documented architecture decisions and rationale
@@ -533,7 +516,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Ollama Installation
+### 2026-06-06 20:00 - Ollama Installation
 **Implementation**: Ollama (non-cpp) installation
 - Installed Ollama v0.30.6 via winget
 - Provides additional local LLM option
@@ -550,7 +533,7 @@ working tree at commit time was captured in the tag.
 
 ## Phase 7: Comprehensive LLM Adapter Implementation
 
-### 2026-06-07 - Ollama Adapter Implementation
+### 2026-06-06 19:00 - Ollama Adapter Implementation
 **Implementation**: `adapters/ollama.py`
 - Implemented `OllamaAdapter` for local LLM inference via Ollama
 - Features:
@@ -567,7 +550,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - OpenAI Adapter Implementation
+### 2026-06-07 00:00 - OpenAI Adapter Implementation
 **Implementation**: `adapters/openai.py`
 - Implemented `OpenAIAdapter` for cloud LLM inference via OpenAI API
 - Features:
@@ -584,7 +567,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Anthropic Adapter Implementation
+### 2026-06-06 23:00 - Anthropic Adapter Implementation
 **Implementation**: `adapters/anthropic.py`
 - Implemented `AnthropicAdapter` for cloud LLM inference via Anthropic API
 - Features:
@@ -601,7 +584,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Google Gemini Adapter Implementation
+### 2026-06-06 22:00 - Google Gemini Adapter Implementation
 **Implementation**: `adapters/gemini.py`
 - Implemented `GeminiAdapter` for cloud LLM inference via Google Gemini API
 - Features:
@@ -618,7 +601,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Groq Adapter Implementation
+### 2026-06-07 03:00 - Groq Adapter Implementation
 **Implementation**: `adapters/groq.py`
 - Implemented `GroqAdapter` for ultra-fast cloud LLM inference via Groq API
 - Features:
@@ -635,7 +618,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Cohere Adapter Implementation
+### 2026-06-07 02:00 - Cohere Adapter Implementation
 **Implementation**: `adapters/cohere.py`
 - Implemented `CohereAdapter` for enterprise-focused cloud LLM inference via Cohere API
 - Features:
@@ -652,7 +635,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - HuggingFace Inference Adapter Implementation
+### 2026-06-07 01:00 - HuggingFace Inference Adapter Implementation
 **Implementation**: `adapters/huggingface.py`
 - Implemented `HuggingFaceAdapter` for accessing thousands of open-source models
 - Features:
@@ -670,7 +653,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Together AI Adapter Implementation
+### 2026-06-07 06:00 - Together AI Adapter Implementation
 **Implementation**: `adapters/together.py`
 - Implemented `TogetherAdapter` for cost-effective open-source model inference
 - Features:
@@ -687,7 +670,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Mistral AI Adapter Implementation
+### 2026-06-07 05:00 - Mistral AI Adapter Implementation
 **Implementation**: `adapters/mistral.py`
 - Implemented `MistralAdapter` for open-source model inference via Mistral AI API
 - Features:
@@ -704,7 +687,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - DeepSeek Adapter Implementation
+### 2026-06-07 04:00 - DeepSeek Adapter Implementation
 **Implementation**: `adapters/deepseek.py`
 - Implemented `DeepSeekAdapter` for strong coding and general-purpose model inference
 - Features:
@@ -721,7 +704,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Dependencies Update
+### 2026-06-07 08:00 - Dependencies Update
 **Implementation**: `requirements.txt` update
 - Added cloud adapter dependencies:
   - `google-generativeai>=0.3.0` - Google Gemini SDK
@@ -734,7 +717,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Cloud Adapter Testing (Gemini & Anthropic)
+### 2026-06-07 07:00 - Cloud Adapter Testing (Gemini & Anthropic)
 **Implementation**: Test execution and debugging
 - Created test files for Gemini and Anthropic adapters with API key support
 - Fixed Message schema validation issues (added required timestamp field to test fixtures)
@@ -779,7 +762,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Cloud Adapter Testing Success (Gemini & Anthropic)
+### 2026-06-07 09:00 - Cloud Adapter Testing Success (Gemini & Anthropic)
 **Implementation**: Model name research and adapter fixes
 - Researched current available models for both Anthropic and Gemini APIs (2026)
 - Updated Anthropic adapter to use `claude-sonnet-4-6` (current Claude 4.x series)
@@ -822,7 +805,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - CLI Implementation with Multi-Interface Compatibility
+### 2026-06-07 10:00 - CLI Implementation with Multi-Interface Compatibility
 **Implementation**: Hybrid CLI with shared command registry
 - Researched CLI interface patterns from Claude Code, Gemini Gravity, and OpenAI Codex
 - Designed shared command/action layer for interface-agnostic operations
@@ -887,7 +870,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-### 2026-06-07 - Textual TUI Implementation with Arrow Key Navigation
+### 2026-06-07 11:00 - Textual TUI Implementation with Arrow Key Navigation
 **Implementation**: Full-screen TUI with interactive menu navigation
 - Implemented Textual TUI (`cli/tui.py`) with arrow key navigation
   - CommandMenu widget using ListView for menu selection
@@ -940,7 +923,7 @@ python cli/main.py "query"      # Non-interactive
 
 ---
 
-### 2026-06-07 - Textual TUI Bug Fixes
+### 2026-06-07 12:00 - Textual TUI Bug Fixes
 **Implementation**: Fixed menu selection errors in Textual TUI
 - Fixed Label widget text access issues in Textual
   - Textual Label widgets don't have `renderable` attribute
@@ -967,7 +950,7 @@ python cli/main.py "query"      # Non-interactive
 
 ---
 
-### 2026-06-07 - Adapter and Model Listing Features
+### 2026-06-07 14:00 - Adapter and Model Listing Features
 **Implementation**: Enhanced adapter and model commands with listing capabilities
 - Updated AdapterHandler to list available adapters when no argument provided
   - Added AVAILABLE_ADAPTERS constant with all 11 implemented adapters
@@ -995,7 +978,7 @@ python cli/main.py "query"      # Non-interactive
 
 ---
 
-### 2026-06-07 - Selectable Adapter/Model Options in TUI
+### 2026-06-07 13:00 - Selectable Adapter/Model Options in TUI
 **Implementation**: Added modal selection screen for interactive adapter/model selection
 - Implemented SelectionScreen modal widget
   - Reusable modal screen for selecting from a list of options
@@ -1028,7 +1011,7 @@ python cli/main.py "query"      # Non-interactive
 
 ---
 
-### 2026-06-07 - Architecture Compliance Check After CLI Implementation
+### 2026-06-07 16:00 - Architecture Compliance Check After CLI Implementation
 **Context**: User requested verification that project still aligns with architecture laws after CLI implementation
 **Architecture Laws Verified**:
 - Clean Architecture: core never imports adapters - ✅ VERIFIED (no imports found in core directory)
@@ -1057,7 +1040,7 @@ python cli/main.py "query"      # Non-interactive
 
 ---
 
-### 2026-06-07 - Observability Layer Implementation
+### 2026-06-07 15:00 - Observability Layer Implementation
 **Context**: User requested integration of observability layer now that we're working with CLI
 **Architecture Laws Compliance**:
 - Clean Architecture: ✅ Core layer only, no adapter dependencies
@@ -1111,7 +1094,7 @@ python cli/main.py "query"      # Non-interactive
 
 ---
 
-### 2026-06-07 - Ollama Integration into QueryHandler
+### 2026-06-07 17:00 - Ollama Integration into QueryHandler
 **Context**: User requested wiring Ollama into QueryHandler to remove mock responses
 **Architecture Laws Compliance**:
 - Clean Architecture: ⚠️ Violation - core/handlers.py now imports adapters.ollama via lazy import
@@ -1147,7 +1130,7 @@ python cli/main.py "query"      # Non-interactive
 
 ---
 
-### 2026-06-07 - Clean Architecture Violation Fix: AdapterFactory Pattern
+### 2026-06-07 18:00 - Clean Architecture Violation Fix: AdapterFactory Pattern
 **Context**: User requested refactoring QueryHandler to fix Clean Architecture violation where core/handlers.py imported adapters via lazy import
 **Architecture Laws Compliance**:
 - Clean Architecture: ✅ Fixed - core/ no longer imports adapters (verified by grep)
@@ -1206,7 +1189,7 @@ python cli/main.py "query"      # Non-interactive
 
 ---
 
-### 2026-06-07 - Real Embeddings Implementation for QdrantBackend
+### 2026-06-07 19:00 - Real Embeddings Implementation for QdrantBackend
 **Context**: User requested replacing placeholder zero vectors in QdrantBackend with real embeddings via OllamaEmbedder to enable functional semantic search
 **Architecture Laws Compliance**:
 - Clean Architecture: ✅ memory/ imports from core/observability.py (allowed), does not import from adapters/ or cli/
@@ -1264,7 +1247,7 @@ python cli/main.py "query"      # Non-interactive
 
 ---
 
-### 2026-06-07 - SessionManager Implementation with In-Memory Fallback
+### 2026-06-07 20:00 - SessionManager Implementation with In-Memory Fallback
 **Context**: User requested implementing session persistence to enable conversation history across CLI invocations
 **Architecture Laws Compliance**:
 - Clean Architecture: ✅ core/session.py never imports from adapters/, cli/, or memory/ (backend is injected as MemoryBackend Protocol)
@@ -1337,7 +1320,7 @@ python cli/main.py "query"      # Non-interactive
 
 ---
 
-### 2026-06-07 - Consolidate Dual Tracing Systems — Remove observability/tracer.py
+### 2026-06-07 21:00 - Consolidate Dual Tracing Systems — Remove observability/tracer.py
 **Context**: User requested removing the old observability/tracer.py (Phase 1) and migrating all references to the current core/observability.py (Phase 7) to establish a single source of truth for tracing
 
 **Architecture Laws Compliance**:
@@ -1436,7 +1419,7 @@ python cli/main.py "query"      # Non-interactive
 
 ---
 
-### 2026-06-07 - Implement Worker Routing Logic in Orchestrator
+### 2026-06-07 22:00 - Implement Worker Routing Logic in Orchestrator
 **Context**: User requested implementing real worker routing logic in core/orchestrator.py to replace the stub implementation that either picked the first registered worker or failed
 
 **Architecture Laws Compliance**:
@@ -1833,7 +1816,7 @@ The Google Generative AI SDK (`google.generativeai`) is synchronous, but the ada
 
 ---
 
-## [2026-06-08] Extend Observability Across All Architectural Layers
+## [2026-06-08 09:00] Extend Observability Across All Architectural Layers
 
 ### Overview
 Extended the existing observability layer to emit meaningful trace events across all architectural layers, including memory backends, embedder, adapters, workers, and orchestrator. This provides comprehensive visibility into the system's execution flow and performance metrics.
@@ -1956,7 +1939,7 @@ All trace emissions are wrapped in try-except blocks to ensure that trace failur
 
 ---
 
-## [2026-06-08] System Intelligence Layer - System Profiler
+## [2026-06-08 10:00] System Intelligence Layer - System Profiler
 
 ### Overview
 Created a new architectural layer `system/` for system intelligence capabilities, implementing a persistent system profiler that detects and profiles the full hardware and software environment. This is Phase 2a of the System Intelligence Layer implementation.
@@ -2077,7 +2060,7 @@ All detection methods are wrapped in try-except blocks to ensure that detection 
 
 ---
 
-## [2026-06-08] Model Registry - System Intelligence Layer
+## [2026-06-08 11:00] Model Registry - System Intelligence Layer
 
 ### Overview
 Implemented a model registry in the system/ layer to track all known models with their resource requirements, adapter compatibility, and download status. This enables intelligent model selection based on system capabilities and task requirements. This is Phase 2b of the System Intelligence Layer implementation.
@@ -2220,7 +2203,7 @@ The recommendation algorithm prioritizes hardware fit over quality score to ensu
 
 ---
 
-## [2026-06-08] Resource Manager - System Intelligence Layer
+## [2026-06-08 12:00] Resource Manager - System Intelligence Layer
 
 ### Overview
 Implemented a resource manager in the system/ layer to track loaded models, enforce resource budgets, and manage model loading/unloading with intelligent eviction policies. This is Phase 2c of the System Intelligence Layer implementation.
@@ -2365,7 +2348,7 @@ The eviction algorithm prioritizes idle time over task priority to ensure unused
 
 ---
 
-## [2026-06-08] Model Acquisition - System Intelligence Layer
+## [2026-06-08 12:00] Model Acquisition - System Intelligence Layer
 
 ### Overview
 Implemented a unified model downloader with HuggingFace catalogue integration in the system/ layer, giving the agent the ability to discover, evaluate, and download models autonomously with user approval. This is Phase 2d of the System Intelligence Layer implementation.
@@ -2523,7 +2506,7 @@ The download flow includes comprehensive checks: disk space verification, hardwa
 
 ---
 
-## [2026-06-08] Task State Machine - Core Infrastructure Upgrades
+## [2026-06-08 13:00] Task State Machine - Core Infrastructure Upgrades
 
 ### Overview
 Implemented an explicit state machine for task lifecycle management in the core/ layer, providing validated state transitions with full history tracking and observability. This is Phase 3 of Core Infrastructure Upgrades.
@@ -2706,7 +2689,7 @@ CANCELLED → (terminal)
 
 ---
 
-## [2026-06-08] Task Scratchpad - Per-Task Working Memory
+## [2026-06-08 14:00] Task Scratchpad - Per-Task Working Memory
 
 ### Overview
 Implemented a per-task working memory scratchpad system that is separate from long-term memory. Workers write reasoning, dead ends, and intermediate results to the scratchpad during execution. On task completion, the scratchpad is compacted into a summary and written to long-term memory. This provides ephemeral working memory for worker reasoning while maintaining clean separation from persistent memory.
@@ -2870,7 +2853,7 @@ Task CANCELLED: Delete scratchpad
 
 ---
 
-## [2026-06-08] PostgreSQL Session Persistence
+## [2026-06-08 15:00] PostgreSQL Session Persistence
 
 ### Overview
 Replaced the in-memory session fallback in core/session.py with proper PostgreSQL persistence via the existing PostgresBackend and MemoryRouter. Sessions now survive process restarts, are queryable by session_id, user_id, and date range, and include session summary statistics persistence. Old sessions expire and are archived after a configurable period (default: 30 days). In-memory fallback is preserved when no DB is configured.
@@ -3014,7 +2997,7 @@ Session Loading: load_session_async() → loads existing session on startup
 
 ---
 
-## [2026-06-08] Command History and Completion in CLI
+## [2026-06-08 15:00] Command History and Completion in CLI
 
 ### Overview
 Added persistent command history and tab completion to cli/tui.py and cli/rich_cli.py. Command history is persisted to PostgreSQL and readable across sessions using the SOVEREIGN_DB_DSN environment variable pattern established in Prompt 11, with in-memory fallback when not set. History is scoped per user/session via SessionManager.session_id. Includes up/down arrow navigation through history, tab completion for commands/adapter names/model names, and Ctrl+R style history search.
@@ -3158,7 +3141,7 @@ Session End → close() → Close backend connection
 
 ---
 
-### 2026-06-08 - Git-Based Backup System Setup
+### 2026-06-08 16:00 - Git-Based Backup System Setup
 **Implementation**: Git checkpoint and restore system for prompt workflow management
 - **Purpose**: Enable snapshot and revert capabilities at any prompt checkpoint during development
 - **Infrastructure Created**:
@@ -3209,7 +3192,7 @@ python scripts/restore.py prompt-12
 
 ---
 
-### 2026-06-08 - Remote GitHub Backup Setup
+### 2026-06-08 17:00 - Remote GitHub Backup Setup
 **Implementation**: Private GitHub repository for offsite backup of Sovereign AI project
 - **Purpose**: Enable offsite backup and remote synchronization of checkpoint snapshots
 - **Infrastructure Created**:
@@ -3262,7 +3245,7 @@ python scripts/restore.py prompt-12
 
 ---
 
-### 2026-06-08 - Skill Registry and Plugin Specification (Prompt 13)
+### 2026-06-08 18:00 - Skill Registry and Plugin Specification (Prompt 13)
 **Implementation**: Skill plugin system with dynamic discovery and registry
 - **Purpose**: Enable modular, discoverable skill capabilities for the Sovereign AI Agent Framework
 - **Infrastructure Created**:
@@ -3340,7 +3323,7 @@ Each SKILL.md must declare:
 
 ## Phase B: Observability Dependency Injection Refactor (Prompt 13.5)
 
-### 2026-06-09 - Phase B Step 1: Add NullTraceEmitter to core/observability.py
+### 2026-06-08 19:00 - Phase B Step 1: Add NullTraceEmitter to core/observability.py
 **Implementation**: Added NullTraceEmitter class for dependency injection
 - **Root Cause**: Missing no-op emitter for components that don't need tracing
 - **Changes to core/observability.py**:
@@ -3349,7 +3332,7 @@ Each SKILL.md must declare:
   - Useful for testing and when tracing is disabled
 - **Architecture Compliance**: Maintains Clean Architecture, no global state
 
-### 2026-06-09 - Phase B Step 2: Fix core/task_state_machine.py
+### 2026-06-08 20:00 - Phase B Step 2: Fix core/task_state_machine.py
 **Implementation**: Refactored TaskStateMachine to use dependency-injected TraceEmitter
 - **Changes to core/task_state_machine.py**:
   - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
@@ -3362,7 +3345,7 @@ Each SKILL.md must declare:
   - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
 - **Testing Results**: All 25 tests passing
 
-### 2026-06-09 - Phase B Step 3: Fix core/scratchpad.py
+### 2026-06-08 21:00 - Phase B Step 3: Fix core/scratchpad.py
 **Implementation**: Refactored Scratchpad to use dependency-injected TraceEmitter
 - **Changes to core/scratchpad.py**:
   - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
@@ -3375,7 +3358,7 @@ Each SKILL.md must declare:
   - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
 - **Testing Results**: All 8 tests passing
 
-### 2026-06-09 - Phase B Step 4: Fix core/worker_base.py
+### 2026-06-09 00:00 - Phase B Step 4: Fix core/worker_base.py
 **Implementation**: Refactored WorkerBase to use dependency-injected TraceEmitter
 - **Changes to core/worker_base.py**:
   - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
@@ -3388,7 +3371,7 @@ Each SKILL.md must declare:
   - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
 - **Testing Results**: All 6 tests passing
 
-### 2026-06-09 - Phase B Step 5: Fix core/memory_router.py
+### 2026-06-08 23:00 - Phase B Step 5: Fix core/memory_router.py
 **Implementation**: Refactored MemoryRouter to use dependency-injected TraceEmitter
 - **Changes to core/memory_router.py**:
   - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
@@ -3401,7 +3384,7 @@ Each SKILL.md must declare:
   - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
 - **Testing Results**: All 12 tests passing
 
-### 2026-06-09 - Phase B Step 6: Fix core/handlers.py
+### 2026-06-08 22:00 - Phase B Step 6: Fix core/handlers.py
 **Implementation**: Refactored handlers to use dependency-injected TraceEmitter
 - **Changes to core/handlers.py**:
   - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
@@ -3414,7 +3397,7 @@ Each SKILL.md must declare:
   - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
 - **Testing Results**: All 15 tests passing
 
-### 2026-06-09 - Phase B Step 7: Fix core/orchestrator.py
+### 2026-06-09 04:00 - Phase B Step 7: Fix core/orchestrator.py
 **Implementation**: Refactored Orchestrator to use dependency-injected TraceEmitter
 - **Changes to core/orchestrator.py**:
   - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
@@ -3427,7 +3410,7 @@ Each SKILL.md must declare:
   - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
 - **Testing Results**: All 20 tests passing
 
-### 2026-06-09 - Phase B Step 8: Fix workers/ollama_worker.py
+### 2026-06-09 03:00 - Phase B Step 8: Fix workers/ollama_worker.py
 **Implementation**: Refactored OllamaWorker to use dependency-injected TraceEmitter
 - **Changes to workers/ollama_worker.py**:
   - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
@@ -3442,7 +3425,7 @@ Each SKILL.md must declare:
   - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
 - **Testing Results**: All 8 tests passing
 
-### 2026-06-09 - Phase B Step 9: Fix workers/echo_worker.py
+### 2026-06-09 02:00 - Phase B Step 9: Fix workers/echo_worker.py
 **Implementation**: Refactored EchoWorker to use dependency-injected TraceEmitter
 - **Changes to workers/echo_worker.py**:
   - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
@@ -3455,7 +3438,7 @@ Each SKILL.md must declare:
   - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
 - **Testing Results**: All 5 tests passing
 
-### 2026-06-09 - Phase B Step 10: Fix system/profiler.py
+### 2026-06-09 01:00 - Phase B Step 10: Fix system/profiler.py
 **Implementation**: Refactored SystemProfiler to use dependency-injected TraceEmitter
 - **Changes to system/profiler.py**:
   - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
@@ -3469,7 +3452,7 @@ Each SKILL.md must declare:
   - Updated `test_trace_events_emitted_during_profiling` to use `MemoryTraceEmitter` injected into constructor
 - **Testing Results**: All 7 tests passing
 
-### 2026-06-09 - Phase B Step 11: Fix system/model_registry.py
+### 2026-06-09 07:00 - Phase B Step 11: Fix system/model_registry.py
 **Implementation**: Refactored ModelRegistry to use dependency-injected TraceEmitter
 - **Changes to system/model_registry.py**:
   - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
@@ -3483,7 +3466,7 @@ Each SKILL.md must declare:
   - Updated `test_trace_events_emitted_on_key_operations` to use `MemoryTraceEmitter` injected into constructor
 - **Testing Results**: All 11 tests passing
 
-### 2026-06-09 - Phase B Step 12: Fix system/resource_manager.py
+### 2026-06-09 06:00 - Phase B Step 12: Fix system/resource_manager.py
 **Implementation**: Refactored ResourceManager to use dependency-injected TraceEmitter
 - **Changes to system/resource_manager.py**:
   - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
@@ -3497,7 +3480,7 @@ Each SKILL.md must declare:
   - Updated trace event tests to use `MemoryTraceEmitter` injected into constructor
 - **Testing Results**: All 14 tests passing
 
-### 2026-06-09 - Phase B Step 13: Fix system/model_acquisition.py
+### 2026-06-09 05:00 - Phase B Step 13: Fix system/model_acquisition.py
 **Implementation**: Refactored ModelAcquisition to use dependency-injected TraceEmitter
 - **Changes to system/model_acquisition.py**:
   - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`
@@ -3521,17 +3504,17 @@ Each SKILL.md must declare:
 - **Rationale**: Dependency injection eliminates global state, making components more testable and composable. NullTraceEmitter provides a no-op default. MemoryTraceEmitter allows tests to assert on trace events without mocking. This refactoring aligns with the architecture law: "No global state"
 - **Checkpoint**: prompt-13.5 created and pushed to remote
 
-### 2026-06-09 - Phase B Step 14: Fix cli/main.py
+### 2026-06-09 08:00 - Phase B Step 14: Fix cli/main.py
 **Implementation**: Verified cli/main.py does not use emit_trace
 - **Changes to cli/main.py**: No changes needed - file only imports and runs rich_cli or tui
 - **Testing Results**: No test file for cli/main.py
 
-### 2026-06-09 - Phase B Step 15: Fix cli/rich_cli.py
+### 2026-06-09 09:00 - Phase B Step 15: Fix cli/rich_cli.py
 **Implementation**: Verified cli/rich_cli.py does not use emit_trace
 - **Changes to cli/rich_cli.py**: No changes needed - file does not use emit_trace
 - **Testing Results**: No test file for cli/rich_cli.py
 
-### 2026-06-09 - Phase B Step 16: Fix cli/tui.py
+### 2026-06-09 10:00 - Phase B Step 16: Fix cli/tui.py
 **Implementation**: Refactored JarvisTUI to use dependency-injected TraceEmitter
 - **Changes to cli/tui.py**:
   - Updated imports: Added `TraceEmitter`, `NullTraceEmitter`, `TraceEvent`, `ConsoleTraceEmitter`
@@ -3542,7 +3525,7 @@ Each SKILL.md must declare:
   - Replaced `emit_trace(...)` call with `self.emitter.emit(TraceEvent(...))`
 - **Testing Results**: No test file for cli/tui.py
 
-### 2026-06-09 - Phase B Step 17: Fix all test files
+### 2026-06-09 11:00 - Phase B Step 17: Fix all test files
 **Implementation**: Verified all test files have been updated in previous steps
 - **Summary**: All test files were updated in the same step as their corresponding source files
 - **Test Files Fixed**: 13 total (one for each DI-refactored module)
@@ -3555,7 +3538,7 @@ Each SKILL.md must declare:
 
 ## Phase C: Approval Gate Design (Prompt 13.6)
 
-### 2026-06-09 - Approval Gate Design Document
+### 2026-06-09 12:00 - Approval Gate Design Document
 **Implementation**: Created comprehensive design document for approval gate system
 - **Purpose**: Lock in approval gate contracts before implementation in Prompt 14
 - **Document**: `docs/APPROVAL_GATE_DESIGN.md`
@@ -3594,7 +3577,7 @@ Each SKILL.md must declare:
 
 - **Next Steps**: Implementation in Prompt 14 (pending user review and approval of this design)
 
-### 2026-06-09 - Prompt 13.6 Amendments: DENIED State and Scope Storage
+### 2026-06-09 13:00 - Prompt 13.6 Amendments: DENIED State and Scope Storage
 **Implementation**: Two design amendments to lock in approval gate decisions before Prompt 14
 
 **Amendment 1: Add DENIED to TaskStatus enum**
@@ -3638,7 +3621,7 @@ Each SKILL.md must declare:
 
 - **Next Steps**: Prompt 14 implementation (approval gate system)
 
-### 2026-06-09 - Prompt 14: Approval Gate Implementation
+### 2026-06-09 14:00 - Prompt 14: Approval Gate Implementation
 **Implementation**: Core approval gate system with human-in-the-loop authorization
 
 **Files Created**:
@@ -3709,7 +3692,7 @@ Each SKILL.md must declare:
 
 **Next Steps**: Approval gate CLI/TUI integration (future prompt)
 
-### 2026-06-09 - Prompt 15: Worker Factory Implementation
+### 2026-06-09 15:00 - Prompt 15: Worker Factory Implementation
 **Implementation**: Dynamic worker creation from natural language descriptions
 
 **Files Created**:
@@ -3768,7 +3751,7 @@ Each SKILL.md must declare:
 
 **Next Steps**: LLM-based worker profile generation (Prompt 17)
 
-### 2026-06-09 - Prompt 16: Model Evaluation Logic Implementation
+### 2026-06-09 16:00 - Prompt 16: Model Evaluation Logic Implementation
 **Implementation**: Intelligent model selection and evaluation for workers
 
 **Files Created**:
@@ -3829,7 +3812,7 @@ Each SKILL.md must declare:
 
 **Next Steps**: LLM-based worker profile generation (Prompt 17)
 
-### 2026-06-09 - Prompt 16.5: Worker Status Schema and Orchestrator Routing Filter
+### 2026-06-09 17:00 - Prompt 16.5: Worker Status Schema and Orchestrator Routing Filter
 **Implementation**: Housekeeping prompt to lock WorkerProfile schema before Postgres persistence
 
 **Files Modified**:
@@ -3903,7 +3886,7 @@ Each SKILL.md must declare:
 
 ---
 
-## Prompt: Warnings Cleanup
+## Prompt: Warnings Cleanup (2026-06-09 18:00)
 
 **Summary**: Cleaned up all test warnings by fixing Pydantic json_encoders deprecation, asyncio mark misuse, web_scraper RuntimeWarning, and qdrant_client UserWarning. Reduced warnings from 27 to 1 (external library warning not in scope).
 
@@ -3954,7 +3937,7 @@ Each SKILL.md must declare:
 
 ---
 
-### 2026-06-09 - Worker Persistence Implementation
+### 2026-06-09 19:00 - Worker Persistence Implementation
 **Context**: User requested implementing full worker survival across restarts with PostgreSQL persistence and Obsidian mirror
 **Architecture Laws Compliance**:
 - Clean Architecture: ✅ system/worker_persistence.py imports only from core/ (no imports from adapters/, cli/, or memory/)
@@ -4044,7 +4027,7 @@ Each SKILL.md must declare:
 
 ---
 
-### 2026-06-09 - Rating System Implementation
+### 2026-06-09 20:00 - Rating System Implementation
 **Context**: User requested implementing a persistent worker rating system that records performance scores per worker, per model, and per instruction version, with trend analysis
 **Architecture Laws Compliance**:
 - Clean Architecture: ✅ core/rating_system.py imports only from core/ (no imports from adapters/, cli/, or memory/)
@@ -4102,7 +4085,7 @@ Each SKILL.md must declare:
 
 ---
 
-### 2026-06-10 - Instruction File Generation Implementation
+### 2026-06-10 10:00 - Instruction File Generation Implementation
 **Context**: User requested implementing LLM-based worker profile generation replacing the rule-based system from Prompt 15. Each worker gets an instruction file and changelog in Obsidian. Orchestrator gets identical files.
 **Architecture Laws Compliance**:
 - Clean Architecture: ✅ core/instruction_generator.py imports only from core/ (no imports from adapters/, system, or cli)
@@ -4172,7 +4155,7 @@ Each SKILL.md must declare:
 
 ---
 
-### 2026-06-10 - Instruction File Versioning and Updates Implementation
+### 2026-06-10 11:00 - Instruction File Versioning and Updates Implementation
 **Context**: User requested implementing version and update mechanism for instruction files. Updates are triggered when a worker's rating trend drops below a threshold over N recent tasks. Proposed updates require user approval. Rollback is available to any previous version.
 **Architecture Laws Compliance**:
 - Clean Architecture: ✅ core/instruction_versioning.py imports only from core/ (no imports from adapters/, system, or cli)
@@ -4220,7 +4203,7 @@ Each SKILL.md must declare:
 
 ---
 
-### 2026-06-10 - Memory Scoping Implementation
+### 2026-06-10 12:00 - Memory Scoping Implementation
 **Context**: User requested implementing memory scoping with ScopedMemoryRouter to enforce scope-based key prefixing and cross-scope access restrictions. Also updated StrategicContext, EscalationDecision, and WorkerOutput schemas with new fields.
 **Architecture Laws Compliance**:
 - Clean Architecture: ✅ core/memory_router.py imports only from core/ (no imports from adapters/, system, or cli)
@@ -4292,7 +4275,7 @@ Each SKILL.md must declare:
 
 ---
 
-### 2026-06-10 - Orchestrator Improvement Loop Implementation
+### 2026-06-10 13:00 - Orchestrator Improvement Loop Implementation
 **Context**: User requested wiring the orchestrator into the same self-improvement loop that workers now have. The orchestrator tracks its own performance, proposes instruction updates when routing quality degrades, and improves via the same InstructionVersionManager mechanism built in Prompt 20.
 **Architecture Laws Compliance**:
 - Clean Architecture: ✅ core/orchestrator_improvement.py imports only from core/ (no imports from adapters/, system, or cli)
@@ -4366,7 +4349,7 @@ Each SKILL.md must declare:
 
 ---
 
-## Prompt 22 — Unified Evaluation Framework (2026-06-10)
+## Prompt 22 — Unified Evaluation Framework (2026-06-10 14:00)
 
 **Context**: Prompt 22 implements a unified evaluation framework that merges hardware-fit scoring from Prompt 16 with a new LLM-as-Judge automated output scorer into a single evaluation system. This prompt also closes the loop from Prompt 21 by updating `task_completed` on `OrchestratorMetrics` when a task reaches a terminal success state.
 
@@ -4441,7 +4424,7 @@ Each SKILL.md must declare:
 
 ---
 
-## Prompt 23 — Memory Scoping (2026-06-10)
+## Prompt 23 — Memory Scoping (2026-06-10 15:00)
 
 **Context**: Prompt 23 implements worker-scoped memory partitions with a shared global context layer. MemoryRouter enforces scoping so workers can only access their own partition and the shared global context. Cross-scope access attempts raise CrossScopeAccessError. StrategicContext and EscalationDecision schemas are activated from orphan status and integrated into the orchestrator for routing state tracking and escalation logic.
 
@@ -4515,9 +4498,7 @@ Each SKILL.md must declare:
 
 ---
 
-## Prompt 24 - Escalation Engine Implementation
-
-**Date**: 2026-06-11
+## Prompt 24 - Escalation Engine Implementation (2026-06-11 16:00)
 
 **Summary**: Implemented EscalationEngine in core/escalation.py with evaluate(), request_approval(), and execute_escalation() methods. Wired escalation engine into orchestrator via optional constructor injection. Created comprehensive test suite with 17 tests covering escalation triggers, approval workflow, and orchestrator integration.
 
@@ -4593,7 +4574,7 @@ Each SKILL.md must declare:
 
 **Checkpoint**: prompt-24 created and pushed to remote
 
-## Prompt 25: Tiered Memory Compaction with Hot/Warm/Cold Tiers
+## Prompt 25: Tiered Memory Compaction with Hot/Warm/Cold Tiers (2026-06-12 17:00)
 
 **Summary**: Implemented tiered memory management with hot (in-context dict), warm (Qdrant semantic search), and cold (Postgres archival) tiers. Added MemoryCompactor class with periodic background compaction task that never blocks main execution. Integrated tier-awareness into MemoryRouter to check hot store before backend fetch and populate hot store after backend write.
 
@@ -4629,7 +4610,7 @@ Each SKILL.md must declare:
 **Next Steps**: Prompt 26 - Persistent Background Monitor Daemon
 
 
-## Prompt 26: Persistent Background Monitor Daemon with Postgres-Backed Task Queue
+## Prompt 26: Persistent Background Monitor Daemon with Postgres-Backed Task Queue (2026-06-12 18:00)
 
 **Objective**: Implement a persistent background monitor daemon with a Postgres-backed task queue that survives restarts. Extend TaskStateMachine with checkpoint/resume capability to restore in-progress tasks after a daemon restart. The daemon runs a scheduler supporting immediate, deferred, recurring, and conditional task types. ApprovalGate integration ensures the daemon never blocks on approval requests.
 
@@ -4678,7 +4659,7 @@ Each SKILL.md must declare:
 
 **Checkpoint**: prompt-26 created and pushed to remote
 
-## Prompt 27: Emitter Injection, Key-Based Query, and Event Trigger System
+## Prompt 27: Emitter Injection, Key-Based Query, and Event Trigger System (2026-06-12 19:00)
 
 **Summary**: Completed debt repayment tasks and implemented event trigger system. Refactored MonitorDaemon to accept injected TraceEmitter instead of using global emit_trace(). Added async list_keys(prefix) method to MemoryRouter and MemoryBackend interface with stub implementations in all backends. Implemented full load_checkpoints() and _restore_queue() using list_keys for daemon restart recovery. Created event trigger system with TriggerType, TriggerOperator enums, EventTrigger and TriggerEngine classes supporting threshold, schedule, and change triggers. Integrated TriggerEngine into MonitorDaemon with ingest_metric method and schedule trigger evaluation in background loop.
 
@@ -4726,7 +4707,7 @@ Each SKILL.md must declare:
 
 **Checkpoint**: prompt-27 created and pushed to remote
 
-## Prompt 26.5: Setup Wizard (First-Run Configuration)
+## Prompt 26.5: Setup Wizard (First-Run Configuration) (2026-06-12 20:00)
 
 **Summary**: Implemented first-run interactive setup wizard using Rich. Automatically runs on first launch when no config exists, walks user through configuration (LLM adapter, model, Postgres, Qdrant, Obsidian vault, Telegram, approval gate mode). Writes jarvis.config.yaml for structured settings and .env for API keys. Subsequent launches load config silently. jarvis setup --reconfigure re-runs wizard. jarvis doctor diagnoses connection issues without reconfiguring. CLI layer addition only — no core/ changes.
 
@@ -4772,7 +4753,7 @@ Each SKILL.md must declare:
 
 ## Phase 1: Foundation and Core Architecture
 
-### 2026-06-12 - Prompt 27.5: Core Skills Implementation
+### 2026-06-12 20:52 - Prompt 27.5: Core Skills Implementation
 **Implementation**: Three table-stakes skills - Terminal, Web Search, Code Execution
 
 **Files Created**:
@@ -4814,7 +4795,7 @@ Each SKILL.md must declare:
 
 ## Phase 1: Foundation and Core Architecture
 
-### 2026-06-12 - Prompt 28: Interrupt and Notification Layer
+### 2026-06-12 20:59 - Prompt 28: Interrupt and Notification Layer
 **Implementation**: Notification system with urgency-based routing and ApprovalGate integration
 
 **Files Created**:
@@ -4849,7 +4830,7 @@ Each SKILL.md must declare:
 
 ## Phase 1: Foundation and Core Architecture
 
-### 2026-06-12 - Prompt 28.5: Telegram Gateway
+### 2026-06-12 22:07 - Prompt 28.5: Telegram Gateway
 **Implementation**: Telegram Gateway for outbound notification delivery with NotificationSystem integration
 
 **Files Created**:
@@ -4891,7 +4872,7 @@ Each SKILL.md must declare:
 
 ## Phase 1: Foundation and Core Architecture
 
-### 2026-06-12 - Prompt 29: ResourceManager KV Cache Fix and Resource Budget
+### 2026-06-12 23:17 - Prompt 29: ResourceManager KV Cache Fix and Resource Budget
 **Implementation**: Two-part implementation - KV cache budget fix in ResourceManager and new ResourceBudget class for multi-worker resource enforcement
 
 **Part 1 - KV Cache Fix (system/resource_manager.py)**:
@@ -4934,7 +4915,7 @@ Each SKILL.md must declare:
 
 ---
 
-### 2026-06-13 - Prompt 22.5: MCP Adapter
+### 2026-06-13 12:27 - Prompt 22.5: MCP Adapter
 **Implementation**: MCP (Model Context Protocol) client and server for tool interoperability
 
 **Files Created**:
@@ -4975,7 +4956,7 @@ Each SKILL.md must declare:
 
 ---
 
-### 2026-06-13 - Prompt 22.6: Trace-Based Skill Optimiser
+### 2026-06-13 13:39 - Prompt 22.6: Trace-Based Skill Optimiser
 **Implementation**: Continuous trace-scoring as second trigger path for instruction updates, collision-prevention policy for dual-trigger system
 
 **Files Modified**:
@@ -5019,7 +5000,7 @@ Each SKILL.md must declare:
 
 ---
 
-### 2026-06-13 - Prompt 22.7: Escalation Engine Re-wiring (Housekeeping)
+### 2026-06-13 13:45 - Prompt 22.7: Escalation Engine Re-wiring (Housekeeping)
 **Implementation**: No-op — escalation wiring already present and tests already passing
 
 **Files Modified**: None
@@ -5058,7 +5039,7 @@ Each SKILL.md must declare:
 
 ---
 
-### 2026-06-13 - Prompt 22.8: Real Embeddings + Qdrant Vector Validation (Housekeeping)
+### 2026-06-13 13:55 - Prompt 22.8: Real Embeddings + Qdrant Vector Validation (Housekeeping)
 **Implementation**: Partial no-op — embedding wiring already present, only fixed hardcoded vector_size
 
 **Files Modified**:
@@ -5093,7 +5074,7 @@ Each SKILL.md must declare:
 
 ---
 
-### 2026-06-13 - Prompt 29.5: Developer Skills: Git, Docker, HTTP Client (Housekeeping)
+### 2026-06-13 14:20 - Prompt 29.5: Developer Skills: Git, Docker, HTTP Client (Housekeeping)
 **Implementation**: Created three developer skills with full test coverage
 
 **Files Created**:
@@ -5158,7 +5139,7 @@ Each SKILL.md must declare:
 
 ---
 
-### 2026-06-13 - Prompt 29.6: Productivity Skills: PDF, Spreadsheet, Clipboard, Calculator (Housekeeping)
+### 2026-06-13 14:44 - Prompt 29.6: Productivity Skills: PDF, Spreadsheet, Clipboard, Calculator (Housekeeping)
 **Implementation**: Created four productivity skills with full test coverage
 
 **Files Created**:
@@ -5238,7 +5219,7 @@ Each SKILL.md must declare:
 **Next Steps**: Prompt 29.7 - Adapter Fallback Chain
 ---
 
-## Prompt 29.7 - Adapter Fallback Chain (2026-06-13)
+### 2026-06-13 15:29 - Prompt 29.7 - Adapter Fallback Chain
 
 **Objective**: Implement Adapter Fallback Chain with circuit breaker pattern for graceful degradation when adapters fail (Ollama crashed, VRAM full, API timeout).
 
@@ -5323,7 +5304,7 @@ Each SKILL.md must declare:
 **Next Steps**: Prompt 29.8 - TBD
 ---
 
-## Prompt 29.8 - Approval Trust Levels (2026-06-13)
+### 2026-06-13 16:29 - Prompt 29.8 - Approval Trust Levels
 
 **Objective**: Add trust registry so the approval gate can skip the prompt entirely for previously-approved commands, while keeping a hardcoded NEVER_ALLOW list for genuinely dangerous operations.
 
@@ -5406,7 +5387,7 @@ Each SKILL.md must declare:
 **Next Steps**: Prompt 30 - Multi-Worker Mode
 ---
 
-## Prompt 30 - Multi-Worker Mode
+### 2026-06-15 11:00 - Prompt 30 - Multi-Worker Mode
 
 **Summary**: Implemented multi-worker dispatch mode with parallel and sequential execution, resource budget checks, VRAM management, and rating system integration.
 
@@ -5465,7 +5446,7 @@ Each SKILL.md must declare:
 **Next Steps**: Prompt 30.5 - Multi-Worker Mode Integration
 ---
 
-## Prompt 30.5 — Environment and Media Skills (2026-06-15)
+### 2026-06-15 12:00 - Prompt 30.5 — Environment and Media Skills
 
 **Summary**: Implemented four environment and media skills: Home Assistant, Screenshot, TTS, and Transcription. Each skill follows the skill plugin specification and includes comprehensive tests with constructor-injected emitters and trace event emission.
 
@@ -5548,7 +5529,7 @@ Each SKILL.md must declare:
 **Next Steps**: Prompt 31 - Worker-to-Worker Communication
 ---
 
-## Prompt 31 — Worker-to-Worker Communication (2026-06-15)
+### 2026-06-15 12:54 - Prompt 31 — Worker-to-Worker Communication
 
 **Summary**: Implemented A2A (Agent-to-Agent) protocol for worker-to-worker communication with circular dependency detection and sub-task priority inheritance. Workers can now emit sub-task requests during execution, and the orchestrator routes sub-tasks to specialist workers.
 
@@ -5602,7 +5583,7 @@ Each SKILL.md must declare:
 **Next Steps**: Prompt 31.5 - Data Retention and Memory Housekeeping
 ---
 
-## Prompt 31.5 - Data Retention and Memory Housekeeping
+### 2026-06-15 14:11 - Prompt 31.5 - Data Retention and Memory Housekeeping
 
 **Summary**: Implemented data retention and memory housekeeping with RetentionEngine and RetentionDaemon for scheduled cleanup of expired data.
 
@@ -5643,7 +5624,7 @@ Each SKILL.md must declare:
 
 ---
 
-## Prompt 31.6 - Data Retention Manager
+### 2026-06-15 14:54 - Prompt 31.6 - Data Retention Manager
 
 **Summary**: Implemented storage-specific retention manager with concrete pruning logic for Postgres trace events, task history, Qdrant vectors, and Obsidian mirror files. Includes dry-run mode and MonitorDaemon integration hook.
 
@@ -5685,7 +5666,7 @@ Each SKILL.md must declare:
 
 ---
 
-## Prompt 31.7 - Security Baseline (2026-06-15)
+### 2026-06-15 16:28 - Prompt 31.7 - Security Baseline
 
 **Summary**: Implemented security baseline for FastAPI server including token-based authentication, prompt injection hardening, and FastAPI auth middleware. Also includes secrets audit at startup.
 
@@ -5743,7 +5724,7 @@ Each SKILL.md must declare:
 
 ---
 
-## Prompt 32 — Web GUI + FastAPI Server (2026-06-15)
+### 2026-06-15 17:02 - Prompt 32 — Web GUI + FastAPI Server
 
 **Summary**: Implemented FastAPI web server and minimal web UI with REST and WebSocket endpoints. Auth middleware from Prompt 31.7 is wired in. A jarvis serve CLI command starts the server.
 
@@ -5796,7 +5777,7 @@ Each SKILL.md must declare:
 
 ---
 
-## Prompt 33 — Voice Interface (2026-06-15)
+### 2026-06-15 18:05 - Prompt 33 — Voice Interface
 
 **Summary**: Implemented voice interface with wake word detection, STT stub, TTS stub, and voice daemon for background processing. Real audio capture and Whisper STT wired in Prompt 33.5. Same approval gates and observability as text interface.
 
@@ -5847,7 +5828,7 @@ Each SKILL.md must declare:
 
 ---
 
-## Prompt 33.5 - Voice Interface Enhancements (Audio Capture and STT Wiring)
+### 2026-06-15 20:31 - Prompt 33.5 - Voice Interface Enhancements (Audio Capture and STT Wiring)
 
 **Summary**: Wired real audio capture and Whisper STT into the voice interface. Created `system/audio_capture.py` to isolate PyAudio interactions, modified `core/voice_interface.py` to replace stubs with real implementations of transcription and TTS notification, and updated `system/voice_daemon.py` to integrate the new `AudioCapture` class. Added comprehensive test coverage for the new audio capture component and updated voice interface tests.
 
@@ -5892,7 +5873,7 @@ Each SKILL.md must declare:
 
 ---
 
-## Prompt 34: Fine-Tuning Data Export (TrajectoryExporter)
+### 2026-06-16 11:28 - Prompt 34: Fine-Tuning Data Export (TrajectoryExporter)
 
 **Summary**: Implemented TrajectoryExporter class to export completed task trajectories in ShareGPT JSONL format for fine-tuning. The exporter filters tasks by complexity_score threshold, converts Task+WorkerOutput pairs to ShareGPT format, and writes to a JSONL file with async I/O.
 
@@ -5924,7 +5905,7 @@ Each SKILL.md must declare:
 
 ---
 
-## Prompt 35: Personal Assistant Skills (Email, Calendar, Reminder, Notes)
+### 2026-06-16 12:54 - Prompt 35: Personal Assistant Skills (Email, Calendar, Reminder, Notes)
 
 **Summary**: Implemented four personal assistant skills (Email, Calendar, Reminder, Notes) with constructor-injected emitters and approval gates. Each skill follows the same architectural pattern: constructor injection of TraceEmitter and optional ApprovalGate, async I/O with executors for blocking operations, proper error handling with SkillExecutionError, and comprehensive test coverage with mocked dependencies.
 
@@ -5985,22 +5966,23 @@ Each SKILL.md must declare:
 
 **Next Steps**: Prompt 36 - (as specified in project roadmap)
 
+---
 
-**Architecture Decisions**:
-- Pure function _to_sharegpt() for conversion logic, easy to test independently
-- Filter by TaskStatus.COMPLETE and complexity_score >= min_rating
-- Create export directory with parents=True if it doesn't exist
-- Write one JSON object per line (JSONL format) for streaming compatibility
-- Mock MemoryRouter.fetch() in tests with actual filter_func execution to properly test filtering behavior
+## Process Fix — Tag Integrity Hardening (2026-06-16 14:47)
 
-**Compliance**:
-- All emitters are constructor-injected, no global emit_trace() calls
-- TraceEvent imported from core/observability.py, not core/schemas.py
-- Used existing TraceEventType enum values, not custom strings
-- @pytest.mark.asyncio only on individual async test methods, not at class level
-- All I/O operations use aiofiles for async execution
-- Verified Task and WorkerOutput field names against core/schemas.py before use
+**Problem**: The prompt-35 tag was created after partial prompt-35.5 code had
+been added to the working tree. The tag captured the wrong state, making
+`git reset --hard prompt-35` ineffective as a rollback mechanism.
 
-**Checkpoint**: prompt-34 (to be created)
+**Root cause**: The old closing steps updated CHANGELOG and SOVEREIGN_AI_HANDOFF
+first, then committed everything together and tagged. Any code present in the
+working tree at commit time was captured in the tag.
 
-**Next Steps**: Prompt 35 - (as specified in project roadmap)
+**Fix**:
+- Code is now committed and tagged before docs are updated
+- A mandatory tag verification step (git show --stat) runs immediately after
+  tagging and before any docs work
+- Every prompt spec now includes a baseline tag verification at the start
+- Docs are committed separately after the tag is clean
+
+**Files changed**: SOVEREIGN_AI_HANDOFF.md, CHANGELOG.md

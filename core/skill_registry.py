@@ -5,6 +5,7 @@ Single responsibility: Maintain a registry of all available skills,
 enabling dynamic discovery and instantiation of worker capabilities.
 """
 
+import asyncio
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -129,8 +130,13 @@ class SkillRegistry:
         Returns:
             SkillMetadata if parsing succeeds, None otherwise
         """
-        with open(skill_md_path, "r") as f:
-            content = f.read()
+        loop = asyncio.get_event_loop()
+        
+        def read_file() -> str:
+            with open(skill_md_path, "r") as f:
+                return f.read()
+        
+        content = await loop.run_in_executor(None, read_file)
 
         # Simple parsing - extract key sections
         # In a production system, this would use a proper markdown parser

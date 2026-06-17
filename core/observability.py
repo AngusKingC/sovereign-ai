@@ -85,6 +85,9 @@ class TraceComponent(str, Enum):
     # Voice
     VOICE = "voice"
 
+    # Verbosity
+    VERBOSITY = "verbosity"
+
 
 class TraceEventType(str, Enum):
     """Types of trace events."""
@@ -245,6 +248,12 @@ class TraceEventType(str, Enum):
     VOICE_LISTENING_STARTED = "voice_listening_started"
     VOICE_LISTENING_STOPPED = "voice_listening_stopped"
     VOICE_NOTIFICATION_SENT = "voice_notification_sent"
+
+    # Verbosity events
+    VERBOSITY_CHANGED = "verbosity_changed"
+
+    # Model thinking events
+    MODEL_THINKING_CAPTURED = "model_thinking_captured"
 
 
 class TraceEvent(BaseModel):

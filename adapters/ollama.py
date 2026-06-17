@@ -5,6 +5,7 @@ Single responsibility: Handle all interactions with local Ollama instances,
 providing the primary local-first inference capability.
 """
 
+import re
 import time
 from typing import TYPE_CHECKING, Any
 
@@ -116,6 +117,33 @@ class OllamaAdapter(LLMAdapter):
 
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             response_length = len(data["message"]["content"])
+
+            # Extract <thinking> content if present
+            raw_content = data["message"]["content"]
+            thinking_match = re.search(r'<thinking>(.*?)</thinking>', raw_content, re.DOTALL)
+            if thinking_match:
+                thinking_content = thinking_match.group(1)
+                # Emit model thinking captured event
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.MODEL_THINKING_CAPTURED,
+                        component=TraceComponent.ADAPTER,
+                        message="Model thinking extracted",
+                        level=TraceLevel.DEBUG,
+                        data={
+                            "adapter_name": "ollama",
+                            "model_name": self._model_name,
+                            "thinking": thinking_content,
+                            "thinking_length": len(thinking_content),
+                        },
+                        duration_ms=0,
+                    )
+                    await self._emitter.emit(event)
+                except Exception:
+                    pass
+                # Strip <thinking> tags from response
+                cleaned_content = re.sub(r'<thinking>.*?</thinking>', '', raw_content, flags=re.DOTALL).strip()
+                data["message"]["content"] = cleaned_content
 
             # Emit adapter response event
             try:

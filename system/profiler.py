@@ -95,12 +95,25 @@ class SystemProfiler:
         try:
             import psutil
 
+            loop = asyncio.get_event_loop()
+
+            def get_cpu_info() -> tuple:
+                return (
+                    platform.processor() or "unknown",
+                    psutil.cpu_count(logical=False),
+                    psutil.cpu_count(logical=True),
+                    platform.machine() or "unknown",
+                    psutil.cpu_freq().max if psutil.cpu_freq() else 0.0,
+                )
+
+            model_name, physical_cores, logical_threads, architecture, base_clock_ghz = await loop.run_in_executor(None, get_cpu_info)
+
             return CPUInfo(
-                model_name=platform.processor() or "unknown",
-                physical_cores=psutil.cpu_count(logical=False),
-                logical_threads=psutil.cpu_count(logical=True),
-                architecture=platform.machine() or "unknown",
-                base_clock_ghz=psutil.cpu_freq().max if psutil.cpu_freq() else 0.0,
+                model_name=model_name,
+                physical_cores=physical_cores,
+                logical_threads=logical_threads,
+                architecture=architecture,
+                base_clock_ghz=base_clock_ghz,
             )
         except ImportError:
             return CPUInfo()
@@ -124,11 +137,22 @@ class SystemProfiler:
         try:
             import psutil
 
-            mem = psutil.virtual_memory()
+            loop = asyncio.get_event_loop()
+
+            def get_ram_info() -> tuple:
+                mem = psutil.virtual_memory()
+                return (
+                    int(mem.total / 1024 / 1024),
+                    int(mem.available / 1024 / 1024),
+                    mem.percent,
+                )
+
+            total_mb, available_mb, usage_percent = await loop.run_in_executor(None, get_ram_info)
+
             return RAMInfo(
-                total_mb=int(mem.total / 1024 / 1024),
-                available_mb=int(mem.available / 1024 / 1024),
-                usage_percent=mem.percent,
+                total_mb=total_mb,
+                available_mb=available_mb,
+                usage_percent=usage_percent,
             )
         except ImportError:
             return RAMInfo()
@@ -153,14 +177,29 @@ class SystemProfiler:
         try:
             import psutil
 
-            for partition in psutil.disk_partitions():
+            loop = asyncio.get_event_loop()
+
+            def get_partitions() -> list:
+                return list(psutil.disk_partitions())
+
+            partitions = await loop.run_in_executor(None, get_partitions)
+
+            for partition in partitions:
                 try:
-                    usage = psutil.disk_usage(partition.mountpoint)
+                    def get_usage(mountpoint: str) -> tuple:
+                        usage = psutil.disk_usage(mountpoint)
+                        return (
+                            int(usage.total / 1024 / 1024),
+                            int(usage.free / 1024 / 1024),
+                        )
+
+                    total_mb, available_mb = await loop.run_in_executor(None, get_usage, partition.mountpoint)
+
                     storage_info.append(
                         StorageInfo(
                             mount_point=partition.mountpoint,
-                            total_mb=int(usage.total / 1024 / 1024),
-                            available_mb=int(usage.free / 1024 / 1024),
+                            total_mb=total_mb,
+                            available_mb=available_mb,
                             filesystem_type=partition.fstype,
                         )
                     )

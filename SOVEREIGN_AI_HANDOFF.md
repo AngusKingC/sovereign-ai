@@ -32,7 +32,7 @@ without breaking what exists. Every component auditable, every decision logged.
 
 ## Workflow
 
-- **Devin** — writes all code, runs tests, updates `c:\Jarvis\CHANGELOG.md`, updates `SOVEREIGN_AI_HANDOFF.md` after every prompt. When Devin encounters a problem and solves it mid-prompt, save the solution to memory files immediately — do not wait for closing steps.
+- **Devin** — writes all code, runs tests, updates `c:\Jarvis\CHANGELOG.md`, updates `SOVEREIGN_AI_HANDOFF.md` after every prompt. When Devin encounters a problem and solves it mid-prompt, save the solution to memory files immediately — do not wait for closing steps. When updating CHANGELOG.md, always append new entries to the bottom of the file. Never prepend. Every entry date must include time in format YYYY-MM-DD HH:MM.
 - **Claude** — reads this handoff document at session start to reconstruct state, advises on architecture and sequencing, maintains Devin memory entries
 - **This handoff doc** is Devin-maintained. Devin updates it after every prompt as part of standard closing steps. Claude reads it but does not write to it.
 - When the user pastes a CHANGELOG entry into Claude, Claude automatically produces the next prompt spec without waiting to be asked.
