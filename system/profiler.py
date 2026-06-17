@@ -50,18 +50,30 @@ class SystemProfiler:
         try:
             import pynvml
 
-            pynvml.nvmlInit()
-            handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-            name = pynvml.nvmlDeviceGetName(handle)
-            
-            memory_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-            total_vram_mb = int(memory_info.total / 1024 / 1024)
-            available_vram_mb = int(memory_info.free / 1024 / 1024)
-            
-            driver_version = pynvml.nvmlSystemGetDriverVersion()
-            
-            pynvml.nvmlShutdown()
-            
+            loop = asyncio.get_event_loop()
+
+            def get_gpu_info() -> tuple:
+                pynvml.nvmlInit()
+                handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+                name = pynvml.nvmlDeviceGetName(handle)
+                
+                memory_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+                total_vram_mb = int(memory_info.total / 1024 / 1024)
+                available_vram_mb = int(memory_info.free / 1024 / 1024)
+                
+                driver_version = pynvml.nvmlSystemGetDriverVersion()
+                
+                pynvml.nvmlShutdown()
+                
+                return (
+                    name,
+                    total_vram_mb,
+                    available_vram_mb,
+                    driver_version,
+                )
+
+            name, total_vram_mb, available_vram_mb, driver_version = await loop.run_in_executor(None, get_gpu_info)
+
             return GPUInfo(
                 model_name=name,
                 total_vram_mb=total_vram_mb,
@@ -228,27 +240,56 @@ class SystemProfiler:
         try:
             import shutil
 
-            docker_available = shutil.which("docker") is not None
+            loop = asyncio.get_event_loop()
+
+            def get_os_info() -> tuple:
+                docker_available = shutil.which("docker") is not None
+                nvidia_drivers_present = shutil.which("nvidia-smi") is not None
+                return (
+                    platform.system(),
+                    platform.version(),
+                    platform.release(),
+                    platform.python_version(),
+                    docker_available,
+                    nvidia_drivers_present,
+                )
+
+            name, version, kernel_build, python_version, docker_available, nvidia_drivers_present = await loop.run_in_executor(None, get_os_info)
+
+            return OSInfo(
+                name=name,
+                version=version,
+                kernel_build=kernel_build,
+                python_version=python_version,
+                docker_available=docker_available,
+                nvidia_drivers_present=nvidia_drivers_present,
+            )
         except Exception:
-            docker_available = False
+            # Fallback to synchronous calls if executor fails
+            try:
+                import shutil
 
-        # Check for NVIDIA drivers
-        nvidia_drivers_present = False
-        try:
-            import shutil
+                docker_available = shutil.which("docker") is not None
+            except Exception:
+                docker_available = False
 
-            nvidia_drivers_present = shutil.which("nvidia-smi") is not None
-        except Exception:
-            pass
+            # Check for NVIDIA drivers
+            nvidia_drivers_present = False
+            try:
+                import shutil
 
-        return OSInfo(
-            name=platform.system(),
-            version=platform.version(),
-            kernel_build=platform.release(),
-            python_version=platform.python_version(),
-            docker_available=docker_available,
-            nvidia_drivers_present=nvidia_drivers_present,
-        )
+                nvidia_drivers_present = shutil.which("nvidia-smi") is not None
+            except Exception:
+                pass
+
+            return OSInfo(
+                name=platform.system(),
+                version=platform.version(),
+                kernel_build=platform.release(),
+                python_version=platform.python_version(),
+                docker_available=docker_available,
+                nvidia_drivers_present=nvidia_drivers_present,
+            )
 
     async def _detect_network(self) -> NetworkInfo:
         """Detect network connectivity with lightweight check."""

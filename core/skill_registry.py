@@ -132,6 +132,7 @@ class SkillRegistry:
         """
         loop = asyncio.get_event_loop()
         
+        # Uses run_in_executor rather than aiofiles to avoid adding a new dependency for a single call site
         def read_file() -> str:
             with open(skill_md_path, "r") as f:
                 return f.read()

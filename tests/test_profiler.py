@@ -43,10 +43,22 @@ class TestSystemProfiler:
         for info in storage_info:
             assert isinstance(info, StorageInfo)
 
+    async def test_detect_gpu_returns_gpu_info(self, profiler):
+        """Test that GPU detection returns GPUInfo."""
+        gpu_info = await profiler._detect_gpu()
+        assert isinstance(gpu_info, GPUInfo)
+
     async def test_detect_os_returns_os_info(self, profiler):
         """Test that OS detection returns OSInfo."""
         os_info = await profiler._detect_os()
         assert isinstance(os_info, OSInfo)
+
+    async def test_detect_os_handles_missing_docker_gracefully(self, profiler):
+        """Test that OS detection handles missing docker gracefully."""
+        os_info = await profiler._detect_os()
+        assert isinstance(os_info, OSInfo)
+        # docker_available should be a boolean, not None
+        assert isinstance(os_info.docker_available, bool)
 
     async def test_detect_network_returns_network_info(self, profiler):
         """Test that network detection returns NetworkInfo."""

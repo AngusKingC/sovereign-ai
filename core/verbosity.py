@@ -46,7 +46,10 @@ class VerbosityManager:
         self._emitter = emitter or MemoryTraceEmitter()
 
     async def set_level(self, level: VerbosityLevel) -> None:
-        """Update verbosity level and emit trace event."""
+        """Update verbosity level and emit trace event.
+        
+        async because it awaits emitter.emit() for the verbosity_changed trace event.
+        """
         self._level = level
         try:
             await self._emitter.emit(TraceEvent(
