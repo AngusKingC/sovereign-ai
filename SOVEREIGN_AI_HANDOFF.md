@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-16 — post Prompt 35 completion. Personal Assistant Skills (Email, Calendar, Reminder, Notes). Test baseline: 1026 passed, 23 skipped, 57 warnings (from 970 passed, +56 new tests).
+**Last updated**: 2026-06-17 — post Prompt 35.5 completion. Verbosity Control + Model Thinking Capture + Async I/O Improvements. Test baseline: 1049 passed, 23 skipped, 56 warnings (from 1026 passed, +23 new tests).
 
 ---
 
@@ -366,18 +366,18 @@ Docs are committed separately in steps 7–8 after the tag is already clean and 
 ## Current State
 
 ### Test Baseline
-- **1026 passed, 23 skipped, 57 warnings** (as of Prompt 35 / checkpoint prompt-35)
+- **1049 passed, 23 skipped, 56 warnings** (as of Prompt 35.5 / checkpoint prompt-35.5)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
-- 57 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for async decorator marks on sync methods (test_web_server.py) — harmless; DeprecationWarning from FastAPI Lifespan events — deferred to Phase 9, do not touch
+- 56 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for async decorator marks on sync methods (test_web_server.py) — harmless; DeprecationWarning from FastAPI Lifespan events — deferred to Phase 9, do not touch
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
-### Known Issues from Prompt 35
-- None — Personal Assistant Skills implementation completed successfully
+### Known Issues from Prompt 35.5
+- None — Verbosity Control, Model Thinking Capture, and Async I/O Improvements completed successfully
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-35`
+- Latest checkpoint tag: `prompt-35.5`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -389,7 +389,8 @@ Docs are committed separately in steps 7–8 after the tag is already clean and 
 - `core/handlers.py` — QueryHandler, DI complete
 - `core/embedder.py` — OllamaEmbedder
 - `core/escalation.py` — EscalationEngine with evaluate(), request_approval(), execute_escalation() (wiring to orchestrator disabled — debt)
-- `core/observability.py` — TraceEmitter, MemoryTraceEmitter, ConsoleTraceEmitter, TraceComponent.ADAPTER_FALLBACK_CHAIN, TraceComponent.APPROVAL_TRUST, TraceEventType.ADAPTER_FALLBACK, ADAPTER_UNAVAILABLE, CIRCUIT_BREAKER_OPEN, CIRCUIT_BREAKER_RESET, TRUST_GRANTED, TRUST_REVOKED, TRUST_BLOCKED
+- `core/observability.py` — TraceEmitter, MemoryTraceEmitter, ConsoleTraceEmitter, TraceComponent.ADAPTER_FALLBACK_CHAIN, TraceComponent.APPROVAL_TRUST, TraceComponent.VERBOSITY, TraceEventType.ADAPTER_FALLBACK, ADAPTER_UNAVAILABLE, CIRCUIT_BREAKER_OPEN, CIRCUIT_BREAKER_RESET, TRUST_GRANTED, TRUST_REVOKED, TRUST_BLOCKED, VERBOSITY_CHANGED, MODEL_THINKING_CAPTURED
+- `core/verbosity.py` — VerbosityLevel enum (SILENT, NORMAL, VERBOSE, DEBUG), VerbosityManager with constructor-injected emitter, set_level() async method, should_emit() filtering, filter_events()
 - `core/commands.py` — CommandRegistry, DI complete
 - `core/exceptions.py` — InvalidStateTransitionError, WorkerNotFoundError, ApprovalDeniedError, CrossScopeAccessError
 - `core/task_state_machine.py` — validated transitions, DENIED terminal state, full history tracking, checkpoint()/load_checkpoints() stubs
@@ -510,6 +511,7 @@ Docs are committed separately in steps 7–8 after the tag is already clean and 
 | 33.5 | Voice Interface Enhancements (Audio Capture and STT Wiring) | 957 (+15 new tests) |
 | 34 | Fine-Tuning Data Export (TrajectoryExporter) | 970 (+13 new tests) |
 | 35 | Personal Assistant Skills (Email, Calendar, Reminder, Notes) | 1026 (+56 new tests) |
+| 35.5 | Verbosity Control + Model Thinking Capture + Async I/O Improvements | 1049 (+23 new tests) |
 
 ---
 
@@ -1361,6 +1363,48 @@ Architecture:
 - `system/trajectory_exporter.py` imports from `core/` and `system/` only
 
 Tests: minimum 12.
+
+---
+
+#### Prompt 35 — Personal Assistant Skills: Email, Calendar, Reminder, Notes
+**Status**: DONE
+
+Files:
+- `skills/email/` — IMAP read + SMTP send
+- `skills/calendar/` — local ICS file first, extensible to Google Calendar
+- `skills/reminder/` — persistent reminders in Postgres, delivered via Telegram
+- `skills/notes/` — Obsidian vault integration surfaced as skill
+
+Features:
+- EmailSkill uses asyncio executors for blocking imaplib and smtplib calls
+- CalendarSkill uses asyncio executors for blocking file I/O and icalendar parsing
+- ReminderSkill and NotesSkill use MemoryRouter for persistence (async by design)
+- Approval gates are optional for low-risk operations but required for destructive operations
+- Environment variable fallback for credentials
+
+Tests: 56 new tests.
+
+---
+
+#### Prompt 35.5 — Verbosity Control + Model Thinking Capture + Async I/O Improvements (Housekeeping)
+**Status**: DONE
+
+Files:
+- `core/verbosity.py` — VerbosityLevel enum, VerbosityManager class
+- `tests/test_verbosity.py` — 9 tests for verbosity manager
+- `adapters/ollama.py` — <thinking> tag extraction from LLM responses
+- `tests/test_ollama_adapter.py` — 4 tests for thinking extraction
+- `core/skill_registry.py` — async file I/O wrapping
+- `system/profiler.py` — async psutil call wrapping
+- `tests/test_profiler.py` — 10 tests for profiler
+
+Features:
+- VerbosityManager filters trace events by level (SILENT, NORMAL, VERBOSE, DEBUG)
+- Ollama adapter extracts <thinking> content and emits as separate trace event
+- Skill registry file I/O wrapped in loop.run_in_executor()
+- Profiler psutil calls wrapped in loop.run_in_executor()
+
+Tests: 23 new tests.
 
 ---
 

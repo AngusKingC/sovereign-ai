@@ -5986,3 +5986,76 @@ working tree at commit time was captured in the tag.
 - Docs are committed separately after the tag is clean
 
 **Files changed**: SOVEREIGN_AI_HANDOFF.md, CHANGELOG.md
+
+---
+
+## Prompt 35.5 — Verbosity Control + Model Thinking Capture + Async I/O Improvements (2026-06-17 13:08)
+
+**Implementation**: Added verbosity manager, model thinking extraction, and async I/O improvements
+- **File Pair 1**: Created core/verbosity.py and tests/test_verbosity.py
+  - VerbosityLevel enum: SILENT, NORMAL, VERBOSE, DEBUG
+  - VerbosityManager class with constructor-injected emitter
+  - set_level() async method that emits verbosity_changed trace event
+  - should_emit() filters events based on current verbosity level
+  - filter_events() filters a list of events through should_emit()
+  - 9 tests covering all verbosity levels and filtering logic
+
+- **File Pair 2**: Modified adapters/ollama.py and tests/test_ollama_adapter.py for <thinking> extraction
+  - Added re import for regex pattern matching
+  - Extract <thinking> content from LLM responses using re.search(r'<thinking>(.*?)</thinking>', response, re.DOTALL)
+  - Emit model_thinking_captured trace event with thinking content and length
+  - Strip <thinking> tags from response before returning
+  - Added MODEL_THINKING_CAPTURED trace event type to core/observability.py
+  - 4 tests covering responses with/without thinking tags, multi-line blocks, and empty blocks
+
+- **File Pair 3**: Modified core/skill_registry.py and tests/test_skill_registry.py for async file I/O
+  - Added asyncio import
+  - Wrapped blocking file I/O in _parse_skill_md() with loop.run_in_executor()
+  - Tests already async and awaiting discover_skills(), no test changes needed
+  - 8 existing tests continue to pass
+
+- **File Pair 4**: Modified system/profiler.py and tests/test_profiler.py for async blocking calls
+  - Wrapped blocking psutil calls in _detect_cpu() with loop.run_in_executor()
+  - Wrapped blocking psutil calls in _detect_ram() with loop.run_in_executor()
+  - Wrapped blocking psutil calls in _detect_storage() with loop.run_in_executor()
+  - Created tests/test_profiler.py with 10 new tests for all detection methods
+  - Tests verify async detection methods return correct info types
+
+**Testing Results**:
+- Baseline (prompt-35): 1026 passed, 23 skipped, 57 warnings
+- Post-Prompt 35.5: 1049 passed, 23 skipped, 56 warnings
+- Added 23 new tests (9 for verbosity, 4 for thinking extraction, 10 for profiler)
+- All tests pass, zero failures, warning count decreased by 1 (from 57 to 56)
+- Test suite run after each file pair confirmed zero new failures:
+  - Verbosity file pair: 1035 passed (+9)
+  - Ollama adapter file pair: 1039 passed (+4)
+  - Skill registry file pair: 1039 passed (no change, tests already async)
+  - Profiler file pair: 1049 passed (+10)
+
+**Implementation Notes**:
+- VerbosityManager uses actual TraceEventType enum values (orchestrator_routing_start, worker_prompt_build, etc.) instead of conceptual names
+- set_level() is async to properly await emitter.emit()
+- should_emit() accepts both string and TraceEventType enum inputs
+- filter_events() uses event.event_type directly (already string due to use_enum_values=True)
+- Ollama adapter tests use actual <thinking> tags in mock content as required
+- Skill registry tests already async, no changes needed
+- Profiler tests created from scratch with proper async/await patterns
+- All psutil blocking calls wrapped in loop.run_in_executor(None, func) to avoid blocking event loop
+
+**Architecture Decisions**:
+- VerbosityManager lives in core/ layer with constructor-injected emitter per global rules
+- Model thinking extraction emits at DEBUG level to avoid noise in normal operation
+- Async executor wrapping uses None executor (default thread pool) for file I/O and system calls
+- Profiler detection methods remain async, only blocking calls wrapped in executors
+
+**Compliance**:
+- All emitters are constructor-injected, no global emit_trace() calls
+- TraceEvent imported from core/observability.py, not core/schemas.py
+- TraceEvent constructed with correct fields: event_type, component, level, message, data, duration_ms
+- No pytest.mark.asyncio at class level — only on individual async test methods
+- All production and test files fixed together as atomic units before running test suite
+- No domain exceptions raised inside try-except blocks
+
+**Checkpoint**: prompt-35.5 created and verified with git show --stat
+
+**Next Steps**: Prompt 36 - (as specified in project roadmap)
