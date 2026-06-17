@@ -686,3 +686,42 @@ class TestOrchestrator:
         assert "worker1" in candidates
         assert "worker2" in candidates
 
+    @pytest.mark.asyncio
+    async def test_submit_task_returns_task(self, orchestrator, memory_router):
+        """Test that submit_task returns a Task with matching intent."""
+        # Register a worker first (route_task requires workers)
+        profile = WorkerProfile(
+            worker_id="test_worker",
+            worker_type="test",
+            depth_preference=0.5,
+            speculation_tolerance=0.5,
+            source_skepticism=0.5,
+            verbosity=0.5,
+            preferred_model="mock-model",
+            escalation_threshold=0.8,
+            capabilities=["test"],
+            preferred_complexity=0.5,
+        )
+        llm = MockLLMAdapter()
+        worker = EchoWorker(profile=profile, llm=llm, memory_router=memory_router)
+        orchestrator.register_worker("test_worker", worker)
+
+        # Submit a task
+        task = await orchestrator.submit_task(intent="test task", priority="normal")
+
+        # Assert returns a Task with matching intent
+        assert isinstance(task, Task)
+        assert task.intent == "test task"
+        assert task.priority == TaskPriority.NORMAL
+
+    @pytest.mark.asyncio
+    async def test_list_tasks_returns_list(self, orchestrator):
+        """Test that list_tasks returns a list (empty is fine)."""
+        # Call list_tasks
+        tasks = await orchestrator.list_tasks()
+
+        # Assert returns a list
+        assert isinstance(tasks, list)
+        # Empty is fine since no _active_tasks attribute exists
+        assert len(tasks) == 0
+

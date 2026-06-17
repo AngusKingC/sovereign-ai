@@ -601,17 +601,67 @@ class Orchestrator:
     async def submit_subtask(self, request: "A2ARequest") -> "A2AResponse":
         """
         Submit an A2A sub-task request for routing.
-        
+
         Args:
             request: The A2A request to submit
-            
+
         Returns:
             A2AResponse with the result
-            
+
         Raises:
             RuntimeError: If A2A router is not configured
         """
         if self._a2a_router is None:
             raise RuntimeError("A2A router not configured")
-        
+
         return await self._a2a_router.submit(request)
+
+    async def submit_task(self, intent: str, priority: str = "normal") -> Task:
+        """
+        Submit a task to the orchestrator for routing.
+
+        Args:
+            intent: The task intent/description
+            priority: Task priority ("normal", "high", or "critical")
+
+        Returns:
+            The created Task object
+
+        Raises:
+            ValueError: If priority is not a valid TaskPriority value
+        """
+        from uuid import uuid4
+        from datetime import datetime
+        from core.schemas import TaskPriority
+
+        # Validate and convert priority string to enum
+        try:
+            priority_enum = TaskPriority(priority.lower())
+        except ValueError:
+            raise ValueError(f"Invalid priority: {priority}. Must be one of: normal, high, critical")
+
+        # Construct Task
+        task = Task(
+            task_id=uuid4(),
+            intent=intent,
+            complexity_score=0.5,  # Default complexity
+            priority=priority_enum,
+            created_at=datetime.utcnow(),
+        )
+
+        # Route the task
+        await self.route_task(task)
+
+        return task
+
+    async def list_tasks(self) -> list[Task]:
+        """
+        Return list of tasks in the orchestrator.
+
+        Returns:
+            List of Task objects (empty if no task tracking exists)
+        """
+        # Check if orchestrator has _active_tasks attribute
+        if hasattr(self, "_active_tasks"):
+            return self._active_tasks
+        return []

@@ -33,16 +33,137 @@ def serve(
     # Instantiate MemoryTraceEmitter
     emitter = MemoryTraceEmitter()
     
-    # Import and instantiate orchestrator
-    # Note: This is a placeholder - actual orchestrator instantiation depends on
-    # the full dependency tree which is outside the scope of this file
+    # Import all required components
     from core.orchestrator import Orchestrator
     from core.memory_router import MemoryRouter
+    from core.skill_registry import SkillRegistry
+    from core.approval_trust import ApprovalTrustRegistry
+    from core.approval_gate import ApprovalGate
+    from core.escalation import EscalationEngine
+    from core.adapter_fallback import AdapterFallbackChain
+    from system.worker_persistence import WorkerPersistence
+    from core.worker_factory import WorkerFactory
+    from core.rating_system import RatingSystem
+    from core.instruction_generator import InstructionGenerator
+    from core.instruction_versioning import InstructionVersionManager
+    from core.evaluator import OutputEvaluator
+    from core.trace_optimiser import TraceOptimiser
+    from core.orchestrator_improvement import OrchestratorImprovementLoop
+    from core.task_state_machine import TaskStateMachine
+    from core.worker_base import LLMAdapter
+    from adapters.ollama import OllamaAdapter
     
-    # Create a minimal orchestrator for the web server
-    # In production, this would be wired with all dependencies
-    memory_router = MemoryRouter()
-    orchestrator = Orchestrator(memory_router=memory_router, emitter=emitter)
+    # Create base dependencies
+    memory_router = MemoryRouter(backends=[], emitter=emitter)
+    skill_registry = SkillRegistry(emitter=emitter)
+    approval_trust = ApprovalTrustRegistry(memory_router=memory_router, emitter=emitter)
+    
+    # Create TaskStateMachine for ApprovalGate
+    state_machine = TaskStateMachine(memory_router=memory_router)
+    
+    # Create ApprovalGate
+    approval_gate = ApprovalGate(
+        state_machine=state_machine,
+        memory_router=memory_router,
+        emitter=emitter,
+        trust_registry=approval_trust
+    )
+    
+    # Create EscalationEngine
+    escalation_engine = EscalationEngine(
+        approval_gate=approval_gate,
+        memory_router=memory_router,
+        emitter=emitter
+    )
+    
+    # Create AdapterFallbackChain with Ollama adapter
+    ollama_adapter = OllamaAdapter(model_name="qwen2.5-coder:7b", emitter=emitter)
+    fallback_chain = AdapterFallbackChain(
+        adapters=[(ollama_adapter, "qwen2.5-coder:7b")],
+        resource_manager=None,
+        approval_gate=approval_gate,
+        emitter=emitter
+    )
+    
+    # Create WorkerPersistence
+    worker_persistence = WorkerPersistence(
+        memory_router=memory_router,
+        emitter=emitter,
+        obsidian_vault_path=None
+    )
+    
+    # Create RatingSystem
+    rating_system = RatingSystem(
+        memory_router=memory_router,
+        emitter=emitter
+    )
+    
+    # Create InstructionGenerator with Ollama adapter
+    instruction_generator = InstructionGenerator(
+        adapter=ollama_adapter,
+        rating_system=rating_system,
+        memory_router=memory_router,
+        obsidian_vault_path=None,
+        emitter=emitter
+    )
+    
+    # Create InstructionVersionManager
+    instruction_versioning = InstructionVersionManager(
+        instruction_generator=instruction_generator,
+        rating_system=rating_system,
+        approval_gate=approval_gate,
+        memory_router=memory_router,
+        emitter=emitter
+    )
+    
+    # Create OutputEvaluator
+    output_evaluator = OutputEvaluator(
+        llm_adapter=ollama_adapter,
+        memory_router=memory_router,
+        evaluator_model="default",
+        emitter=emitter
+    )
+    
+    # Create TraceOptimiser
+    trace_optimiser = TraceOptimiser(
+        memory_router=memory_router,
+        instruction_version_manager=instruction_versioning,
+        emitter=emitter
+    )
+    
+    # Create Orchestrator first (needed by WorkerFactory and OrchestratorImprovementLoop)
+    orchestrator = Orchestrator(
+        memory_router=memory_router,
+        improvement_loop=None,  # Will set after creating it
+        cloud_fallback_model="gpt-4o",
+        approval_gate=approval_gate,
+        escalation_engine=escalation_engine,
+        fallback_chain=fallback_chain,
+        a2a_router=None,
+        emitter=emitter
+    )
+    
+    # Create WorkerFactory (requires orchestrator)
+    # Pass None for persistence to avoid asyncio.create_task in __init__ (no event loop in serve)
+    worker_factory = WorkerFactory(
+        skill_registry=skill_registry,
+        orchestrator=orchestrator,
+        memory_router=memory_router,
+        emitter=emitter,
+        persistence=None,  # Skip persistence loading in non-async context
+        instruction_generator=instruction_generator
+    )
+    
+    # Create OrchestratorImprovementLoop (requires orchestrator)
+    improvement_loop = OrchestratorImprovementLoop(
+        orchestrator=orchestrator,
+        instruction_version_manager=instruction_versioning,
+        memory_router=memory_router,
+        emitter=emitter
+    )
+    
+    # Set improvement_loop on orchestrator
+    orchestrator.improvement_loop = improvement_loop
     
     # Create FastAPI app
     app = create_app(orchestrator, auth_manager, emitter)

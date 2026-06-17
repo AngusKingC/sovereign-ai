@@ -18,6 +18,15 @@ sys.path.insert(0, str(project_root))
 
 def main() -> None:
     """Main entry point."""
+    # Check if user is calling 'serve' command
+    if len(sys.argv) > 1 and sys.argv[1] == "serve":
+        # Import and call the serve function directly
+        from cli.serve import serve
+        # Use typer to run the serve command
+        import typer
+        typer.run(serve)
+        return
+
     parser = argparse.ArgumentParser(
         description="Sovereign AI Agent Framework CLI",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -27,6 +36,7 @@ Examples:
   jarvis --rich             # Start Rich-based CLI (slash commands)
   jarvis "explain this code" # Run single query
   jarvis --help             # Show help
+  jarvis serve              # Start web server
         """
     )
     
