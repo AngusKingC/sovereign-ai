@@ -385,7 +385,7 @@ Docs are committed separately in steps 7â€“8 after the tag is already clean and 
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-35.6b`
+- Latest checkpoint tag: `prompt-35.6c`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable â€” do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -1551,3 +1551,30 @@ Priority workers once factory is operational:
 - OpenMeteo: open-meteo.com (free weather + marine API, no key required)
 - WorldTides API: worldtides.info (tidal predictions)
 - Ollama API: localhost:11434/api (model management and inference)
+
+
+
+
+
+
+
+#### Prompt 35.6c — Test Suite Reconciliation (Housekeeping)
+**Status**: DONE
+
+Investigated test discrepancy between baseline (1065 passed) and current run (1057 passed). Root cause: baseline was generated without --ignore=tests/test_llama_cpp_adapter.py flag, while current run correctly uses it. No code changes needed.
+
+---
+
+#### Prompt 35.6d — Foundation Bug Fixes (New)
+**Status**: IN PROGRESS
+
+Fix seven foundation bugs sequentially, each as an atomic unit of production file + test file + full suite run:
+- Bug 1: MemoryRouter signature mismatch (DONE in prompt-35.6b)
+- Bug 2: StrategicContext field mismatch (core/orchestrator.py, core/schemas.py, tests/test_orchestrator.py)
+- Bug 3: ScopedMemoryRouter TraceEvent migration (core/memory_router.py, tests/test_memory_router.py)
+- Bug 4: AdapterFallbackChain.execute type mismatch (core/adapter_fallback.py, tests/test_adapter_fallback.py)
+- Bug 5: SessionManager/CommandHistory backend.fetch() call (core/session.py, cli/command_history.py, tests/test_session.py, tests/test_command_history.py)
+- Bug 6: WorkerBase emitter default to MemoryTraceEmitter (core/worker_base.py, tests/test_worker_base.py)
+- Bug 7: Add list_workers() to Orchestrator (core/orchestrator.py, tests/test_orchestrator.py)
+
+---
