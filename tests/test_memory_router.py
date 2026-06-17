@@ -180,3 +180,11 @@ class TestMemoryRouter:
         assert len(events) > 0
         assert any(event.event_type.value == "MEMORY_WRITE" for event in events)
 
+    def test_postgres_backend_parameter(self, mock_backend):
+        """Test that postgres_backend parameter is accepted and converted to backends dict."""
+        router = MemoryRouter(
+            backends={},
+            postgres_backend=mock_backend,
+        )
+        assert "postgres" in router.backends
+        assert router.backends["postgres"] == mock_backend

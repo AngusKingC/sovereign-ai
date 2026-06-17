@@ -166,6 +166,7 @@ class MemoryRouter:
         backends: dict[str, MemoryBackend],
         emitter: "TraceEmitter | None" = None,
         compactor: "MemoryCompactor | None" = None,
+        postgres_backend: MemoryBackend | None = None,
     ) -> None:
         """Initialize the memory router with backends.
 
@@ -173,7 +174,12 @@ class MemoryRouter:
             backends: Dictionary of backend name to backend instance
             emitter: Trace emitter for events
             compactor: Optional memory compactor for tiered memory management
+            postgres_backend: Optional single postgres backend (converted to backends dict for compatibility)
         """
+        # Convert postgres_backend to backends dict if provided
+        if postgres_backend is not None:
+            backends = backends.copy()
+            backends["postgres"] = postgres_backend
         self.backends = backends
         self.emitter = emitter or MemoryTraceEmitter()
         self._compactor = compactor
