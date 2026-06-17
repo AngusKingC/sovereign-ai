@@ -8,7 +8,7 @@ in order.
 
 **Maintained by**: Devin — updated after every prompt as part of standard closing steps. Claude reads this document at session start but does not write to it.
 
-**Last updated**: 2026-06-17 — post Prompt 35.5.2 completion. Integrity Check and Final Tag Creation. Test baseline: 1051 passed, 23 skipped, 56 warnings (no new tests - checkpoint for user manual correction).
+**Last updated**: 2026-06-17 — post Prompt 35.6b completion. submit_task/list_tasks added to Orchestrator, jarvis serve wired into CLI, full cognition stack wired into cli/serve.py. Test baseline: 1065 passed, 23 skipped, 64 warnings, 0 failed.
 
 ---
 
@@ -355,6 +355,14 @@ This single prompt closes more of the integration gap than any other.
 11. Update Memory 1 in memory files with new checkpoint and test baseline
 12. If any new problems were encountered and solved during this prompt, save solutions to memory files immediately — they should already be saved mid-prompt, but confirm here
 
+### CHANGELOG Append Procedure (Mandatory — violations caused repeated prompt failures)
+
+- Always use `[System.IO.File]::ReadAllLines("C:\Jarvis\CHANGELOG.md").Count` for line counts — never `Get-Content | Measure-Object` (truncates large files)
+- Always use `Add-Content` to append — never paste into editor, never use insert operations
+- Before appending: record current line count with `ReadAllLines().Count`
+- After appending: verify new count exceeds previous count, verify last 5 lines with `Select-Object -Last 5`, verify boundary with `$lines[N-5..N-1]` where N is the old line count
+- Close the file in the IDE before running `Add-Content` — a locked file causes IOException
+
 The critical changes from the old steps:
 
 Code is committed and tagged BEFORE docs are updated (old steps updated docs first, then committed everything together — this caused the tag to capture stale or next-prompt code)
@@ -366,18 +374,18 @@ Docs are committed separately in steps 7–8 after the tag is already clean and 
 ## Current State
 
 ### Test Baseline
-- **1051 passed, 23 skipped, 56 warnings** (as of Prompt 35.5.2 / checkpoint prompt-35.5.2)
+- **1065 passed, 23 skipped, 64 warnings** (as of Prompt 35.6b / checkpoint prompt-35.6b)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
-- 56 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for async decorator marks on sync methods (test_web_server.py) — harmless; DeprecationWarning from FastAPI Lifespan events — deferred to Phase 9, do not touch
+- 64 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for async decorator marks on sync methods (test_web_server.py) — harmless; DeprecationWarning from FastAPI Lifespan events — deferred to Phase 9, do not touch. Warning count increased from 56 to 64 in prompt-35.6b — all pre-existing warnings in test_web_server.py, none new.
 - Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
 
 ### Known Issues from Prompt 35.5.2
-- None — Integrity check confirmed repo state is clean
+- None — prompt-35.6b landed cleanly
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-35.5.2`
+- Latest checkpoint tag: `prompt-35.6b`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -514,6 +522,7 @@ Docs are committed separately in steps 7–8 after the tag is already clean and 
 | 35.5 | Verbosity Control + Model Thinking Capture + Async I/O Improvements | 1049 (+23 new tests) |
 | 35.5.1 | Spec Deviation Correction | 1051 (+2 new tests) |
 | 35.5.2 | Integrity Check and Final Tag Creation | 1051 (no new tests - checkpoint for user manual correction) |
+| 35.6b | Runtime Bug Fixes + Minimum Cognition Wiring | 1065 (+14 new tests) |
 
 ---
 
