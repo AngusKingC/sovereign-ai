@@ -4,10 +4,10 @@
 This changelog documents all implementations, changes, and decisions made during the development of the Sovereign AI Agent Framework.
 
 ### CHANGELOG Rules
-- Entries are in chronological order — oldest at top, newest at bottom
+- Entries are in chronological order â€” oldest at top, newest at bottom
 - New entries are always appended to the bottom of the file, never inserted at the top
 - Every entry date must include time: format YYYY-MM-DD HH:MM
-- Never prepend entries — always append
+- Never prepend entries â€” always append
 
 ---
 
@@ -772,7 +772,7 @@ This changelog documents all implementations, changes, and decisions made during
 
 **Testing Results**:
 
-**Anthropic Adapter**: ✅ 12/12 tests PASSED
+**Anthropic Adapter**: âœ… 12/12 tests PASSED
 - All tests passing including:
   - Initialization, properties, health check
   - Simple message generation
@@ -784,7 +784,7 @@ This changelog documents all implementations, changes, and decisions made during
 - API key working correctly
 - Rate limiting encountered during testing (high demand error) but tests pass on retry
 
-**Gemini Adapter**: ⚠️ Partial success
+**Gemini Adapter**: âš ï¸� Partial success
 - Basic tests passing (initialization, properties, health check)
 - Generation tests affected by:
   - Rate limiting: Free tier limited to 5 requests/minute for gemini-3.5-flash
@@ -849,14 +849,14 @@ This changelog documents all implementations, changes, and decisions made during
 - No interface-specific logic in core command system
 
 **Testing Results**:
-- CLI non-interactive mode: ✅ Working
-- CLI interactive mode: ✅ Working (tested with /help command)
-- CLI query processing: ✅ Working
-- Web GUI server: ✅ Running on port 8000
-- Web GUI /commands endpoint: ✅ Returns available commands
-- Web GUI /menu endpoint: ✅ Returns menu structure
-- Standalone GUI reference: ✅ Working (menu structure tested)
-- Interface compatibility: ✅ Confirmed (same commands available across all interfaces)
+- CLI non-interactive mode: âœ… Working
+- CLI interactive mode: âœ… Working (tested with /help command)
+- CLI query processing: âœ… Working
+- Web GUI server: âœ… Running on port 8000
+- Web GUI /commands endpoint: âœ… Returns available commands
+- Web GUI /menu endpoint: âœ… Returns menu structure
+- Standalone GUI reference: âœ… Working (menu structure tested)
+- Interface compatibility: âœ… Confirmed (same commands available across all interfaces)
 
 **Key Features**:
 - Backwards compatibility: CLI menu items available in Web GUI and Standalone GUI
@@ -896,12 +896,12 @@ This changelog documents all implementations, changes, and decisions made during
 - Clean separation between UI layer and command system
 
 **Testing Results**:
-- Textual TUI: ✅ Working (menu displays correctly, arrow navigation functional)
-- Menu categories: ✅ SYSTEM, CONFIGURATION, APPEARANCE, AI
-- Command shortcuts: ✅ F1 (Help), Ctrl+S (Status), Ctrl+L (Clear), Ctrl+Q (Exit)
-- Direct input: ✅ Working (text field accepts commands)
-- Rich CLI (--rich flag): ✅ Still functional
-- Non-interactive mode: ✅ Working
+- Textual TUI: âœ… Working (menu displays correctly, arrow navigation functional)
+- Menu categories: âœ… SYSTEM, CONFIGURATION, APPEARANCE, AI
+- Command shortcuts: âœ… F1 (Help), Ctrl+S (Status), Ctrl+L (Clear), Ctrl+Q (Exit)
+- Direct input: âœ… Working (text field accepts commands)
+- Rich CLI (--rich flag): âœ… Still functional
+- Non-interactive mode: âœ… Working
 
 **Key Features**:
 - Arrow key navigation (up/down) through menu items
@@ -940,11 +940,11 @@ python cli/main.py "query"      # Non-interactive
 - Metadata storage on widgets is standard Textual pattern
 
 **Testing Results**:
-- Textual TUI: ✅ Working without errors
-- Menu display: ✅ Correct
-- Arrow navigation: ✅ Working
-- Menu selection: ✅ Fixed (no more AttributeError)
-- Direct input: ✅ Working
+- Textual TUI: âœ… Working without errors
+- Menu display: âœ… Correct
+- Arrow navigation: âœ… Working
+- Menu selection: âœ… Fixed (no more AttributeError)
+- Direct input: âœ… Working
 
 **Rationale**: Simplified menu selection by storing command type as widget metadata instead of parsing label text, eliminating Textual API compatibility issues.
 
@@ -969,10 +969,10 @@ python cli/main.py "query"      # Non-interactive
 - Validation logic follows clean architecture principles
 
 **Testing Results**:
-- AdapterHandler listing: ✅ Working (lists 11 available adapters)
-- AdapterHandler validation: ✅ Working (rejects unknown adapters)
-- ModelHandler listing: ✅ Working (shows adapter selection required message)
-- Default models mapping: ✅ Defined for all 11 adapters
+- AdapterHandler listing: âœ… Working (lists 11 available adapters)
+- AdapterHandler validation: âœ… Working (rejects unknown adapters)
+- ModelHandler listing: âœ… Working (shows adapter selection required message)
+- Default models mapping: âœ… Defined for all 11 adapters
 
 **Rationale**: Provides user-friendly discovery of available adapters and guides proper workflow (adapter selection before model selection).
 
@@ -1000,12 +1000,12 @@ python cli/main.py "query"      # Non-interactive
 - Callback pattern for loose coupling
 
 **Testing Results**:
-- SelectionScreen modal: ✅ Implemented
-- Adapter selection modal: ✅ Working (opens from menu)
-- Arrow navigation in modal: ✅ Working
-- Selection callback: ✅ Working
-- Cancel button: ✅ Working
-- TUI main menu: ✅ Still functional
+- SelectionScreen modal: âœ… Implemented
+- Adapter selection modal: âœ… Working (opens from menu)
+- Arrow navigation in modal: âœ… Working
+- Selection callback: âœ… Working
+- Cancel button: âœ… Working
+- TUI main menu: âœ… Still functional
 
 **Rationale**: Provides intuitive, interactive selection experience instead of requiring users to type adapter names, improving usability and discoverability.
 
@@ -1014,11 +1014,11 @@ python cli/main.py "query"      # Non-interactive
 ### 2026-06-07 16:00 - Architecture Compliance Check After CLI Implementation
 **Context**: User requested verification that project still aligns with architecture laws after CLI implementation
 **Architecture Laws Verified**:
-- Clean Architecture: core never imports adapters - ✅ VERIFIED (no imports found in core directory)
-- Async-first: every I/O operation is async - ✅ VERIFIED (all handlers use async/await)
-- Pydantic everywhere: no raw dicts cross boundaries - ✅ VERIFIED (CommandResult, CommandContext use Pydantic)
-- Typed or rejected: untyped outputs are invalid outputs - ⚠️ PARTIAL (CLI has some untyped functions, core is typed)
-- Observability built-in: every component emits TraceEvents - ❌ NOT IMPLEMENTED (no observability layer yet)
+- Clean Architecture: core never imports adapters - âœ… VERIFIED (no imports found in core directory)
+- Async-first: every I/O operation is async - âœ… VERIFIED (all handlers use async/await)
+- Pydantic everywhere: no raw dicts cross boundaries - âœ… VERIFIED (CommandResult, CommandContext use Pydantic)
+- Typed or rejected: untyped outputs are invalid outputs - âš ï¸� PARTIAL (CLI has some untyped functions, core is typed)
+- Observability built-in: every component emits TraceEvents - â�Œ NOT IMPLEMENTED (no observability layer yet)
 
 **Code Quality Issues Fixed**:
 - Fixed asyncio import order in core/handlers.py (was imported at bottom, moved to top)
@@ -1030,10 +1030,10 @@ python cli/main.py "query"      # Non-interactive
 - No regressions introduced by CLI implementation
 
 **Architecture Compliance Summary**:
-- Core layer: ✅ Clean (no adapter imports, proper typing, Pydantic models)
-- CLI layer: ✅ Clean (imports from core only, no direct adapter access)
-- Command registry: ✅ Clean (interface-agnostic, shared across all interfaces)
-- Handlers: ✅ Clean (async, typed, Pydantic models)
+- Core layer: âœ… Clean (no adapter imports, proper typing, Pydantic models)
+- CLI layer: âœ… Clean (imports from core only, no direct adapter access)
+- Command registry: âœ… Clean (interface-agnostic, shared across all interfaces)
+- Handlers: âœ… Clean (async, typed, Pydantic models)
 - Missing: Observability layer (TraceEvents) - not yet implemented
 
 **Rationale**: CLI implementation maintains clean architecture principles. Core layer remains isolated from adapters. CLI layer correctly depends on core layer only. No architecture violations found.
@@ -1043,11 +1043,11 @@ python cli/main.py "query"      # Non-interactive
 ### 2026-06-07 15:00 - Observability Layer Implementation
 **Context**: User requested integration of observability layer now that we're working with CLI
 **Architecture Laws Compliance**:
-- Clean Architecture: ✅ Core layer only, no adapter dependencies
-- Async-first: ✅ All event emission is async
-- Pydantic everywhere: ✅ TraceEvent, TraceContext use Pydantic models
-- Typed or rejected: ✅ All functions have return types
-- Observability built-in: ✅ Now implemented with TraceEvents
+- Clean Architecture: âœ… Core layer only, no adapter dependencies
+- Async-first: âœ… All event emission is async
+- Pydantic everywhere: âœ… TraceEvent, TraceContext use Pydantic models
+- Typed or rejected: âœ… All functions have return types
+- Observability built-in: âœ… Now implemented with TraceEvents
 
 **Implementation Details**:
 - Created `core/observability.py` with:
@@ -1084,9 +1084,9 @@ python cli/main.py "query"      # Non-interactive
 - Full test suite: 130 passed, 23 skipped, 7 warnings (no regressions)
 
 **Architecture Compliance Summary**:
-- Core layer: ✅ Clean (no adapter imports, proper typing, Pydantic models)
-- CLI layer: ✅ Clean (imports from core only, uses ConsoleTraceEmitter)
-- Command handlers: ✅ Clean (async, typed, emit trace events)
+- Core layer: âœ… Clean (no adapter imports, proper typing, Pydantic models)
+- CLI layer: âœ… Clean (imports from core only, uses ConsoleTraceEmitter)
+- Command handlers: âœ… Clean (async, typed, emit trace events)
 - No global state violations (global emitter is a singleton pattern, not mutable global state)
 - Pydantic v2 ConfigDict used instead of deprecated class-based Config
 
@@ -1097,11 +1097,11 @@ python cli/main.py "query"      # Non-interactive
 ### 2026-06-07 17:00 - Ollama Integration into QueryHandler
 **Context**: User requested wiring Ollama into QueryHandler to remove mock responses
 **Architecture Laws Compliance**:
-- Clean Architecture: ⚠️ Violation - core/handlers.py now imports adapters.ollama via lazy import
-- Async-first: ✅ All Ollama calls are async
-- Pydantic everywhere: ✅ Uses Message from core.schemas, CommandResult unchanged
-- Typed or rejected: ✅ All functions have return types
-- Observability built-in: ✅ QueryHandler emits trace events for all operations
+- Clean Architecture: âš ï¸� Violation - core/handlers.py now imports adapters.ollama via lazy import
+- Async-first: âœ… All Ollama calls are async
+- Pydantic everywhere: âœ… Uses Message from core.schemas, CommandResult unchanged
+- Typed or rejected: âœ… All functions have return types
+- Observability built-in: âœ… QueryHandler emits trace events for all operations
 
 **Implementation Details**:
 - Updated `core/handlers.py`:
@@ -1133,11 +1133,11 @@ python cli/main.py "query"      # Non-interactive
 ### 2026-06-07 18:00 - Clean Architecture Violation Fix: AdapterFactory Pattern
 **Context**: User requested refactoring QueryHandler to fix Clean Architecture violation where core/handlers.py imported adapters via lazy import
 **Architecture Laws Compliance**:
-- Clean Architecture: ✅ Fixed - core/ no longer imports adapters (verified by grep)
-- Async-first: ✅ All operations remain async
-- Pydantic everywhere: ✅ Uses MessageRole enum, proper Message construction
-- Typed or rejected: ✅ All functions have return types
-- Observability built-in: ✅ Trace events continue to be emitted
+- Clean Architecture: âœ… Fixed - core/ no longer imports adapters (verified by grep)
+- Async-first: âœ… All operations remain async
+- Pydantic everywhere: âœ… Uses MessageRole enum, proper Message construction
+- Typed or rejected: âœ… All functions have return types
+- Observability built-in: âœ… Trace events continue to be emitted
 
 **Implementation Details**:
 - Created `cli/adapter_factory.py`:
@@ -1175,9 +1175,9 @@ python cli/main.py "query"      # Non-interactive
 
 **Architecture Compliance Verification**:
 - Ran Python script to search for adapter imports in core/:
-  - `grep -r "from adapters" core/` → No matches found
-  - `grep -r "import adapters" core/` → No matches found
-- Result: ✅ Zero adapter imports in core/ layer
+  - `grep -r "from adapters" core/` â†’ No matches found
+  - `grep -r "import adapters" core/` â†’ No matches found
+- Result: âœ… Zero adapter imports in core/ layer
 
 **Testing Results**:
 - New tests: 12 tests (6 adapter factory + 6 query handler)
@@ -1192,11 +1192,11 @@ python cli/main.py "query"      # Non-interactive
 ### 2026-06-07 19:00 - Real Embeddings Implementation for QdrantBackend
 **Context**: User requested replacing placeholder zero vectors in QdrantBackend with real embeddings via OllamaEmbedder to enable functional semantic search
 **Architecture Laws Compliance**:
-- Clean Architecture: ✅ memory/ imports from core/observability.py (allowed), does not import from adapters/ or cli/
-- Async-first: ✅ All embed operations are async
-- Pydantic everywhere: ✅ No raw dicts cross boundaries
-- Typed or rejected: ✅ All functions have return types
-- Observability built-in: ✅ Embedder failures emit WARNING trace events
+- Clean Architecture: âœ… memory/ imports from core/observability.py (allowed), does not import from adapters/ or cli/
+- Async-first: âœ… All embed operations are async
+- Pydantic everywhere: âœ… No raw dicts cross boundaries
+- Typed or rejected: âœ… All functions have return types
+- Observability built-in: âœ… Embedder failures emit WARNING trace events
 
 **Implementation Details**:
 - Created `memory/embedder.py`:
@@ -1250,11 +1250,11 @@ python cli/main.py "query"      # Non-interactive
 ### 2026-06-07 20:00 - SessionManager Implementation with In-Memory Fallback
 **Context**: User requested implementing session persistence to enable conversation history across CLI invocations
 **Architecture Laws Compliance**:
-- Clean Architecture: ✅ core/session.py never imports from adapters/, cli/, or memory/ (backend is injected as MemoryBackend Protocol)
-- Async-first: ✅ All session operations are async
-- Pydantic everywhere: ✅ Uses Message, MessageRole, SessionSummary from core/schemas.py
-- Typed or rejected: ✅ All functions have return types
-- Observability built-in: ✅ Session errors are caught and logged to prevent blocking query processing
+- Clean Architecture: âœ… core/session.py never imports from adapters/, cli/, or memory/ (backend is injected as MemoryBackend Protocol)
+- Async-first: âœ… All session operations are async
+- Pydantic everywhere: âœ… Uses Message, MessageRole, SessionSummary from core/schemas.py
+- Typed or rejected: âœ… All functions have return types
+- Observability built-in: âœ… Session errors are caught and logged to prevent blocking query processing
 
 **Implementation Details**:
 - Created `core/session.py`:
@@ -1320,23 +1320,23 @@ python cli/main.py "query"      # Non-interactive
 
 ---
 
-### 2026-06-07 21:00 - Consolidate Dual Tracing Systems — Remove observability/tracer.py
+### 2026-06-07 21:00 - Consolidate Dual Tracing Systems â€” Remove observability/tracer.py
 **Context**: User requested removing the old observability/tracer.py (Phase 1) and migrating all references to the current core/observability.py (Phase 7) to establish a single source of truth for tracing
 
 **Architecture Laws Compliance**:
-- Clean Architecture: ✅ core/ never imports from adapters/ or cli/
-- Async-first: ✅ All trace operations are async
-- Pydantic everywhere: ✅ All trace events use Pydantic models
-- Typed or rejected: ✅ All functions have return types
-- Observability built-in: ✅ All components emit TraceEvents via core/observability.py
+- Clean Architecture: âœ… core/ never imports from adapters/ or cli/
+- Async-first: âœ… All trace operations are async
+- Pydantic everywhere: âœ… All trace events use Pydantic models
+- Typed or rejected: âœ… All functions have return types
+- Observability built-in: âœ… All components emit TraceEvents via core/observability.py
 
 **Files Migrated (5 files found via grep audit)**:
 1. core/memory_router.py
    - Removed Tracer constructor parameter from MemoryRouter.__init__()
    - Replaced self.tracer.emit() calls with await emit_trace()
-   - Mapped EventType.MEMORY_QUERY → TraceEventType.DATA_READ
-   - Mapped EventType.MEMORY_WRITE → TraceEventType.DATA_WRITE
-   - Mapped Layer.L0 → TraceComponent.MEMORY_ROUTER
+   - Mapped EventType.MEMORY_QUERY â†’ TraceEventType.DATA_READ
+   - Mapped EventType.MEMORY_WRITE â†’ TraceEventType.DATA_WRITE
+   - Mapped Layer.L0 â†’ TraceComponent.MEMORY_ROUTER
    - Used TraceLevel.ERROR for error events, TraceLevel.INFO for success events
 
 2. core/orchestrator.py
@@ -1346,14 +1346,14 @@ python cli/main.py "query"      # Non-interactive
 3. core/worker_base.py
    - Removed Tracer constructor parameter from WorkerBase.__init__()
    - Replaced self.tracer.emit() calls with await emit_trace()
-   - Mapped EventType.MEMORY_QUERY → TraceEventType.DATA_READ
-   - Mapped EventType.PROMPT_BUILT → TraceEventType.OPERATION_START
-   - Mapped EventType.LLM_CALLED → TraceEventType.ADAPTER_CALL
-   - Mapped EventType.LLM_RAW_RESPONSE → TraceEventType.ADAPTER_RESPONSE
-   - Mapped EventType.VALIDATION_PASSED → TraceEventType.OPERATION_COMPLETE
-   - Mapped EventType.VALIDATION_FAILED → TraceEventType.OPERATION_ERROR
-   - Mapped EventType.OUTPUT_FINAL → TraceEventType.OPERATION_COMPLETE
-   - Mapped Layer.L2 → TraceComponent.WORKER
+   - Mapped EventType.MEMORY_QUERY â†’ TraceEventType.DATA_READ
+   - Mapped EventType.PROMPT_BUILT â†’ TraceEventType.OPERATION_START
+   - Mapped EventType.LLM_CALLED â†’ TraceEventType.ADAPTER_CALL
+   - Mapped EventType.LLM_RAW_RESPONSE â†’ TraceEventType.ADAPTER_RESPONSE
+   - Mapped EventType.VALIDATION_PASSED â†’ TraceEventType.OPERATION_COMPLETE
+   - Mapped EventType.VALIDATION_FAILED â†’ TraceEventType.OPERATION_ERROR
+   - Mapped EventType.OUTPUT_FINAL â†’ TraceEventType.OPERATION_COMPLETE
+   - Mapped Layer.L2 â†’ TraceComponent.WORKER
    - Used TraceLevel.ERROR for validation failures, TraceLevel.INFO for success events
 
 4. tests/test_memory_router.py
@@ -1385,23 +1385,23 @@ python cli/main.py "query"      # Non-interactive
 - observability/ directory (deleted as empty)
 
 **Grep Verification Results**:
-- grep -r "from observability" . --include="*.py" → No results found ✅
-- grep -r "observability.tracer" . --include="*.py" → No results found ✅
+- grep -r "from observability" . --include="*.py" â†’ No results found âœ…
+- grep -r "observability.tracer" . --include="*.py" â†’ No results found âœ…
 
 **Event Type Mapping**:
-- Old EventType.MEMORY_QUERY → New TraceEventType.DATA_READ
-- Old EventType.MEMORY_WRITE → New TraceEventType.DATA_WRITE
-- Old EventType.PROMPT_BUILT → New TraceEventType.OPERATION_START
-- Old EventType.LLM_CALLED → New TraceEventType.ADAPTER_CALL
-- Old EventType.LLM_RAW_RESPONSE → New TraceEventType.ADAPTER_RESPONSE
-- Old EventType.VALIDATION_PASSED → New TraceEventType.OPERATION_COMPLETE
-- Old EventType.VALIDATION_FAILED → New TraceEventType.OPERATION_ERROR
-- Old EventType.OUTPUT_FINAL → New TraceEventType.OPERATION_COMPLETE
+- Old EventType.MEMORY_QUERY â†’ New TraceEventType.DATA_READ
+- Old EventType.MEMORY_WRITE â†’ New TraceEventType.DATA_WRITE
+- Old EventType.PROMPT_BUILT â†’ New TraceEventType.OPERATION_START
+- Old EventType.LLM_CALLED â†’ New TraceEventType.ADAPTER_CALL
+- Old EventType.LLM_RAW_RESPONSE â†’ New TraceEventType.ADAPTER_RESPONSE
+- Old EventType.VALIDATION_PASSED â†’ New TraceEventType.OPERATION_COMPLETE
+- Old EventType.VALIDATION_FAILED â†’ New TraceEventType.OPERATION_ERROR
+- Old EventType.OUTPUT_FINAL â†’ New TraceEventType.OPERATION_COMPLETE
 
 **Component Mapping**:
-- Old Layer.L0 → New TraceComponent.MEMORY_ROUTER
-- Old Layer.L2 → New TraceComponent.WORKER
-- Old component string (e.g., worker_id) → New TraceComponent.WORKER
+- Old Layer.L0 â†’ New TraceComponent.MEMORY_ROUTER
+- Old Layer.L2 â†’ New TraceComponent.WORKER
+- Old component string (e.g., worker_id) â†’ New TraceComponent.WORKER
 
 **Testing Results**:
 - Full test suite: 164 passed, 23 skipped, 7 warnings (same as before migration)
@@ -1423,11 +1423,11 @@ python cli/main.py "query"      # Non-interactive
 **Context**: User requested implementing real worker routing logic in core/orchestrator.py to replace the stub implementation that either picked the first registered worker or failed
 
 **Architecture Laws Compliance**:
-- Clean Architecture: ✅ core/ never imports from adapters/, cli/, or memory/
-- Async-first: ✅ All routing operations are async
-- Pydantic everywhere: ✅ All data structures use Pydantic models
-- Typed or rejected: ✅ All functions have return type annotations
-- Observability built-in: ✅ Trace events emitted during routing
+- Clean Architecture: âœ… core/ never imports from adapters/, cli/, or memory/
+- Async-first: âœ… All routing operations are async
+- Pydantic everywhere: âœ… All data structures use Pydantic models
+- Typed or rejected: âœ… All functions have return type annotations
+- Observability built-in: âœ… Trace events emitted during routing
 
 **Implementation Details**:
 - Updated core/schemas.py:
@@ -1466,7 +1466,7 @@ python cli/main.py "query"      # Non-interactive
   7. process_task() with explicit worker ID still works
   8. process_task() raises ValueError for unknown worker ID
   9. Trace events emitted during routing (use MemoryTraceEmitter)
-  10. Multiple workers with no overlap — first registered wins
+  10. Multiple workers with no overlap â€” first registered wins
 
 **Scoring Algorithm**:
 ```python
@@ -1501,7 +1501,7 @@ for word in intent_words:
 
 ---
 
-### 2026-06-07 23:11 - Complete Pipeline Integration: QueryHandler → Orchestrator → Worker → Adapter
+### 2026-06-07 23:11 - Complete Pipeline Integration: QueryHandler â†’ Orchestrator â†’ Worker â†’ Adapter
 **Implementation**: Full pipeline wiring and OllamaWorker production implementation
 
 **Changes Made**:
@@ -1583,8 +1583,8 @@ for word in intent_words:
 
 **Pipeline Flow**:
 The complete execution path is now:
-1. User query → Command (CLI layer)
-2. Command → QueryHandler.execute() (core/handlers.py)
+1. User query â†’ Command (CLI layer)
+2. Command â†’ QueryHandler.execute() (core/handlers.py)
 3. QueryHandler constructs Task from query string
 4. QueryHandler calls orchestrator.route_task(task) (core/orchestrator.py)
 5. Orchestrator routes to appropriate worker based on scoring algorithm
@@ -1596,7 +1596,7 @@ The complete execution path is now:
 11. QueryHandler returns CommandResult with WorkerOutput.content
 
 **Rationale**:
-This change completes the architectural vision of the Sovereign AI Agent Framework by ensuring all queries flow through the proper Layer 1 Orchestrator → Layer 2 Worker → Adapter pipeline. The previous direct adapter calls in QueryHandler bypassed the orchestration layer, preventing proper worker selection, routing, and observability. The new implementation enables:
+This change completes the architectural vision of the Sovereign AI Agent Framework by ensuring all queries flow through the proper Layer 1 Orchestrator â†’ Layer 2 Worker â†’ Adapter pipeline. The previous direct adapter calls in QueryHandler bypassed the orchestration layer, preventing proper worker selection, routing, and observability. The new implementation enables:
 - Dynamic worker selection based on task complexity and capabilities
 - Proper tracing at each pipeline stage
 - Future extensibility for multiple worker types
@@ -1689,12 +1689,12 @@ This change completes the architectural vision of the Sovereign AI Agent Framewo
 - All architecture compliance fixes are working correctly
 
 **Project Structure Verification:**
-- core/ - Contains core business logic, schemas, orchestrator, worker_base, memory_router, observability ✓
-- adapters/ - Contains all LLM adapter implementations (12 adapters) ✓
-- workers/ - Contains worker implementations (ollama_worker, echo_worker) ✓
-- memory/ - Contains memory backend implementations (obsidian, postgres, qdrant, router) ✓
-- cli/ - Contains CLI implementations (adapter_factory, main, rich_cli, tui) ✓
-- Structure matches Clean Architecture layer boundaries ✓
+- core/ - Contains core business logic, schemas, orchestrator, worker_base, memory_router, observability âœ“
+- adapters/ - Contains all LLM adapter implementations (12 adapters) âœ“
+- workers/ - Contains worker implementations (ollama_worker, echo_worker) âœ“
+- memory/ - Contains memory backend implementations (obsidian, postgres, qdrant, router) âœ“
+- cli/ - Contains CLI implementations (adapter_factory, main, rich_cli, tui) âœ“
+- Structure matches Clean Architecture layer boundaries âœ“
 
 **Rationale**:
 This audit and fix cycle ensures the Sovereign AI Agent Framework maintains strict Clean Architecture compliance. The import fixes ensure proper layer separation (adapters only depend on core, memory only depends on core). The async I/O fix prevents blocking the event loop in memory operations. The global state violations are documented for future refactoring to dependency injection. All fixes maintain backward compatibility and pass the full test suite with zero regressions.
@@ -1744,13 +1744,13 @@ Audited all files in the cli/ directory for missing return type annotations on p
 - All type annotation changes are working correctly
 
 **Project Structure Verification:**
-- core/ - Contains core business logic, schemas, orchestrator, worker_base, memory_router, observability, embedder ✓
-- adapters/ - Contains all LLM adapter implementations (12 adapters) ✓
-- workers/ - Contains worker implementations (ollama_worker, echo_worker) ✓
-- memory/ - Contains memory backend implementations (obsidian, postgres, qdrant, router) ✓
-- cli/ - Contains CLI implementations (adapter_factory, main, rich_cli, tui) ✓
-- Structure matches Clean Architecture layer boundaries ✓
-- No files were moved or placed in wrong layers during this task ✓
+- core/ - Contains core business logic, schemas, orchestrator, worker_base, memory_router, observability, embedder âœ“
+- adapters/ - Contains all LLM adapter implementations (12 adapters) âœ“
+- workers/ - Contains worker implementations (ollama_worker, echo_worker) âœ“
+- memory/ - Contains memory backend implementations (obsidian, postgres, qdrant, router) âœ“
+- cli/ - Contains CLI implementations (adapter_factory, main, rich_cli, tui) âœ“
+- Structure matches Clean Architecture layer boundaries âœ“
+- No files were moved or placed in wrong layers during this task âœ“
 
 **Rationale:**
 Adding type annotations to CLI functions improves code maintainability and enables better IDE support and static type checking. The annotations were inferred from function body context and usage patterns. Using `Any` for the `result` parameter is appropriate since it can be a `CommandResult` from the command registry, and using `Callable[[str], None]` for the callback parameter accurately describes the expected function signature. All changes maintain backward compatibility and pass the full test suite with zero regressions.
@@ -1803,13 +1803,13 @@ Audited all adapters in adapters/ directory for sync/async mismatches:
 - All async/await changes are working correctly
 
 **Project Structure Verification:**
-- core/ - Contains core business logic, schemas, orchestrator, worker_base, memory_router, observability, embedder ✓
-- adapters/ - Contains all LLM adapter implementations (12 adapters) ✓
-- workers/ - Contains worker implementations (ollama_worker, echo_worker) ✓
-- memory/ - Contains memory backend implementations (obsidian, postgres, qdrant, router) ✓
-- cli/ - Contains CLI implementations (adapter_factory, main, rich_cli, tui) ✓
-- Structure matches Clean Architecture layer boundaries ✓
-- No files were moved or placed in wrong layers during this task ✓
+- core/ - Contains core business logic, schemas, orchestrator, worker_base, memory_router, observability, embedder âœ“
+- adapters/ - Contains all LLM adapter implementations (12 adapters) âœ“
+- workers/ - Contains worker implementations (ollama_worker, echo_worker) âœ“
+- memory/ - Contains memory backend implementations (obsidian, postgres, qdrant, router) âœ“
+- cli/ - Contains CLI implementations (adapter_factory, main, rich_cli, tui) âœ“
+- Structure matches Clean Architecture layer boundaries âœ“
+- No files were moved or placed in wrong layers during this task âœ“
 
 **Rationale:**
 The Google Generative AI SDK (`google.generativeai`) is synchronous, but the adapter's public interface requires async methods to comply with the LLMAdapter protocol and the framework's async-first architecture law. Wrapping the synchronous SDK calls with `asyncio.get_event_loop().run_in_executor()` allows the synchronous I/O to run in a thread pool without blocking the event loop, maintaining async compatibility while using the synchronous SDK. All other adapters already use async SDKs (AsyncAnthropic, AsyncOpenAI, httpx.AsyncClient, etc.) and required no changes. The fix maintains backward compatibility and passes the full test suite with zero regressions.
@@ -1888,13 +1888,13 @@ Extended the existing observability layer to emit meaningful trace events across
   - Includes duration measurement
 
 **7. Bug Fix (core/handlers.py)**
-- Fixed incorrect enum reference: `TraceEventType.COMMAND_EXECUTED` → `TraceEventType.COMMAND_EXECUT`
+- Fixed incorrect enum reference: `TraceEventType.COMMAND_EXECUTED` â†’ `TraceEventType.COMMAND_EXECUT`
 - Updated all occurrences in help, status, adapter, and query handlers
 
 **8. Test Updates (tests/)**
 - Updated `test_qdrant_backend.py` to mock `emit_trace` with `AsyncMock`
 - Updated `test_query_handler.py` to mock `emit_trace` with `AsyncMock` using `new_callable=AsyncMock`
-- Fixed enum reference in test expectations: `COMMAND_EXECUTED` → `COMMAND_EXECUT`
+- Fixed enum reference in test expectations: `COMMAND_EXECUTED` â†’ `COMMAND_EXECUT`
 
 ### Architecture Compliance
 - **Clean Architecture**: All trace events use existing `emit_trace` function from `core.observability`
@@ -1911,13 +1911,13 @@ Extended the existing observability layer to emit meaningful trace events across
 - Test mocking with AsyncMock functioning properly
 
 ### Project Structure Verification
-- **core/** - Contains core business logic, schemas, orchestrator, worker_base, memory_router, observability, embedder ✓
-- **adapters/** - Contains all LLM adapter implementations (12 adapters) ✓
-- **workers/** - Contains worker implementations (ollama_worker, echo_worker) ✓
-- **memory/** - Contains memory backend implementations (obsidian, postgres, qdrant, router) ✓
-- **cli/** - Contains CLI implementations (adapter_factory, main, rich_cli, tui) ✓
-- Structure matches Clean Architecture layer boundaries ✓
-- No files were moved or placed in wrong layers during this task ✓
+- **core/** - Contains core business logic, schemas, orchestrator, worker_base, memory_router, observability, embedder âœ“
+- **adapters/** - Contains all LLM adapter implementations (12 adapters) âœ“
+- **workers/** - Contains worker implementations (ollama_worker, echo_worker) âœ“
+- **memory/** - Contains memory backend implementations (obsidian, postgres, qdrant, router) âœ“
+- **cli/** - Contains CLI implementations (adapter_factory, main, rich_cli, tui) âœ“
+- Structure matches Clean Architecture layer boundaries âœ“
+- No files were moved or placed in wrong layers during this task âœ“
 
 ### Rationale
 The observability extension provides comprehensive visibility into the system's execution flow across all architectural layers. By adding trace events at key points (method start, completion, error), operators can:
@@ -1999,7 +1999,7 @@ Added new dependencies:
 - `httpx>=0.24.0`: Network connectivity and Ollama API queries (already present)
 
 **7. Bug Fix (core/handlers.py)**
-- Fixed remaining incorrect enum reference: `TraceEventType.COMMAND_EXECUTED` → `TraceEventType.COMMAND_EXECUT`
+- Fixed remaining incorrect enum reference: `TraceEventType.COMMAND_EXECUTED` â†’ `TraceEventType.COMMAND_EXECUT`
 - This was the last occurrence of the typo in the codebase
 
 **8. Test Coverage (tests/test_system_profiler.py)**
@@ -2031,12 +2031,12 @@ Created comprehensive test suite with 9 tests:
 - Previously passing tests still passing
 
 ### Project Structure Verification
-- **system/** - New architectural layer for system intelligence ✓
-- **core/** - Contains SystemProfile and related schemas ✓
-- **system/profiler.py** - Only imports from core/ ✓
-- **system/__init__.py** - Layer documentation ✓
-- Structure matches Clean Architecture layer boundaries ✓
-- No layer violations detected ✓
+- **system/** - New architectural layer for system intelligence âœ“
+- **core/** - Contains SystemProfile and related schemas âœ“
+- **system/profiler.py** - Only imports from core/ âœ“
+- **system/__init__.py** - Layer documentation âœ“
+- Structure matches Clean Architecture layer boundaries âœ“
+- No layer violations detected âœ“
 
 ### Rationale
 The System Intelligence Layer provides comprehensive hardware and software environment detection to enable intelligent resource allocation and model selection. By profiling GPU, CPU, RAM, storage, OS, network, and Ollama service status, the framework can:
@@ -2068,7 +2068,7 @@ Implemented a model registry in the system/ layer to track all known models with
 ### Changes Made
 
 **1. Bug Fix (core/observability.py)**
-- Fixed enum truncation error: `COMMAND_EXECUT` → `COMMAND_EXECUTED`
+- Fixed enum truncation error: `COMMAND_EXECUT` â†’ `COMMAND_EXECUTED`
 - This was a truncation artifact from the original audit, now corrected to match the string value "command_executed"
 - Updated all references in core/handlers.py and tests/test_query_handler.py
 - The enum now follows the pattern of other command events (COMMAND_RECEIVED, COMMAND_FAILED)
@@ -2169,13 +2169,13 @@ Created comprehensive test suite with 12 tests:
 - Previously passing tests still passing
 
 ### Project Structure Verification
-- **system/** - System Intelligence Layer (profiler, model_registry) ✓
-- **system/profiler.py** - Only imports from core/ ✓
-- **system/model_registry.py** - Only imports from core/ ✓
-- **core/schemas.py** - Contains ModelEntry and related schemas ✓
-- **core/observability.py** - Contains new TraceEventType values ✓
-- Structure matches Clean Architecture layer boundaries ✓
-- No layer violations detected ✓
+- **system/** - System Intelligence Layer (profiler, model_registry) âœ“
+- **system/profiler.py** - Only imports from core/ âœ“
+- **system/model_registry.py** - Only imports from core/ âœ“
+- **core/schemas.py** - Contains ModelEntry and related schemas âœ“
+- **core/observability.py** - Contains new TraceEventType values âœ“
+- Structure matches Clean Architecture layer boundaries âœ“
+- No layer violations detected âœ“
 
 ### Rationale
 The Model Registry provides intelligent model selection by tracking resource requirements and compatibility. By maintaining a comprehensive registry of known models with their quantisation variants, hardware requirements, and task suitability, the framework can:
@@ -2244,14 +2244,14 @@ Implemented ResourceManager class with methods:
 
 **3. Load Decision Flow**
 The `request_load()` method implements the full decision flow:
-1. Check if already loaded → approve immediately
-2. Check if fits without eviction → approve immediately
-3. If doesn't fit → calculate eviction candidates using priority queue:
+1. Check if already loaded â†’ approve immediately
+2. Check if fits without eviction â†’ approve immediately
+3. If doesn't fit â†’ calculate eviction candidates using priority queue:
    - Idle time first (longest unused)
    - Task priority (NORMAL before HIGH)
    - Pinned models last
-4. If non-pinned eviction sufficient → queue evictions and approve
-5. If pinned model eviction required → request user approval via approval callback
+4. If non-pinned eviction sufficient â†’ queue evictions and approve
+5. If pinned model eviction required â†’ request user approval via approval callback
 6. Return LoadDecision with approval status, models to evict, and reason
 
 **4. Eviction Priority Algorithm**
@@ -2313,14 +2313,14 @@ Created comprehensive test suite with 12 tests:
 - Previously passing tests still passing
 
 ### Project Structure Verification
-- **system/** - System Intelligence Layer (profiler, model_registry, resource_manager) ✓
-- **system/profiler.py** - Only imports from core/ ✓
-- **system/model_registry.py** - Only imports from core/ ✓
-- **system/resource_manager.py** - Only imports from core/ ✓
-- **core/schemas.py** - Contains ResourceSnapshot, LoadedModel, LoadDecision, ApprovalCallback ✓
-- **core/observability.py** - Contains new TraceEventType values ✓
-- Structure matches Clean Architecture layer boundaries ✓
-- No layer violations detected ✓
+- **system/** - System Intelligence Layer (profiler, model_registry, resource_manager) âœ“
+- **system/profiler.py** - Only imports from core/ âœ“
+- **system/model_registry.py** - Only imports from core/ âœ“
+- **system/resource_manager.py** - Only imports from core/ âœ“
+- **core/schemas.py** - Contains ResourceSnapshot, LoadedModel, LoadDecision, ApprovalCallback âœ“
+- **core/observability.py** - Contains new TraceEventType values âœ“
+- Structure matches Clean Architecture layer boundaries âœ“
+- No layer violations detected âœ“
 
 ### Rationale
 The Resource Manager provides live resource tracking and intelligent model loading decisions. By monitoring loaded models and their resource usage, the framework can:
@@ -2386,13 +2386,13 @@ Implemented ModelAcquisition class with methods:
 
 **4. Download Request Flow**
 The `request_download()` method implements the full decision flow:
-1. Check if already downloaded → return immediately if so
-2. Check disk space via SystemProfiler → warn if less than 20% free after download
+1. Check if already downloaded â†’ return immediately if so
+2. Check disk space via SystemProfiler â†’ warn if less than 20% free after download
 3. Check hardware fit via ResourceManager
-4. If fit check fails → query HuggingFace for lower quantisation alternatives that do fit
+4. If fit check fails â†’ query HuggingFace for lower quantisation alternatives that do fit
 5. Present download summary to user for approval
-6. On approval → execute download via adapter-specific mechanism
-7. On completion → register in ModelRegistry with correct download status
+6. On approval â†’ execute download via adapter-specific mechanism
+7. On completion â†’ register in ModelRegistry with correct download status
 8. Return DownloadResult
 
 **5. Adapter-Specific Download Mechanisms**
@@ -2464,15 +2464,15 @@ Created comprehensive test suite with 15 tests:
 - Previously passing tests still passing
 
 ### Project Structure Verification
-- **system/** - System Intelligence Layer (profiler, model_registry, resource_manager, model_acquisition) ✓
-- **system/profiler.py** - Only imports from core/ ✓
-- **system/model_registry.py** - Only imports from core/ ✓
-- **system/resource_manager.py** - Only imports from core/ ✓
-- **system/model_acquisition.py** - Only imports from core/ ✓
-- **core/schemas.py** - Contains DownloadRequest, DownloadResult ✓
-- **core/observability.py** - Contains new TraceEventType values ✓
-- Structure matches Clean Architecture layer boundaries ✓
-- No layer violations detected ✓
+- **system/** - System Intelligence Layer (profiler, model_registry, resource_manager, model_acquisition) âœ“
+- **system/profiler.py** - Only imports from core/ âœ“
+- **system/model_registry.py** - Only imports from core/ âœ“
+- **system/resource_manager.py** - Only imports from core/ âœ“
+- **system/model_acquisition.py** - Only imports from core/ âœ“
+- **core/schemas.py** - Contains DownloadRequest, DownloadResult âœ“
+- **core/observability.py** - Contains new TraceEventType values âœ“
+- Structure matches Clean Architecture layer boundaries âœ“
+- No layer violations detected âœ“
 
 ### Rationale
 The Model Acquisition provides autonomous model discovery and download capabilities with HuggingFace integration. By querying the HuggingFace catalogue, the framework can:
@@ -2525,9 +2525,9 @@ Extended TaskStatus enum with new states for explicit task lifecycle:
 - `CANCELLED`: Task cancelled
 
 Added backward compatibility aliases:
-- `PENDING` → `RECEIVED`
-- `RUNNING` → `EXECUTING`
-- `ESCALATED` → `AWAITING_APPROVAL`
+- `PENDING` â†’ `RECEIVED`
+- `RUNNING` â†’ `EXECUTING`
+- `ESCALATED` â†’ `AWAITING_APPROVAL`
 
 **2. TaskStateTransition Schema (core/schemas.py)**
 Added new Pydantic model for tracking state transitions:
@@ -2559,12 +2559,12 @@ Created new exception module with framework-specific exceptions:
 **5. TaskStateMachine Implementation (core/task_state_machine.py)**
 Implemented TaskStateMachine class with state transition validation:
 - `VALID_TRANSITIONS`: Class-level dict defining all legal state transitions
-  - RECEIVED → PLANNED, FAILED, CANCELLED
-  - PLANNED → EXECUTING, FAILED, CANCELLED
-  - EXECUTING → VALIDATING, AWAITING_APPROVAL, FAILED, CANCELLED
-  - VALIDATING → COMPLETE, EXECUTING, FAILED, CANCELLED
-  - AWAITING_APPROVAL → EXECUTING, CANCELLED
-  - COMPLETE, FAILED, CANCELLED → (terminal, no transitions)
+  - RECEIVED â†’ PLANNED, FAILED, CANCELLED
+  - PLANNED â†’ EXECUTING, FAILED, CANCELLED
+  - EXECUTING â†’ VALIDATING, AWAITING_APPROVAL, FAILED, CANCELLED
+  - VALIDATING â†’ COMPLETE, EXECUTING, FAILED, CANCELLED
+  - AWAITING_APPROVAL â†’ EXECUTING, CANCELLED
+  - COMPLETE, FAILED, CANCELLED â†’ (terminal, no transitions)
 
 Methods:
 - `async transition(task, to_state, reason, actor)`: Attempt state transition with validation
@@ -2643,16 +2643,16 @@ Created comprehensive test suite with 14 tests:
 - Result: **249 passed, 23 skipped, 0 failures**
 - Zero regressions confirmed
 - All 14 new task state machine tests passing
-- Previously passing tests still passing (235 → 249, +14 new tests)
+- Previously passing tests still passing (235 â†’ 249, +14 new tests)
 
 ### Project Structure Verification
-- **core/** - Core schemas, observability, orchestration, workers, memory ✓
-- **core/schemas.py** - Extended TaskStatus, added TaskStateTransition, extended Task ✓
-- **core/exceptions.py** - New custom exceptions module ✓
-- **core/task_state_machine.py** - New state machine implementation ✓
-- **core/orchestrator.py** - Integrated state machine with transitions ✓
-- **Structure matches Clean Architecture layer boundaries** ✓
-- **No layer violations detected** ✓
+- **core/** - Core schemas, observability, orchestration, workers, memory âœ“
+- **core/schemas.py** - Extended TaskStatus, added TaskStateTransition, extended Task âœ“
+- **core/exceptions.py** - New custom exceptions module âœ“
+- **core/task_state_machine.py** - New state machine implementation âœ“
+- **core/orchestrator.py** - Integrated state machine with transitions âœ“
+- **Structure matches Clean Architecture layer boundaries** âœ“
+- **No layer violations detected** âœ“
 
 ### Rationale
 The Task State Machine provides explicit, validated state transitions for task lifecycle management. By defining legal transitions and tracking full history, the framework can:
@@ -2667,14 +2667,14 @@ The state machine follows Clean Architecture by only importing from core/, maint
 
 ### Valid State Transition Map
 ```
-RECEIVED → PLANNED, FAILED, CANCELLED
-PLANNED → EXECUTING, FAILED, CANCELLED
-EXECUTING → VALIDATING, AWAITING_APPROVAL, FAILED, CANCELLED
-VALIDATING → COMPLETE, EXECUTING, FAILED, CANCELLED
-AWAITING_APPROVAL → EXECUTING, CANCELLED
-COMPLETE → (terminal)
-FAILED → (terminal)
-CANCELLED → (terminal)
+RECEIVED â†’ PLANNED, FAILED, CANCELLED
+PLANNED â†’ EXECUTING, FAILED, CANCELLED
+EXECUTING â†’ VALIDATING, AWAITING_APPROVAL, FAILED, CANCELLED
+VALIDATING â†’ COMPLETE, EXECUTING, FAILED, CANCELLED
+AWAITING_APPROVAL â†’ EXECUTING, CANCELLED
+COMPLETE â†’ (terminal)
+FAILED â†’ (terminal)
+CANCELLED â†’ (terminal)
 ```
 
 ### Metadata Included in TaskStateTransition
@@ -2805,17 +2805,17 @@ Created comprehensive test suite with 12 tests:
 - Result: **261 passed, 23 skipped, 0 failures**
 - Zero regressions confirmed
 - All 12 new scratchpad tests passing
-- Previously passing tests still passing (249 → 261, +12 new tests)
+- Previously passing tests still passing (249 â†’ 261, +12 new tests)
 
 ### Project Structure Verification
-- **core/schemas.py** - Added ScratchpadEntryType enum, ScratchpadEntry schema, Scratchpad schema ✓
-- **core/scratchpad.py** - New ScratchpadManager implementation ✓
-- **core/observability.py** - Added scratchpad trace event types ✓
-- **core/worker_base.py** - Integrated ScratchpadManager with write_scratchpad() method ✓
-- **core/orchestrator.py** - Integrated scratchpad lifecycle (create on EXECUTING, compact on COMPLETE, preserve on FAILED, delete on CANCELLED) ✓
-- **tests/test_scratchpad.py** - New comprehensive test suite ✓
-- **Structure matches Clean Architecture layer boundaries** ✓
-- **No layer violations detected** ✓
+- **core/schemas.py** - Added ScratchpadEntryType enum, ScratchpadEntry schema, Scratchpad schema âœ“
+- **core/scratchpad.py** - New ScratchpadManager implementation âœ“
+- **core/observability.py** - Added scratchpad trace event types âœ“
+- **core/worker_base.py** - Integrated ScratchpadManager with write_scratchpad() method âœ“
+- **core/orchestrator.py** - Integrated scratchpad lifecycle (create on EXECUTING, compact on COMPLETE, preserve on FAILED, delete on CANCELLED) âœ“
+- **tests/test_scratchpad.py** - New comprehensive test suite âœ“
+- **Structure matches Clean Architecture layer boundaries** âœ“
+- **No layer violations detected** âœ“
 
 ### Rationale
 The Task Scratchpad provides ephemeral working memory for worker reasoning, separate from long-term memory. This separation is important because:
@@ -2830,7 +2830,7 @@ The scratchpad follows Clean Architecture by only importing from core/, maintain
 
 ### Scratchpad Lifecycle
 ```
-Task RECEIVED → PLANNED → EXECUTING: Create scratchpad
+Task RECEIVED â†’ PLANNED â†’ EXECUTING: Create scratchpad
 Task EXECUTING: Workers write entries via write_scratchpad()
 Task COMPLETE: Compact scratchpad, write summary to long-term memory
 Task FAILED: Preserve scratchpad, log task_id for debugging
@@ -2950,11 +2950,11 @@ Added imports for new functionality:
 - All previously passing tests still passing
 
 ### Project Structure Verification
-- **core/session.py** - Updated with session persistence, query methods, expiration/archival ✓
-- **cli/rich_cli.py** - Updated to use PostgresBackend when DSN available ✓
-- **cli/tui.py** - Updated to use PostgresBackend when DSN available ✓
-- **Structure matches Clean Architecture layer boundaries** ✓
-- **No layer violations detected** ✓
+- **core/session.py** - Updated with session persistence, query methods, expiration/archival âœ“
+- **cli/rich_cli.py** - Updated to use PostgresBackend when DSN available âœ“
+- **cli/tui.py** - Updated to use PostgresBackend when DSN available âœ“
+- **Structure matches Clean Architecture layer boundaries** âœ“
+- **No layer violations detected** âœ“
 
 ### Rationale
 The PostgreSQL Session Persistence implementation provides robust session management that survives process restarts while maintaining backward compatibility with in-memory fallback. This is important because:
@@ -2970,12 +2970,12 @@ The implementation follows Clean Architecture by keeping core/ independent of ot
 
 ### Session Lifecycle
 ```
-Session Creation: create_session() → writes to Postgres with user_id, created_at, expires_at
-Session Append: append() → updates session with refreshed expires_at
-Session Query: query_sessions() → filters by session_id, user_id, date range
-Session Summary: summarize() → persists summary to backend
-Session Expiration: archive_expired_sessions() → archives sessions older than expiry_days
-Session Loading: load_session_async() → loads existing session on startup
+Session Creation: create_session() â†’ writes to Postgres with user_id, created_at, expires_at
+Session Append: append() â†’ updates session with refreshed expires_at
+Session Query: query_sessions() â†’ filters by session_id, user_id, date range
+Session Summary: summarize() â†’ persists summary to backend
+Session Expiration: archive_expired_sessions() â†’ archives sessions older than expiry_days
+Session Loading: load_session_async() â†’ loads existing session on startup
 ```
 
 ### Session Metadata
@@ -3081,11 +3081,11 @@ Implemented up/down arrow navigation:
 - All previously passing tests still passing
 
 ### Project Structure Verification
-- **cli/command_history.py** - New CommandHistory class for managing command history ✓
-- **cli/rich_cli.py** - Integrated CommandHistory with PostgreSQL persistence ✓
-- **cli/tui.py** - Integrated CommandHistory with PostgreSQL persistence ✓
-- **Structure matches Clean Architecture layer boundaries** ✓
-- **No layer violations detected** ✓
+- **cli/command_history.py** - New CommandHistory class for managing command history âœ“
+- **cli/rich_cli.py** - Integrated CommandHistory with PostgreSQL persistence âœ“
+- **cli/tui.py** - Integrated CommandHistory with PostgreSQL persistence âœ“
+- **Structure matches Clean Architecture layer boundaries** âœ“
+- **No layer violations detected** âœ“
 
 ### Rationale
 The Command History and Completion implementation provides persistent command history and intelligent tab completion while maintaining backward compatibility with in-memory fallback. This is important because:
@@ -3102,12 +3102,12 @@ The implementation follows Clean Architecture by keeping core/ independent of CL
 
 ### Command History Lifecycle
 ```
-Command Input → add_command() → Persist to Postgres (if DSN) or in-memory
-Navigation → navigate_up()/navigate_down() → Retrieve from history cache
-Tab Completion → get_completions() → Return suggestions from commands/adapters/models/history
-History Search → search_history() → Return matching commands from history
-Session Creation → Set session_id on CommandHistory for scoping
-Session End → close() → Close backend connection
+Command Input â†’ add_command() â†’ Persist to Postgres (if DSN) or in-memory
+Navigation â†’ navigate_up()/navigate_down() â†’ Retrieve from history cache
+Tab Completion â†’ get_completions() â†’ Return suggestions from commands/adapters/models/history
+History Search â†’ search_history() â†’ Return matching commands from history
+Session Creation â†’ Set session_id on CommandHistory for scoping
+Session End â†’ close() â†’ Close backend connection
 ```
 
 ### Command History Metadata
@@ -3147,13 +3147,13 @@ Session End → close() → Close backend connection
 - **Infrastructure Created**:
   - Initialized git repository at `c:\Jarvis`
   - Created `.gitignore` excluding: `__pycache__/`, `*.pyc`, `.env`, `*.log`, `venv/`, `.pytest_cache/`, `node_modules/`, and other common artifacts
-  - Created initial checkpoint: `prompt-12` with commit message "checkpoint: prompt-12-complete — 261 passed, 23 skipped"
+  - Created initial checkpoint: `prompt-12` with commit message "checkpoint: prompt-12-complete â€” 261 passed, 23 skipped"
   - Created `scripts/checkpoint.py` helper script:
     - Takes one argument: label (e.g., `prompt-13`)
     - Stages all changes (`git add -A`)
     - Commits with message `checkpoint: {label}`
     - Creates git tag `{label}`
-    - Prints confirmation: `✓ Checkpoint saved: {label}`
+    - Prints confirmation: `âœ“ Checkpoint saved: {label}`
   - Created `scripts/restore.py` helper script:
     - Lists all available checkpoint tags if no argument given
     - Takes one argument: tag name (e.g., `prompt-12`)
@@ -3561,7 +3561,7 @@ Each SKILL.md must declare:
 
 - **TaskStateMachine Integration**:
   - New state: `AWAITING_APPROVAL`
-  - Transitions: `IN_PROGRESS` → `AWAITING_APPROVAL` (request), `AWAITING_APPROVAL` → `IN_PROGRESS` (approve), `AWAITING_APPROVAL` → `FAILED` (deny/expire)
+  - Transitions: `IN_PROGRESS` â†’ `AWAITING_APPROVAL` (request), `AWAITING_APPROVAL` â†’ `IN_PROGRESS` (approve), `AWAITING_APPROVAL` â†’ `FAILED` (deny/expire)
   - Trace events: `approval_requested`, `approval_granted`, `approval_denied`, `approval_expired`
 
 - **Security Considerations**:
@@ -3585,12 +3585,12 @@ Each SKILL.md must declare:
   - Added `DENIED = "denied"` to TaskStatus enum
   - DENIED is a terminal state for tasks denied by human approval or timeout
 - **Changes to core/task_state_machine.py**:
-  - Updated VALID_TRANSITIONS: `AWAITING_APPROVAL` → `[EXECUTING, DENIED, FAILED, CANCELLED]`
+  - Updated VALID_TRANSITIONS: `AWAITING_APPROVAL` â†’ `[EXECUTING, DENIED, FAILED, CANCELLED]`
   - Added DENIED to terminal states list in is_terminal() method
   - Rationale: DENIED represents user decision (no retry), FAILED represents system error (retryable)
 - **Changes to docs/APPROVAL_GATE_DESIGN.md**:
-  - Updated state transitions: `AWAITING_APPROVAL` → `DENIED` (human denied or timeout)
-  - Updated state transitions: `AWAITING_APPROVAL` → `FAILED` (gate itself errored)
+  - Updated state transitions: `AWAITING_APPROVAL` â†’ `DENIED` (human denied or timeout)
+  - Updated state transitions: `AWAITING_APPROVAL` â†’ `FAILED` (gate itself errored)
   - Added new section: "Approval Gate Error" for system error handling
   - Updated TaskStateMachine integration points to include DENIED state
 - **Rationale**: Separates user denial (no retry) from system error (retryable) for clearer audit trail
@@ -3940,11 +3940,11 @@ Each SKILL.md must declare:
 ### 2026-06-09 19:00 - Worker Persistence Implementation
 **Context**: User requested implementing full worker survival across restarts with PostgreSQL persistence and Obsidian mirror
 **Architecture Laws Compliance**:
-- Clean Architecture: ✅ system/worker_persistence.py imports only from core/ (no imports from adapters/, cli/, or memory/)
-- Async-first: ✅ All persistence operations are async
-- Pydantic everywhere: ✅ Uses DynamicWorkerProfile, WorkerStatus from core/worker_factory.py and core/schemas.py
-- Typed or rejected: ✅ All public methods have return type annotations
-- Observability built-in: ✅ TraceEmitter injected via constructor, all trace calls wrapped in try-except
+- Clean Architecture: âœ… system/worker_persistence.py imports only from core/ (no imports from adapters/, cli/, or memory/)
+- Async-first: âœ… All persistence operations are async
+- Pydantic everywhere: âœ… Uses DynamicWorkerProfile, WorkerStatus from core/worker_factory.py and core/schemas.py
+- Typed or rejected: âœ… All public methods have return type annotations
+- Observability built-in: âœ… TraceEmitter injected via constructor, all trace calls wrapped in try-except
 
 **Implementation Details**:
 - Created `system/worker_persistence.py`:
@@ -4030,11 +4030,11 @@ Each SKILL.md must declare:
 ### 2026-06-09 20:00 - Rating System Implementation
 **Context**: User requested implementing a persistent worker rating system that records performance scores per worker, per model, and per instruction version, with trend analysis
 **Architecture Laws Compliance**:
-- Clean Architecture: ✅ core/rating_system.py imports only from core/ (no imports from adapters/, cli/, or memory/)
-- Async-first: ✅ All rating operations are async
-- Pydantic everywhere: ✅ Uses WorkerRating from core/schemas.py with validation
-- Typed or rejected: ✅ All public methods have return type annotations
-- Observability built-in: ✅ TraceEmitter injected via constructor, all trace calls wrapped in try-except
+- Clean Architecture: âœ… core/rating_system.py imports only from core/ (no imports from adapters/, cli/, or memory/)
+- Async-first: âœ… All rating operations are async
+- Pydantic everywhere: âœ… Uses WorkerRating from core/schemas.py with validation
+- Typed or rejected: âœ… All public methods have return type annotations
+- Observability built-in: âœ… TraceEmitter injected via constructor, all trace calls wrapped in try-except
 
 **Implementation Details**:
 - Added `WorkerRating` schema to `core/schemas.py`:
@@ -4088,11 +4088,11 @@ Each SKILL.md must declare:
 ### 2026-06-10 10:00 - Instruction File Generation Implementation
 **Context**: User requested implementing LLM-based worker profile generation replacing the rule-based system from Prompt 15. Each worker gets an instruction file and changelog in Obsidian. Orchestrator gets identical files.
 **Architecture Laws Compliance**:
-- Clean Architecture: ✅ core/instruction_generator.py imports only from core/ (no imports from adapters/, system, or cli)
-- Async-first: ✅ All instruction generation operations are async
-- Pydantic everywhere: ✅ Uses InstructionFile and InstructionChangelogEntry from core/schemas.py
-- Typed or rejected: ✅ All public methods have return type annotations
-- Observability built-in: ✅ TraceEmitter injected via constructor, all trace calls wrapped in try-except
+- Clean Architecture: âœ… core/instruction_generator.py imports only from core/ (no imports from adapters/, system, or cli)
+- Async-first: âœ… All instruction generation operations are async
+- Pydantic everywhere: âœ… Uses InstructionFile and InstructionChangelogEntry from core/schemas.py
+- Typed or rejected: âœ… All public methods have return type annotations
+- Observability built-in: âœ… TraceEmitter injected via constructor, all trace calls wrapped in try-except
 
 **Implementation Details**:
 - Added `InstructionFile` schema to `core/schemas.py`:
@@ -4158,11 +4158,11 @@ Each SKILL.md must declare:
 ### 2026-06-10 11:00 - Instruction File Versioning and Updates Implementation
 **Context**: User requested implementing version and update mechanism for instruction files. Updates are triggered when a worker's rating trend drops below a threshold over N recent tasks. Proposed updates require user approval. Rollback is available to any previous version.
 **Architecture Laws Compliance**:
-- Clean Architecture: ✅ core/instruction_versioning.py imports only from core/ (no imports from adapters/, system, or cli)
-- Async-first: ✅ All versioning operations are async
-- Pydantic everywhere: ✅ Uses VersionUpdateProposal from core/schemas.py
-- Typed or rejected: ✅ All public methods have return type annotations
-- Observability built-in: ✅ TraceEmitter injected via constructor, all trace calls wrapped in try-except
+- Clean Architecture: âœ… core/instruction_versioning.py imports only from core/ (no imports from adapters/, system, or cli)
+- Async-first: âœ… All versioning operations are async
+- Pydantic everywhere: âœ… Uses VersionUpdateProposal from core/schemas.py
+- Typed or rejected: âœ… All public methods have return type annotations
+- Observability built-in: âœ… TraceEmitter injected via constructor, all trace calls wrapped in try-except
 
 **Implementation Details**:
 - Added `VersionUpdateProposal` schema to `core/schemas.py`:
@@ -4206,11 +4206,11 @@ Each SKILL.md must declare:
 ### 2026-06-10 12:00 - Memory Scoping Implementation
 **Context**: User requested implementing memory scoping with ScopedMemoryRouter to enforce scope-based key prefixing and cross-scope access restrictions. Also updated StrategicContext, EscalationDecision, and WorkerOutput schemas with new fields.
 **Architecture Laws Compliance**:
-- Clean Architecture: ✅ core/memory_router.py imports only from core/ (no imports from adapters/, system, or cli)
-- Async-first: ✅ All memory operations are async
-- Pydantic everywhere: ✅ Uses TraceEvent, EventType, Layer from core/schemas.py
-- Typed or rejected: ✅ All public methods have return type annotations
-- Observability built-in: ✅ TraceEmitter injected via constructor, all trace calls use injected emitter
+- Clean Architecture: âœ… core/memory_router.py imports only from core/ (no imports from adapters/, system, or cli)
+- Async-first: âœ… All memory operations are async
+- Pydantic everywhere: âœ… Uses TraceEvent, EventType, Layer from core/schemas.py
+- Typed or rejected: âœ… All public methods have return type annotations
+- Observability built-in: âœ… TraceEmitter injected via constructor, all trace calls use injected emitter
 
 **Implementation Details**:
 - Updated `core/schemas.py`:
@@ -4278,12 +4278,12 @@ Each SKILL.md must declare:
 ### 2026-06-10 13:00 - Orchestrator Improvement Loop Implementation
 **Context**: User requested wiring the orchestrator into the same self-improvement loop that workers now have. The orchestrator tracks its own performance, proposes instruction updates when routing quality degrades, and improves via the same InstructionVersionManager mechanism built in Prompt 20.
 **Architecture Laws Compliance**:
-- Clean Architecture: ✅ core/orchestrator_improvement.py imports only from core/ (no imports from adapters/, system, or cli)
-- Async-first: ✅ All improvement loop operations are async
-- Pydantic everywhere: ✅ Uses OrchestratorMetrics from core/schemas.py
-- Typed or rejected: ✅ All public methods have return type annotations
-- Observability built-in: ✅ TraceEmitter injected via constructor, all trace calls wrapped in try-except
-- Circular import guard: ✅ OrchestratorImprovementLoop imported in TYPE_CHECKING block in orchestrator.py
+- Clean Architecture: âœ… core/orchestrator_improvement.py imports only from core/ (no imports from adapters/, system, or cli)
+- Async-first: âœ… All improvement loop operations are async
+- Pydantic everywhere: âœ… Uses OrchestratorMetrics from core/schemas.py
+- Typed or rejected: âœ… All public methods have return type annotations
+- Observability built-in: âœ… TraceEmitter injected via constructor, all trace calls wrapped in try-except
+- Circular import guard: âœ… OrchestratorImprovementLoop imported in TYPE_CHECKING block in orchestrator.py
 
 **Implementation Details**:
 - Added `OrchestratorMetrics` schema to `core/schemas.py`:
@@ -4349,7 +4349,7 @@ Each SKILL.md must declare:
 
 ---
 
-## Prompt 22 — Unified Evaluation Framework (2026-06-10 14:00)
+## Prompt 22 â€” Unified Evaluation Framework (2026-06-10 14:00)
 
 **Context**: Prompt 22 implements a unified evaluation framework that merges hardware-fit scoring from Prompt 16 with a new LLM-as-Judge automated output scorer into a single evaluation system. This prompt also closes the loop from Prompt 21 by updating `task_completed` on `OrchestratorMetrics` when a task reaches a terminal success state.
 
@@ -4368,7 +4368,7 @@ Each SKILL.md must declare:
 - Added `historical_performance_weight()` method to `system/model_evaluator.py`:
   - Pure sync computation blending avg final score and base score if >10 records exist
   - Weighted blend: 70% historical, 30% base
-  - Returns base score unchanged if ≤10 records
+  - Returns base score unchanged if â‰¤10 records
 
 - Added `mark_task_completed()` async method to `core/orchestrator_improvement.py`:
   - Retrieves OrchestratorMetrics by task_id, sets task_completed=True, persists, emits trace event
@@ -4385,7 +4385,7 @@ Each SKILL.md must declare:
 
 - Extended `tests/test_model_evaluator.py`:
   - 2 tests for historical_performance_weight blending logic
-  - Tests verify blended score when >10 records and base score unchanged when ≤10 records
+  - Tests verify blended score when >10 records and base score unchanged when â‰¤10 records
 
 **Implementation Notes**:
 - test_evaluate_output_calls_LLM_with_prompt_containing_task_description_and_worker_output failed initially due to incorrect mock call_args access pattern - fixed by using call_args.kwargs["messages"] instead of call_args[0][0]
@@ -4424,7 +4424,7 @@ Each SKILL.md must declare:
 
 ---
 
-## Prompt 23 — Memory Scoping (2026-06-10 15:00)
+## Prompt 23 â€” Memory Scoping (2026-06-10 15:00)
 
 **Context**: Prompt 23 implements worker-scoped memory partitions with a shared global context layer. MemoryRouter enforces scoping so workers can only access their own partition and the shared global context. Cross-scope access attempts raise CrossScopeAccessError. StrategicContext and EscalationDecision schemas are activated from orphan status and integrated into the orchestrator for routing state tracking and escalation logic.
 
@@ -4709,7 +4709,7 @@ Each SKILL.md must declare:
 
 ## Prompt 26.5: Setup Wizard (First-Run Configuration) (2026-06-12 20:00)
 
-**Summary**: Implemented first-run interactive setup wizard using Rich. Automatically runs on first launch when no config exists, walks user through configuration (LLM adapter, model, Postgres, Qdrant, Obsidian vault, Telegram, approval gate mode). Writes jarvis.config.yaml for structured settings and .env for API keys. Subsequent launches load config silently. jarvis setup --reconfigure re-runs wizard. jarvis doctor diagnoses connection issues without reconfiguring. CLI layer addition only — no core/ changes.
+**Summary**: Implemented first-run interactive setup wizard using Rich. Automatically runs on first launch when no config exists, walks user through configuration (LLM adapter, model, Postgres, Qdrant, Obsidian vault, Telegram, approval gate mode). Writes jarvis.config.yaml for structured settings and .env for API keys. Subsequent launches load config silently. jarvis setup --reconfigure re-runs wizard. jarvis doctor diagnoses connection issues without reconfiguring. CLI layer addition only â€” no core/ changes.
 
 **Files Modified**:
 - `cli/setup_wizard.py` (new file): SetupWizard class with config_exists(), run(), save(), load(), run_doctor() methods. Uses Rich Console and Prompt.ask() for interactive wizard. Splits config into jarvis.config.yaml (non-secret) and .env (API keys only). Emits trace events on save/load/doctor.
@@ -4724,10 +4724,10 @@ Each SKILL.md must declare:
 - Never writes API keys to jarvis.config.yaml
 - Does not write empty API key entries to .env
 - run_doctor() checks Ollama (httpx), Postgres (asyncpg), Qdrant (httpx), Obsidian (Path.exists)
-- CLI first-run check wrapped in try/except — if SetupWizard cannot be imported, CLI continues without it
+- CLI first-run check wrapped in try/except â€” if SetupWizard cannot be imported, CLI continues without it
 - --setup and --reconfigure flags trigger wizard regardless of existing config
 - --doctor flag runs diagnostic checks without reconfiguring
-- Test mocks use tmp_path fixture for all file operations — never writes to C:\Jarvis during tests
+- Test mocks use tmp_path fixture for all file operations â€” never writes to C:\Jarvis during tests
 - Mocked all network calls (httpx.get) and asyncpg connections in tests
 - Test for run_re_runs_when_user_confirms_no required accounting for API key prompts when adapter is not ollama
 
@@ -4737,7 +4737,7 @@ Each SKILL.md must declare:
 - All new tests pass, no regressions in existing tests
 
 **Architecture Compliance**:
-- CLI layer addition only — no core/ changes
+- CLI layer addition only â€” no core/ changes
 - SetupWizard imports only from cli/ and core/ (observability)
 - Constructor injection for emitter
 - No circular imports
@@ -4770,7 +4770,7 @@ Each SKILL.md must declare:
 **Implementation Notes**:
 - **Windows compatibility issue**: Initial terminal timeout test used timeout 2 command which doesn't exist on Windows. Fixed by using python -c "import time; time.sleep(10)" for cross-platform compatibility.
 - **Multiline code test failure**: Initial test used actual newlines in code string, which doesn't work with python -c shell command. Fixed by using semicolons for single-line multiline equivalent.
-- **Async test decorators**: All test methods required @pytest.mark.asyncio decorator to run async functions. Added to all 33 new test methods across three test files. Note: Per-method decorators were used in Prompt 27.5. From Prompt 28 onward, global_rules.md mandates class-level pytestmark for all async test classes — use pytestmark at class level, not per-method decorators.
+- **Async test decorators**: All test methods required @pytest.mark.asyncio decorator to run async functions. Added to all 33 new test methods across three test files. Note: Per-method decorators were used in Prompt 27.5. From Prompt 28 onward, global_rules.md mandates class-level pytestmark for all async test classes â€” use pytestmark at class level, not per-method decorators.
 - **DI compliance**: All three skills use constructor-injected emitter pattern per global_rules.md. TraceEvent imported from core/observability.py only. No direct emit_trace() calls.
 - **Clean Architecture**: All skills import only from core/ (observability, approval_gate). No imports from adapters/, workers/, cli/, memory/, or other skills.
 
@@ -4817,7 +4817,7 @@ Each SKILL.md must declare:
 - Final test count: 599 passed (585 baseline + 14 notification tests)
 
 **Architecture Compliance**:
-- Core layer addition only — no skills/ or adapters/ changes
+- Core layer addition only â€” no skills/ or adapters/ changes
 - Constructor injection for emitter
 - TraceEvent fields correct: event_type, component, level, message, data, duration_ms (from core/observability.py)
 - ApprovalGate integration via constructor injection
@@ -4859,7 +4859,7 @@ Each SKILL.md must declare:
 - Final test count: 617 passed (599 baseline + 18 new tests)
 
 **Architecture Compliance**:
-- Gateway layer addition — imports only from core/ (observability, notification)
+- Gateway layer addition â€” imports only from core/ (observability, notification)
 - Constructor injection for emitter in TelegramGateway
 - Constructor injection for telegram_gateway in NotificationSystem
 - TraceEvent fields correct: event_type, component, level, message, data, duration_ms (from core/observability.py)
@@ -5001,7 +5001,7 @@ Each SKILL.md must declare:
 ---
 
 ### 2026-06-13 13:45 - Prompt 22.7: Escalation Engine Re-wiring (Housekeeping)
-**Implementation**: No-op — escalation wiring already present and tests already passing
+**Implementation**: No-op â€” escalation wiring already present and tests already passing
 
 **Files Modified**: None
 
@@ -5027,7 +5027,7 @@ Each SKILL.md must declare:
 - No new tests added (work already completed in previous prompt)
 
 **Architecture Compliance**:
-- No changes required — escalation wiring already present and compliant
+- No changes required â€” escalation wiring already present and compliant
 - core/orchestrator.py already uses constructor-injected emitter
 - core/orchestrator.py already uses TraceEventType and TraceComponent enums
 - EscalationEngine already uses constructor-injected emitter
@@ -5040,7 +5040,7 @@ Each SKILL.md must declare:
 ---
 
 ### 2026-06-13 13:55 - Prompt 22.8: Real Embeddings + Qdrant Vector Validation (Housekeeping)
-**Implementation**: Partial no-op — embedding wiring already present, only fixed hardcoded vector_size
+**Implementation**: Partial no-op â€” embedding wiring already present, only fixed hardcoded vector_size
 
 **Files Modified**:
 - **memory/qdrant.py** - Moved vector_size to first parameter position and removed hardcoded default (was `vector_size: int = 768`, now `vector_size: int` as required parameter). Forces callers to provide vector_size explicitly.
@@ -5048,7 +5048,7 @@ Each SKILL.md must declare:
 
 **Implementation Notes**:
 - **Finding**: Upon reading memory/qdrant.py, core/memory_router.py, core/embedder.py, and test files, discovered that the embedding work was ALREADY COMPLETED in a previous prompt. QdrantBackend already uses OllamaEmbedder (line 42: `self.embedder = embedder if embedder is not None else OllamaEmbedder()`). The embedder is called in write() (line 246) and fetch() (line 119). Zero vector is only a fallback on embedder failure (lines 261, 134).
-- **Contradiction with prompt**: The prompt stated "MemoryRouter currently writes zero vectors to Qdrant — semantic search is entirely non-functional" and asked to "wire OllamaEmbedder into the MemoryRouter write path". However, MemoryRouter does NOT write vectors - it delegates to backends. The embedding work is already done in QdrantBackend itself.
+- **Contradiction with prompt**: The prompt stated "MemoryRouter currently writes zero vectors to Qdrant â€” semantic search is entirely non-functional" and asked to "wire OllamaEmbedder into the MemoryRouter write path". However, MemoryRouter does NOT write vectors - it delegates to backends. The embedding work is already done in QdrantBackend itself.
 - **MemoryRouter role**: MemoryRouter.write() (lines 269-317) simply calls `await backend.write(data)` - no embedding logic in MemoryRouter. This is correct architecture - backends handle their own embedding.
 - **Only issue fixed**: Hardcoded vector_size=768 default in QdrantBackend constructor. Made it a required parameter (moved to first position) to force callers to provide it explicitly. This prevents silent mismatches between embedder output dimension and Qdrant collection vector size.
 - **Test coverage**: tests/test_qdrant_backend.py already had comprehensive tests for embedder integration (test_write_calls_embedder_with_correct_text, test_fetch_calls_embedder_with_task_intent, test_embedder_failure_during_write_falls_back_to_zero_vector, test_embedder_failure_during_fetch_falls_back_to_zero_vector). All tests passed before and after the fix.
@@ -5155,20 +5155,20 @@ Each SKILL.md must declare:
 - **skills/clipboard/skill.py** - ClipboardSkill class with methods: read(), write(), clear(). Uses pyperclip. Uses constructor-injected emitter and optional ApprovalGate for write operations. Uses asyncio.get_event_loop().run_in_executor() to avoid blocking.
 - **tests/skills/test_clipboard_skill.py** - 6 tests covering all ClipboardSkill methods, approval gate integration, trace events, and error handling. Uses class-level pytestmark = pytest.mark.asyncio. Mocks pyperclip.
 - **skills/calculator/__init__.py** - Empty module init
-- **skills/calculator/skill.py** - CalculatorSkill class with methods: calculate(), convert_units(), supported_conversions(). Uses Python's built-in math module and safe AST-based expression evaluator (no eval()). No ApprovalGate — read-only and side-effect free. Uses constructor-injected emitter.
+- **skills/calculator/skill.py** - CalculatorSkill class with methods: calculate(), convert_units(), supported_conversions(). Uses Python's built-in math module and safe AST-based expression evaluator (no eval()). No ApprovalGate â€” read-only and side-effect free. Uses constructor-injected emitter.
 - **tests/skills/test_calculator_skill.py** - 8 tests covering all CalculatorSkill methods, trace events, and error handling. Uses class-level pytestmark = pytest.mark.asyncio.
 
 **Implementation Notes**:
-- **SKILL_SPECIFICATION.md findings**: Same as before — defines generic skill architecture with SKILL.md metadata files and a single execute() method. The prompt required specific method signatures for each skill, so I followed the prompt's specific API requirements rather than the generic spec.
+- **SKILL_SPECIFICATION.md findings**: Same as before â€” defines generic skill architecture with SKILL.md metadata files and a single execute() method. The prompt required specific method signatures for each skill, so I followed the prompt's specific API requirements rather than the generic spec.
 - **Architecture compliance**: All four skills use constructor-injected emitter (compliant with global_rules.md). All four skills use TraceEventType and TraceComponent enum values (compliant). All four skills import only from core/ (compliant with Clean Architecture). All I/O operations are async (compliant).
 - **PdfSkill implementation**:
-  - Initial test failure due to incorrect patching — patched `skills.pdf.skill.pdfplumber.open` instead of `pdfplumber.open`. Fixed by patching at the correct import location.
+  - Initial test failure due to incorrect patching â€” patched `skills.pdf.skill.pdfplumber.open` instead of `pdfplumber.open`. Fixed by patching at the correct import location.
   - Also patched `skills.pdf.skill.os.path.exists` instead of `os.path.exists`. Fixed by patching at the correct import location.
   - Also patched `skills.pdf.skill.SimpleDocTemplate` instead of `reportlab.platypus.SimpleDocTemplate`. Fixed by patching at the correct import location.
   - Read-only operations (extract_text, extract_pages, page_count) do not require approval.
   - Write operation (generate) requires ApprovalGate approval.
   - extract_text() raises FileNotFoundError outside try-except if file does not exist (compliant with global_rules.md).
-  - extract_text() on encrypted/unreadable PDF returns empty string — does not raise.
+  - extract_text() on encrypted/unreadable PDF returns empty string â€” does not raise.
 - **SpreadsheetSkill implementation**:
   - Uses openpyxl for Excel (.xlsx) and built-in csv module for CSV.
   - Read-only operations (read_csv, read_excel, sheet_names) do not require approval.
@@ -5179,14 +5179,14 @@ Each SKILL.md must declare:
   - All methods are synchronous operations wrapped in async using asyncio.get_event_loop().run_in_executor(None, ...) to avoid blocking.
   - Read-only operation (read) does not require approval.
   - Write operations (write, clear) require ApprovalGate approval.
-  - read() handles pyperclip error gracefully — returns empty string, does not raise.
+  - read() handles pyperclip error gracefully â€” returns empty string, does not raise.
 - **CalculatorSkill implementation**:
-  - No external library required — uses Python's built-in math module.
+  - No external library required â€” uses Python's built-in math module.
   - Safe expression evaluator using AST (not eval()) to prevent code injection.
   - Rejects dangerous expressions (import, exec, eval, __, open, file).
   - Supports basic arithmetic, parentheses, and math functions (abs, round, min, max, sum, sqrt, sin, cos, tan, log, log10, exp, pi, e).
   - Unit conversions: length (mm, cm, m, km, in, ft, mi), weight (g, kg, lb, oz), temperature (C, F, K).
-  - No ApprovalGate — calculator is read-only and side-effect free.
+  - No ApprovalGate â€” calculator is read-only and side-effect free.
 - **Test coverage**:
   - PdfSkill: 8 tests (met minimum 8)
   - SpreadsheetSkill: 8 tests (met minimum 8)
@@ -5367,7 +5367,7 @@ Each SKILL.md must declare:
 
 **Implementation Notes**:
 - No test failures encountered during implementation.
-- Trust registry integration was straightforward — added optional parameter to ApprovalGate constructor for backward compatibility.
+- Trust registry integration was straightforward â€” added optional parameter to ApprovalGate constructor for backward compatibility.
 - Command extraction from ApprovalRequest: Check action_parameters["command"] first, then fall back to action_description.
 - Trace event emission wrapped in try-except to avoid crashing main code paths if emitter fails.
 - MemoryRouter scoped_write() used for persisting PERMANENT_TRUST commands with scope="approval_trust".
@@ -5446,7 +5446,7 @@ Each SKILL.md must declare:
 **Next Steps**: Prompt 30.5 - Multi-Worker Mode Integration
 ---
 
-### 2026-06-15 12:00 - Prompt 30.5 — Environment and Media Skills
+### 2026-06-15 12:00 - Prompt 30.5 â€” Environment and Media Skills
 
 **Summary**: Implemented four environment and media skills: Home Assistant, Screenshot, TTS, and Transcription. Each skill follows the skill plugin specification and includes comprehensive tests with constructor-injected emitters and trace event emission.
 
@@ -5529,7 +5529,7 @@ Each SKILL.md must declare:
 **Next Steps**: Prompt 31 - Worker-to-Worker Communication
 ---
 
-### 2026-06-15 12:54 - Prompt 31 — Worker-to-Worker Communication
+### 2026-06-15 12:54 - Prompt 31 â€” Worker-to-Worker Communication
 
 **Summary**: Implemented A2A (Agent-to-Agent) protocol for worker-to-worker communication with circular dependency detection and sub-task priority inheritance. Workers can now emit sub-task requests during execution, and the orchestrator routes sub-tasks to specialist workers.
 
@@ -5641,7 +5641,7 @@ Each SKILL.md must declare:
 - prune_task_history() deletes task history records older than config.task_history_ttl_days, skipping tasks in AWAITING_APPROVAL or IN_PROGRESS state
 - prune_qdrant_vectors() deletes Qdrant vector entries older than config.qdrant_ttl_days via memory router
 - archive_obsidian_notes() moves Obsidian daily note files older than config.obsidian_archive_ttl_days to /archive/ subfolder (never delete)
-- All four prune methods support dry_run parameter — when True, count records but do not delete or archive
+- All four prune methods support dry_run parameter â€” when True, count records but do not delete or archive
 - run_all() calls all four prune methods in order, accumulates counts into RetentionReport, and catches per-method errors without aborting the entire run
 - run_all() emits RETENTION_RUN_STARTED and RETENTION_RUN_COMPLETED trace events
 - schedule_hook() provides MonitorDaemon integration entry point that calls run_all()
@@ -5724,7 +5724,7 @@ Each SKILL.md must declare:
 
 ---
 
-### 2026-06-15 17:02 - Prompt 32 — Web GUI + FastAPI Server
+### 2026-06-15 17:02 - Prompt 32 â€” Web GUI + FastAPI Server
 
 **Summary**: Implemented FastAPI web server and minimal web UI with REST and WebSocket endpoints. Auth middleware from Prompt 31.7 is wired in. A jarvis serve CLI command starts the server.
 
@@ -5777,7 +5777,7 @@ Each SKILL.md must declare:
 
 ---
 
-### 2026-06-15 18:05 - Prompt 33 — Voice Interface
+### 2026-06-15 18:05 - Prompt 33 â€” Voice Interface
 
 **Summary**: Implemented voice interface with wake word detection, STT stub, TTS stub, and voice daemon for background processing. Real audio capture and Whisper STT wired in Prompt 33.5. Same approval gates and observability as text interface.
 
@@ -5790,14 +5790,14 @@ Each SKILL.md must declare:
 - `core/observability.py` - Added TraceComponent.VOICE and voice trace event types (VOICE_WAKE_WORD_DETECTED, VOICE_COMMAND_RECEIVED, VOICE_LISTENING_STARTED, VOICE_LISTENING_STOPPED, VOICE_NOTIFICATION_SENT)
 
 **Implementation Details**:
-- **core/voice_interface.py**: VoiceConfig Pydantic model with wake_word, wake_word_sensitivity, stt_model, tts_voice, noise_threshold, silence_timeout_ms, enabled. VoiceCommand Pydantic model with command_id, transcript, confidence, detected_at, wake_word_detected. VoiceInterface class with detect_wake_word(), _transcribe_stub(), process_command(), start_listening(), stop_listening(), notify(). All methods emit trace events. Stub implementations for _transcribe_stub() and notify() — real implementations wired in Prompt 33.5.
-- **system/voice_daemon.py**: VoiceDaemon class with start(), stop(), _loop(), _get_audio_chunk(), _submit_command(), run_once(). Background daemon that runs voice loop, detects wake word, processes commands, submits to orchestrator. Stub implementation for _get_audio_chunk() — real microphone capture wired in Prompt 33.5. run_once() for testing and one-shot use.
-- **tests/test_voice.py**: 20 tests covering VoiceConfig validation, VoiceCommand validation, VoiceInterface wake word detection, command processing, listening state, notifications, VoiceDaemon start/stop, run_once, command submission. All mocks — no real audio, no real Whisper, no real Piper.
+- **core/voice_interface.py**: VoiceConfig Pydantic model with wake_word, wake_word_sensitivity, stt_model, tts_voice, noise_threshold, silence_timeout_ms, enabled. VoiceCommand Pydantic model with command_id, transcript, confidence, detected_at, wake_word_detected. VoiceInterface class with detect_wake_word(), _transcribe_stub(), process_command(), start_listening(), stop_listening(), notify(). All methods emit trace events. Stub implementations for _transcribe_stub() and notify() â€” real implementations wired in Prompt 33.5.
+- **system/voice_daemon.py**: VoiceDaemon class with start(), stop(), _loop(), _get_audio_chunk(), _submit_command(), run_once(). Background daemon that runs voice loop, detects wake word, processes commands, submits to orchestrator. Stub implementation for _get_audio_chunk() â€” real microphone capture wired in Prompt 33.5. run_once() for testing and one-shot use.
+- **tests/test_voice.py**: 20 tests covering VoiceConfig validation, VoiceCommand validation, VoiceInterface wake word detection, command processing, listening state, notifications, VoiceDaemon start/stop, run_once, command submission. All mocks â€” no real audio, no real Whisper, no real Piper.
 
 **Implementation Notes**:
 - **Test Failure**: Initial test run had 2 failures in VoiceDaemon tests (test_run_once_submits_command_to_orchestrator_when_wake_word_detected and test_submit_command_creates_task_from_command_transcript_and_submits_to_orchestrator). The issue was that Task model requires task_id, complexity_score, priority, and created_at fields in addition to intent and status. Fixed by updating _submit_command() to include all required fields: task_id=command.command_id, complexity_score=0.5, priority="normal", created_at=command.detected_at.
 - **Stub Pattern**: _transcribe_stub() and _get_audio_chunk() are stub methods that return empty string/bytes. This allows tests to mock these methods without touching real audio or Whisper. Real implementations will be wired in Prompt 33.5.
-- **Privacy**: Trace events never include transcript text or notification message text — only lengths. This prevents sensitive voice data from appearing in trace logs.
+- **Privacy**: Trace events never include transcript text or notification message text â€” only lengths. This prevents sensitive voice data from appearing in trace logs.
 - **Architecture Compliance**: core/voice_interface.py imports only from core/. system/voice_daemon.py imports from core/ and system/. All emitters are constructor-injected. TraceEvent imported from core/observability.py, not core/schemas.py.
 
 **Testing Results**:
@@ -5813,12 +5813,12 @@ Each SKILL.md must declare:
 - `system/voice_daemon.py` imports from core/ and system/
 - All emitters are constructor-injected, no global emit_trace() calls
 - TraceEvent imported from core/observability.py, not core/schemas.py
-- No pytest.mark.asyncio at class level — only on individual async test methods
+- No pytest.mark.asyncio at class level â€” only on individual async test methods
 
 **Rationale**:
 - Voice interface required before exposing real audio capture and Whisper STT
 - Stub pattern enables testing without real audio hardware or Whisper installation
-- Privacy-first design — transcript text never appears in trace logs
+- Privacy-first design â€” transcript text never appears in trace logs
 - Voice daemon provides background processing for continuous listening
 - Same approval gates and observability as text interface
 
@@ -5865,7 +5865,7 @@ Each SKILL.md must declare:
 - TraceEvent imported from core/observability.py, not core/schemas.py
 - duration_ms cast to int in all trace events
 - event_type and level compared as strings due to use_enum_values=True
-- No pytest.mark.asyncio at class level — only on individual async test methods
+- No pytest.mark.asyncio at class level â€” only on individual async test methods
 
 **Checkpoint**: prompt-33-5 created and pushed to remote
 
@@ -5958,7 +5958,7 @@ Each SKILL.md must declare:
 - TraceEvent imported from core/observability.py, not core/schemas.py
 - duration_ms cast to int in all trace events
 - event_type and level compared as strings due to use_enum_values=True
-- No pytest.mark.asyncio at class level — only on individual async test methods
+- No pytest.mark.asyncio at class level â€” only on individual async test methods
 - All production and test files fixed together as atomic units before running test suite
 - No domain exceptions raised inside try-except blocks
 
@@ -5968,7 +5968,7 @@ Each SKILL.md must declare:
 
 ---
 
-## Process Fix — Tag Integrity Hardening (2026-06-16 14:47)
+## Process Fix â€” Tag Integrity Hardening (2026-06-16 14:47)
 
 **Problem**: The prompt-35 tag was created after partial prompt-35.5 code had
 been added to the working tree. The tag captured the wrong state, making
@@ -5989,7 +5989,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-## Prompt 35.5 — Verbosity Control + Model Thinking Capture + Async I/O Improvements (2026-06-17 13:08)
+## Prompt 35.5 â€” Verbosity Control + Model Thinking Capture + Async I/O Improvements (2026-06-17 13:08)
 
 **Implementation**: Added verbosity manager, model thinking extraction, and async I/O improvements
 - **File Pair 1**: Created core/verbosity.py and tests/test_verbosity.py
@@ -6052,7 +6052,7 @@ working tree at commit time was captured in the tag.
 - All emitters are constructor-injected, no global emit_trace() calls
 - TraceEvent imported from core/observability.py, not core/schemas.py
 - TraceEvent constructed with correct fields: event_type, component, level, message, data, duration_ms
-- No pytest.mark.asyncio at class level — only on individual async test methods
+- No pytest.mark.asyncio at class level â€” only on individual async test methods
 - All production and test files fixed together as atomic units before running test suite
 - No domain exceptions raised inside try-except blocks
 
@@ -6062,7 +6062,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-## Prompt 35.5.1 — Spec Deviation Correction (2026-06-17 14:46)
+## Prompt 35.5.1 â€” Spec Deviation Correction (2026-06-17 14:46)
 
 **Implementation**: Corrected four deviations from the Prompt 35.5 spec
 - **Correction 1**: Tag format changed from `<thinking>` to `<thought>`
@@ -6121,7 +6121,7 @@ working tree at commit time was captured in the tag.
 - All emitters are constructor-injected, no global emit_trace() calls
 - TraceEvent imported from core/observability.py, not core/schemas.py
 - TraceEvent constructed with correct fields: event_type, component, level, message, data, duration_ms
-- No pytest.mark.asyncio at class level — only on individual async test methods
+- No pytest.mark.asyncio at class level â€” only on individual async test methods
 - All production and test files fixed together as atomic units before running test suite
 - No domain exceptions raised inside try-except blocks
 
@@ -6131,7 +6131,7 @@ working tree at commit time was captured in the tag.
 
 ---
 
-## [2026-06-17 17:00] Prompt 35.5.2 — Integrity Check and Final Tag Creation
+## [2026-06-17 17:00] Prompt 35.5.2 â€” Integrity Check and Final Tag Creation
 
 **Scope**: Read-only filesystem and state integrity audit following the tooling instability saga in the previous session, followed by final checkpoint creation for the corrected test file.
 
@@ -6179,7 +6179,7 @@ The audit revealed that the production file (adapters/ollama.py) was actually co
 - All emitters are constructor-injected, no global emit_trace() calls
 - TraceEvent imported from core/observability.py, not core/schemas.py
 - TraceEvent constructed with correct fields: event_type, component, level, message, data, duration_ms
-- No pytest.mark.asyncio at class level — only on individual async test methods
+- No pytest.mark.asyncio at class level â€” only on individual async test methods
 
 **Checkpoint**: prompt-35.5.2 created and verified with git show --stat (commit ab0469c)
 
@@ -6188,30 +6188,30 @@ The audit revealed that the production file (adapters/ollama.py) was actually co
 ---
 
 
-## [2026-06-17 17:47] Prompt 35.6b � Runtime Bug Fixes + Minimum Cognition Wiring
+## [2026-06-17 17:47] Prompt 35.6b ï¿½ Runtime Bug Fixes + Minimum Cognition Wiring
 
 **Scope**: Fix two confirmed runtime bugs (web/server.py calling nonexistent Orchestrator methods; jarvis serve not registered in CLI), then wire the minimum cognition stack into cli/serve.py so the system is actually functional when jarvis serve is run.
 
 **Files Modified**:
-- core/orchestrator.py � added submit_task() and list_tasks() methods (58 lines)
-- tests/test_orchestrator.py � added tests for submit_task and list_tasks (39 lines)
-- cli/main.py � added serve subcommand detection and dispatch (10 lines)
-- tests/test_main.py � added test for serve subcommand (26 lines)
-- cli/serve.py � wired full cognition stack into serve entry point (135 lines)
-- tests/test_serve.py � added tests for serve wiring (52 lines)
+- core/orchestrator.py ï¿½ added submit_task() and list_tasks() methods (58 lines)
+- tests/test_orchestrator.py ï¿½ added tests for submit_task and list_tasks (39 lines)
+- cli/main.py ï¿½ added serve subcommand detection and dispatch (10 lines)
+- tests/test_main.py ï¿½ added test for serve subcommand (26 lines)
+- cli/serve.py ï¿½ wired full cognition stack into serve entry point (135 lines)
+- tests/test_serve.py ï¿½ added tests for serve wiring (52 lines)
 
 **Changes Made**:
 
-Bug 1 � web/server.py calling nonexistent Orchestrator methods:
-- Added async def submit_task(self, intent: str, priority: str = "normal") -> Task to core/orchestrator.py � constructs a Task from intent + priority, calls self.route_task(task), returns the task
-- Added async def list_tasks(self) -> list[Task] to core/orchestrator.py � returns [] (no _active_tasks attribute exists; empty list is correct behaviour)
+Bug 1 ï¿½ web/server.py calling nonexistent Orchestrator methods:
+- Added async def submit_task(self, intent: str, priority: str = "normal") -> Task to core/orchestrator.py ï¿½ constructs a Task from intent + priority, calls self.route_task(task), returns the task
+- Added async def list_tasks(self) -> list[Task] to core/orchestrator.py ï¿½ returns [] (no _active_tasks attribute exists; empty list is correct behaviour)
 - web/server.py called both methods via broad except Exception clauses that silently returned fake responses; both endpoints now call methods that exist
 
-Bug 2 � jarvis serve not registered in CLI:
+Bug 2 ï¿½ jarvis serve not registered in CLI:
 - Added serve subcommand detection to cli/main.py: when user passes "serve" as first positional arg, imports and calls the serve function from cli/serve.py via typer.run()
-- Minimal targeted change � did not refactor CLI from argparse to Typer
+- Minimal targeted change ï¿½ did not refactor CLI from argparse to Typer
 
-Wiring gap � cli/serve.py hollow Orchestrator:
+Wiring gap ï¿½ cli/serve.py hollow Orchestrator:
 - Wired full cognition stack into cli/serve.py in dependency order:
   MemoryRouter, SkillRegistry, ApprovalTrustRegistry, ApprovalGate, EscalationEngine, AdapterFallbackChain, WorkerPersistence, WorkerFactory, RatingSystem, InstructionGenerator, InstructionVersionManager, OutputEvaluator, TraceOptimiser, OrchestratorImprovementLoop
 - Orchestrator now constructed with all required dependencies
@@ -6219,11 +6219,11 @@ Wiring gap � cli/serve.py hollow Orchestrator:
 - WorkerPersistence passed as persistence=None to WorkerFactory to avoid asyncio.create_task() in non-async context
 
 o00
-- Warning count increased from 56 to 64 � all pre-existing warnings in test_web_server.py, none new
+- Warning count increased from 56 to 64 ï¿½ all pre-existing warnings in test_web_server.py, none new
 
 **Implementation Notes**:
-- submit_task() requires a registered worker to call route_task() � test registers a mock worker before calling submit_task
-- WorkerFactory.__init__ calls asyncio.create_task() which requires a running event loop � passed persistence=None to avoid this in non-async serve() context
+- submit_task() requires a registered worker to call route_task() ï¿½ test registers a mock worker before calling submit_task
+- WorkerFactory.__init__ calls asyncio.create_task() which requires a running event loop ï¿½ passed persistence=None to avoid this in non-async serve() context
 - Circular dependency between Orchestrator and OrchestratorImprovementLoop resolved by constructing Orchestrator first, then setting improvement_loop as an attribute after creation
 - OllamaAdapter used as LLM adapter for InstructionGenerator and OutputEvaluator with model_name="qwen2.5-coder:7b"
 - AdapterFallbackChain constructed with single Ollama adapter as primary (no fallbacks configured)
@@ -6241,12 +6241,12 @@ o00
 
 **Checkpoint**: prompt-35.6b (commit 1f36e5f)
 
-**Next Steps**: Prompt 35.6c � Foundation bug fixes (MemoryRouter signature mismatch, StrategicContext field mismatch, ScopedMemoryRouter TraceEvent migration, AdapterFallbackChain type mismatch, SessionManager fetch signature, WorkerBase emitter default, list_workers() on Orchestrator)
+**Next Steps**: Prompt 35.6c ï¿½ Foundation bug fixes (MemoryRouter signature mismatch, StrategicContext field mismatch, ScopedMemoryRouter TraceEvent migration, AdapterFallbackChain type mismatch, SessionManager fetch signature, WorkerBase emitter default, list_workers() on Orchestrator)
 
 ---
 
 
-## Prompt 35.6c � Test Suite Reconciliation (2026-06-17 21:55)
+## Prompt 35.6c — Test Suite Reconciliation (2026-06-17 21:55)
 
 **Scope**: Reconcile test discrepancy between baseline (1065 passed) and current run (1057 passed)
 
@@ -6276,6 +6276,25 @@ o00
 
 **Checkpoint**: prompt-35.6c (commit 8ec75f9)
 
-**Next Steps**: Prompt 35.6d � Foundation bug fixes (StrategicContext field mismatch, ScopedMemoryRouter TraceEvent migration, AdapterFallbackChain type mismatch, SessionManager fetch signature, WorkerBase emitter default, list_workers() on Orchestrator)
+**Next Steps**: Prompt 35.6d — Foundation bug fixes (StrategicContext field mismatch, ScopedMemoryRouter TraceEvent migration, AdapterFallbackChain type mismatch, SessionManager fetch signature, WorkerBase emitter default, list_workers() on Orchestrator)
+
+---
+
+## 2026-06-18 — Prompt 35.6d: Foundation Bug Fixes (Bugs 2–7)
+
+### Fixes
+- Bug 2: StrategicContext field mismatch — recent_task_summary→active_goals, active_workers→pending_tasks, updated_at→last_updated
+- Bug 3: TraceEvent migration in core/memory_router.py — import from core.observability, correct fields only
+- Bug 4: AdapterFallbackChain.execute — prompt: str → messages: list to match LLMAdapter protocol
+- Bug 5: SessionManager/CommandHistory backend.fetch() — dict filter → Task object
+- Bug 6: EscalationDecision — added missing estimated_cost field to all constructions
+- Bug 7: Removed unused Layer import in core/escalation.py
+
+### Baseline
+1056 passed, 23 skipped, 1 pre-existing flaky failure
+(test_lm_studio_adapter.py::test_health_check_without_server — pre-existing, ignore)
+
+### Implementation notes
+- Closing sequence was not completed automatically — triggered manually
 
 ---

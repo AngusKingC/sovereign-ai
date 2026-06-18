@@ -374,18 +374,19 @@ Docs are committed separately in steps 7–8 after the tag is already clean and 
 ## Current State
 
 ### Test Baseline
-- **1065 passed, 23 skipped, 64 warnings** (as of Prompt 35.6b / checkpoint prompt-35.6b)
+- **1056 passed, 23 skipped, 62 warnings** (as of Prompt 35.6d / checkpoint prompt-35.6d)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
-- 64 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for async decorator marks on sync methods (test_web_server.py) — harmless; DeprecationWarning from FastAPI Lifespan events — deferred to Phase 9, do not touch. Warning count increased from 56 to 64 in prompt-35.6b — all pre-existing warnings in test_web_server.py, none new.
-- Run with: `python -m pytest tests/ -v 
+- 62 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for async decorator marks on sync methods (test_web_server.py) — harmless; DeprecationWarning from FastAPI Lifespan events — deferred to Phase 9, do not touch. Warning count decreased from 64 to 62 in prompt-35.6d — pre-existing warnings in test_web_server.py, no new warnings.
+- 1 pre-existing flaky failure: `tests/test_lm_studio_adapter.py::test_health_check_without_server` — ignore per global rules
+- Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py` 
 
 ### Known Issues from Prompt 35.5.2
 - None — prompt-35.6b landed cleanly
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-35.6c`
+- Latest checkpoint tag: `prompt-35.6d`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -523,6 +524,7 @@ Docs are committed separately in steps 7–8 after the tag is already clean and 
 | 35.5.1 | Spec Deviation Correction | 1051 (+2 new tests) |
 | 35.5.2 | Integrity Check and Final Tag Creation | 1051 (no new tests - checkpoint for user manual correction) |
 | 35.6b | Runtime Bug Fixes + Minimum Cognition Wiring | 1065 (+14 new tests) |
+| 35.6d | Foundation Bug Fixes (Bugs 2–7) | 1056 (no new tests - schema/trace fixes) |
 
 ---
 
