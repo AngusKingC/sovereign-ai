@@ -11,9 +11,6 @@ from core.observability import MemoryTraceEmitter, TraceEventType, TraceComponen
 from core.schemas import Message, MessageRole
 
 
-pytestmark = pytest.mark.asyncio
-
-
 class MockAdapter:
     """Mock adapter for testing."""
 
@@ -81,6 +78,7 @@ class TestAdapterFallbackChain:
             emitter=MemoryTraceEmitter(),
         )
 
+    @pytest.mark.asyncio
     async def test_execute_calls_primary_adapter_and_returns_result_on_success(self, fallback_chain):
         """Test execute() calls primary adapter and returns result on success."""
         messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.utcnow())]
@@ -90,6 +88,7 @@ class TestAdapterFallbackChain:
         assert fallback_chain.adapters[0][0].call_count == 1
         assert fallback_chain.adapters[1][0].call_count == 0
 
+    @pytest.mark.asyncio
     async def test_execute_falls_back_to_second_adapter_when_primary_raises(self):
         """Test execute() falls back to second adapter when primary raises."""
         primary = MockAdapter("primary", should_fail=True)
@@ -106,6 +105,7 @@ class TestAdapterFallbackChain:
         assert primary.call_count == 1
         assert fallback.call_count == 1
 
+    @pytest.mark.asyncio
     async def test_execute_falls_back_through_full_chain_and_raises_runtime_error_when_all_adapters_fail(self):
         """Test execute() falls back through full chain and raises RuntimeError when all adapters fail."""
         primary = MockAdapter("primary", should_fail=True)
@@ -122,6 +122,7 @@ class TestAdapterFallbackChain:
         assert primary.call_count == 1
         assert fallback.call_count == 1
 
+    @pytest.mark.asyncio
     async def test_execute_opens_circuit_breaker_after_failure_threshold_consecutive_failures(self):
         """Test execute() opens circuit breaker after failure_threshold consecutive failures."""
         primary = MockAdapter("primary", should_fail=True)
@@ -150,6 +151,7 @@ class TestAdapterFallbackChain:
         assert primary.call_count == 2  # Only called twice, third time skipped
         assert fallback.call_count == 3  # Called all three times
 
+    @pytest.mark.asyncio
     async def test_execute_skips_adapter_with_open_circuit_breaker(self):
         """Test execute() skips adapter with open circuit breaker."""
         primary = MockAdapter("primary", should_fail=True)
@@ -173,6 +175,7 @@ class TestAdapterFallbackChain:
         assert primary.call_count == 1  # Only called once
         assert fallback.call_count == 2  # Called both times
 
+    @pytest.mark.asyncio
     async def test_execute_resets_circuit_breaker_after_timeout_elapses_and_retries_adapter(self):
         """Test execute() resets circuit breaker after timeout elapses and retries adapter."""
         primary = MockAdapter("primary", should_fail=True)
@@ -200,6 +203,7 @@ class TestAdapterFallbackChain:
         assert primary.call_count == 2  # Called again after timeout
         assert fallback.call_count == 2  # Called both times
 
+    @pytest.mark.asyncio
     async def test_execute_skips_adapter_when_vram_check_fails(self):
         """Test execute() skips adapter when VRAM check fails (resource_manager provided)."""
         primary = MockAdapter("primary")
@@ -219,6 +223,7 @@ class TestAdapterFallbackChain:
         assert fallback.call_count == 1
         assert resource_manager.can_load_call_count >= 1
 
+    @pytest.mark.asyncio
     async def test_execute_skips_vram_check_when_resource_manager_is_none(self):
         """Test execute() skips VRAM check when resource_manager is None."""
         primary = MockAdapter("primary")
@@ -236,6 +241,7 @@ class TestAdapterFallbackChain:
         assert primary.call_count == 1
         assert fallback.call_count == 0
 
+    @pytest.mark.asyncio
     async def test_execute_requests_approval_before_cloud_adapter_fallback_when_approval_gate_provided(self):
         """Test execute() requests approval before cloud adapter fallback when approval_gate provided."""
         primary = MockAdapter("primary", should_fail=True)
@@ -254,6 +260,7 @@ class TestAdapterFallbackChain:
         assert approval_gate.request_approval_call_count == 1
         assert cloud_adapter.call_count == 1
 
+    @pytest.mark.asyncio
     async def test_execute_skips_cloud_adapter_when_approval_denied(self):
         """Test execute() skips cloud adapter when approval denied."""
         primary = MockAdapter("primary", should_fail=True)
@@ -327,6 +334,7 @@ class TestAdapterFallbackChain:
         assert status[1]["circuit_open"] is False
         assert status[1]["resets_in_seconds"] is None
 
+    @pytest.mark.asyncio
     async def test_reset_circuit_breaker_clears_failure_count_and_emits_reset_trace_event(self):
         """Test reset_circuit_breaker() clears failure count and emits reset trace event."""
         primary = MockAdapter("primary", should_fail=True)
@@ -352,6 +360,7 @@ class TestAdapterFallbackChain:
         reset_events = [e for e in events if e.event_type == TraceEventType.CIRCUIT_BREAKER_RESET]
         assert len(reset_events) > 0
 
+    @pytest.mark.asyncio
     async def test_trace_event_emitted_on_fallback_with_correct_failed_adapter_name(self):
         """Test trace event emitted on fallback with correct failed adapter name."""
         primary = MockAdapter("primary", should_fail=True, failure_message="Primary failed")

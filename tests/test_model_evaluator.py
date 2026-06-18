@@ -123,7 +123,6 @@ class TestEvaluationResult:
         assert len(result.recommendations) == 0
 
 
-@pytest.mark.asyncio
 class TestModelEvaluator:
     """Test cases for ModelEvaluator."""
     
@@ -212,6 +211,7 @@ class TestModelEvaluator:
             ),
         }
     
+    @pytest.mark.asyncio
     async def test_evaluate_returns_empty_recommendations_when_no_models_match_task_tags(self, evaluator, resource_manager, mock_profiler):
         """Test evaluate returns empty recommendations when no models match task tags."""
         resource_manager.set_snapshot()
@@ -222,6 +222,7 @@ class TestModelEvaluator:
         assert len(result.recommendations) == 0
         assert result.worker_id == "test_worker"
     
+    @pytest.mark.asyncio
     async def test_evaluate_filters_out_models_that_do_not_fit_hardware_constraints(self, evaluator, model_registry, resource_manager, mock_profiler):
         """Test evaluate filters out models that do not fit hardware constraints."""
         self.setup_models(model_registry)
@@ -235,6 +236,7 @@ class TestModelEvaluator:
         assert result.recommendations[0].model_id == "test_model_1"
         assert result.recommendations[0].fits_ram is True
     
+    @pytest.mark.asyncio
     async def test_evaluate_ranks_by_final_score_with_hardware_fit_weighted_highest(self, evaluator, model_registry, resource_manager, mock_profiler):
         """Test evaluate ranks by final score with hardware fit weighted highest."""
         self.setup_models(model_registry)
@@ -247,6 +249,7 @@ class TestModelEvaluator:
         # test_model_2 has higher quality score (0.90 vs 0.85)
         assert result.recommendations[0].score >= result.recommendations[1].score
     
+    @pytest.mark.asyncio
     async def test_evaluate_with_quality_preference_1_weights_quality_over_speed(self, evaluator, model_registry, resource_manager, mock_profiler):
         """Test evaluate with quality_preference=1.0 weights quality over speed."""
         self.setup_models(model_registry)
@@ -259,6 +262,7 @@ class TestModelEvaluator:
         # test_model_2 has higher quality score
         assert result.recommendations[0].model_id == "test_model_2"
     
+    @pytest.mark.asyncio
     async def test_evaluate_with_quality_preference_0_weights_speed_over_quality(self, evaluator, model_registry, resource_manager, mock_profiler):
         """Test evaluate with quality_preference=0.0 weights speed over quality."""
         self.setup_models(model_registry)
@@ -271,6 +275,7 @@ class TestModelEvaluator:
         # test_model_1 has higher speed score
         assert result.recommendations[0].model_id == "test_model_1"
     
+    @pytest.mark.asyncio
     async def test_evaluate_emits_trace_events(self, evaluator, model_registry, resource_manager, emitter, mock_profiler):
         """Test evaluate emits trace events."""
         self.setup_models(model_registry)
@@ -284,6 +289,7 @@ class TestModelEvaluator:
         assert any(event.event_type == TraceEventType.OPERATION_START for event in events)
         assert any(event.event_type == TraceEventType.OPERATION_COMPLETE for event in events)
     
+    @pytest.mark.asyncio
     async def test_get_best_returns_top_recommendation_from_evaluate(self, evaluator, model_registry, resource_manager, mock_profiler):
         """Test get_best returns top recommendation from evaluate."""
         self.setup_models(model_registry)
@@ -295,6 +301,7 @@ class TestModelEvaluator:
         assert best is not None
         assert best.model_id in ["test_model_1", "test_model_2"]
     
+    @pytest.mark.asyncio
     async def test_get_best_returns_none_when_no_models_fit_hardware(self, evaluator, resource_manager, mock_profiler):
         """Test get_best returns None when no models fit hardware."""
         resource_manager.set_snapshot(vram_available_gb=1.0, ram_available_gb=2.0)
@@ -304,6 +311,7 @@ class TestModelEvaluator:
         
         assert best is None
     
+    @pytest.mark.asyncio
     async def test_record_selection_emits_trace_event(self, evaluator, emitter):
         """Test record_selection emits trace event."""
         await evaluator.record_selection("test_worker", "test_model", "Q4_K_M")
@@ -312,6 +320,7 @@ class TestModelEvaluator:
         assert len(events) > 0
         assert any(event.event_type == TraceEventType.OPERATION_COMPLETE for event in events)
     
+    @pytest.mark.asyncio
     async def test_evaluate_hardware_snapshot_captures_current_vram_and_ram_state(self, evaluator, model_registry, resource_manager, mock_profiler):
         """Test evaluate hardware snapshot captures current VRAM and RAM state."""
         self.setup_models(model_registry)
@@ -325,6 +334,7 @@ class TestModelEvaluator:
         assert result.hardware_snapshot["vram_available_gb"] == 10.0
         assert result.hardware_snapshot["ram_available_gb"] == 20.0
     
+    @pytest.mark.asyncio
     async def test_scoring_formula_produces_correct_relative_rankings(self, evaluator, model_registry, resource_manager, mock_profiler):
         """Test scoring formula produces correct relative rankings."""
         self.setup_models(model_registry)

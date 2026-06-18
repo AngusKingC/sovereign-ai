@@ -1,11 +1,35 @@
 """Docker skill tests."""
 
 import pytest
+import asyncio
+import gc
 from unittest.mock import Mock, AsyncMock, patch
 
 from skills.docker.skill import DockerSkill
 from core.approval_gate import ApprovalGate
 from core.observability import MemoryTraceEmitter, TraceEventType, TraceComponent
+
+
+@pytest.fixture(autouse=True)
+def cleanup_subprocess_transports():
+    """Force-close any lingering subprocess transports after each test.
+    
+    Workaround for pytest-asyncio/Windows interaction where event loop closes
+    before subprocess transports (asyncio.create_subprocess_exec) are cleaned up.
+    Per Plan 38.5 Step 4 — not a code bug, a test-fixture cleanup gap.
+    """
+    yield
+    # Force garbage collection to trigger transport cleanup
+    gc.collect()
+    # Close any remaining event loops
+    try:
+        loop = asyncio.get_event_loop()
+        if not loop.is_closed():
+            # Run pending tasks to allow transports to close
+            loop.run_until_complete(asyncio.sleep(0.1))
+    except RuntimeError:
+        # Event loop already closed — nothing to do
+        pass
 
 
 class TestDockerSkill:

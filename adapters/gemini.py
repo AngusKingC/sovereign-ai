@@ -9,7 +9,7 @@ import asyncio
 import time
 from typing import TYPE_CHECKING, Any
 
-import google.generativeai as genai
+import google.generativeai as genai  # noqa: Plan 38.7: migrate to google.genai
 
 from core.schemas import Message
 from core.worker_base import LLMAdapter, LLMResponse

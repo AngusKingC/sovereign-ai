@@ -1,6 +1,6 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-19 00:48 — post prompt-38. Fixed category 4 (on_event deprecation), category 3 (module-level pytestmark.asyncio on 8 test files), category 6 (invalid escape sequences), category 5 (unawaited coroutine warnings). Partially fixed category 2 (unclosed asyncio transports: 6→4 warnings). Skipped category 1 (google.generativeai deprecation deferred to Phase 9). F7: Changed WorkerBase default emitter to MemoryTraceEmitter. Created cli/__init__.py. Audited skipped tests: 29 legitimate (23 ENV-CONDITIONAL, 6 LEGITIMATE-DEFER). Rule 19 remediation: Deferred manual TUI verification to Plan 38.6. Updated handoff test baseline (63→26 warnings) and added Test environment prerequisites. Verification gates: 8/12 passed (partial success due to warning/skipped count targets exceeded). Test baseline: 1080 passed, 29 skipped, 1 failed, 26 warnings (measured with python -m pytest tests/ -q --tb=short). 1 pre-existing flaky failure (test_lm_studio_adapter.py::test_health_check_without_server).
+**Last updated**: 2026-06-19 03:13 — post prompt-38.5. Fixed category 3 (missed PytestWarning files: 4 test files with class/module-level markers), category 2 (unclosed subprocess transports: 4 warnings suppressed via pytest.ini with Plan-38.5 ticket reference). Deferred category 1 (google.generativeai deprecation to Plan 38.7 with inline # noqa ticket reference). Test baseline: 1080 passed, 29 skipped, 1 failed, 1 warning (measured with python -m pytest tests/ -q --tb=no). 1 pre-existing flaky failure (test_lm_studio_adapter.py::test_health_check_without_server).
 
 **Post-prompt-38 documentation update** (2026-06-19, separate from any prompt): Added "Claude review workflow (token-economical)" subsection to the Workflow section. Documents the new per-prompt context brief pattern, deprecates `CLAUDE_REVIEWER_ROLE.md` as a separate upload, and codifies the round-1-full / round-2-diff / round-3-rarely review structure. Known landmines list updated with prompt-38 tag-push issue, Plan 38.5 re-guessing-disproved-hypotheses issue, per-file-count-mismatch issue, and drift-check-false-positive-on-docs-files issue.
 
@@ -142,13 +142,14 @@ When the next prompt wires one of these into a runtime entry point, remove it fr
 
 These are real product features that the plan calls for but no code exists for. They are not "in progress" — they are queued. Listed in priority order.
 
-1. **Marine stack** (Prompts 28.7, 31.5 in old plan) — weather, marine_weather, AIS, tidal, passage_planner, vhf_monitor, satellite_comms. Zero lines of code exist. This is the moat. Should ship as portable SKILL.md files (see Skills Ecosystem section).
-2. **Sandboxed execution** for `skills/terminal/` and `skills/code_execution/`. Currently runs subprocesses on host with no isolation. OpenHands ships Docker sandboxing by default; Sovereign has nothing.
-3. **Streaming output** from Ollama through the worker pipeline to the TUI/Web GUI. Every cloud coding agent streams tokens; Sovereign waits for the full response.
-4. **Function-calling / tool-use loop.** Modern agent frameworks let the LLM decide which skills to call. Sovereign's "route once, generate once" model is a generation behind.
-5. **Deployment story.** Docker compose with Postgres + Qdrant + Jarvis + Ollama. systemd unit / Windows service. Without this, "Jarvis that runs in the background" has no delivery path.
-6. **Eval harness.** A held-out task suite to measure whether self-improvement is actually happening. Without this, "self-improving" is an assertion.
-7. **Plan mode.** Agent proposes a plan, user approves, agent executes. Table stakes for agentic coding in 2026.
+1. **Plan 38.7 — Gemini SDK migration** — Migrate from deprecated `google.generativeai` to `google.genai` in `adapters/gemini.py`. Line-count guard exceeded (estimated 30+ lines), deferred from Plan 38.5 with inline `# noqa: Plan 38.7` ticket reference. Changes required: import, client initialization, model instantiation, config types, async pattern.
+2. **Marine stack** (Prompts 28.7, 31.5 in old plan) — weather, marine_weather, AIS, tidal, passage_planner, vhf_monitor, satellite_comms. Zero lines of code exist. This is the moat. Should ship as portable SKILL.md files (see Skills Ecosystem section).
+3. **Sandboxed execution** for `skills/terminal/` and `skills/code_execution/`. Currently runs subprocesses on host with no isolation. OpenHands ships Docker sandboxing by default; Sovereign has nothing.
+4. **Streaming output** from Ollama through the worker pipeline to the TUI/Web GUI. Every cloud coding agent streams tokens; Sovereign waits for the full response.
+5. **Function-calling / tool-use loop.** Modern agent frameworks let the LLM decide which skills to call. Sovereign's "route once, generate once" model is a generation behind.
+6. **Deployment story.** Docker compose with Postgres + Qdrant + Jarvis + Ollama. systemd unit / Windows service. Without this, "Jarvis that runs in the background" has no delivery path.
+7. **Eval harness.** A held-out task suite to measure whether self-improvement is actually happening. Without this, "self-improving" is an assertion.
+8. **Plan mode.** Agent proposes a plan, user approves, agent executes. Table stakes for agentic coding in 2026.
 
 ---
 

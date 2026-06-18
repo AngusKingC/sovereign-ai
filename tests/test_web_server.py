@@ -9,7 +9,6 @@ from core.auth import AuthManager
 from core.observability import MemoryTraceEmitter
 
 
-@pytest.mark.asyncio
 class TestWebServer:
     """Tests for web server endpoints."""
 
