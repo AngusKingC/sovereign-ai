@@ -107,7 +107,16 @@ class SessionManager:
         if self.backend:
             # Fetch from backend
             try:
-                results = await self.backend.fetch({"type": "session", "session_id": session_id})
+                from core.schemas import Task
+                task = Task(
+                    task_id=uuid4(),
+                    intent=f"session:{session_id}",
+                    complexity_score=0.0,
+                    priority="normal",
+                    current_state="received",
+                    created_at=datetime.now(),
+                )
+                results = await self.backend.fetch(task)
                 if results:
                     # Extract messages from the first result
                     data = results[0].get("content", {})
@@ -216,15 +225,24 @@ class SessionManager:
             return []
         
         try:
-            # Build query filter
-            query_filter = {"type": "session"}
+            # Build query intent
+            intent_parts = ["session"]
             if session_id:
-                query_filter["session_id"] = session_id
+                intent_parts.append(f"id:{session_id}")
             if user_id:
-                query_filter["user_id"] = user_id
+                intent_parts.append(f"user:{user_id}")
+            intent = ":".join(intent_parts)
             
             # Fetch sessions matching filter
-            results = await self.backend.fetch(query_filter)
+            task = Task(
+                task_id=uuid4(),
+                intent=intent,
+                complexity_score=0.0,
+                priority="normal",
+                current_state="received",
+                created_at=datetime.now(),
+            )
+            results = await self.backend.fetch(task)
             
             # Filter by date range if specified
             if date_from or date_to:
@@ -259,7 +277,15 @@ class SessionManager:
         
         try:
             # Get all sessions
-            all_sessions = await self.backend.fetch({"type": "session"})
+            task = Task(
+                task_id=uuid4(),
+                intent="session:all",
+                complexity_score=0.0,
+                priority="normal",
+                current_state="received",
+                created_at=datetime.now(),
+            )
+            all_sessions = await self.backend.fetch(task)
             
             archived_count = 0
             cutoff_date = datetime.now() - timedelta(days=self.session_expiry_days)

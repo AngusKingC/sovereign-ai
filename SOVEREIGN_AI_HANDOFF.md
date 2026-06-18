@@ -378,7 +378,7 @@ Docs are committed separately in steps 7–8 after the tag is already clean and 
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
 - 64 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for async decorator marks on sync methods (test_web_server.py) — harmless; DeprecationWarning from FastAPI Lifespan events — deferred to Phase 9, do not touch. Warning count increased from 56 to 64 in prompt-35.6b — all pre-existing warnings in test_web_server.py, none new.
-- Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py`
+- Run with: `python -m pytest tests/ -v 
 
 ### Known Issues from Prompt 35.5.2
 - None — prompt-35.6b landed cleanly
@@ -1558,14 +1558,14 @@ Priority workers once factory is operational:
 
 
 
-#### Prompt 35.6c � Test Suite Reconciliation (Housekeeping)
+#### Prompt 35.6c � Test Suite Reconciliation (Housekeeping)
 **Status**: DONE
 
 Investigated test discrepancy between baseline (1065 passed) and current run (1057 passed). Root cause: baseline was generated without --ignore=tests/test_llama_cpp_adapter.py flag, while current run correctly uses it. No code changes needed.
 
 ---
 
-#### Prompt 35.6d � Foundation Bug Fixes (New)
+#### Prompt 35.6d � Foundation Bug Fixes (New)
 **Status**: IN PROGRESS
 
 Fix seven foundation bugs sequentially, each as an atomic unit of production file + test file + full suite run:

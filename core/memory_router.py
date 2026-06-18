@@ -11,10 +11,12 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-from core.schemas import Task, TraceEvent, Layer, EventType
+from core.schemas import Task
 from core.observability import (
     TraceComponent,
     TraceLevel,
+    TraceEventType,
+    TraceEvent,
     MemoryTraceEmitter,
 )
 
@@ -109,18 +111,16 @@ class ScopedMemoryRouter:
 
         duration_ms = int((time.perf_counter() - start_time) * 1000)
         event = TraceEvent(
-            event_id=uuid4(),
-            timestamp=datetime.utcnow(),
-            layer=Layer.L0,
-            component=str(TraceComponent.MEMORY_ROUTER),
-            event_type=EventType.MEMORY_QUERY,
-            payload={
+            event_type=TraceEventType.MEMORY_FETCH,
+            component=TraceComponent.MEMORY_ROUTER,
+            level=TraceLevel.INFO,
+            message="Scoped memory fetch completed",
+            data={
                 "task_id": str(task.task_id),
                 "scope": self._scope,
                 "memory_count": len(memory),
             },
             duration_ms=duration_ms,
-            success=True,
         )
         await self._emitter.emit(event)
 
@@ -143,17 +143,15 @@ class ScopedMemoryRouter:
 
         duration_ms = int((time.perf_counter() - start_time) * 1000)
         event = TraceEvent(
-            event_id=uuid4(),
-            timestamp=datetime.utcnow(),
-            layer=Layer.L0,
-            component=str(TraceComponent.MEMORY_ROUTER),
-            event_type=EventType.MEMORY_WRITE,
-            payload={
+            event_type=TraceEventType.MEMORY_WRITE,
+            component=TraceComponent.MEMORY_ROUTER,
+            level=TraceLevel.INFO,
+            message="Scoped memory write completed",
+            data={
                 "scope": self._scope,
                 "key_count": len(scoped_data),
             },
             duration_ms=duration_ms,
-            success=True,
         )
         await self._emitter.emit(event)
 
@@ -210,19 +208,17 @@ class MemoryRouter:
                 all_memory.append(hot_result)
                 duration_ms = int((time.perf_counter() - start_time) * 1000)
                 event = TraceEvent(
-                    event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
-                    layer=Layer.L0,
-                    component=str(TraceComponent.MEMORY_ROUTER),
-                    event_type=EventType.MEMORY_QUERY,
-                    payload={
+                    event_type=TraceEventType.MEMORY_FETCH,
+                    component=TraceComponent.MEMORY_ROUTER,
+                    level=TraceLevel.INFO,
+                    message="Memory fetch from hot store completed",
+                    data={
                         "task_id": str(task.task_id),
                         "backend_count": len(self.backends),
                         "memory_count": len(all_memory),
                         "source": "hot_store",
                     },
                     duration_ms=duration_ms,
-                    success=True,
                 )
                 await self.emitter.emit(event)
                 return all_memory
@@ -233,18 +229,16 @@ class MemoryRouter:
                 all_memory.extend(memory)
             except Exception as e:
                 event = TraceEvent(
-                    event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
-                    layer=Layer.L0,
-                    component=str(TraceComponent.MEMORY_ROUTER),
-                    event_type=EventType.MEMORY_QUERY,
-                    payload={
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.MEMORY_ROUTER,
+                    level=TraceLevel.ERROR,
+                    message="Memory fetch error",
+                    data={
                         "task_id": str(task.task_id),
                         "backend": backend_name,
                         "error": str(e),
                     },
                     duration_ms=0,
-                    success=False,
                 )
                 await self.emitter.emit(event)
 
@@ -255,18 +249,16 @@ class MemoryRouter:
 
         duration_ms = int((time.perf_counter() - start_time) * 1000)
         event = TraceEvent(
-            event_id=uuid4(),
-            timestamp=datetime.utcnow(),
-            layer=Layer.L0,
-            component=str(TraceComponent.MEMORY_ROUTER),
-            event_type=EventType.MEMORY_QUERY,
-            payload={
+            event_type=TraceEventType.MEMORY_FETCH,
+            component=TraceComponent.MEMORY_ROUTER,
+            level=TraceLevel.INFO,
+            message="Memory fetch completed",
+            data={
                 "task_id": str(task.task_id),
                 "backend_count": len(self.backends),
                 "memory_count": len(all_memory),
             },
             duration_ms=duration_ms,
-            success=True,
         )
         await self.emitter.emit(event)
 
@@ -293,32 +285,28 @@ class MemoryRouter:
                 await backend.write(data)
             except Exception as e:
                 event = TraceEvent(
-                    event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
-                    layer=Layer.L0,
-                    component=str(TraceComponent.MEMORY_ROUTER),
-                    event_type=EventType.MEMORY_WRITE,
-                    payload={
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.MEMORY_ROUTER,
+                    level=TraceLevel.ERROR,
+                    message="Memory write error",
+                    data={
                         "backend": name,
                         "error": str(e),
                     },
                     duration_ms=0,
-                    success=False,
                 )
                 await self.emitter.emit(event)
 
         duration_ms = int((time.perf_counter() - start_time) * 1000)
         event = TraceEvent(
-            event_id=uuid4(),
-            timestamp=datetime.utcnow(),
-            layer=Layer.L0,
-            component=str(TraceComponent.MEMORY_ROUTER),
-            event_type=EventType.MEMORY_WRITE,
-            payload={
+            event_type=TraceEventType.MEMORY_WRITE,
+            component=TraceComponent.MEMORY_ROUTER,
+            level=TraceLevel.INFO,
+            message="Memory write completed",
+            data={
                 "backend_count": len(backends_to_write),
             },
             duration_ms=duration_ms,
-            success=True,
         )
         await self.emitter.emit(event)
 
@@ -343,34 +331,30 @@ class MemoryRouter:
                 all_keys.extend(keys)
             except Exception as e:
                 event = TraceEvent(
-                    event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
-                    layer=Layer.L0,
-                    component=str(TraceComponent.MEMORY_ROUTER),
-                    event_type=EventType.MEMORY_QUERY,
-                    payload={
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.MEMORY_ROUTER,
+                    level=TraceLevel.ERROR,
+                    message="List keys error",
+                    data={
                         "prefix": prefix,
                         "backend": backend_name,
                         "error": str(e),
                     },
                     duration_ms=0,
-                    success=False,
                 )
                 await self.emitter.emit(event)
 
         duration_ms = int((time.perf_counter() - start_time) * 1000)
         event = TraceEvent(
-            event_id=uuid4(),
-            timestamp=datetime.utcnow(),
-            layer=Layer.L0,
-            component=str(TraceComponent.MEMORY_ROUTER),
-            event_type=EventType.MEMORY_QUERY,
-            payload={
+            event_type=TraceEventType.MEMORY_ACCESS,
+            component=TraceComponent.MEMORY_ROUTER,
+            level=TraceLevel.INFO,
+            message="List keys completed",
+            data={
                 "prefix": prefix,
                 "key_count": len(all_keys),
             },
             duration_ms=duration_ms,
-            success=True,
         )
         await self.emitter.emit(event)
 

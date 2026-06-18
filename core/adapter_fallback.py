@@ -60,22 +60,22 @@ class AdapterFallbackChain:
             self._failure_counts[i] = 0
             self._circuit_open_since[i] = None
 
-    async def execute(self, prompt: str, **kwargs) -> Any:
-        """Execute a prompt through the fallback chain.
+    async def execute(self, messages: list, **kwargs) -> Any:
+        """Execute messages through the fallback chain.
 
         Iterates through self.adapters in order:
         - Check circuit breaker — if open for this adapter and timeout has not elapsed, skip it
         - If circuit breaker timeout has elapsed, reset it
         - If resource_manager is provided, check VRAM fit for this adapter/model
         - If this is not the primary adapter and appears to be a cloud adapter, request approval
-        - Attempt execution — call the adapter's execution method with prompt and **kwargs
+        - Attempt execution — call the adapter's execution method with messages and **kwargs
         - On success: reset failure count for this adapter to 0. Return result.
         - On failure: increment failure count. If count reaches failure_threshold, open circuit breaker. Continue to next adapter.
 
         If all adapters are exhausted without success: raise RuntimeError
 
         Args:
-            prompt: The prompt to execute
+            messages: List of Message objects to execute
             **kwargs: Additional keyword arguments to pass to the adapter
 
         Returns:
@@ -181,7 +181,7 @@ class AdapterFallbackChain:
             # Attempt execution
             try:
                 # Call the adapter's generate method
-                result = await adapter.generate(prompt, **kwargs)
+                result = await adapter.generate(messages, **kwargs)
 
                 # Success: reset failure count
                 self._failure_counts[i] = 0

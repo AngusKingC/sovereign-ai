@@ -85,11 +85,23 @@ class CommandHistory:
         if self.backend:
             try:
                 # Fetch from backend
-                results = await self.backend.fetch({
-                    "type": "command_history",
-                    "session_id": self.session_id,
-                    "user_id": self.user_id,
-                })
+                from core.schemas import Task
+                intent_parts = ["command_history"]
+                if self.session_id:
+                    intent_parts.append(f"session:{self.session_id}")
+                if self.user_id:
+                    intent_parts.append(f"user:{self.user_id}")
+                intent = ":".join(intent_parts)
+                
+                task = Task(
+                    task_id=uuid4(),
+                    intent=intent,
+                    complexity_score=0.0,
+                    priority="normal",
+                    current_state="received",
+                    created_at=datetime.now(),
+                )
+                results = await self.backend.fetch(task)
                 # Sort by timestamp
                 results.sort(key=lambda x: x.get("content", {}).get("timestamp", ""))
                 return results

@@ -265,7 +265,7 @@ class TestMemoryRouterTraceEvents:
     """Tests for MemoryRouter trace event field names."""
 
     def test_memory_router_trace_events_use_correct_field_names(self, mock_backend, task):
-        """Test that MemoryRouter trace events use correct field names (not layer, payload, success)."""
+        """Test that MemoryRouter trace events use correct field names (event_type, component, level, message, data, duration_ms)."""
         emitter = MemoryTraceEmitter()
         router = MemoryRouter(backends={"mock": mock_backend}, emitter=emitter)
 
@@ -277,11 +277,13 @@ class TestMemoryRouterTraceEvents:
         assert len(events) > 0
         # Check that events have the correct TraceEvent schema fields
         for event in events:
-            assert hasattr(event, "event_id")
-            assert hasattr(event, "timestamp")
-            assert hasattr(event, "layer")
-            assert hasattr(event, "component")
             assert hasattr(event, "event_type")
-            assert hasattr(event, "payload")
+            assert hasattr(event, "component")
+            assert hasattr(event, "level")
+            assert hasattr(event, "message")
+            assert hasattr(event, "data")
             assert hasattr(event, "duration_ms")
-            assert hasattr(event, "success")
+            # Check that old schema fields do NOT exist
+            assert not hasattr(event, "layer")
+            assert not hasattr(event, "payload")
+            assert not hasattr(event, "success")

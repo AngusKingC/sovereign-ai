@@ -384,17 +384,18 @@ class Orchestrator:
             try:
                 current_context = await self.memory_router.get_global_context(caller_id="orchestrator")
                 if current_context is None:
-                    current_context = StrategicContext()
+                    from datetime import datetime
+                    current_context = StrategicContext(last_updated=datetime.utcnow())
                 
-                # Update recent task summary
-                current_context.recent_task_summary = f"Task {task.task_id}: {task.intent} routed to {worker_id}"
+                # Update active goals with recent task
+                current_context.active_goals.append(f"Task {task.task_id}: {task.intent} routed to {worker_id}")
                 
-                # Update active workers list
-                current_context.active_workers = list(self.workers.keys())
+                # Update pending tasks with active workers
+                current_context.pending_tasks = list(self.workers.keys())
                 
                 # Update timestamp
                 from datetime import datetime
-                current_context.updated_at = datetime.utcnow()
+                current_context.last_updated = datetime.utcnow()
                 
                 await self.memory_router.set_global_context(current_context, caller_id="orchestrator")
             except Exception:
@@ -480,17 +481,18 @@ class Orchestrator:
         try:
             current_context = await self.memory_router.get_global_context(caller_id="orchestrator")
             if current_context is None:
-                current_context = StrategicContext()
+                from datetime import datetime
+                current_context = StrategicContext(last_updated=datetime.utcnow())
             
-            # Update recent task summary
-            current_context.recent_task_summary = f"Task {task.task_id}: {task.intent} routed to {selected_worker_id}"
+            # Update active goals with recent task
+            current_context.active_goals.append(f"Task {task.task_id}: {task.intent} routed to {selected_worker_id}")
             
-            # Update active workers list
-            current_context.active_workers = list(self.workers.keys())
+            # Update pending tasks with active workers
+            current_context.pending_tasks = list(self.workers.keys())
             
             # Update timestamp
             from datetime import datetime
-            current_context.updated_at = datetime.utcnow()
+            current_context.last_updated = datetime.utcnow()
             
             await self.memory_router.set_global_context(current_context, caller_id="orchestrator")
         except Exception:

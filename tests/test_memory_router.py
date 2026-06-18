@@ -14,7 +14,7 @@ from pydantic import ValidationError
 
 from core.memory_router import MemoryBackend, MemoryRouter
 from core.schemas import Task, TaskPriority
-from core.observability import MemoryTraceEmitter
+from core.observability import MemoryTraceEmitter, TraceEventType
 
 
 class MockMemoryBackend(MemoryBackend):
@@ -162,7 +162,7 @@ class TestMemoryRouter:
 
         events = trace_emitter.get_events()
         assert len(events) > 0
-        assert any(event.event_type.value == "MEMORY_QUERY" for event in events)
+        assert any(event.event_type == TraceEventType.MEMORY_FETCH for event in events)
 
     def test_tracing_on_write(self, trace_emitter, mock_backend):
         """Test that write operations emit trace events."""
@@ -178,7 +178,7 @@ class TestMemoryRouter:
 
         events = trace_emitter.get_events()
         assert len(events) > 0
-        assert any(event.event_type.value == "MEMORY_WRITE" for event in events)
+        assert any(event.event_type == TraceEventType.MEMORY_WRITE for event in events)
 
     def test_postgres_backend_parameter(self, mock_backend):
         """Test that postgres_backend parameter is accepted and converted to backends dict."""

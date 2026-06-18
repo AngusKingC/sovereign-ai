@@ -106,6 +106,7 @@ class TestEscalationFlow:
             should_escalate=True,
             reasons=["Low confidence"],
             suggested_model="gpt-4o",
+            estimated_cost=0.0,
             tier="cloud",
         ))
         
@@ -143,6 +144,7 @@ class TestEscalationFlow:
             should_escalate=False,
             reasons=[],
             suggested_model="",
+            estimated_cost=0.0,
             tier="local",
         ))
         
@@ -178,6 +180,7 @@ class TestEscalationFlow:
             should_escalate=True,
             reasons=["Low confidence"],
             suggested_model="gpt-4o",
+            estimated_cost=0.0,
             tier="cloud",
         ))
         
@@ -222,6 +225,7 @@ class TestEscalationFlow:
             should_escalate=True,
             reasons=["Low confidence"],
             suggested_model="gpt-4o",
+            estimated_cost=0.0,
             tier="cloud",
         ))
         mock_escalation_engine.request_approval = AsyncMock(return_value=True)
@@ -266,6 +270,7 @@ class TestEscalationFlow:
             should_escalate=True,
             reasons=["Low confidence"],
             suggested_model="gpt-4o",
+            estimated_cost=0.0,
             tier="cloud",
         ))
         mock_escalation_engine.request_approval = AsyncMock(return_value=False)

@@ -9,7 +9,7 @@ import time
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-from core.schemas import Task, WorkerOutput, EscalationDecision, Layer
+from core.schemas import Task, WorkerOutput, EscalationDecision
 from core.observability import (
     TraceComponent,
     TraceLevel,
@@ -82,6 +82,7 @@ class EscalationEngine:
                 should_escalate=False,
                 reasons=[],
                 suggested_model="",
+                estimated_cost=0.0,
                 tier="local",
             )
         else:
@@ -92,6 +93,7 @@ class EscalationEngine:
                 should_escalate=True,
                 reasons=reasons,
                 suggested_model=suggested_model,
+                estimated_cost=0.0,
                 tier="cloud",
             )
 

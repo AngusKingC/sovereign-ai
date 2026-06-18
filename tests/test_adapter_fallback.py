@@ -4,8 +4,11 @@ import pytest
 import asyncio
 import time
 
+from datetime import datetime
+
 from core.adapter_fallback import AdapterFallbackChain
 from core.observability import MemoryTraceEmitter, TraceEventType, TraceComponent
+from core.schemas import Message, MessageRole
 
 
 pytestmark = pytest.mark.asyncio
@@ -20,12 +23,14 @@ class MockAdapter:
         self.failure_message = failure_message
         self.call_count = 0
 
-    async def generate(self, prompt: str, **kwargs):
+    async def generate(self, messages: list, **kwargs):
         """Generate a response."""
         self.call_count += 1
         if self.should_fail:
             raise RuntimeError(self.failure_message)
-        return f"Response from {self.name}: {prompt}"
+        # Extract content from first message for response
+        content = messages[0].content if messages else "empty"
+        return f"Response from {self.name}: {content}"
 
 
 class MockCloudAdapter(MockAdapter):
@@ -78,7 +83,8 @@ class TestAdapterFallbackChain:
 
     async def test_execute_calls_primary_adapter_and_returns_result_on_success(self, fallback_chain):
         """Test execute() calls primary adapter and returns result on success."""
-        result = await fallback_chain.execute("test prompt")
+        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.utcnow())]
+        result = await fallback_chain.execute(messages)
 
         assert result == "Response from primary: test prompt"
         assert fallback_chain.adapters[0][0].call_count == 1
@@ -93,7 +99,8 @@ class TestAdapterFallbackChain:
             emitter=MemoryTraceEmitter(),
         )
 
-        result = await chain.execute("test prompt")
+        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.utcnow())]
+        result = await chain.execute(messages)
 
         assert result == "Response from fallback: test prompt"
         assert primary.call_count == 1
@@ -108,8 +115,9 @@ class TestAdapterFallbackChain:
             emitter=MemoryTraceEmitter(),
         )
 
+        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.utcnow())]
         with pytest.raises(RuntimeError, match="All adapters in fallback chain exhausted"):
-            await chain.execute("test prompt")
+            await chain.execute(messages)
 
         assert primary.call_count == 1
         assert fallback.call_count == 1
@@ -125,15 +133,18 @@ class TestAdapterFallbackChain:
         )
 
         # First failure - primary fails, fallback succeeds
-        result1 = await chain.execute("test prompt 1")
+        messages1 = [Message(role=MessageRole.USER, content="test prompt 1", timestamp=datetime.utcnow())]
+        result1 = await chain.execute(messages1)
         assert result1 == "Response from fallback: test prompt 1"
 
         # Second failure - primary fails, fallback succeeds
-        result2 = await chain.execute("test prompt 2")
+        messages2 = [Message(role=MessageRole.USER, content="test prompt 2", timestamp=datetime.utcnow())]
+        result2 = await chain.execute(messages2)
         assert result2 == "Response from fallback: test prompt 2"
 
         # Third attempt - primary should be skipped due to circuit breaker, fallback succeeds
-        result3 = await chain.execute("test prompt 3")
+        messages3 = [Message(role=MessageRole.USER, content="test prompt 3", timestamp=datetime.utcnow())]
+        result3 = await chain.execute(messages3)
         assert result3 == "Response from fallback: test prompt 3"
 
         assert primary.call_count == 2  # Only called twice, third time skipped
@@ -150,11 +161,13 @@ class TestAdapterFallbackChain:
         )
 
         # First failure - opens circuit breaker
-        result1 = await chain.execute("test prompt 1")
+        messages1 = [Message(role=MessageRole.USER, content="test prompt 1", timestamp=datetime.utcnow())]
+        result1 = await chain.execute(messages1)
         assert result1 == "Response from fallback: test prompt 1"
 
         # Second attempt - primary should be skipped
-        result2 = await chain.execute("test prompt 2")
+        messages2 = [Message(role=MessageRole.USER, content="test prompt 2", timestamp=datetime.utcnow())]
+        result2 = await chain.execute(messages2)
         assert result2 == "Response from fallback: test prompt 2"
 
         assert primary.call_count == 1  # Only called once
@@ -172,14 +185,16 @@ class TestAdapterFallbackChain:
         )
 
         # First failure - opens circuit breaker
-        result1 = await chain.execute("test prompt 1")
+        messages1 = [Message(role=MessageRole.USER, content="test prompt 1", timestamp=datetime.utcnow())]
+        result1 = await chain.execute(messages1)
         assert result1 == "Response from fallback: test prompt 1"
 
         # Wait for timeout
         await asyncio.sleep(1.1)
 
         # Circuit breaker should be reset, primary should be tried again
-        result2 = await chain.execute("test prompt 2")
+        messages2 = [Message(role=MessageRole.USER, content="test prompt 2", timestamp=datetime.utcnow())]
+        result2 = await chain.execute(messages2)
         assert result2 == "Response from fallback: test prompt 2"
 
         assert primary.call_count == 2  # Called again after timeout
@@ -196,7 +211,8 @@ class TestAdapterFallbackChain:
             emitter=MemoryTraceEmitter(),
         )
 
-        result = await chain.execute("test prompt")
+        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.utcnow())]
+        result = await chain.execute(messages)
 
         assert result == "Response from fallback: test prompt"
         assert primary.call_count == 0  # Skipped due to VRAM check
@@ -213,7 +229,8 @@ class TestAdapterFallbackChain:
             emitter=MemoryTraceEmitter(),
         )
 
-        result = await chain.execute("test prompt")
+        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.utcnow())]
+        result = await chain.execute(messages)
 
         assert result == "Response from primary: test prompt"
         assert primary.call_count == 1
@@ -230,7 +247,8 @@ class TestAdapterFallbackChain:
             emitter=MemoryTraceEmitter(),
         )
 
-        result = await chain.execute("test prompt")
+        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.utcnow())]
+        result = await chain.execute(messages)
 
         assert result == "Response from cloud: test prompt"
         assert approval_gate.request_approval_call_count == 1
@@ -248,7 +266,8 @@ class TestAdapterFallbackChain:
             emitter=MemoryTraceEmitter(),
         )
 
-        result = await chain.execute("test prompt")
+        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.utcnow())]
+        result = await chain.execute(messages)
 
         assert result == "Response from fallback: test prompt"
         assert approval_gate.request_approval_call_count == 1
@@ -342,7 +361,8 @@ class TestAdapterFallbackChain:
             emitter=MemoryTraceEmitter(),
         )
 
-        await chain.execute("test prompt")
+        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.utcnow())]
+        await chain.execute(messages)
 
         events = chain._emitter.get_events()
         fallback_events = [e for e in events if e.event_type == TraceEventType.ADAPTER_FALLBACK]
