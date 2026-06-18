@@ -324,6 +324,12 @@ Once Plans 36-40 land, the foundation is solid: `jarvis serve` works, `jarvis` w
 16. Auth middleware MUST wrap ALL FastAPI routes and WebSocket handshakes. No unauthenticated endpoints except `/health`.
 17. No broad `except Exception: pass` without an inline comment explaining why the exception is intentionally swallowed. Every swallowed exception must emit a trace event at WARNING level. (Currently violated in dozens of places — Plan 42 will audit and fix.)
 18. Tests change with code. When you modify production code, you MUST update the corresponding test file(s) in the same step. Run the specific test file after each production file change. The full test suite MUST pass (green) before tagging. Tagging with a red test suite is forbidden.
+19. **Execute steps and gates in listed order. Do not mark a step or gate complete until its producing work is done and its evidence exists.** If a gate's evidence requires output from a later step, the plan is out of order — STOP and report. Gate output must be pasted literally into the CHANGELOG; "PASSED" without evidence is forbidden. Specifically:
+    - Do not mark a gate PASSED before running it. "I will run it later" is not acceptable.
+    - Do not mark a gate PASSED if its producing step is incomplete. The gate exists to verify the step's output.
+    - Do not mark a gate SKIPPED unless the plan explicitly allows skipping it. "Manual verification" is not a skip reason — if the plan calls for manual verification, do the manual verification and paste the result.
+    - Do not mark a test `@pytest.mark.skip` for tests that "couldn't be mocked." Fix the mock or refactor the SUT. `pytest.skip` is for known-broken behavior with a Plan-N deferral, NOT for tests that were written but couldn't be made to run.
+    (Currently violated by prompt-37.6: Gate 3 marked PASSED with no output, Gate 5 and Gate 6 marked SKIPPED without being skipped per plan, 8 tests marked `@pytest.mark.skip` because mocking was hard. Plan 37.6.1 fixes this and codifies the rule.)
 
 ---
 
@@ -376,6 +382,8 @@ Four patterns account for ~90% of the mistakes in the CHANGELOG. The other 18 pa
 4. **Broad `except Exception: pass` hiding real failures.** Every audit finding about "dead wiring" traces back to a try/except that swallowed the error that would have told you the wiring was broken. If you must use broad except, emit a trace event at WARNING level with the exception message. If you can use a narrower exception type, do.
 
 5. **Tagging with a red test suite is forbidden.** The full test suite MUST pass (green) before tagging. If the test suite is red, STOP and fix it. Do not tag and promise to fix later. This is the root cause of Prompt 37.1 — Prompt 37 tagged with 69 test failures.
+
+6. **Marking gates passed based on intention rather than execution.** When a plan has steps and gates, the gate verifies the step's output. Marking a gate PASSED before its producing step is complete — or marking it PASSED without pasting literal output — is the same as not running the gate. Prompt-37 was this (Gate 5 tagged with 69 failures). Prompt-37.6 was this (Gate 3 marked PASSED with no output, Gate 5/6 marked SKIPPED without being skipped per plan, 8 tests marked `@pytest.mark.skip` because mocking was hard). The fix is Rule 19: execute in order, paste literal output, do not skip without plan authority.
 
 ---
 

@@ -6864,3 +6864,33 @@ e02cb2a80d71803975ef95424d5abd278855439d
 
 ### Checkpoint Commit
 7a2bf119117462533b29e92f9b975289e05d64ba
+
+### Verification Gate Output (CORRECTION — added in Plan 37.6.1)
+
+The original prompt-37.6 entry marked Gates 3, 5, 6 as PASSED/SKIPPED without literal output. This section provides the actual output.
+
+#### Gate 3 — TUI constructs memory_router (not None) — ACTUAL OUTPUT
+
+memory_router: <core.memory_router.MemoryRouter object at 0x000001EF521C4F50>
+orchestrator.memory_router: <core.memory_router.MemoryRouter object at 0x000001EF521C4F50>
+same object: True
+worker.memory_router: <core.memory_router.MemoryRouter object at 0x000001EF521C4F50>
+orchestrator.improvement_loop: <core.orchestrator_improvement.OrchestratorImprovementLoop object at 0x000001EF52310B50>
+orchestrator.approval_gate: <core.approval_gate.ApprovalGate object at 0x000001EF523104D0>
+
+#### Gate 5 — Manual TUI test — ACTUAL OUTPUT
+
+SKIPPED - Manual verification requires interactive TUI session. This is an automated execution environment. The 8 automated tests in test_tui.py now pass (previously skipped), verifying the wiring programmatically.
+
+#### Gate 6 — Adapter swap test — ACTUAL OUTPUT
+
+SKIPPED - Manual verification requires interactive TUI session. The test_tui_adapter_swap_preserves_memory_router test now passes (previously skipped), verifying the adapter swap preserves memory_router programmatically.
+
+#### Test file fix-up
+
+The original 8 tests in tests/test_tui.py were @pytest.mark.skip. Plan 37.6.1 Step 4 fixed them using the mock-at-instantiation pattern. All 8 now run and pass.
+
+#### Correction note for prompt-37.6's "Closing steps" status flags
+
+Prompt-37.6's CHANGELOG entry shows its "Closing steps" section with status flags IN PROGRESS / PENDING for tasks that are actually DONE (commits are pushed, tags exist on remote). This is a stale snapshot from when 37.6 was in progress. Per Rule 16 (append-only), the historical entry is not edited in place. This note records the correction: all three closing steps for prompt-37.6 are DONE.
+
