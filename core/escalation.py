@@ -143,7 +143,7 @@ class EscalationEngine:
             expires_at=datetime.utcnow() + timedelta(minutes=5),
         )
 
-        approval_response = await self._approval_gate.request(approval_request)
+        approval_response = await self._approval_gate.request_approval(approval_request)
 
         # Record denial on decision if denied
         if not approval_response.approved:

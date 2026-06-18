@@ -6643,3 +6643,9 @@ e4ec2fd6491b29ffe3a3cc816b5e9ac6b82bdd3a
 
 ### Checkpoint Commit
 9272bd7af3af6a46c5a3c761e1990423ad670062
+
+### Checkpoint Commit Correction (added in Plan 37.5)
+- Prompt-37.1 CHANGELOG originally listed checkpoint commit as 9272bd7af3af6a46c5a3c761e1990423ad670062 (prompt-37's commit) — incorrect.
+- Actual prompt-37.1 commit: 41cb13b88adaa293da830d4eca6f2b1a796c92f6
+- Verified via `git rev-parse prompt-37.1` → 41cb13b88adaa293da830d4eca6f2b1a796c92f6
+- global_rules.md Rule 16 violation (CHANGELOG must match commit). Corrected here; original entry preserved per append-only policy.

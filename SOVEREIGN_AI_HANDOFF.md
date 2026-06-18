@@ -60,6 +60,7 @@ Open bugs, ordered by impact. Each has a verification step so the fix can be con
 - **Status**: New methods added to MemoryRouter (`fetch_by_filter`, `write_to_collection`, `get_global_context`, `set_global_context`) and 33 call sites updated. However, `system/trajectory_exporter.py` uses a different pattern `fetch(Type, filter_func=...)` not covered by the F6 spec and still has mypy errors.
 - **Remaining work**: Fix trajectory_exporter.py pattern (needs separate plan). Also 69 test failures due to mock implementation details not matching expected behavior.
 - **Verification**: `mypy core/ system/ --ignore-missing-imports | Select-String "Unexpected keyword argument"` still shows errors from trajectory_exporter.py.
+- **Note on `core/retention.py`**: Listed in the original F6 location list and Plan 37 entry, but verified against the live repo — retention.py uses the correct `fetch(task)` and `write(dict)` signatures. No `collection=`/`document_id=`/`limit=` kwargs. The handoff's inclusion was inaccurate; retention.py was never affected by F6. No changes needed. (Claude review finding #1, applied in Plan 37.5.)
 
 ### F7 — Trace spam in CLI from `WorkerBase` defaulting to `ConsoleTraceEmitter`
 - **Location**: `core/worker_base.py:88-91`
@@ -360,7 +361,7 @@ Once Plans 36-40 land, the foundation is solid: `jarvis serve` works, `jarvis` w
 | 35.6f | Wire Cognition Stack End-to-End | 1058 | Registered OllamaWorker in serve.py; fixed F3 in test only |
 | 36 | Fix jarvis serve end-to-end (F1, F2, F3, F5) | 1044 | Fixed 4 regressions; jarvis serve now starts and returns worker listings |
 | 36.5 | Fix llama_cpp test collection | 1072 | Added pytest.importorskip("llama_cpp"); --ignore flag no longer needed |
-| 37 | Fix F6 (MemoryRouter call-signature mismatch) | 1010 | Added new MemoryRouter methods; fixed 33 call sites across 12 files; trajectory_exporter.py pattern not covered; 69 test failures |
+| 37 | Fix F6 (MemoryRouter call-signature mismatch) | 1010 | Added new MemoryRouter methods; fixed 33 call sites across 13 production files + memory_router.py; 8 test files updated in prompt-37, 3 more in prompt-37.1 = 11 total; trajectory_exporter.py pattern not covered; 69 test failures |
 | 37.1 | Fix test mocks and establish Rule 18 | 1078 | Fixed 69 test failures by updating stale mock references; added Rule 18 and recurring mistake pattern #5 |
 
 ---

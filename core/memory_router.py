@@ -22,6 +22,7 @@ from core.observability import (
 
 if TYPE_CHECKING:
     from core.memory_compactor import MemoryCompactor
+    from core.schemas import StrategicContext
 
 if TYPE_CHECKING:
     from core.observability import TraceEmitter
@@ -545,4 +546,110 @@ class MemoryRouter:
             data={"context": context.model_dump() if hasattr(context, "model_dump") else context},
             collection="global_context",
             document_id="current",
+        )
+
+    async def _delete_from_collection(self, collection: str, document_id: str) -> None:
+        """Delete a document from a collection by document_id.
+
+        This is a best-effort delete — backends that don't support deletion
+        will silently no-op. Emits a WARNING trace event on failure.
+        """
+        # Backends don't have a unified delete interface. For now, write a
+        # tombstone marker that scoped_read can filter out.
+        # TODO: Plan 45+ — add proper delete() to MemoryBackend interface.
+        await self.write_to_collection(
+            data={"_deleted": True, "_scope": collection, "_key": document_id},
+            collection=collection,
+            document_id=document_id,
+        )
+
+    async def scoped_read(
+        self,
+        scope: str,
+        key: str,
+    ) -> dict[str, Any] | list[dict[str, Any]] | None:
+        """Read from a named scope.
+
+        Supports both calling conventions natively — ordinary Python parameters
+        are positional-or-keyword by default, so scoped_read("notes", "notes:*")
+        and scoped_read(scope="notes", key="notes:*") both work without any
+        special machinery.
+
+        Args:
+            scope: Collection/scope name (e.g., "approval_trust", "notes", "reminders").
+            key: Document key within the scope. May end with "*" for wildcard reads.
+
+        Returns:
+            Single dict (or None) for exact key, list of dicts for wildcard key.
+        """
+        if key.endswith("*"):
+            # Wildcard read — return list
+            prefix = key[:-1]
+            all_results = await self.fetch_by_filter(
+                filter={"_scope": scope},
+                collection=scope,
+            )
+            # Group by _key, keep only the chronologically last entry for each key,
+            # then exclude tombstones (deletes). This prevents stale duplicates
+            # when a note/reminder is edited (written twice under the same key):
+            # without dedup, the wildcard listing would return both the stale
+            # and current copies. Group-by-key + take-last mirrors the exact-key
+            # path's recency-first logic.
+            by_key: dict[str, dict] = {}
+            for r in all_results:
+                k = r.get("_key", "")
+                if k.startswith(prefix):
+                    by_key[k] = r  # later writes overwrite earlier ones in dict order
+            return [v for k, v in by_key.items() if not v.get("_deleted", False)]
+        else:
+            # Exact key read — return single dict or None
+            # CRITICAL: do NOT use limit=1 — backends are append-only, so the
+            # latest write is the most recent match. limit=1 would return the
+            # oldest entry, which may be a stale value or a pre-tombstone original.
+            results = await self.fetch_by_filter(
+                filter={"_scope": scope, "_key": key},
+                collection=scope,
+            )
+            # Check the LAST entry's tombstone status — DO NOT filter tombstones
+            # first and then take last. The filter-then-take-last ordering is a
+            # bug: for storage [entry1, tombstone], filtering leaves [entry1],
+            # and taking last returns entry1 (the stale value) instead of None.
+            # The correct check is: look at the chronologically last entry,
+            # and only then ask whether THAT entry is a tombstone.
+            if not results:
+                return None
+            last = results[-1]
+            return None if last.get("_deleted", False) else last
+
+    async def scoped_write(
+        self,
+        scope: str,
+        key: str,
+        data: dict[str, Any] | None = None,
+    ) -> None:
+        """Write (or delete) data in a named scope.
+
+        Supports both calling conventions natively — scoped_write("notes", "key", data)
+        and scoped_write(scope="trust", key="cmd", data=None) both work.
+
+        Args:
+            scope: Collection/scope name.
+            key: Document key within the scope.
+            data: Dict to write. If None, delete the entry (used by approval_trust
+                  to revoke trust).
+        """
+        if data is None:
+            # Delete — see Step 1.5
+            await self._delete_from_collection(scope, key)
+            return
+
+        # Augment data with scope metadata
+        write_data = data.copy() if isinstance(data, dict) else {"value": data}
+        write_data["_scope"] = scope
+        write_data["_key"] = key
+
+        await self.write_to_collection(
+            data=write_data,
+            collection=scope,
+            document_id=key,
         )

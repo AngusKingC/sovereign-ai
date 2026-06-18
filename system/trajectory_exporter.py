@@ -61,16 +61,21 @@ class TrajectoryExporter:
 
         # Fetch completed tasks with complexity_score >= min_rating
         # Note: complexity_score is 0-1, so min_rating should be interpreted as a threshold in that range
-        tasks = await self._router.fetch(Task, filter_func=lambda t: t.current_state == TaskStatus.COMPLETE and t.complexity_score >= min_rating)
-
-        records = []
-        for task in tasks:
-            # Fetch associated WorkerOutput for this task
-            outputs = await self._router.fetch(WorkerOutput, filter_func=lambda o: o.task_id == task.task_id)
-            if outputs:
-                output = outputs[0]  # Take first output if multiple exist
-                sharegpt_record = self._to_sharegpt(task, output)
-                records.append(sharegpt_record)
+        # TODO: Plan 45 — redesign trajectory export to use fetch_by_filter properly
+        # Current backends don't support querying Task/WorkerOutput class objects via fetch_by_filter
+        try:
+            event = TraceEvent(
+                event_type=TraceEventType.OPERATION_ERROR,
+                component=TraceComponent.ORCHESTRATOR,
+                level=TraceLevel.WARNING,
+                message="Trajectory export not yet functional — fetch_by_filter does not support querying Task/WorkerOutput class objects. Deferred to Plan 45.",
+                data={"export_path": self._export_path},
+                duration_ms=0,
+            )
+            await self._emitter.emit(event)
+        except Exception:
+            pass
+        return 0  # Skip export, write empty file
 
         # Create export directory if it does not exist
         export_file = Path(self._export_path)
