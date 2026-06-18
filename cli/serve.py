@@ -52,6 +52,7 @@ def serve(
     from core.task_state_machine import TaskStateMachine
     from core.worker_base import LLMAdapter
     from adapters.ollama import OllamaAdapter
+    from workers.ollama_worker import OllamaWorker
     
     # Create base dependencies
     memory_router = MemoryRouter(backends=[], emitter=emitter)
@@ -164,6 +165,14 @@ def serve(
     
     # Set improvement_loop on orchestrator
     orchestrator.improvement_loop = improvement_loop
+    
+    # Construct and register OllamaWorker with Orchestrator
+    ollama_worker = OllamaWorker(
+        adapter=ollama_adapter,
+        memory_router=memory_router,
+        profile=None,  # Use default profile
+    )
+    orchestrator.register_worker("ollama_worker", ollama_worker)
     
     # Create FastAPI app
     app = create_app(orchestrator, auth_manager, emitter)

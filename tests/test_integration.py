@@ -201,3 +201,84 @@ class TestIntegration:
         with pytest.raises(WorkerNotFoundError, match="No workers registered"):
             asyncio.run(orchestrator.route_task(sample_task))
 
+    def test_end_to_end_pipeline_with_ollama_worker(self, trace_emitter):
+        """Test full pipeline: Orchestrator -> OllamaWorker -> OllamaAdapter -> LLMResponse with mocked HTTP."""
+        import asyncio
+        from unittest.mock import patch, AsyncMock
+        from core.orchestrator import Orchestrator
+        from core.memory_router import MemoryRouter
+        from workers.ollama_worker import OllamaWorker
+        from adapters.ollama import OllamaAdapter
+        from core.schemas import Task, TaskPriority
+        from datetime import datetime
+        from uuid import uuid4
+
+        # Create memory router with empty backends
+        memory_router = MemoryRouter(backends={}, emitter=trace_emitter)
+
+        # Create OllamaAdapter with mocked HTTP
+        ollama_adapter = OllamaAdapter(model_name="qwen2.5-coder:7b", emitter=trace_emitter)
+
+        # Mock the HTTP call to Ollama
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        mock_response.json = lambda: {
+            "model": "qwen2.5-coder:7b",
+            "message": {
+                "content": "Mocked LLM response",
+                "role": "assistant"
+            },
+            "done": True,
+            "eval_count": 10,
+            "prompt_eval_count": 5,
+        }
+        mock_response.raise_for_status = lambda: None
+
+        with patch('httpx.AsyncClient.post', return_value=mock_response):
+            # Construct OllamaWorker with constructor-injected emitter
+            ollama_worker = OllamaWorker(
+                adapter=ollama_adapter,
+                memory_router=memory_router,
+                profile=None,  # Use default profile
+            )
+            ollama_worker.emitter = trace_emitter  # Constructor injection
+
+            # Construct Orchestrator with constructor-injected emitter
+            orchestrator = Orchestrator(
+                memory_router=memory_router,
+                improvement_loop=None,
+                cloud_fallback_model="gpt-4o",
+                approval_gate=None,
+                escalation_engine=None,
+                fallback_chain=None,
+                a2a_router=None,
+                emitter=trace_emitter,
+            )
+
+            # Register the worker with the Orchestrator
+            orchestrator.register_worker("ollama_worker", ollama_worker)
+
+            # Create a task
+            task = Task(
+                task_id=uuid4(),
+                intent="Test task for end-to-end integration",
+                complexity_score=0.5,
+                priority=TaskPriority.NORMAL,
+                created_at=datetime.utcnow(),
+            )
+
+            # Submit task via Orchestrator.route()
+            output = asyncio.run(orchestrator.route_task(task))
+
+            # Assert a real LLMResponse is returned (not None, not a stub)
+            assert output is not None
+            assert output.worker_id == "ollama_worker"
+            assert output.content is not None
+            assert output.content != ""
+            assert output.confidence > 0.0
+            assert output.model_used is not None
+
+            # Assert at least one trace event was emitted
+            events = trace_emitter.get_events()
+            assert len(events) > 0
+
