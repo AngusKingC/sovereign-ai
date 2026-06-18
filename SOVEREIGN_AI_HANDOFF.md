@@ -1,7 +1,7 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-18 18:21 — post prompt-37.1. Fixed 69 test failures from Prompt 37 by updating stale mock references. Added Rule 18 (tests change with code) and recurring mistake pattern #5 (tagging with red test suite forbidden).
-**Test baseline**: 1078 passed, 23 skipped, 1 failed, 65 warnings (measured with python -m pytest tests/ -q --tb=short). 1 pre-existing flaky failure (test_lm_studio_adapter.py::test_health_check_without_server).
+**Last updated**: 2026-06-18 19:24 — post prompt-37.5. Finished F6 by adding scoped_read/scoped_write to MemoryRouter, fixed trajectory_exporter (Option 2 fallback), fixed escalation.py, applied Claude's blocking fixes. 6 trajectory_exporter tests skipped (deferred to Plan 45).
+**Test baseline**: 1072 passed, 29 skipped, 1 failed, 63 warnings (measured with python -m pytest tests/ -q --tb=short). 1 pre-existing flaky failure (test_lm_studio_adapter.py::test_health_check_without_server).
 **Static analysis baseline**: 365 ruff errors, 116 mypy errors. CI will fail on first run. This is the worklist, not a problem.
 
 ---
@@ -363,6 +363,7 @@ Once Plans 36-40 land, the foundation is solid: `jarvis serve` works, `jarvis` w
 | 36.5 | Fix llama_cpp test collection | 1072 | Added pytest.importorskip("llama_cpp"); --ignore flag no longer needed |
 | 37 | Fix F6 (MemoryRouter call-signature mismatch) | 1010 | Added new MemoryRouter methods; fixed 33 call sites across 13 production files + memory_router.py; 8 test files updated in prompt-37, 3 more in prompt-37.1 = 11 total; trajectory_exporter.py pattern not covered; 69 test failures |
 | 37.1 | Fix test mocks and establish Rule 18 | 1078 | Fixed 69 test failures by updating stale mock references; added Rule 18 and recurring mistake pattern #5 |
+| 37.5 | Finish F6 - add scoped_read/scoped_write | 1072 | Added scoped_read/scoped_write to MemoryRouter; fixed trajectory_exporter (Option 2 fallback); fixed escalation.py; applied Claude's blocking fixes; 6 trajectory_exporter tests skipped (deferred to Plan 45) |
 
 ---
 
