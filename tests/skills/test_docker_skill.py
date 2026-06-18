@@ -8,9 +8,6 @@ from core.approval_gate import ApprovalGate
 from core.observability import MemoryTraceEmitter, TraceEventType, TraceComponent
 
 
-pytestmark = pytest.mark.asyncio
-
-
 class TestDockerSkill:
     """Test DockerSkill functionality."""
 
@@ -23,6 +20,7 @@ class TestDockerSkill:
             timeout=30,
         )
 
+    @pytest.mark.asyncio
     async def test_list_containers_returns_parsed_list(self, docker_skill):
         """Test list_containers() returns parsed list."""
         mock_process = Mock()
@@ -38,6 +36,7 @@ class TestDockerSkill:
         assert result[0]["status"] == "running"
         assert result[0]["image"] == "nginx"
 
+    @pytest.mark.asyncio
     async def test_list_containers_all_true_passes_all_flag(self, docker_skill):
         """Test list_containers(all=True) passes --all flag."""
         mock_process = Mock()
@@ -51,6 +50,11 @@ class TestDockerSkill:
             call_args = mock_exec.call_args
             assert "--all" in call_args[0]
 
+        # Give event loop time to clean up subprocess transports
+        import asyncio
+        await asyncio.sleep(0.1)
+
+    @pytest.mark.asyncio
     async def test_start_requires_approval_returns_success(self):
         """Test start() requires approval, returns success."""
         mock_approval_gate = Mock(spec=ApprovalGate)
@@ -72,6 +76,7 @@ class TestDockerSkill:
         assert result["success"] is True
         mock_approval_gate.request_approval.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_start_denied_by_approval_gate_no_subprocess(self):
         """Test start() denied by approval gate — no subprocess call made."""
         mock_approval_gate = Mock(spec=ApprovalGate)
@@ -88,6 +93,7 @@ class TestDockerSkill:
         assert result["success"] is False
         assert "denied" in result["output"].lower()
 
+    @pytest.mark.asyncio
     async def test_stop_requires_approval(self):
         """Test stop() requires approval."""
         mock_approval_gate = Mock(spec=ApprovalGate)
@@ -109,6 +115,7 @@ class TestDockerSkill:
         assert result["success"] is True
         mock_approval_gate.request_approval.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_logs_returns_string_no_approval_required(self, docker_skill):
         """Test logs() returns string, no approval required."""
         mock_process = Mock()
@@ -120,6 +127,7 @@ class TestDockerSkill:
 
         assert result == "log line 1\nlog line 2\n"
 
+    @pytest.mark.asyncio
     async def test_exec_command_requires_approval(self):
         """Test exec_command() requires approval."""
         mock_approval_gate = Mock(spec=ApprovalGate)
@@ -141,6 +149,7 @@ class TestDockerSkill:
         assert result["success"] is True
         mock_approval_gate.request_approval.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_trace_event_emitted_on_command(self, docker_skill):
         """Test trace event emitted on command (verify enum values)."""
         mock_process = Mock()
@@ -155,6 +164,7 @@ class TestDockerSkill:
         assert any(event.event_type == TraceEventType.DOCKER_COMMAND for event in events)
         assert any(event.component == TraceComponent.DOCKER_SKILL for event in events)
 
+    @pytest.mark.asyncio
     async def test_error_case_non_zero_exit_code_handled(self, docker_skill):
         """Test error case: non-zero exit code handled."""
         mock_process = Mock()

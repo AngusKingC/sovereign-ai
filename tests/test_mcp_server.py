@@ -7,12 +7,10 @@ from core.observability import MemoryTraceEmitter
 from core.skill_registry import SkillMetadata, SkillRegistry
 from skills.mcp_server import MCPServer, MCPRequestHandler
 
-pytestmark = pytest.mark.asyncio
-
-
 class TestMCPServer:
     """Test MCPServer class."""
 
+    @pytest.mark.asyncio
     async def test_get_tools_manifest_returns_correctly_structured_manifest(self) -> None:
         """Test that get_tools_manifest returns correctly structured MCP manifest for registered skills."""
         emitter = MemoryTraceEmitter()
@@ -50,6 +48,7 @@ class TestMCPServer:
         assert manifest[0]["input_schema"]["properties"]["param1"] == "string"
         assert manifest[1]["name"] == "skill2"
 
+    @pytest.mark.asyncio
     async def test_get_tools_manifest_returns_empty_list_when_no_skills(self) -> None:
         """Test that get_tools_manifest returns empty list when no skills registered."""
         emitter = MemoryTraceEmitter()
@@ -61,6 +60,7 @@ class TestMCPServer:
 
         assert manifest == []
 
+    @pytest.mark.asyncio
     async def test_call_skill_calls_correct_skill_with_arguments(self) -> None:
         """Test that call_skill calls correct skill with correct arguments, returns success dict."""
         emitter = MemoryTraceEmitter()
@@ -83,6 +83,7 @@ class TestMCPServer:
         assert "Called skill1" in result["result"]
         mock_registry.get_skill.assert_called_once_with("skill1")
 
+    @pytest.mark.asyncio
     async def test_call_skill_returns_failure_for_unknown_tool(self) -> None:
         """Test that call_skill returns failure dict for unknown tool — does not raise."""
         emitter = MemoryTraceEmitter()
@@ -96,6 +97,7 @@ class TestMCPServer:
         assert result["result"] is None
         assert result["error"] == "Tool not found"
 
+    @pytest.mark.asyncio
     async def test_call_skill_returns_failure_when_skill_raises(self) -> None:
         """Test that call_skill returns failure dict when skill raises internally — does not raise."""
         emitter = MemoryTraceEmitter()
@@ -121,6 +123,7 @@ class TestMCPServer:
         # This test would need to be updated when real skill execution is implemented
         assert result["success"] is True
 
+    @pytest.mark.asyncio
     async def test_handle_get_tools_returns_json_with_content_type(self) -> None:
         """Test that handle_get_tools returns JSON with correct Content-Type header."""
         emitter = MemoryTraceEmitter()
@@ -153,6 +156,7 @@ class TestMCPServer:
         mock_handler.send_response.assert_called_once_with(200)
         mock_handler.send_header.assert_any_call("Content-Type", "application/json")
 
+    @pytest.mark.asyncio
     async def test_handle_call_tool_parses_body_and_routes(self) -> None:
         """Test that handle_call_tool parses request body and routes to correct skill."""
         emitter = MemoryTraceEmitter()
@@ -185,6 +189,7 @@ class TestMCPServer:
 
         mock_registry.get_skill.assert_called_once_with("skill1")
 
+    @pytest.mark.asyncio
     async def test_handle_call_tool_returns_error_for_missing_tool(self) -> None:
         """Test that handle_call_tool returns error JSON for missing tool field in body."""
         emitter = MemoryTraceEmitter()
@@ -203,6 +208,7 @@ class TestMCPServer:
 
         mock_handler.send_error.assert_called_once_with(400, "Missing 'tool' field in request body")
 
+    @pytest.mark.asyncio
     async def test_start_starts_server_thread(self) -> None:
         """Test that start() starts server in background thread."""
         emitter = MemoryTraceEmitter()
@@ -217,6 +223,7 @@ class TestMCPServer:
 
         server.stop()
 
+    @pytest.mark.asyncio
     async def test_stop_shuts_down_server(self) -> None:
         """Test that stop() shuts down server thread."""
         emitter = MemoryTraceEmitter()

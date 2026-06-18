@@ -86,8 +86,8 @@ class WorkerBase(ABC):
         self.fallback_chain = fallback_chain
         self.current_task_id: str | None = None
         if emitter is None:
-            from core.observability import ConsoleTraceEmitter
-            emitter = ConsoleTraceEmitter()
+            from core.observability import MemoryTraceEmitter
+            emitter = MemoryTraceEmitter()
         self.emitter = emitter
 
     @abstractmethod

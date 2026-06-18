@@ -100,6 +100,10 @@ class TestTerminalSkill:
         assert result["error"] == "Command timed out"
         assert result["return_code"] == -1
 
+        # Give event loop time to clean up subprocess transports
+        import asyncio
+        await asyncio.sleep(0.1)
+
     @pytest.mark.asyncio
     async def test_working_directory_is_respected(self, emitter):
         """Test that working directory is respected."""
@@ -139,6 +143,10 @@ class TestTerminalSkill:
         assert error_events[0].component == TraceComponent.WORKER
         assert "Terminal execution timed out" in error_events[0].message
         assert error_events[0].level == TraceLevel.ERROR
+
+        # Give event loop time to clean up subprocess transports
+        import asyncio
+        await asyncio.sleep(0.1)
 
     @pytest.mark.asyncio
     async def test_empty_command_raises_value_error(self, skill):

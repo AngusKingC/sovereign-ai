@@ -12,8 +12,6 @@ from core.schemas import VersionUpdateProposal
 class TestTraceOptimiser:
     """Tests for TraceOptimiser class."""
 
-    pytestmark = pytest.mark.asyncio
-
     @pytest.fixture
     def mock_memory_router(self):
         """Create a mock MemoryRouter."""
@@ -48,6 +46,7 @@ class TestTraceOptimiser:
             min_traces=10
         )
 
+    @pytest.mark.asyncio
     async def test_score_recent_traces_returns_1_when_fewer_than_min_traces(
         self, trace_optimiser, mock_memory_router
     ):
@@ -61,6 +60,7 @@ class TestTraceOptimiser:
 
         assert score == 1.0
 
+    @pytest.mark.asyncio
     async def test_score_recent_traces_correctly_computes_success_rate(
         self, trace_optimiser, mock_memory_router
     ):
@@ -79,6 +79,7 @@ class TestTraceOptimiser:
         # Composite = (0.7 * 0.7) + ((1.0 - 0.0) * 0.3) = 0.49 + 0.3 = 0.79
         assert abs(score - 0.79) < 0.01
 
+    @pytest.mark.asyncio
     async def test_score_recent_traces_correctly_applies_error_penalty(
         self, trace_optimiser, mock_memory_router
     ):
@@ -97,6 +98,7 @@ class TestTraceOptimiser:
         # Composite = (0.5 * 0.7) + ((1.0 - 0.5) * 0.3) = 0.35 + 0.15 = 0.5
         assert score == 0.5
 
+    @pytest.mark.asyncio
     async def test_score_recent_traces_returns_composite_score_in_range(
         self, trace_optimiser, mock_memory_router
     ):
@@ -110,6 +112,7 @@ class TestTraceOptimiser:
         score = await trace_optimiser.score_recent_traces("test-worker")
         assert 0.0 <= score <= 1.0
 
+    @pytest.mark.asyncio
     async def test_score_recent_traces_emits_trace_score_computed_event(
         self, trace_optimiser, mock_memory_router, emitter
     ):
@@ -130,6 +133,7 @@ class TestTraceOptimiser:
             for event in events
         )
 
+    @pytest.mark.asyncio
     async def test_score_recent_traces_returns_1_on_memory_router_error(
         self, trace_optimiser, mock_memory_router
     ):
@@ -140,6 +144,7 @@ class TestTraceOptimiser:
 
         assert score == 1.0
 
+    @pytest.mark.asyncio
     async def test_check_and_trigger_update_returns_none_when_score_above_threshold(
         self, trace_optimiser, mock_memory_router
     ):
@@ -153,6 +158,7 @@ class TestTraceOptimiser:
 
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_check_and_trigger_update_calls_instruction_version_manager_when_score_below_threshold(
         self, trace_optimiser, mock_memory_router, mock_instruction_version_manager
     ):
@@ -170,6 +176,7 @@ class TestTraceOptimiser:
 
         assert mock_instruction_version_manager.check_and_trigger_update.call_count >= 1
 
+    @pytest.mark.asyncio
     async def test_check_and_trigger_update_emits_trace_update_triggered_event_when_threshold_crossed(
         self, trace_optimiser, mock_memory_router, mock_instruction_version_manager, emitter
     ):
@@ -194,6 +201,7 @@ class TestTraceOptimiser:
             for event in events
         )
 
+    @pytest.mark.asyncio
     async def test_check_and_trigger_update_returns_proposal_from_instruction_version_manager(
         self, trace_optimiser, mock_memory_router, mock_instruction_version_manager
     ):
@@ -222,6 +230,7 @@ class TestTraceOptimiser:
         assert result is proposal
         assert result.proposal_id == "test-proposal"
 
+    @pytest.mark.asyncio
     async def test_check_and_trigger_update_collision_case_returns_existing_proposal(
         self, trace_optimiser, mock_memory_router, mock_instruction_version_manager
     ):
@@ -251,6 +260,7 @@ class TestTraceOptimiser:
         # MemoryRouter should be called once for score_recent_traces
         assert mock_memory_router.fetch_by_filter.call_count == 1
 
+    @pytest.mark.asyncio
     async def test_score_recent_traces_handles_empty_trace_list_gracefully(
         self, trace_optimiser, mock_memory_router
     ):

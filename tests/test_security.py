@@ -11,9 +11,6 @@ from core.observability import (
 from web.middleware.auth_middleware import AuthMiddleware, SecretsAudit
 
 
-pytestmark = pytest.mark.asyncio
-
-
 @pytest.mark.asyncio
 class TestAuthManager:
     """Tests for AuthManager class."""

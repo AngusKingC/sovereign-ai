@@ -4,7 +4,7 @@ Copy this file when creating a new system/ module.
 Replace all placeholder names with your actual class and method names.
 Delete this docstring before committing.
 
-MANDATORY: Read C:\Jarvis\BEFORE_YOU_CODE.md before writing any code.
+MANDATORY: Read r"C:\Jarvis\BEFORE_YOU_CODE.md" before writing any code.
 """
 
 from __future__ import annotations

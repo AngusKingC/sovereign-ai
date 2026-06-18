@@ -13,8 +13,8 @@ def test_serve_constructs_full_orchestrator():
         with patch('cli.serve.asyncio.run') as mock_asyncio_run:
             # Mock AuthManager to avoid token generation
             with patch('cli.serve.AuthManager') as mock_auth_manager:
-                # Mock the async get_or_create_token method
-                async def mock_get_token():
+                # Mock the get_or_create_token method as synchronous (not async)
+                def mock_get_token():
                     return "test-token"
                 mock_auth_manager.return_value.get_or_create_token = mock_get_token
                 # Make asyncio.run return the token
@@ -39,8 +39,8 @@ def test_serve_worker_factory_accessible():
         with patch('cli.serve.asyncio.run') as mock_asyncio_run:
             # Mock AuthManager to avoid token generation
             with patch('cli.serve.AuthManager') as mock_auth_manager:
-                # Mock the async get_or_create_token method
-                async def mock_get_token():
+                # Mock the get_or_create_token method as synchronous (not async)
+                def mock_get_token():
                     return "test-token"
                 mock_auth_manager.return_value.get_or_create_token = mock_get_token
                 # Make asyncio.run return the token
@@ -59,8 +59,8 @@ def test_serve_registers_ollama_worker():
         with patch('cli.serve.asyncio.run') as mock_asyncio_run:
             # Mock AuthManager to avoid token generation
             with patch('cli.serve.AuthManager') as mock_auth_manager:
-                # Mock the async get_or_create_token method
-                async def mock_get_token():
+                # Mock the get_or_create_token method as synchronous (not async)
+                def mock_get_token():
                     return "test-token"
                 mock_auth_manager.return_value.get_or_create_token = mock_get_token
                 # Make asyncio.run return the token

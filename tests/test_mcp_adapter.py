@@ -6,12 +6,10 @@ from unittest.mock import AsyncMock, Mock
 from adapters.mcp_adapter import MCPAdapter
 from core.observability import MemoryTraceEmitter, TraceEventType
 
-pytestmark = pytest.mark.asyncio
-
-
 class TestMCPAdapter:
     """Test MCPAdapter class."""
 
+    @pytest.mark.asyncio
     async def test_discover_tools_returns_correctly_parsed_list(self) -> None:
         """Test that discover_tools returns correctly parsed list of tool manifests."""
         emitter = MemoryTraceEmitter()
@@ -31,6 +29,7 @@ class TestMCPAdapter:
         assert tools[0]["name"] == "tool1"
         assert tools[1]["name"] == "tool2"
 
+    @pytest.mark.asyncio
     async def test_discover_tools_populates_tool_cache(self) -> None:
         """Test that discover_tools populates self._tool_cache."""
         emitter = MemoryTraceEmitter()
@@ -46,6 +45,7 @@ class TestMCPAdapter:
         assert len(adapter._tool_cache) == 1
         assert adapter._tool_cache[0]["name"] == "tool1"
 
+    @pytest.mark.asyncio
     async def test_discover_tools_emits_mcp_discover_trace_event(self) -> None:
         """Test that discover_tools emits mcp_discover trace event with correct tool count."""
         emitter = MemoryTraceEmitter()
@@ -66,6 +66,7 @@ class TestMCPAdapter:
         assert len(discover_events) == 1
         assert discover_events[0].data["tool_count"] == 2
 
+    @pytest.mark.asyncio
     async def test_call_tool_sends_correct_post_body(self) -> None:
         """Test that call_tool sends correct POST body and returns success dict."""
         emitter = MemoryTraceEmitter()
@@ -86,6 +87,7 @@ class TestMCPAdapter:
         assert result["success"] is True
         assert result["result"] == "test result"
 
+    @pytest.mark.asyncio
     async def test_call_tool_with_empty_cache_calls_discover_first(self) -> None:
         """Test that call_tool with empty cache calls discover_tools() first."""
         emitter = MemoryTraceEmitter()
@@ -102,6 +104,7 @@ class TestMCPAdapter:
 
         mock_client.get.assert_called_once_with("http://localhost:8765/mcp/tools")
 
+    @pytest.mark.asyncio
     async def test_call_tool_with_unknown_tool_raises_value_error(self) -> None:
         """Test that call_tool with unknown tool name raises ValueError."""
         emitter = MemoryTraceEmitter()
@@ -112,6 +115,7 @@ class TestMCPAdapter:
         with pytest.raises(ValueError, match="Tool 'unknown_tool' not found"):
             await adapter.call_tool("unknown_tool", {})
 
+    @pytest.mark.asyncio
     async def test_call_tool_server_error_returns_failure_dict(self) -> None:
         """Test that call_tool when server returns error payload returns failure dict."""
         emitter = MemoryTraceEmitter()
@@ -127,6 +131,7 @@ class TestMCPAdapter:
         assert result["result"] is None
         assert "Server error" in result["error"]
 
+    @pytest.mark.asyncio
     async def test_call_tool_emits_mcp_tool_call_trace_event(self) -> None:
         """Test that call_tool emits mcp_tool_call trace event."""
         emitter = MemoryTraceEmitter()
@@ -146,6 +151,7 @@ class TestMCPAdapter:
         assert len(call_events) >= 1
         assert call_events[0].data["tool"] == "tool1"
 
+    @pytest.mark.asyncio
     async def test_list_cached_tools_returns_empty_list_before_discover(self) -> None:
         """Test that list_cached_tools returns empty list before any discover call."""
         emitter = MemoryTraceEmitter()
@@ -156,6 +162,7 @@ class TestMCPAdapter:
 
         assert tools == []
 
+    @pytest.mark.asyncio
     async def test_list_cached_tools_returns_tool_names_after_discover(self) -> None:
         """Test that list_cached_tools returns tool names after discover_tools() call."""
         emitter = MemoryTraceEmitter()
@@ -175,6 +182,7 @@ class TestMCPAdapter:
 
         assert tools == ["tool1", "tool2"]
 
+    @pytest.mark.asyncio
     async def test_discover_tools_network_failure_emits_error_and_raises(self) -> None:
         """Test that discover_tools network failure emits error trace and raises RuntimeError."""
         emitter = MemoryTraceEmitter()

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -24,6 +25,20 @@ if TYPE_CHECKING:
     from core.orchestrator import Orchestrator
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for FastAPI app."""
+    # Startup: run secrets audit
+    try:
+        _emitter = app.state._emitter
+        audit = SecretsAudit(emitter=_emitter)
+        await audit.audit()
+    except Exception:
+        pass  # Secrets audit failure should not crash the server
+    yield
+    # Shutdown: no cleanup needed currently
+
+
 def create_app(
     orchestrator: "Orchestrator",
     auth_manager: AuthManager,
@@ -39,21 +54,12 @@ def create_app(
     Returns:
         Configured FastAPI application
     """
-    app = FastAPI()
+    app = FastAPI(lifespan=lifespan)
     _emitter = emitter or MemoryTraceEmitter()
+    app.state._emitter = _emitter
 
     # Wire AuthMiddleware into the app
     app.add_middleware(AuthMiddleware, auth_manager=auth_manager)
-
-    # Startup event: run secrets audit
-    @app.on_event("startup")
-    async def startup_event():
-        """Run secrets audit on startup."""
-        try:
-            audit = SecretsAudit(emitter=_emitter)
-            await audit.audit()
-        except Exception:
-            pass  # Secrets audit failure should not crash the server
 
     # GET /health — no auth required
     @app.get("/health")

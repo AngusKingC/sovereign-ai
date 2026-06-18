@@ -1,6 +1,6 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-18 21:58 — post prompt-37.6.1. Added Rule 19 (process discipline) and recurring mistake pattern #6. Fixed 8 skipped tests in test_tui.py using mock-at-instantiation pattern. Completed verification work from prompt-37.6 (Gate 3 output documented). Test baseline: 1080 passed, 29 skipped, 1 failed, 63 warnings (measured with python -m pytest tests/ -q --tb=short). 1 pre-existing flaky failure (test_lm_studio_adapter.py::test_health_check_without_server).
+**Last updated**: 2026-06-18 21:58 — post prompt-37.6.1. Added Rule 19 (process discipline) and recurring mistake pattern #6. Fixed 8 skipped tests in test_tui.py using mock-at-instantiation pattern. Completed verification work from prompt-37.6 (Gate 3 output documented). Test baseline: 1080 passed, 29 skipped, 1 failed, 26 warnings (measured with python -m pytest tests/ -q --tb=short). 1 pre-existing flaky failure (test_lm_studio_adapter.py::test_health_check_without_server).
 **Static analysis baseline**: 365 ruff errors, 116 mypy errors. CI will fail on first run. This is the worklist, not a problem.
 
 ---
@@ -43,6 +43,19 @@ Verified by running the code, not by reading the CHANGELOG:
 That's it. Everything else is either broken, unreachable, or aspirational.
 
 ---
+
+## Test environment prerequisites
+
+The following environment variables are required for full test coverage:
+
+- **ANTHROPIC_API_KEY** — Required for `test_anthropic_adapter.py` (12 tests). Without this key, these tests are skipped.
+- **GEMINI_API_KEY** — Required for `test_gemini_adapter.py` (11 tests). Without this key, these tests are skipped.
+
+These are legitimate environment-conditional skips. The core test suite (1080 tests) runs without these keys.
+
+---
+
+
 
 ## What's broken right now
 
@@ -243,7 +256,7 @@ The template enforces the same discipline structurally — verification gates ar
 9. `git push origin master && git push origin prompt-{N}`
 
 **CHANGELOG append procedure** (PowerShell, because file locks):
-- `[System.IO.File]::ReadAllLines("C:\Jarvis\CHANGELOG.md").Count` for line counts — never `Get-Content | Measure-Object` (truncates large files).
+- `[System.IO.File]::ReadAllLines(r"C:\Jarvis\CHANGELOG.md").Count` for line counts — never `Get-Content | Measure-Object` (truncates large files).
 - `Add-Content` to append — never paste into editor, never use insert operations.
 - Before appending: record current line count. After: verify new count exceeds previous, verify last 5 lines with `Select-Object -Last 5`.
 - Close the file in the IDE before running `Add-Content`.

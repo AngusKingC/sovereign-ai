@@ -8,12 +8,10 @@ from core.observability import MemoryTraceEmitter, TraceEventType, TraceComponen
 from core.schemas import Message, MessageRole
 from adapters.ollama import OllamaAdapter
 
-pytestmark = pytest.mark.asyncio
-
-
 class TestThinkingExtraction:
     """Test <think> tag extraction from Ollama responses."""
 
+    @pytest.mark.asyncio
     async def test_response_with_thinking_tags_emits_event_and_strips_tags(self) -> None:
         """Response with <think> tags should emit event and strip tags from content."""
         emitter = MemoryTraceEmitter()
@@ -56,6 +54,7 @@ class TestThinkingExtraction:
         assert "</think>" not in response.content
         assert "The answer is 42." in response.content
 
+    @pytest.mark.asyncio
     async def test_response_without_thinking_tags_no_event_emitted(self) -> None:
         """Response without <think> tags should not emit event and content unchanged."""
         emitter = MemoryTraceEmitter()
@@ -92,6 +91,7 @@ class TestThinkingExtraction:
         # Assert content unchanged
         assert response.content == "The answer is 42."
 
+    @pytest.mark.asyncio
     async def test_multiline_thinking_block_captured_fully(self) -> None:
         """Multi-line <think> block should be captured fully in event data."""
         emitter = MemoryTraceEmitter()
@@ -129,6 +129,7 @@ class TestThinkingExtraction:
         assert "Line 2 of reasoning" in thinking_content
         assert "Line 3 of reasoning" in thinking_content
 
+    @pytest.mark.asyncio
     async def test_empty_thinking_block_emits_event_with_empty_string(self) -> None:
         """Empty <think> block should emit event with empty thinking string."""
         emitter = MemoryTraceEmitter()

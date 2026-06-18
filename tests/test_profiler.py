@@ -7,9 +7,6 @@ from core.observability import MemoryTraceEmitter, NullTraceEmitter
 from system.profiler import SystemProfiler
 from core.memory_router import MemoryRouter
 
-pytestmark = pytest.mark.asyncio
-
-
 class TestSystemProfiler:
     """Test cases for SystemProfiler."""
 
@@ -26,16 +23,19 @@ class TestSystemProfiler:
         """Create a SystemProfiler instance."""
         return SystemProfiler(memory_router=memory_router, emitter=MemoryTraceEmitter())
 
+    @pytest.mark.asyncio
     async def test_detect_cpu_returns_cpu_info(self, profiler):
         """Test that CPU detection returns CPUInfo."""
         cpu_info = await profiler._detect_cpu()
         assert isinstance(cpu_info, CPUInfo)
 
+    @pytest.mark.asyncio
     async def test_detect_ram_returns_ram_info(self, profiler):
         """Test that RAM detection returns RAMInfo."""
         ram_info = await profiler._detect_ram()
         assert isinstance(ram_info, RAMInfo)
 
+    @pytest.mark.asyncio
     async def test_detect_storage_returns_storage_info_list(self, profiler):
         """Test that storage detection returns list of StorageInfo."""
         storage_info = await profiler._detect_storage()
@@ -43,16 +43,19 @@ class TestSystemProfiler:
         for info in storage_info:
             assert isinstance(info, StorageInfo)
 
+    @pytest.mark.asyncio
     async def test_detect_gpu_returns_gpu_info(self, profiler):
         """Test that GPU detection returns GPUInfo."""
         gpu_info = await profiler._detect_gpu()
         assert isinstance(gpu_info, GPUInfo)
 
+    @pytest.mark.asyncio
     async def test_detect_os_returns_os_info(self, profiler):
         """Test that OS detection returns OSInfo."""
         os_info = await profiler._detect_os()
         assert isinstance(os_info, OSInfo)
 
+    @pytest.mark.asyncio
     async def test_detect_os_handles_missing_docker_gracefully(self, profiler):
         """Test that OS detection handles missing docker gracefully."""
         os_info = await profiler._detect_os()
@@ -60,16 +63,19 @@ class TestSystemProfiler:
         # docker_available should be a boolean, not None
         assert isinstance(os_info.docker_available, bool)
 
+    @pytest.mark.asyncio
     async def test_detect_network_returns_network_info(self, profiler):
         """Test that network detection returns NetworkInfo."""
         network_info = await profiler._detect_network()
         assert isinstance(network_info, NetworkInfo)
 
+    @pytest.mark.asyncio
     async def test_detect_ollama_returns_ollama_info(self, profiler):
         """Test that Ollama detection returns OllamaInfo."""
         ollama_info = await profiler._detect_ollama()
         assert isinstance(ollama_info, OllamaInfo)
 
+    @pytest.mark.asyncio
     async def test_profile_returns_complete_system_profile(self, profiler):
         """Test that profile returns complete SystemProfile."""
         profile = await profiler.profile()
@@ -81,12 +87,14 @@ class TestSystemProfiler:
         assert profile.network is not None
         assert profile.ollama is not None
 
+    @pytest.mark.asyncio
     async def test_profile_caches_result(self, profiler):
         """Test that profile caches the result."""
         profile1 = await profiler.profile()
         profile2 = await profiler.get_cached()
         assert profile1 is profile2
 
+    @pytest.mark.asyncio
     async def test_refresh_reruns_detection(self, profiler):
         """Test that refresh re-runs detection."""
         profile1 = await profiler.profile()
@@ -94,6 +102,7 @@ class TestSystemProfiler:
         # Should be a new profile object
         assert profile1 is not profile2
 
+    @pytest.mark.asyncio
     async def test_get_cached_returns_none_before_first_profile(self, profiler):
         """Test that get_cached returns None before first profile."""
         cached = await profiler.get_cached()

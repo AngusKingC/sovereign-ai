@@ -49,6 +49,10 @@ class TestWebScraperSkill:
             assert "Target Text" in result
             assert "Other Text" not in result
 
+        # Give event loop time to clean up transports
+        import asyncio
+        await asyncio.sleep(0.1)
+
     @pytest.mark.asyncio
     async def test_execute_with_invalid_url(self, skill):
         """Test that invalid URL raises ValueError."""
