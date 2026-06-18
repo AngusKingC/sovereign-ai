@@ -257,26 +257,145 @@ class JarvisTUI(App):
             session_id=None,  # Will be set after session creation
         )
         
-        # Create worker persistence (Postgres if DSN available, None otherwise)
+        # Import all required components for cognition stack
+        from core.memory_router import MemoryRouter
+        from core.skill_registry import SkillRegistry
+        from core.approval_trust import ApprovalTrustRegistry
+        from core.approval_gate import ApprovalGate
+        from core.escalation import EscalationEngine
+        from core.adapter_fallback import AdapterFallbackChain
+        from core.worker_factory import WorkerFactory
+        from core.rating_system import RatingSystem
+        from core.instruction_generator import InstructionGenerator
+        from core.instruction_versioning import InstructionVersionManager
+        from core.evaluator import OutputEvaluator
+        from core.trace_optimiser import TraceOptimiser
+        from core.orchestrator_improvement import OrchestratorImprovementLoop
+        from core.task_state_machine import TaskStateMachine
+        from adapters.ollama import OllamaAdapter
+        
+        # Create memory router (always construct, even if no DSN)
         if db_dsn:
             from memory.postgres import PostgresBackend
-            from core.memory_router import MemoryRouter
-            
-            # Create memory router for worker persistence
-            memory_router = MemoryRouter(postgres_backend=PostgresBackend(dsn=db_dsn, table_name="workers"))
+            self.memory_router = MemoryRouter(postgres_backend=PostgresBackend(dsn=db_dsn, table_name="workers"), emitter=self.emitter)
+        else:
+            self.memory_router = MemoryRouter(backends={}, emitter=self.emitter)
+        
+        # Create worker persistence (Postgres if DSN available, None otherwise)
+        if db_dsn:
             self.worker_persistence = WorkerPersistence(
-                memory_router=memory_router,
+                memory_router=self.memory_router,
                 emitter=self.emitter,
                 obsidian_vault_path=os.getenv("OBSIDIAN_VAULT_PATH"),
             )
         else:
             self.worker_persistence = None
         
-        # Create orchestrator
-        self.orchestrator = Orchestrator(memory_router=None)
+        # Create base dependencies
+        skill_registry = SkillRegistry(emitter=self.emitter)
+        approval_trust = ApprovalTrustRegistry(memory_router=self.memory_router, emitter=self.emitter)
         
-        # Create default worker and register with orchestrator
-        self.worker = create_worker("ollama", "llama3", memory_router=None)
+        # Create TaskStateMachine for ApprovalGate
+        state_machine = TaskStateMachine(memory_router=self.memory_router)
+        
+        # Create ApprovalGate
+        approval_gate = ApprovalGate(
+            state_machine=state_machine,
+            memory_router=self.memory_router,
+            emitter=self.emitter,
+            trust_registry=approval_trust
+        )
+        
+        # Create EscalationEngine
+        escalation_engine = EscalationEngine(
+            approval_gate=approval_gate,
+            memory_router=self.memory_router,
+            emitter=self.emitter
+        )
+        
+        # Create AdapterFallbackChain with Ollama adapter
+        ollama_adapter = OllamaAdapter(model_name="llama3", emitter=self.emitter)
+        fallback_chain = AdapterFallbackChain(
+            adapters=[(ollama_adapter, "llama3")],
+            resource_manager=None,
+            approval_gate=approval_gate,
+            emitter=self.emitter
+        )
+        
+        # Create RatingSystem
+        rating_system = RatingSystem(
+            memory_router=self.memory_router,
+            emitter=self.emitter
+        )
+        
+        # Create InstructionGenerator with Ollama adapter
+        instruction_generator = InstructionGenerator(
+            adapter=ollama_adapter,
+            rating_system=rating_system,
+            memory_router=self.memory_router,
+            obsidian_vault_path=os.getenv("OBSIDIAN_VAULT_PATH"),
+            emitter=self.emitter
+        )
+        
+        # Create InstructionVersionManager
+        instruction_versioning = InstructionVersionManager(
+            instruction_generator=instruction_generator,
+            rating_system=rating_system,
+            approval_gate=approval_gate,
+            memory_router=self.memory_router,
+            emitter=self.emitter
+        )
+        
+        # Create OutputEvaluator
+        output_evaluator = OutputEvaluator(
+            llm_adapter=ollama_adapter,
+            memory_router=self.memory_router,
+            evaluator_model="default",
+            emitter=self.emitter
+        )
+        
+        # Create TraceOptimiser
+        trace_optimiser = TraceOptimiser(
+            memory_router=self.memory_router,
+            instruction_version_manager=instruction_versioning,
+            emitter=self.emitter
+        )
+        
+        # Create Orchestrator first (needed by WorkerFactory and OrchestratorImprovementLoop)
+        self.orchestrator = Orchestrator(
+            memory_router=self.memory_router,
+            improvement_loop=None,  # Will set after creating it
+            cloud_fallback_model="gpt-4o",
+            approval_gate=approval_gate,
+            escalation_engine=escalation_engine,
+            fallback_chain=fallback_chain,
+            a2a_router=None,
+            emitter=self.emitter
+        )
+        
+        # Create WorkerFactory (requires orchestrator)
+        worker_factory = WorkerFactory(
+            skill_registry=skill_registry,
+            orchestrator=self.orchestrator,
+            memory_router=self.memory_router,
+            emitter=self.emitter,
+            persistence=self.worker_persistence,
+            instruction_generator=instruction_generator
+        )
+        
+        # Create OrchestratorImprovementLoop (requires orchestrator)
+        improvement_loop = OrchestratorImprovementLoop(
+            orchestrator=self.orchestrator,
+            instruction_version_manager=instruction_versioning,
+            memory_router=self.memory_router,
+            emitter=self.emitter
+        )
+        
+        # Set improvement_loop on orchestrator
+        self.orchestrator.improvement_loop = improvement_loop
+        
+        # Create default worker with REAL memory_router (not None)
+        self.worker = create_worker("ollama", "llama3", memory_router=self.memory_router)
         self.orchestrator.register_worker("ollama_worker", self.worker)
         
         # Register default handlers with orchestrator and session manager
@@ -371,8 +490,8 @@ class JarvisTUI(App):
     
     def _on_adapter_selected(self, adapter_name: str) -> None:
         """Handle adapter selection from modal."""
-        # Create new worker
-        self.worker = create_worker(adapter_name, "llama3", memory_router=None)
+        # Create new worker with REAL memory_router (not None)
+        self.worker = create_worker(adapter_name, "llama3", memory_router=self.memory_router)
         
         # Re-register worker with orchestrator (replace the old worker)
         self.orchestrator.register_worker("ollama_worker", self.worker)
