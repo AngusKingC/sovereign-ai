@@ -60,11 +60,11 @@ class TestRatingSystem:
         assert rating.created_at is not None
         
         # Verify write was called
-        assert mock_memory_router.write.call_count >= 1
-        call_args = mock_memory_router.write.call_args
-        assert call_args[0][0]["type"] == "worker_rating"
-        assert call_args[0][0]["worker_id"] == "test-worker"
-        assert call_args[0][0]["score"] == 8
+        assert mock_memory_router.write_to_collection.call_count >= 1
+        call_args = mock_memory_router.write_to_collection.call_args
+        assert call_args.kwargs["data"]["type"] == "worker_rating"
+        assert call_args.kwargs["data"]["worker_id"] == "test-worker"
+        assert call_args.kwargs["data"]["score"] == 8
     
     @pytest.mark.asyncio
     async def test_record_rating_rejects_score_outside_1_to_10(self, rating_system):
@@ -90,7 +90,7 @@ class TestRatingSystem:
     @pytest.mark.asyncio
     async def test_get_ratings_returns_correct_workers_ratings_in_order(self, rating_system, mock_memory_router):
         """Test that get_ratings() returns correct worker's ratings in order."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "rating_id": "rating-1",
@@ -128,7 +128,7 @@ class TestRatingSystem:
     @pytest.mark.asyncio
     async def test_get_ratings_respects_limit(self, rating_system, mock_memory_router):
         """Test that get_ratings() respects limit parameter."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "rating_id": f"rating-{i}",
@@ -146,13 +146,13 @@ class TestRatingSystem:
         await rating_system.get_ratings("test-worker", limit=5)
         
         # Verify that limit was passed to fetch
-        call_args = mock_memory_router.fetch.call_args
+        call_args = mock_memory_router.fetch_by_filter.call_args
         assert call_args[1]["limit"] == 5
     
     @pytest.mark.asyncio
     async def test_get_average_score_returns_correct_average_across_all_ratings(self, rating_system, mock_memory_router):
         """Test that get_average_score() returns correct average across all ratings."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "rating_id": "rating-1",
@@ -184,7 +184,7 @@ class TestRatingSystem:
     @pytest.mark.asyncio
     async def test_get_average_score_respects_last_n_parameter(self, rating_system, mock_memory_router):
         """Test that get_average_score() respects last_n parameter."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "rating_id": f"rating-{i}",
@@ -207,7 +207,7 @@ class TestRatingSystem:
     @pytest.mark.asyncio
     async def test_get_average_score_returns_none_when_no_ratings_exist(self, rating_system, mock_memory_router):
         """Test that get_average_score() returns None when no ratings exist."""
-        mock_memory_router.fetch.return_value = []
+        mock_memory_router.fetch_by_filter.return_value = []
         
         avg = await rating_system.get_average_score("test-worker")
         
@@ -217,7 +217,7 @@ class TestRatingSystem:
     async def test_get_trend_returns_positive_float_when_scores_are_improving(self, rating_system, mock_memory_router):
         """Test that get_trend() returns positive float when scores are improving."""
         # Create ratings that improve over time (5, 6, 7, 8, 9, 10)
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "rating_id": f"rating-{i}",
@@ -241,7 +241,7 @@ class TestRatingSystem:
     async def test_get_trend_returns_negative_float_when_scores_are_declining(self, rating_system, mock_memory_router):
         """Test that get_trend() returns negative float when scores are declining."""
         # Create ratings that decline over time (10, 9, 8, 7, 6, 5)
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "rating_id": f"rating-{i}",
@@ -264,7 +264,7 @@ class TestRatingSystem:
     @pytest.mark.asyncio
     async def test_get_trend_returns_none_when_fewer_than_window_ratings_exist(self, rating_system, mock_memory_router):
         """Test that get_trend() returns None when fewer than window ratings exist."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "rating_id": f"rating-{i}",
@@ -286,7 +286,7 @@ class TestRatingSystem:
     @pytest.mark.asyncio
     async def test_get_best_model_returns_model_with_highest_average_score(self, rating_system, mock_memory_router):
         """Test that get_best_model() returns model with highest average score."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "rating_id": "rating-1",
@@ -342,7 +342,7 @@ class TestRatingSystem:
     @pytest.mark.asyncio
     async def test_get_best_model_returns_none_when_no_ratings_exist(self, rating_system, mock_memory_router):
         """Test that get_best_model() returns None when no ratings exist."""
-        mock_memory_router.fetch.return_value = []
+        mock_memory_router.fetch_by_filter.return_value = []
         
         best_model = await rating_system.get_best_model("test-worker")
         
@@ -359,18 +359,18 @@ class TestRatingSystem:
         )
         
         # Verify write was called
-        assert mock_memory_router.write.call_count >= 1
-        call_args = mock_memory_router.write.call_args
-        assert call_args[0][0]["type"] == "worker_comparison"
-        assert call_args[0][0]["task_id"] == "task-123"
-        assert call_args[0][0]["winner_worker_id"] == "worker-a"
-        assert call_args[0][0]["loser_worker_id"] == "worker-b"
-        assert call_args[0][0]["model_used"] == "qwen2.5-coder:7b"
+        assert mock_memory_router.write_to_collection.call_count >= 1
+        call_args = mock_memory_router.write_to_collection.call_args
+        assert call_args.kwargs["data"]["type"] == "worker_comparison"
+        assert call_args.kwargs["data"]["task_id"] == "task-123"
+        assert call_args.kwargs["data"]["winner_worker_id"] == "worker-a"
+        assert call_args.kwargs["data"]["loser_worker_id"] == "worker-b"
+        assert call_args.kwargs["data"]["model_used"] == "qwen2.5-coder:7b"
     
     @pytest.mark.asyncio
     async def test_trace_event_emitted_for_rating_recorded(self, rating_system, mock_memory_router, emitter):
         """Test that trace event is emitted for rating_recorded."""
-        mock_memory_router.write.return_value = None
+        mock_memory_router.write_to_collection.return_value = None
         
         await rating_system.record_rating(
             worker_id="test-worker",
@@ -392,7 +392,7 @@ class TestRatingSystem:
     @pytest.mark.asyncio
     async def test_trace_event_emitted_for_comparison_recorded(self, rating_system, mock_memory_router, emitter):
         """Test that trace event is emitted for comparison_recorded."""
-        mock_memory_router.write.return_value = None
+        mock_memory_router.write_to_collection.return_value = None
         
         await rating_system.record_comparison(
             task_id="task-123",
@@ -413,7 +413,7 @@ class TestRatingSystem:
     @pytest.mark.asyncio
     async def test_trace_event_emitted_for_trend_calculated(self, rating_system, mock_memory_router, emitter):
         """Test that trace event is emitted for trend_calculated."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "rating_id": f"rating-{i}",

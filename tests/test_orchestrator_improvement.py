@@ -77,11 +77,11 @@ class TestOrchestratorImprovementLoop:
         """Test that record_routing_decision persists metrics to memory router."""
         await improvement_loop.record_routing_decision(sample_metrics)
         
-        assert mock_memory_router.write.call_count >= 1
-        call_args = mock_memory_router.write.call_args
-        assert call_args[0][0]["type"] == "orchestrator_metrics"
-        assert call_args[0][0]["task_id"] == "task-1"
-        assert call_args[0][0]["routed_to_worker_id"] == "worker-1"
+        assert mock_memory_router.write_to_collection.call_count >= 1
+        call_args = mock_memory_router.write_to_collection.call_args
+        assert call_args.kwargs["data"]["type"] == "orchestrator_metrics"
+        assert call_args.kwargs["data"]["task_id"] == "task-1"
+        assert call_args.kwargs["data"]["routed_to_worker_id"] == "worker-1"
     
     @pytest.mark.asyncio
     async def test_record_routing_decision_emits_correct_trace_event_with_correct_fields(
@@ -107,7 +107,7 @@ class TestOrchestratorImprovementLoop:
         self, improvement_loop, mock_memory_router
     ):
         """Test that get_routing_accuracy returns correct proportion from N records."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"task_completed": True}},
             {"content": {"task_completed": True}},
             {"content": {"task_completed": False}},
@@ -124,7 +124,7 @@ class TestOrchestratorImprovementLoop:
         self, improvement_loop, mock_memory_router
     ):
         """Test that get_routing_accuracy returns 0.0 when fewer than min_samples records."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"task_completed": True}},
             {"content": {"task_completed": True}},
             {"content": {"task_completed": False}},
@@ -139,7 +139,7 @@ class TestOrchestratorImprovementLoop:
         self, improvement_loop, mock_memory_router
     ):
         """Test that get_routing_accuracy handles all-failed routing correctly (returns 0.0)."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"task_completed": False}},
             {"content": {"task_completed": False}},
             {"content": {"task_completed": False}},
@@ -156,7 +156,7 @@ class TestOrchestratorImprovementLoop:
         self, improvement_loop, mock_memory_router
     ):
         """Test that get_routing_accuracy handles all-successful routing correctly (returns 1.0)."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"task_completed": True}},
             {"content": {"task_completed": True}},
             {"content": {"task_completed": True}},
@@ -173,7 +173,7 @@ class TestOrchestratorImprovementLoop:
         self, improvement_loop, mock_memory_router
     ):
         """Test that get_rating_trend returns positive slope when ratings are improving."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"user_rating": 5.0}},
             {"content": {"user_rating": 6.0}},
             {"content": {"user_rating": 7.0}},
@@ -190,7 +190,7 @@ class TestOrchestratorImprovementLoop:
         self, improvement_loop, mock_memory_router
     ):
         """Test that get_rating_trend returns negative slope when ratings are declining."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"user_rating": 9.0}},
             {"content": {"user_rating": 8.0}},
             {"content": {"user_rating": 7.0}},
@@ -207,7 +207,7 @@ class TestOrchestratorImprovementLoop:
         self, improvement_loop, mock_memory_router
     ):
         """Test that get_rating_trend returns 0.0 when fewer than min_ratings rated records."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"user_rating": 7.0}},
             {"content": {"user_rating": 8.0}},
         ]  # Only 2 rated records, below min_ratings=3
@@ -221,7 +221,7 @@ class TestOrchestratorImprovementLoop:
         self, improvement_loop, mock_memory_router
     ):
         """Test that get_rating_trend skips records where user_rating is None."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"user_rating": None}},
             {"content": {"user_rating": 7.0}},
             {"content": {"user_rating": None}},
@@ -239,7 +239,7 @@ class TestOrchestratorImprovementLoop:
         self, improvement_loop, mock_memory_router, mock_instruction_version_manager
     ):
         """Test that check_and_trigger_update triggers when accuracy < threshold."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"task_completed": True}},
             {"content": {"task_completed": False}},
             {"content": {"task_completed": False}},
@@ -270,7 +270,7 @@ class TestOrchestratorImprovementLoop:
     ):
         """Test that check_and_trigger_update triggers when rating trend < threshold."""
         # Good accuracy
-        mock_memory_router.fetch.side_effect = [
+        mock_memory_router.fetch_by_filter.side_effect = [
             [{"content": {"task_completed": True}} for _ in range(10)],  # For accuracy check
             [{"content": {"user_rating": 9.0}}, {"content": {"user_rating": 8.0}}, {"content": {"user_rating": 7.0}}]  # For trend check
         ]
@@ -297,7 +297,7 @@ class TestOrchestratorImprovementLoop:
     ):
         """Test that check_and_trigger_update does NOT trigger when both metrics are healthy."""
         # Good accuracy
-        mock_memory_router.fetch.side_effect = [
+        mock_memory_router.fetch_by_filter.side_effect = [
             [{"content": {"task_completed": True}} for _ in range(10)],  # For accuracy check
             [{"content": {"user_rating": 7.0}}, {"content": {"user_rating": 8.0}}, {"content": {"user_rating": 9.0}}]  # For trend check
         ]
@@ -311,7 +311,7 @@ class TestOrchestratorImprovementLoop:
         self, improvement_loop, mock_memory_router, mock_instruction_version_manager, emitter
     ):
         """Test that check_and_trigger_update emits correct trace event when triggered."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"task_completed": True}},
             {"content": {"task_completed": False}},
             {"content": {"task_completed": False}},
@@ -347,7 +347,7 @@ class TestOrchestratorImprovementLoop:
     ):
         """Test that check_and_trigger_update returns None when no update needed."""
         # Good accuracy and good trend
-        mock_memory_router.fetch.side_effect = [
+        mock_memory_router.fetch_by_filter.side_effect = [
             [{"content": {"task_completed": True}} for _ in range(10)],
             [{"content": {"user_rating": 7.0}}, {"content": {"user_rating": 8.0}}, {"content": {"user_rating": 9.0}}]
         ]

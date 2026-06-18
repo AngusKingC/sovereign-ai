@@ -280,8 +280,8 @@ class TestOutputEvaluator:
             worker_id="worker-1"
         )
         
-        assert mock_memory_router.write.call_count == 1
-        call_args = mock_memory_router.write.call_args
+        assert mock_memory_router.write_to_collection.call_count == 1
+        call_args = mock_memory_router.write_to_collection.call_args
         assert call_args[1]["document_id"] == "evaluation:task-1:worker-1"
     
     @pytest.mark.asyncio
@@ -317,7 +317,7 @@ class TestOutputEvaluator:
         self, evaluator, mock_memory_router
     ):
         """Test that get_worker_evaluations returns records for the given worker."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "record_id": "record-1",
@@ -341,7 +341,7 @@ class TestOutputEvaluator:
         self, evaluator, mock_memory_router
     ):
         """Test that get_worker_evaluations returns empty list when no records exist."""
-        mock_memory_router.fetch.return_value = []
+        mock_memory_router.fetch_by_filter.return_value = []
         
         records = await evaluator.get_worker_evaluations("worker-1", n=20)
         

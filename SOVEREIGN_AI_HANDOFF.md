@@ -327,6 +327,7 @@ Once Plans 36-40 land, the foundation is solid: `jarvis serve` works, `jarvis` w
 15. `ApprovalTrustRegistry` MUST be consulted by `ApprovalGate` before raising any approval request.
 16. Auth middleware MUST wrap ALL FastAPI routes and WebSocket handshakes. No unauthenticated endpoints except `/health`.
 17. No broad `except Exception: pass` without an inline comment explaining why the exception is intentionally swallowed. Every swallowed exception must emit a trace event at WARNING level. (Currently violated in dozens of places — Plan 42 will audit and fix.)
+18. Tests change with code. When you modify production code, you MUST update the corresponding test file(s) in the same step. Run the specific test file after each production file change. The full test suite MUST pass (green) before tagging. Tagging with a red test suite is forbidden.
 
 ---
 
@@ -374,6 +375,8 @@ Four patterns account for ~90% of the mistakes in the CHANGELOG. The other 18 pa
 3. **Localised fixes for systemic bugs.** When a bug is found in one file, search the codebase for the same pattern before closing the prompt. 35.6d Bug 5 fixed the `MemoryRouter.fetch(dict)` call in `session.py` and `command_history.py` but the same bug exists in 15+ other files. Use `grep` or `mypy` to find all instances.
 
 4. **Broad `except Exception: pass` hiding real failures.** Every audit finding about "dead wiring" traces back to a try/except that swallowed the error that would have told you the wiring was broken. If you must use broad except, emit a trace event at WARNING level with the exception message. If you can use a narrower exception type, do.
+
+5. **Tagging with a red test suite is forbidden.** The full test suite MUST pass (green) before tagging. If the test suite is red, STOP and fix it. Do not tag and promise to fix later. This is the root cause of Prompt 37.1 — Prompt 37 tagged with 69 test failures.
 
 ---
 

@@ -16,6 +16,28 @@ class MockMemoryRouter:
     async def write(self, data: dict) -> None:
         """Mock write."""
         self.writes.append(data)
+    
+    async def fetch(self, task_id: str, query: str) -> Mock:
+        """Mock fetch."""
+        mock_result = Mock()
+        mock_result.data = None
+        return mock_result
+    
+    async def fetch_by_filter(self, filter: dict, collection: str | None = None, limit: int | None = None, filter_func=None) -> list:
+        """Mock fetch_by_filter."""
+        return []
+    
+    async def write_to_collection(self, data: dict, collection: str, document_id: str | None = None) -> None:
+        """Mock write_to_collection."""
+        self.writes.append({"data": data, "collection": collection, "document_id": document_id})
+    
+    async def get_global_context(self, caller_id: str = "orchestrator") -> None:
+        """Mock get_global_context."""
+        return None
+    
+    async def set_global_context(self, context: dict, caller_id: str = "orchestrator") -> None:
+        """Mock set_global_context."""
+        pass
 
 
 @pytest.mark.asyncio

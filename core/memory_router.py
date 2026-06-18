@@ -513,7 +513,7 @@ class MemoryRouter:
         except Exception:
             pass
 
-    async def get_global_context(self, caller_id: str = "orchestrator") -> Any:
+    async def get_global_context(self, caller_id: str = "orchestrator") -> "StrategicContext | None":
         """Get the shared global StrategicContext.
 
         Args:

@@ -63,23 +63,23 @@ class TestWorkerPersistence:
     @pytest.mark.asyncio
     async def test_save_writes_to_postgres(self, worker_persistence, sample_profile, mock_memory_router):
         """Test that save() writes to PostgreSQL."""
-        mock_memory_router.fetch.return_value = []  # No existing worker
+        mock_memory_router.fetch_by_filter.return_value = []  # No existing worker
         
         await worker_persistence.save(sample_profile)
         
         # Verify write was called
-        mock_memory_router.write.assert_called_once()
-        call_args = mock_memory_router.write.call_args
-        assert call_args[1]["collection"] == "workers"
-        assert call_args[0][0]["type"] == "worker_profile"
-        assert call_args[0][0]["worker_id"] == "test-worker"
-        assert call_args[0][0]["is_current"] is True
+        mock_memory_router.write_to_collection.assert_called_once()
+        call_args = mock_memory_router.write_to_collection.call_args
+        assert call_args.kwargs["collection"] == "workers"
+        assert call_args.kwargs["data"]["type"] == "worker_profile"
+        assert call_args.kwargs["data"]["worker_id"] == "test-worker"
+        assert call_args.kwargs["data"]["is_current"] is True
     
     @pytest.mark.asyncio
     async def test_save_increments_version_on_update(self, worker_persistence, sample_profile, mock_memory_router):
         """Test that save() increments version on update."""
         # Simulate existing worker with version 1
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"version": 1, "profile": sample_profile.model_dump()}}
         ]
         
@@ -92,24 +92,24 @@ class TestWorkerPersistence:
     async def test_save_marks_old_version_as_not_current(self, worker_persistence, sample_profile, mock_memory_router):
         """Test that save() marks old version as is_current=False."""
         # Simulate existing worker
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"version": 1, "profile": sample_profile.model_dump()}}
         ]
         
         await worker_persistence.save(sample_profile)
         
         # Verify write was called twice (once for old version, once for new)
-        assert mock_memory_router.write.call_count == 2
+        assert mock_memory_router.write_to_collection.call_count == 2
         
         # Check that old version was marked as not current
-        first_call = mock_memory_router.write.call_args_list[0]
-        assert first_call[0][0]["is_current"] is False
+        first_call = mock_memory_router.write_to_collection.call_args_list[0]
+        assert first_call.kwargs["data"]["is_current"] is False
     
     @pytest.mark.asyncio
     async def test_load_all_returns_only_current_workers(self, worker_persistence, mock_memory_router):
         """Test that load_all() returns only is_current=True workers."""
         # Set up mock to return only current workers
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "type": "worker_profile",
@@ -129,7 +129,7 @@ class TestWorkerPersistence:
     @pytest.mark.asyncio
     async def test_load_all_returns_empty_list_when_no_workers(self, worker_persistence, mock_memory_router):
         """Test that load_all() returns empty list when no workers persisted."""
-        mock_memory_router.fetch.return_value = []
+        mock_memory_router.fetch_by_filter.return_value = []
         
         profiles = await worker_persistence.load_all()
         
@@ -138,7 +138,7 @@ class TestWorkerPersistence:
     @pytest.mark.asyncio
     async def test_load_all_returns_deprecated_workers(self, worker_persistence, mock_memory_router):
         """Test that load_all() returns DEPRECATED workers (they are current, just not routed)."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "type": "worker_profile",
@@ -158,7 +158,7 @@ class TestWorkerPersistence:
     @pytest.mark.asyncio
     async def test_load_one_returns_correct_worker_by_id(self, worker_persistence, mock_memory_router, sample_profile):
         """Test that load_one() returns correct worker by ID."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "type": "worker_profile",
@@ -178,7 +178,7 @@ class TestWorkerPersistence:
     @pytest.mark.asyncio
     async def test_load_one_returns_none_for_unknown_id(self, worker_persistence, mock_memory_router):
         """Test that load_one() returns None for unknown ID."""
-        mock_memory_router.fetch.return_value = []
+        mock_memory_router.fetch_by_filter.return_value = []
         
         profile = await worker_persistence.load_one("unknown-worker")
         
@@ -187,7 +187,7 @@ class TestWorkerPersistence:
     @pytest.mark.asyncio
     async def test_deprecate_sets_status_to_deprecated(self, worker_persistence, sample_profile, mock_memory_router):
         """Test that deprecate() sets status to WorkerStatus.DEPRECATED."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "type": "worker_profile",
@@ -201,15 +201,15 @@ class TestWorkerPersistence:
         await worker_persistence.deprecate("test-worker")
         
         # Verify save was called with updated status
-        assert mock_memory_router.write.call_count >= 1
+        assert mock_memory_router.write_to_collection.call_count >= 1
         # The last call should be the save with DEPRECATED status
-        last_call = mock_memory_router.write.call_args_list[-1]
-        assert last_call[0][0]["profile"]["status"] == WorkerStatus.DEPRECATED
+        last_call = mock_memory_router.write_to_collection.call_args_list[-1]
+        assert last_call.kwargs["data"]["profile"]["status"] == WorkerStatus.DEPRECATED
     
     @pytest.mark.asyncio
     async def test_archive_sets_status_to_archived(self, worker_persistence, sample_profile, mock_memory_router):
         """Test that archive() sets status to WorkerStatus.ARCHIVED."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "type": "worker_profile",
@@ -223,10 +223,10 @@ class TestWorkerPersistence:
         await worker_persistence.archive("test-worker")
         
         # Verify save was called with updated status
-        assert mock_memory_router.write.call_count >= 1
+        assert mock_memory_router.write_to_collection.call_count >= 1
         # The last call should be the save with ARCHIVED status
-        last_call = mock_memory_router.write.call_args_list[-1]
-        assert last_call[0][0]["profile"]["status"] == WorkerStatus.ARCHIVED
+        last_call = mock_memory_router.write_to_collection.call_args_list[-1]
+        assert last_call.kwargs["data"]["profile"]["status"] == WorkerStatus.ARCHIVED
     
     @pytest.mark.asyncio
     async def test_get_version_history_returns_all_versions_ascending(self, worker_persistence, mock_memory_router, sample_profile):
@@ -236,7 +236,7 @@ class TestWorkerPersistence:
         profile_v2 = sample_profile.model_copy(update={"version": 2})
         profile_v3 = sample_profile.model_copy(update={"version": 3})
         
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "type": "worker_profile",
@@ -274,13 +274,13 @@ class TestWorkerPersistence:
     @pytest.mark.asyncio
     async def test_trace_events_emitted_on_save_and_load(self, worker_persistence, sample_profile, mock_memory_router, emitter):
         """Test that trace events are emitted on save and load operations."""
-        mock_memory_router.fetch.return_value = []
+        mock_memory_router.fetch_by_filter.return_value = []
         
         # Save
         await worker_persistence.save(sample_profile)
         
         # Load
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "type": "worker_profile",
@@ -308,7 +308,7 @@ class TestWorkerPersistence:
                 emitter=emitter,
                 obsidian_vault_path=temp_dir,
             )
-            mock_memory_router.fetch.return_value = []
+            mock_memory_router.fetch_by_filter.return_value = []
             
             # Reset profile version to 1 for this test
             sample_profile.version = 1

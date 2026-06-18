@@ -168,7 +168,7 @@ class TestScratchpadManager:
         
         # Verify summary was written to memory
         assert len(mock_router.writes) == 1
-        assert custom_summary in mock_router.writes[0]["content"]
+        assert custom_summary in mock_router.writes[0]["data"]["content"]
     
     async def test_compact_without_summary_generates_rule_based_summary(self) -> None:
         """Test compact() without summary generates rule-based summary."""
@@ -213,9 +213,9 @@ class TestScratchpadManager:
         
         # Verify summary was written to memory
         assert len(mock_router.writes) == 1
-        assert mock_router.writes[0]["task_id"] == str(task_id)
-        assert custom_summary in mock_router.writes[0]["content"]
-        assert mock_router.writes[0]["metadata"]["type"] == "scratchpad_summary"
+        assert mock_router.writes[0]["data"]["metadata"]["task_id"] == str(task_id)
+        assert custom_summary in mock_router.writes[0]["data"]["content"]
+        assert mock_router.writes[0]["data"]["metadata"]["type"] == "scratchpad_summary"
     
     async def test_compact_marks_scratchpad_as_compacted(self) -> None:
         """Test compact() marks scratchpad as compacted."""

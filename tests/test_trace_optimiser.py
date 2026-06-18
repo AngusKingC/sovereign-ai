@@ -52,7 +52,7 @@ class TestTraceOptimiser:
         self, trace_optimiser, mock_memory_router
     ):
         """Test that score_recent_traces returns 1.0 when fewer than min_traces traces exist."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"event_type": "tool_call", "level": "info"}}
             for _ in range(5)  # Only 5 traces, below min_traces=10
         ]
@@ -65,7 +65,7 @@ class TestTraceOptimiser:
         self, trace_optimiser, mock_memory_router
     ):
         """Test that score_recent_traces correctly computes success rate from tool call events."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"event_type": "tool_call", "level": "info"}}
             for _ in range(7)  # 7 successful
         ] + [
@@ -83,7 +83,7 @@ class TestTraceOptimiser:
         self, trace_optimiser, mock_memory_router
     ):
         """Test that score_recent_traces correctly applies error penalty."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"event_type": "tool_call", "level": "info"}}
             for _ in range(5)  # 5 successful
         ] + [
@@ -102,7 +102,7 @@ class TestTraceOptimiser:
     ):
         """Test that score_recent_traces returns composite score in [0.0, 1.0] range (clamp test)."""
         # All errors - should clamp to 0.0
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"event_type": "tool_call", "level": "error"}}
             for _ in range(20)
         ]
@@ -114,7 +114,7 @@ class TestTraceOptimiser:
         self, trace_optimiser, mock_memory_router, emitter
     ):
         """Test that score_recent_traces emits trace_score_computed event with correct fields."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"event_type": "tool_call", "level": "info"}}
             for _ in range(10)
         ]
@@ -134,7 +134,7 @@ class TestTraceOptimiser:
         self, trace_optimiser, mock_memory_router
     ):
         """Test that score_recent_traces returns 1.0 (fail safe) when MemoryRouter raises."""
-        mock_memory_router.fetch.side_effect = Exception("MemoryRouter error")
+        mock_memory_router.fetch_by_filter.side_effect = Exception("MemoryRouter error")
 
         score = await trace_optimiser.score_recent_traces("test-worker")
 
@@ -144,7 +144,7 @@ class TestTraceOptimiser:
         self, trace_optimiser, mock_memory_router
     ):
         """Test that check_and_trigger_update returns None when score is at or above threshold."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"event_type": "tool_call", "level": "info"}}
             for _ in range(10)
         ]
@@ -158,7 +158,7 @@ class TestTraceOptimiser:
     ):
         """Test that check_and_trigger_update calls InstructionVersionManager.check_and_trigger_update when score is below threshold."""
         # All errors - score will be low
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"event_type": "tool_call", "level": "error"}}
             for _ in range(10)
         ]
@@ -175,7 +175,7 @@ class TestTraceOptimiser:
     ):
         """Test that check_and_trigger_update emits trace_update_triggered event when threshold crossed."""
         # All errors - score will be low
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"event_type": "tool_call", "level": "error"}}
             for _ in range(10)
         ]
@@ -199,7 +199,7 @@ class TestTraceOptimiser:
     ):
         """Test that check_and_trigger_update returns the VersionUpdateProposal from InstructionVersionManager."""
         # All errors - score will be low
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"event_type": "tool_call", "level": "error"}}
             for _ in range(10)
         ]
@@ -227,7 +227,7 @@ class TestTraceOptimiser:
     ):
         """Test that check_and_trigger_update returns existing proposal (returned by InstructionVersionManager) without calling MemoryRouter a second time."""
         # All errors - score will be low
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {"content": {"event_type": "tool_call", "level": "error"}}
             for _ in range(10)
         ]
@@ -249,14 +249,14 @@ class TestTraceOptimiser:
 
         assert result is proposal
         # MemoryRouter should be called once for score_recent_traces
-        assert mock_memory_router.fetch.call_count == 1
+        assert mock_memory_router.fetch_by_filter.call_count == 1
 
     async def test_score_recent_traces_handles_empty_trace_list_gracefully(
         self, trace_optimiser, mock_memory_router
     ):
         """Test that score_recent_traces handles empty trace list (no tool call events) gracefully — returns computed score, not an exception."""
         # Empty traces
-        mock_memory_router.fetch.return_value = []
+        mock_memory_router.fetch_by_filter.return_value = []
 
         score = await trace_optimiser.score_recent_traces("test-worker")
 

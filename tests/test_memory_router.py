@@ -24,8 +24,8 @@ class MockMemoryBackend(MemoryBackend):
         self.storage: list[dict[str, Any]] = []
 
     async def fetch(self, task: Task) -> list[dict[str, Any]]:
-        """Fetch memory - returns mock data."""
-        return [{"content": f"Memory for {task.intent}", "source": "mock"}]
+        """Fetch memory - returns from storage (round-trippable)."""
+        return list(self.storage)
 
     async def write(self, data: dict[str, Any]) -> None:
         """Write data to storage."""
@@ -98,6 +98,10 @@ class TestMemoryRouter:
 
         import asyncio
 
+        # Write data first, then fetch it
+        data = {"content": f"Memory for {sample_task.intent}", "source": "mock"}
+        asyncio.run(router.write(data, backend_name="mock"))
+
         memory = asyncio.run(router.fetch(sample_task))
 
         assert len(memory) == 1
@@ -113,6 +117,12 @@ class TestMemoryRouter:
         )
 
         import asyncio
+
+        # Write data to both backends first, then fetch
+        data1 = {"content": "Memory from backend1", "source": "backend1"}
+        data2 = {"content": "Memory from backend2", "source": "backend2"}
+        asyncio.run(router.write(data1, backend_name="backend1"))
+        asyncio.run(router.write(data2, backend_name="backend2"))
 
         memory = asyncio.run(router.fetch(sample_task))
 
@@ -212,9 +222,13 @@ class TestMemoryRouter:
 
         import asyncio
 
+        # Write data first, then fetch by filter
+        data = {"content": "test data", "type": "test"}
+        asyncio.run(router.write_to_collection(data=data, collection="test_collection"))
+
         results = asyncio.run(router.fetch_by_filter(filter={"type": "test"}, collection="test_collection"))
 
-        # Mock backend returns a single entry, filter matching should pass it through
+        # Mock backend returns the written entry, filter matching should pass it through
         assert len(results) == 1
 
     def test_fetch_by_filter_with_limit(self, mock_backend):

@@ -36,6 +36,10 @@ class TestInstructionGenerator:
         router = Mock()
         router.write = AsyncMock()
         router.fetch = AsyncMock()
+        router.fetch_by_filter = AsyncMock(return_value=[])
+        router.write_to_collection = AsyncMock()
+        router.get_global_context = AsyncMock(return_value=None)
+        router.set_global_context = AsyncMock()
         return router
     
     @pytest.fixture
@@ -171,12 +175,12 @@ class TestInstructionGenerator:
         )
         
         # Verify changelog entry was written
-        assert mock_memory_router.write.call_count >= 2
-        changelog_call = [call for call in mock_memory_router.write.call_args_list 
-                         if call[0][0].get("type") == "instruction_changelog"]
+        assert mock_memory_router.write_to_collection.call_count >= 2
+        changelog_call = [call for call in mock_memory_router.write_to_collection.call_args_list 
+                         if call.kwargs.get("data", {}).get("type") == "instruction_changelog"]
         assert len(changelog_call) == 1
-        assert changelog_call[0][0][0]["version"] == 1
-        assert changelog_call[0][0][0]["trigger"] == "Initial generation"
+        assert changelog_call[0].kwargs["data"]["version"] == 1
+        assert changelog_call[0].kwargs["data"]["trigger"] == "Initial generation"
     
     @pytest.mark.asyncio
     async def test_update_instruction_file_increments_version(
@@ -242,10 +246,10 @@ class TestInstructionGenerator:
         )
         
         # Verify changelog entry was written with new version
-        changelog_call = [call for call in mock_memory_router.write.call_args_list 
-                         if call[0][0].get("type") == "instruction_changelog"]
+        changelog_call = [call for call in mock_memory_router.write_to_collection.call_args_list 
+                         if call.kwargs.get("data", {}).get("type") == "instruction_changelog"]
         assert len(changelog_call) >= 1
-        assert changelog_call[-1][0][0]["version"] == 2
+        assert changelog_call[-1].kwargs["data"]["version"] == 2
     
     @pytest.mark.asyncio
     async def test_update_instruction_file_includes_trigger_in_changelog_entry(
@@ -277,9 +281,9 @@ class TestInstructionGenerator:
             trigger="Performance decline"
         )
         
-        changelog_call = [call for call in mock_memory_router.write.call_args_list 
-                         if call[0][0].get("type") == "instruction_changelog"]
-        assert changelog_call[-1][0][0]["trigger"] == "Performance decline"
+        changelog_call = [call for call in mock_memory_router.write_to_collection.call_args_list 
+                         if call.kwargs.get("data", {}).get("type") == "instruction_changelog"]
+        assert changelog_call[-1].kwargs["data"]["trigger"] == "Performance decline"
     
     @pytest.mark.asyncio
     async def test_update_instruction_file_includes_rating_trend_in_changelog_entry_when_available(
@@ -311,16 +315,16 @@ class TestInstructionGenerator:
             trigger="Performance decline"
         )
         
-        changelog_call = [call for call in mock_memory_router.write.call_args_list 
-                         if call[0][0].get("type") == "instruction_changelog"]
-        assert changelog_call[-1][0][0]["rating_trend"] == -0.5
+        changelog_call = [call for call in mock_memory_router.write_to_collection.call_args_list 
+                         if call.kwargs.get("data", {}).get("type") == "instruction_changelog"]
+        assert changelog_call[-1].kwargs["data"]["rating_trend"] == -0.5
     
     @pytest.mark.asyncio
     async def test_get_instruction_file_returns_existing_file(
         self, instruction_generator, mock_memory_router
     ):
         """Test that get_instruction_file returns existing file."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "worker_id": "test-worker",
@@ -344,7 +348,7 @@ class TestInstructionGenerator:
         self, instruction_generator, mock_memory_router
     ):
         """Test that get_instruction_file returns None when not found."""
-        mock_memory_router.fetch.return_value = []
+        mock_memory_router.fetch_by_filter.return_value = []
         
         instruction_file = await instruction_generator.get_instruction_file("test-worker")
         
@@ -355,7 +359,7 @@ class TestInstructionGenerator:
         self, instruction_generator, mock_memory_router
     ):
         """Test that get_instruction_changelog returns entries in order."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "worker_id": "test-worker",

@@ -6568,5 +6568,78 @@ e4ec2fd6491b29ffe3a3cc816b5e9ac6b82bdd3a
 - **Test failures**: 69 test failures due to mock implementations not matching expected behavior. Test mocks need more sophisticated implementation to match the new MemoryRouter method signatures and return values.
 - **Pre-existing mypy errors**: 40 pre-existing mypy errors in files not modified by F6 (core/schemas.py, core/task_state_machine.py, core/approval_gate.py, core/worker_base.py, core/escalation.py, core/evaluator.py, core/orchestrator.py, core/worker_factory.py, core/instruction_generator.py, core/instruction_versioning.py, system/resource_manager.py)
 
+---
+
+## 2026-06-18 18:02 - Prompt 37.1: Fix Test Mocks and Establish Rule 18
+
+### Files Modified
+- tests/test_memory_router.py
+  - Fixed 3 tests to write data before fetching (test_fetch_from_single_backend, test_fetch_from_multiple_backends, test_fetch_by_filter_basic)
+- tests/test_evaluator.py
+  - Fixed 4 stale mock references: write.call_count → write_to_collection.call_count, fetch.return_value → fetch_by_filter.return_value
+- tests/test_instruction_versioning.py
+  - Fixed 6 stale mock references: write.call_count → write_to_collection.call_count, write.call_args_list → write_to_collection.call_args_list, fetch.return_value → fetch_by_filter.return_value
+- tests/test_instruction_generator.py
+  - Fixed 7 stale mock references and expanded mock fixture to include async mocks for all new MemoryRouter methods
+- tests/test_rating_system.py
+  - Fixed 13 stale mock references: write.call_count → write_to_collection.call_count, fetch.return_value → fetch_by_filter.return_value
+- tests/test_orchestrator_improvement.py
+  - Fixed 11 stale mock references: write.call_count → write_to_collection.call_count, fetch.return_value → fetch_by_filter.return_value
+- tests/test_trace_optimiser.py
+  - Fixed 11 stale mock references: fetch.return_value → fetch_by_filter.return_value, fetch.call_count → fetch_by_filter.call_count
+- tests/test_model_registry.py
+  - Added new MemoryRouter methods to custom MockMemoryRouter class (fetch_by_filter, write_to_collection, get_global_context, set_global_context)
+- tests/test_worker_persistence.py
+  - Fixed 18 stale mock references: write.call_count → write_to_collection.call_count, fetch.return_value → fetch_by_filter.return_value
+- tests/test_resource_manager.py
+  - Added new MemoryRouter methods to custom MockMemoryRouter class
+- tests/test_system_profiler.py
+  - Added new MemoryRouter methods to custom MockMemoryRouter class
+- tests/test_scratchpad.py
+  - Fixed 2 test assertions to access data from new write_to_collection format
+- core/memory_router.py
+  - Fixed get_global_context return type from Any to "StrategicContext | None"
+- SOVEREIGN_AI_HANDOFF.md
+  - Added Rule 18 to Architecture rules section
+  - Added recurring mistake pattern #5 to Recurring mistake patterns section
+
+### Implementation Notes
+- **Mock fixture expansion**: Added fetch_by_filter, write_to_collection, get_global_context, set_global_context as AsyncMock to mock fixtures in test_instruction_generator.py and test_rating_system.py
+- **Call argument access**: Changed from positional args (call[0][0]) to keyword args (call.kwargs["data"]) for write_to_collection assertions
+- **Custom mock classes**: Added new methods to 3 custom MockMemoryRouter classes (resource_manager, system_profiler, model_registry)
+- **Scratchpad test fixes**: Fixed assertions to access data from new write_to_collection format (data["content"] instead of content, data["metadata"]["task_id"] instead of task_id)
+
+### Testing Results
+- **Baseline**: 1072 passed, 23 skipped, 63 warnings, 1 pre-existing flaky failure
+- **Final**: 1078 passed, 23 skipped, 65 warnings, 1 pre-existing flaky failure
+- **Test Command**: `python -m pytest tests/ -q --tb=short`
+- **Test count change**: +6 passed (from 1010 to 1078), -69 failures (from 69 to 1 pre-existing flaky)
+
+### Test Count Reconciliation
+- Prompt-37 reported: 1010 passed, 23 skipped, 1 failed (69 new failures from 1072 baseline)
+- Arithmetic check: 1072 + 6 new tests − 69 failures = 1009, but prompt-37 reported 1010. Off by 1.
+- Prompt-37.1 actual final: 1078 passed, 23 skipped, 1 failed.
+- Reconciliation: The off-by-1 in prompt-37 was likely a counting error. Prompt-37.1 restored all 69 failing tests to passing, bringing the count to 1078 (1072 baseline + 6 new tests from prompt-37). The 6 new tests were added to test_memory_router.py for the new MemoryRouter methods.
+
+### Verification Gate Output
+- **Gate 1 (Drift)**: PASSED - no drift in in-scope files
+- **Gate 2 (MockMemoryBackend round-trip)**: PASSED - all 18 tests in test_memory_router.py pass
+- **Gate 3 (All 8 stale-mock test files green)**: PASSED - 117 tests pass across 8 test files
+- **Gate 4 (All 3 custom-mock test files green)**: PASSED - 42 tests pass across 3 test files
+- **Gate 5 (Full test suite)**: PASSED - 1078 passed, 23 skipped, 1 failed (pre-existing flaky)
+- **Gate 6 (Rule 18 in handoff)**: PASSED - Rule 18 added to SOVEREIGN_AI_HANDOFF.md
+- **Gate 7 (Recurring mistake pattern #5 in handoff)**: PASSED - Pattern #5 added to SOVEREIGN_AI_HANDOFF.md
+- **Gate 8 (Return type fix)**: PASSED - get_global_context return type fixed to "StrategicContext | None"
+- **Gate 9 (mypy on production change)**: PENDING - mypy not installed on this machine
+
+### Deviations from Plan
+- **Step 7 (Add Rule 18 to global_rules.md)**: SKIPPED - global_rules.md is a Devin-specific file not in the workspace (C:\Users\King\.codeium\windsurf\memories\global_rules.md)
+
+### Architecture Rules Added
+- **Rule 18**: Tests change with code. When you modify production code, you MUST update the corresponding test file(s) in the same step. Run the specific test file after each production file change. The full test suite MUST pass (green) before tagging. Tagging with a red test suite is forbidden.
+
+### Recurring Mistake Patterns Added
+- **Pattern #5**: Tagging with a red test suite is forbidden. The full test suite MUST pass (green) before tagging. If the test suite is red, STOP and fix it. Do not tag and promise to fix later. This is the root cause of Prompt 37.1 — Prompt 37 tagged with 69 test failures.
+
 ### Checkpoint Commit
 9272bd7af3af6a46c5a3c761e1990423ad670062

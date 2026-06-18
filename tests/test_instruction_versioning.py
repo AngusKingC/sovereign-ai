@@ -252,11 +252,11 @@ class TestInstructionVersionManager:
         await version_manager.approve_update(proposal)
         
         # Verify proposal status was updated
-        assert mock_memory_router.write.call_count >= 2
-        status_call = [call for call in mock_memory_router.write.call_args_list 
-                      if call[0][0].get("type") == "version_update_proposal"]
+        assert mock_memory_router.write_to_collection.call_count >= 2
+        status_call = [call for call in mock_memory_router.write_to_collection.call_args_list 
+                      if call.kwargs.get("data", {}).get("type") == "version_update_proposal"]
         assert len(status_call) >= 1
-        assert status_call[-1][0][0]["status"] == "approved"
+        assert status_call[-1].kwargs["data"]["status"] == "approved"
     
     @pytest.mark.asyncio
     async def test_approve_update_raises_if_proposal_status_is_not_pending(
@@ -336,10 +336,10 @@ class TestInstructionVersionManager:
         await version_manager.rollback("test-worker", 1)
         
         # Verify changelog entry was created with correct trigger
-        changelog_call = [call for call in mock_memory_router.write.call_args_list 
-                         if call[0][0].get("type") == "instruction_changelog"]
+        changelog_call = [call for call in mock_memory_router.write_to_collection.call_args_list 
+                         if call.kwargs.get("data", {}).get("type") == "instruction_changelog"]
         assert len(changelog_call) >= 1
-        assert changelog_call[-1][0][0]["trigger"] == "rollback to v1"
+        assert changelog_call[-1].kwargs["data"]["trigger"] == "rollback to v1"
     
     @pytest.mark.asyncio
     async def test_rollback_raises_if_target_version_does_not_exist(
@@ -360,7 +360,7 @@ class TestInstructionVersionManager:
         self, version_manager, mock_memory_router
     ):
         """Test that get_version_history returns all versions oldest first."""
-        mock_memory_router.fetch.return_value = [
+        mock_memory_router.fetch_by_filter.return_value = [
             {
                 "content": {
                     "worker_id": "test-worker",
@@ -617,11 +617,11 @@ class TestInstructionVersionManager:
         await version_manager.reject_update(proposal)
 
         # Verify proposal status was updated
-        assert mock_memory_router.write.call_count >= 1
-        status_call = [call for call in mock_memory_router.write.call_args_list
-                      if call[0][0].get("type") == "version_update_proposal"]
+        assert mock_memory_router.write_to_collection.call_count >= 1
+        status_call = [call for call in mock_memory_router.write_to_collection.call_args_list
+                      if call.kwargs.get("data", {}).get("type") == "version_update_proposal"]
         assert len(status_call) >= 1
-        assert status_call[-1][0][0]["status"] == "rejected"
+        assert status_call[-1].kwargs["data"]["status"] == "rejected"
 
     @pytest.mark.asyncio
     async def test_reject_update_clears_pending_proposal_tracking(
