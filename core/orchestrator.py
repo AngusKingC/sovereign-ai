@@ -667,3 +667,30 @@ class Orchestrator:
         if hasattr(self, "_active_tasks"):
             return self._active_tasks
         return []
+
+    async def list_workers(self) -> list[dict]:
+        """
+        Return list of registered workers with their profile metadata.
+
+        Returns:
+            List of dicts, one per registered worker, with keys:
+            worker_id, worker_type, capabilities, preferred_model,
+            preferred_complexity, tasks_completed, avg_confidence.
+            Workers without a profile return a minimal dict with just worker_id.
+        """
+        result = []
+        for worker_id, worker in self.workers.items():
+            profile = getattr(worker, "profile", None)
+            if profile is None:
+                result.append({"worker_id": worker_id})
+                continue
+            result.append({
+                "worker_id": worker_id,
+                "worker_type": getattr(profile, "worker_type", "unknown"),
+                "capabilities": getattr(profile, "capabilities", []),
+                "preferred_model": getattr(profile, "preferred_model", None),
+                "preferred_complexity": getattr(profile, "preferred_complexity", 0.5),
+                "tasks_completed": getattr(profile, "tasks_completed", 0),
+                "avg_confidence": getattr(profile, "avg_confidence", 0.0),
+            })
+        return result

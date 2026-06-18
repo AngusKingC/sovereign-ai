@@ -20,9 +20,11 @@ def main() -> None:
     """Main entry point."""
     # Check if user is calling 'serve' command
     if len(sys.argv) > 1 and sys.argv[1] == "serve":
-        # Import and call the serve function directly
+        # Strip the 'serve' subcommand from argv so typer.run only sees options
+        # (--host, --port, --reload). Without this, typer sees 'serve' as a
+        # positional argument and crashes with "Got unexpected extra argument".
+        sys.argv = [sys.argv[0]] + sys.argv[2:]
         from cli.serve import serve
-        # Use typer to run the serve command
         import typer
         typer.run(serve)
         return

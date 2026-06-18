@@ -725,3 +725,44 @@ class TestOrchestrator:
         # Empty is fine since no _active_tasks attribute exists
         assert len(tasks) == 0
 
+    @pytest.mark.asyncio
+    async def test_list_workers_returns_registered_workers(self, orchestrator, memory_router):
+        """Test that list_workers returns a list of dicts with worker metadata."""
+        # Register a worker first
+        profile = WorkerProfile(
+            worker_id="test_worker",
+            worker_type="test",
+            depth_preference=0.5,
+            speculation_tolerance=0.5,
+            source_skepticism=0.5,
+            verbosity=0.5,
+            preferred_model="mock-model",
+            escalation_threshold=0.8,
+            capabilities=["test", "general"],
+            preferred_complexity=0.5,
+        )
+        llm = MockLLMAdapter()
+        worker = EchoWorker(profile=profile, llm=llm, memory_router=memory_router)
+        orchestrator.register_worker("test_worker", worker)
+
+        # Call list_workers
+        workers = await orchestrator.list_workers()
+
+        # Assert returns a list with one entry
+        assert isinstance(workers, list)
+        assert len(workers) == 1
+
+        # Assert the worker dict has expected fields
+        w = workers[0]
+        assert w["worker_id"] == "test_worker"
+        assert w["worker_type"] == "test"
+        assert "test" in w["capabilities"]
+        assert w["preferred_model"] == "mock-model"
+
+    @pytest.mark.asyncio
+    async def test_list_workers_returns_empty_list_when_no_workers(self, orchestrator):
+        """Test that list_workers returns empty list when no workers registered."""
+        workers = await orchestrator.list_workers()
+        assert isinstance(workers, list)
+        assert len(workers) == 0
+

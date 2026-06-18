@@ -55,7 +55,7 @@ def serve(
     from workers.ollama_worker import OllamaWorker
     
     # Create base dependencies
-    memory_router = MemoryRouter(backends=[], emitter=emitter)
+    memory_router = MemoryRouter(backends={}, emitter=emitter)
     skill_registry = SkillRegistry(emitter=emitter)
     approval_trust = ApprovalTrustRegistry(memory_router=memory_router, emitter=emitter)
     

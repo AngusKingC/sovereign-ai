@@ -188,3 +188,20 @@ class TestMemoryRouter:
         )
         assert "postgres" in router.backends
         assert router.backends["postgres"] == mock_backend
+
+    def test_memory_router_with_only_postgres_backend(self, mock_backend):
+        """Test that MemoryRouter can be constructed with postgres_backend and no backends arg.
+
+        Regression test for F2: backends was required positional, so
+        MemoryRouter(postgres_backend=...) crashed with TypeError.
+        """
+        router = MemoryRouter(postgres_backend=mock_backend)
+        assert "postgres" in router.backends
+        assert router.backends["postgres"] == mock_backend
+        assert len(router.backends) == 1
+
+    def test_memory_router_with_no_backends_at_all(self):
+        """Test that MemoryRouter can be constructed with no backends at all."""
+        router = MemoryRouter()
+        assert router.backends == {}
+        assert len(router.backends) == 0
