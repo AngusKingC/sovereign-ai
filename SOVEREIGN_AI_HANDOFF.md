@@ -1,7 +1,7 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-18 17:06 — post prompt-37. F6 partially fixed: added new MemoryRouter methods and fixed 33 call sites across 12 files. trajectory_exporter.py uses different pattern not covered by F6 spec. 69 test failures due to mock implementations.
-**Test baseline**: 1010 passed, 23 skipped, 1 failed, 67 warnings (measured with python -m pytest tests/ -q --tb=short). 69 new test failures due to mock implementation details.
+**Last updated**: 2026-06-18 18:21 — post prompt-37.1. Fixed 69 test failures from Prompt 37 by updating stale mock references. Added Rule 18 (tests change with code) and recurring mistake pattern #5 (tagging with red test suite forbidden).
+**Test baseline**: 1078 passed, 23 skipped, 1 failed, 65 warnings (measured with python -m pytest tests/ -q --tb=short). 1 pre-existing flaky failure (test_lm_studio_adapter.py::test_health_check_without_server).
 **Static analysis baseline**: 365 ruff errors, 116 mypy errors. CI will fail on first run. This is the worklist, not a problem.
 
 ---
@@ -361,6 +361,7 @@ Once Plans 36-40 land, the foundation is solid: `jarvis serve` works, `jarvis` w
 | 36 | Fix jarvis serve end-to-end (F1, F2, F3, F5) | 1044 | Fixed 4 regressions; jarvis serve now starts and returns worker listings |
 | 36.5 | Fix llama_cpp test collection | 1072 | Added pytest.importorskip("llama_cpp"); --ignore flag no longer needed |
 | 37 | Fix F6 (MemoryRouter call-signature mismatch) | 1010 | Added new MemoryRouter methods; fixed 33 call sites across 12 files; trajectory_exporter.py pattern not covered; 69 test failures |
+| 37.1 | Fix test mocks and establish Rule 18 | 1078 | Fixed 69 test failures by updating stale mock references; added Rule 18 and recurring mistake pattern #5 |
 
 ---
 
