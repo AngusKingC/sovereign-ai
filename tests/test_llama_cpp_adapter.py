@@ -5,10 +5,16 @@ Single responsibility: Test llama.cpp adapter functionality,
 hardware configuration, and LLM generation.
 """
 
+import pytest
+
+# Skip all tests in this file if llama_cpp is not installed.
+# Without this, pytest aborts at collection with ModuleNotFoundError,
+# which forces every test command to use --ignore=tests/test_llama_cpp_adapter.py
+# and breaks CI (which runs pytest without --ignore).
+pytest.importorskip("llama_cpp")
+
 from datetime import datetime
 from uuid import uuid4
-
-import pytest
 
 from adapters.llama_cpp import LlamaCppAdapter
 from core.schemas import Message, MessageRole
