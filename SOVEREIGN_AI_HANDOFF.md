@@ -374,19 +374,19 @@ Docs are committed separately in steps 7–8 after the tag is already clean and 
 ## Current State
 
 ### Test Baseline
-- **1056 passed, 23 skipped, 62 warnings** (as of Prompt 35.6d / checkpoint prompt-35.6d)
+- **1065 passed, 23 skipped, 62 warnings** (as of Prompt 35.6e / checkpoint prompt-35.6e)
 - Baseline is dynamic — every prompt must exceed the previous count
 - Skipped: `tests/test_llama_cpp_adapter.py` (missing llama_cpp dependency)
 - 62 warnings: FutureWarning from adapters/gemini.py — deferred to Phase 9, do not touch; PytestWarning for async decorator marks on sync methods (test_web_server.py) — harmless; DeprecationWarning from FastAPI Lifespan events — deferred to Phase 9, do not touch. Warning count decreased from 64 to 62 in prompt-35.6d — pre-existing warnings in test_web_server.py, no new warnings.
 - 1 pre-existing flaky failure: `tests/test_lm_studio_adapter.py::test_health_check_without_server` — ignore per global rules
-- Run with: `python -m pytest tests/ -v --ignore=tests/test_llama_cpp_adapter.py` 
+- Run with: `python -m pytest tests/ -v` 
 
 ### Known Issues from Prompt 35.5.2
 - None — prompt-35.6b landed cleanly
 
 ### Git / Backup
 - Repo: `https://github.com/AngusKingC/sovereign-ai` (private)
-- Latest checkpoint tag: `prompt-35.6d`
+- Latest checkpoint tag: `prompt-35.6e`
 - Checkpoint script: `python scripts/checkpoint.py prompt-{N}` (unreliable — do manually)
 - Restore script: `python scripts/restore.py`
 
@@ -525,6 +525,7 @@ Docs are committed separately in steps 7–8 after the tag is already clean and 
 | 35.5.2 | Integrity Check and Final Tag Creation | 1051 (no new tests - checkpoint for user manual correction) |
 | 35.6b | Runtime Bug Fixes + Minimum Cognition Wiring | 1065 (+14 new tests) |
 | 35.6d | Foundation Bug Fixes (Bugs 2–7) | 1056 (no new tests - schema/trace fixes) |
+| 35.6e | CI/CD Pipeline | 1065 (no new tests - GitHub Actions workflow) |
 
 ---
 
@@ -1567,16 +1568,53 @@ Investigated test discrepancy between baseline (1065 passed) and current run (10
 
 ---
 
-#### Prompt 35.6d � Foundation Bug Fixes (New)
-**Status**: IN PROGRESS
+#### Prompt 35.6d — Foundation Bug Fixes
+**Status**: DONE
+**Baseline**: 1056 passed, 23 skipped, 1 pre-existing flaky failure
+(test_lm_studio_adapter.py::test_health_check_without_server — pre-existing, ignore)
 
-Fix seven foundation bugs sequentially, each as an atomic unit of production file + test file + full suite run:
-- Bug 1: MemoryRouter signature mismatch (DONE in prompt-35.6b)
-- Bug 2: StrategicContext field mismatch (core/orchestrator.py, core/schemas.py, tests/test_orchestrator.py)
-- Bug 3: ScopedMemoryRouter TraceEvent migration (core/memory_router.py, tests/test_memory_router.py)
-- Bug 4: AdapterFallbackChain.execute type mismatch (core/adapter_fallback.py, tests/test_adapter_fallback.py)
-- Bug 5: SessionManager/CommandHistory backend.fetch() call (core/session.py, cli/command_history.py, tests/test_session.py, tests/test_command_history.py)
-- Bug 6: WorkerBase emitter default to MemoryTraceEmitter (core/worker_base.py, tests/test_worker_base.py)
-- Bug 7: Add list_workers() to Orchestrator (core/orchestrator.py, tests/test_orchestrator.py)
+Fixes applied:
+- Bug 2: StrategicContext field mismatch — recent_task_summary→active_goals,
+  active_workers→pending_tasks, updated_at→last_updated
+- Bug 3: TraceEvent migration in core/memory_router.py — import from
+  core.observability, correct fields only
+- Bug 4: AdapterFallbackChain.execute — prompt: str → messages: list
+- Bug 5: SessionManager/CommandHistory backend.fetch() — dict filter → Task object
+- Bug 6: EscalationDecision — added missing estimated_cost field
+- Bug 7: Removed unused Layer import in core/escalation.py
+
+Note: Closing sequence was not completed automatically by Devin — triggered
+manually. CHANGELOG entry was below standard verbosity (no per-file detail,
+no mid-implementation failure notes). Next prompt enforces this explicitly.
 
 ---
+
+#### Prompt 35.6e — CI/CD Pipeline
+**Status**: DONE
+
+Created GitHub Actions workflow that runs on every push and PR to master:
+- ruff (linting)
+- mypy (type checking)
+- Full test suite (python -m pytest tests/)
+- Fail the build on any new test failure
+
+Goal: catch the class of regressions that caused 35.6b and 35.6c failures
+(backends=[] instead of {}, typer.run(serve) argv stripping) automatically,
+without relying on Devin running the suite manually.
+
+Files:
+- `.github/workflows/ci.yml` — GitHub Actions workflow with 6 steps (checkout, setup Python, install deps, ruff, mypy, pytest)
+
+Tests: 1065 passed (no new tests - CI workflow only)
+
+---
+
+#### Prompt 35.6f — Wire Cognition Stack End-to-End
+**Status**: IN PROGRESS
+
+Wire the full cognition stack end-to-end:
+- Orchestrator → WorkerFactory → WorkerBase → Adapter → LLM
+- Ensure all components are properly connected and can execute a full task
+- Test with a simple task to verify the complete pipeline works
+
+------

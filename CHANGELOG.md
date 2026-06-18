@@ -6298,3 +6298,41 @@ o00
 - Closing sequence was not completed automatically — triggered manually
 
 ---
+
+
+### 2026-06-18 13:06 - CI/CD Pipeline Implementation
+**Implementation**: Created GitHub Actions workflow for automated testing on every push and pull request to master
+- **File Created**: .github/workflows/ci.yml
+- **Workflow Steps Added**:
+  1. Checkout repository - uses actions/checkout@v4 to access code
+  2. Set up Python 3.11 - uses actions/setup-python@v5 for consistent Python version
+  3. Install dependencies - pip install -r requirements.txt to ensure all dependencies available
+  4. Run ruff check . - linting to catch code style issues early
+  5. Run mypy type checking - static type analysis on core/, adapters/, workers/, system/, cli/, memory/ with --ignore-missing-imports
+  6. Run pytest - full test suite execution to catch regressions
+- **Rationale for Each Step**:
+  - Ruff: Fast Python linter to catch style and potential bug patterns
+  - MyPy: Static type checking to catch type errors before runtime
+  - Pytest: Full test suite to catch the class of regressions that caused 35.6b and 35.6c failures (backends=[] instead of {}, typer.run(serve) argv stripping)
+- **All Steps Use continue-on-error: false** - any failure blocks the merge to prevent broken code from entering master
+- **No --ignore Flag in CI** - runs the full test suite including llama_cpp tests to ensure complete coverage
+
+**Testing Results**:
+- **Local Test Result**: 1065 passed, 23 skipped, 1 pre-existing flaky failure (test_lm_studio_adapter.py::test_health_check_without_server)
+- **Command**: python -m pytest tests/ -v
+- **Last 10 Lines**:
+`
+FAILED tests/test_lm_studio_adapter.py::TestLMStudioAdapter::test_health_check_without_server
+===== 1 failed, 1065 passed, 23 skipped, 62 warnings in 81.00s (0:01:21) ======
+`
+- **Baseline Confirmed**: Zero new failures introduced by CI workflow creation
+
+**GitHub Actions Status**: Will be verified after push
+
+**Warnings/Issues**: None encountered during implementation
+
+**Checkpoint Commit**: adea7ac1b041e2f8fb6e50370b45693741b38ac0
+
+---
+
+
