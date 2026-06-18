@@ -1,7 +1,6 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-18 20:55 — post prompt-37.6. Wired full cognition stack into TUI (Orchestrator, MemoryRouter, ApprovalGate, EscalationEngine, AdapterFallbackChain, WorkerFactory, RatingSystem, InstructionGenerator, InstructionVersionManager, OutputEvaluator, TraceOptimiser, OrchestratorImprovementLoop). Memory is now stateful across TUI queries. 12 subsystems removed from "Built but not reachable" table (now wired in both cli/serve.py and cli/tui.py).
-**Test baseline**: 1072 passed, 37 skipped, 1 failed, 63 warnings (measured with python -m pytest tests/ -q --tb=short). 1 pre-existing flaky failure (test_lm_studio_adapter.py::test_health_check_without_server). 8 new tests in test_tui.py skipped due to OllamaAdapter initialization complexity.
+**Last updated**: 2026-06-18 21:58 — post prompt-37.6.1. Added Rule 19 (process discipline) and recurring mistake pattern #6. Fixed 8 skipped tests in test_tui.py using mock-at-instantiation pattern. Completed verification work from prompt-37.6 (Gate 3 output documented). Test baseline: 1080 passed, 29 skipped, 1 failed, 63 warnings (measured with python -m pytest tests/ -q --tb=short). 1 pre-existing flaky failure (test_lm_studio_adapter.py::test_health_check_without_server).
 **Static analysis baseline**: 365 ruff errors, 116 mypy errors. CI will fail on first run. This is the worklist, not a problem.
 
 ---
@@ -39,7 +38,7 @@ Verified by running the code, not by reading the CHANGELOG:
 - **TUI slash commands** — `/help`, `/status`, `/clear`, `/exit`, `/model`, `/adapter`, `/theme` work. `/adapter ollama` and `/adapter lm_studio` actually switch adapters; the other 9 listed adapters crash with `ValueError` because `cli/adapter_factory.py` only knows those two.
 - **Session manager** — in-memory mode works. Postgres persistence does not (see "What's broken").
 - **Command history** — in-memory mode works. Postgres persistence does not.
-- **Test suite** — 1044 tests pass. Quality varies; some are smoke tests with `assert True` (see Process section).
+- **Test suite** — 1080 tests pass. Quality varies; some are smoke tests with `assert True` (see Process section).
 
 That's it. Everything else is either broken, unreachable, or aspirational.
 
@@ -366,6 +365,7 @@ Once Plans 36-40 land, the foundation is solid: `jarvis serve` works, `jarvis` w
 | 37.1 | Fix test mocks and establish Rule 18 | 1078 | Fixed 69 test failures by updating stale mock references; added Rule 18 and recurring mistake pattern #5 |
 | 37.5 | Finish F6 - add scoped_read/scoped_write | 1072 | Added scoped_read/scoped_write to MemoryRouter; fixed trajectory_exporter (Option 2 fallback); fixed escalation.py; applied Claude's blocking fixes; 6 trajectory_exporter tests skipped (deferred to Plan 45) |
 | 37.6 | Wire TUI Cognition Stack | 1072 | Wired full cognition stack into TUI (Orchestrator, MemoryRouter, ApprovalGate, EscalationEngine, AdapterFallbackChain, WorkerFactory, RatingSystem, InstructionGenerator, InstructionVersionManager, OutputEvaluator, TraceOptimiser, OrchestratorImprovementLoop); 12 subsystems removed from "Built but not reachable" table; 8 new tests in test_tui.py skipped due to OllamaAdapter initialization complexity |
+| 37.6.1 | Process discipline rule + 37.6 verification fix-ups | 1080 | Added Rule 19 (process discipline) and recurring mistake pattern #6 to handoff. Fixed 8 skipped tests in test_tui.py using mock-at-instantiation pattern. Completed verification work from prompt-37.6 (Gate 3 output documented). Added mirror rule to global_rules.md (Rule 24). |
 
 ---
 
