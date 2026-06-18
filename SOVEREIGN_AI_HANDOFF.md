@@ -1,6 +1,9 @@
 # Sovereign AI Agent Framework — Project Handoff
 
 **Last updated**: 2026-06-19 00:48 — post prompt-38. Fixed category 4 (on_event deprecation), category 3 (module-level pytestmark.asyncio on 8 test files), category 6 (invalid escape sequences), category 5 (unawaited coroutine warnings). Partially fixed category 2 (unclosed asyncio transports: 6→4 warnings). Skipped category 1 (google.generativeai deprecation deferred to Phase 9). F7: Changed WorkerBase default emitter to MemoryTraceEmitter. Created cli/__init__.py. Audited skipped tests: 29 legitimate (23 ENV-CONDITIONAL, 6 LEGITIMATE-DEFER). Rule 19 remediation: Deferred manual TUI verification to Plan 38.6. Updated handoff test baseline (63→26 warnings) and added Test environment prerequisites. Verification gates: 8/12 passed (partial success due to warning/skipped count targets exceeded). Test baseline: 1080 passed, 29 skipped, 1 failed, 26 warnings (measured with python -m pytest tests/ -q --tb=short). 1 pre-existing flaky failure (test_lm_studio_adapter.py::test_health_check_without_server).
+
+**Post-prompt-38 documentation update** (2026-06-19, separate from any prompt): Added "Claude review workflow (token-economical)" subsection to the Workflow section. Documents the new per-prompt context brief pattern, deprecates `CLAUDE_REVIEWER_ROLE.md` as a separate upload, and codifies the round-1-full / round-2-diff / round-3-rarely review structure. Known landmines list updated with prompt-38 tag-push issue, Plan 38.5 re-guessing-disproved-hypotheses issue, per-file-count-mismatch issue, and drift-check-false-positive-on-docs-files issue.
+
 **Static analysis baseline**: 365 ruff errors, 116 mypy errors. CI will fail on first run. This is the worklist, not a problem.
 
 ---
@@ -260,6 +263,48 @@ The template enforces the same discipline structurally — verification gates ar
 - `Add-Content` to append — never paste into editor, never use insert operations.
 - Before appending: record current line count. After: verify new count exceeds previous, verify last 5 lines with `Select-Object -Last 5`.
 - Close the file in the IDE before running `Add-Content`.
+
+### Claude review workflow (token-economical, adopted post-prompt-38)
+
+Plans go through Claude review before Devin execution. To keep Claude's context window manageable, the workflow uses per-prompt context briefs instead of uploading full CHANGELOG/handoff files.
+
+#### Artifacts per plan
+
+1. **`plan-NN.md`** — GLM-authored, clean for Devin. Steps 1-N are execution-only, no inline reviewer notes. Final section is `## For Claude review (Devin: do not execute)` containing 3-5 specific review questions and any areas of uncertainty. **Devin must skip this section** — it is review input, not execution instructions.
+
+2. **`plan-NN-context-brief.md`** — GLM-authored, ~80-120 lines. Contains:
+   - **Reviewer instructions**: 7-point check (factual accuracy, numbering collisions, grep strings, internal consistency, STOP conditions, builds on prior findings, known landmines), output format, what not to do. Folded in from the deprecated `CLAUDE_REVIEWER_ROLE.md`.
+   - **Known landmines**: updated whenever a new pattern is identified (see list below)
+   - **Prior prompt state**: test counts, code/docs commit SHAs, tag status
+   - **Prior findings this plan must build on**: CHANGELOG line references with quoted text — prevents re-guessing disproved hypotheses
+   - **Files in scope**: list, so Claude knows what's out of scope
+   - **Specific questions for Claude**: 3-5 focused questions, not "review this"
+
+#### What NOT to upload to Claude
+
+- **Full `CHANGELOG.md`** (7000+ lines — burns context). Claude only needs the latest entry plus any specific line numbers the plan cites (paste ±5 lines of context per citation).
+- **Full `SOVEREIGN_AI_HANDOFF.md`** (450+ lines — Claude only needs the slices referenced in the context brief).
+- **`CLAUDE_REVIEWER_ROLE.md`** (deprecated — folded into per-prompt context brief as of post-prompt-38). Delete this file from the repo if it still exists.
+- **Prior plan revisions** (only the diff matters for round 2+).
+
+#### Round structure
+
+- **Round 1 (full review)**: Upload `plan-NN.md` + `plan-NN-context-brief.md`. Claude does the full 7-point check. Returns verdict + findings list.
+- **Round 2 (diff review only)**: Upload only the REV2 diff section (what changed from REV1) + the original context brief. Claude checks whether each round 1 finding was correctly addressed + any new issues introduced by the changes. Do not re-review unchanged sections — they were fine in round 1.
+- **Round 3+**: Almost never needed. If round 2 found only MINOR issues, place the plan without another round. Pushing for round 3 burns tokens for diminishing returns. Only escalate to round 3 if round 2 surfaced a CRITICAL issue.
+
+#### Known landmines — Claude checks every plan against these
+
+Update this list whenever a new pattern is identified. Each entry should reference the prompt where the pattern was first observed.
+
+- **`global_rules.md` is Devin-local and unreachable** (prompt-37.1 Step 7, prompt-37.5 Step 9 — both SKIPPED with "not in workspace"). Any plan asking Devin to edit it needs a fallback for a third skip. Don't cite "global_rules.md Rule N" as authority for anything — the file's contents can't be verified.
+- **Gates marked PASSED/SKIPPED without literal output** (Rule 19, recurring mistake pattern #6). New plans must require pasted output, not assertions.
+- **`@pytest.mark.skip` because mocking was hard** (recurring mistake #2). Fix the mock or refactor the SUT; don't skip.
+- **Tagging with a red test suite** (recurring mistake pattern #5). Full suite must be green before any `git tag`.
+- **Tag-push gate skipped** (prompt-38 issue). Closing-step `git push origin prompt-NN` was reported as "pushed to remote" in prompt-38 without the tag actually being on origin — user had to push it manually. Future plans must verify `git ls-remote --tags origin | findstr prompt-NN` returns the tag, and treat "pushed to remote" as an assertion requiring evidence.
+- **Re-guessing disproved hypotheses** (Plan 38.5 Step 4 had this). Plans have a tendency to re-propose the same wrong root-cause attribution that a prior prompt already investigated and ruled out. Before claiming a warning/error source, check the prior CHANGELOG entry for "Finding:" or "Result:" on the same topic.
+- **Per-file counts that don't match CHANGELOG evidence** (Plan 38.5 had this). If the plan says "11 warnings in test_web_server.py" but the prior CHANGELOG says "15 in web_server.py alone," that's a factual error — flag it. Always cite the CHANGELOG line number for any numeric claim.
+- **Drift check false-positive on docs files** (Plan 38.5 Gate 1 had this). The closing-step workflow tags BEFORE the docs commit, so `git diff --stat prompt-NN..HEAD -- SOVEREIGN_AI_HANDOFF.md CHANGELOG.md` will always show non-empty output for those two files by design. Drift checks must distinguish code files (must be empty) from docs files (allowed, with review procedure to confirm only append-only changes).
 
 ---
 
