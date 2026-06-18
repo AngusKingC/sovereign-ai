@@ -56,13 +56,13 @@ class ModelRegistry:
 
             # Try to load from Postgres
             try:
-                results = await self.memory_router.fetch(
-                    task_id="model_registry",
-                    query="model_registry",
+                results = await self.memory_router.fetch_by_filter(
+                    filter={"task_id": "model_registry", "query": "model_registry"},
+                    collection="model_registry"
                 )
                 
-                if results and results.data:
-                    for item in results.data:
+                if results:
+                    for item in results:
                         if isinstance(item, dict):
                             entry = ModelEntry.model_validate(item)
                             self._models[entry.model_id] = entry
@@ -111,12 +111,13 @@ class ModelRegistry:
     async def _save_to_storage(self, entry: ModelEntry) -> None:
         """Save a model entry to storage."""
         try:
-            await self.memory_router.write(
-                {
+            await self.memory_router.write_to_collection(
+                data={
                     "content": entry.model_dump_json(),
                     "task_id": "model_registry",
                     "metadata": {"model_id": entry.model_id, "type": "model_entry"},
-                }
+                },
+                collection="model_registry"
             )
         except Exception as e:
             try:

@@ -129,8 +129,8 @@ class InstructionVersionManager:
         self._pending_proposals[profile.worker_id] = proposal
         
         # Store proposal
-        await self.memory_router.write(
-            {
+        await self.memory_router.write_to_collection(
+            data={
                 "type": "version_update_proposal",
                 "proposal_id": proposal_id,
                 "worker_id": profile.worker_id,
@@ -212,8 +212,8 @@ class InstructionVersionManager:
         )
         
         # Store new instruction file
-        await self.memory_router.write(
-            {
+        await self.memory_router.write_to_collection(
+            data={
                 "type": "instruction_file",
                 "worker_id": proposal.worker_id,
                 "version": new_version,
@@ -227,8 +227,8 @@ class InstructionVersionManager:
         
         # Update proposal status
         proposal = proposal.model_copy(update={"status": "approved"})
-        await self.memory_router.write(
-            {
+        await self.memory_router.write_to_collection(
+            data={
                 "type": "version_update_proposal",
                 "proposal_id": proposal.proposal_id,
                 "worker_id": proposal.worker_id,
@@ -282,8 +282,8 @@ class InstructionVersionManager:
 
         # Update proposal status
         proposal = proposal.model_copy(update={"status": "rejected"})
-        await self.memory_router.write(
-            {
+        await self.memory_router.write_to_collection(
+            data={
                 "type": "version_update_proposal",
                 "proposal_id": proposal.proposal_id,
                 "worker_id": proposal.worker_id,
@@ -365,8 +365,8 @@ class InstructionVersionManager:
         )
         
         # Store new instruction file
-        await self.memory_router.write(
-            {
+        await self.memory_router.write_to_collection(
+            data={
                 "type": "instruction_file",
                 "worker_id": worker_id,
                 "version": new_version,
@@ -379,8 +379,8 @@ class InstructionVersionManager:
         )
         
         # Create changelog entry for rollback
-        await self.memory_router.write(
-            {
+        await self.memory_router.write_to_collection(
+            data={
                 "type": "instruction_changelog",
                 "worker_id": worker_id,
                 "version": new_version,
@@ -422,8 +422,8 @@ class InstructionVersionManager:
         Returns:
             List of InstructionFile objects, oldest first
         """
-        results = await self.memory_router.fetch(
-            {"worker_id": worker_id},
+        results = await self.memory_router.fetch_by_filter(
+            filter={"worker_id": worker_id},
             collection="instruction_files",
             limit=1000
         )

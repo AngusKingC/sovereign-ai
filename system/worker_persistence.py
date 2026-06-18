@@ -71,8 +71,8 @@ class WorkerPersistence:
                 profile.version = existing.get("version", 1) + 1
             
             # Save to PostgreSQL
-            await self.memory_router.write(
-                {
+            await self.memory_router.write_to_collection(
+                data={
                     "type": "worker_profile",
                     "worker_id": profile.worker_id,
                     "version": profile.version,
@@ -120,8 +120,8 @@ class WorkerPersistence:
             ))
             
             # Query for current workers
-            results = await self.memory_router.fetch(
-                {"type": "worker_profile", "is_current": True},
+            results = await self.memory_router.fetch_by_filter(
+                filter={"type": "worker_profile", "is_current": True},
                 collection="workers",
             )
             
@@ -170,8 +170,8 @@ class WorkerPersistence:
             ))
             
             # Query for specific worker
-            results = await self.memory_router.fetch(
-                {"type": "worker_profile", "worker_id": worker_id, "is_current": True},
+            results = await self.memory_router.fetch_by_filter(
+                filter={"type": "worker_profile", "worker_id": worker_id, "is_current": True},
                 collection="workers",
             )
             
@@ -326,8 +326,8 @@ class WorkerPersistence:
             ))
             
             # Query for all versions of the worker
-            results = await self.memory_router.fetch(
-                {"type": "worker_profile", "worker_id": worker_id},
+            results = await self.memory_router.fetch_by_filter(
+                filter={"type": "worker_profile", "worker_id": worker_id},
                 collection="workers",
             )
             
@@ -370,8 +370,8 @@ class WorkerPersistence:
         Returns:
             Raw worker data or None if not found
         """
-        results = await self.memory_router.fetch(
-            {"type": "worker_profile", "worker_id": worker_id, "is_current": True},
+        results = await self.memory_router.fetch_by_filter(
+            filter={"type": "worker_profile", "worker_id": worker_id, "is_current": True},
             collection="workers",
         )
         
@@ -390,8 +390,8 @@ class WorkerPersistence:
         current = await self._load_raw(worker_id)
         if current:
             # Write back with is_current=False
-            await self.memory_router.write(
-                {
+            await self.memory_router.write_to_collection(
+                data={
                     "type": "worker_profile",
                     "worker_id": worker_id,
                     "version": current.get("version", 1),

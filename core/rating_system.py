@@ -35,8 +35,8 @@ class RatingSystem:
         """Ensure Postgres tables exist for ratings and comparisons."""
         try:
             # Create worker_ratings table
-            await self.memory_router.write(
-                {
+            await self.memory_router.write_to_collection(
+                data={
                     "type": "schema_migration",
                     "table": "worker_ratings",
                     "sql": """
@@ -56,8 +56,8 @@ class RatingSystem:
             )
             
             # Create worker_comparisons table
-            await self.memory_router.write(
-                {
+            await self.memory_router.write_to_collection(
+                data={
                     "type": "schema_migration",
                     "table": "worker_comparisons",
                     "sql": """
@@ -76,7 +76,7 @@ class RatingSystem:
         except Exception as e:
             try:
                 await self.emitter.emit(TraceEvent(
-                    event_type=TraceEventType.ERROR,
+                    event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.SYSTEM,
                     message=f"Failed to ensure rating tables: {e}",
                     level=TraceLevel.ERROR,
@@ -132,8 +132,8 @@ class RatingSystem:
         )
         
         # Store in Postgres
-        await self.memory_router.write(
-            {
+        await self.memory_router.write_to_collection(
+            data={
                 "type": "worker_rating",
                 "rating_id": rating_id,
                 "worker_id": worker_id,
@@ -181,8 +181,8 @@ class RatingSystem:
         Returns:
             List of WorkerRating objects, ordered by created_at descending
         """
-        results = await self.memory_router.fetch(
-            {"worker_id": worker_id},
+        results = await self.memory_router.fetch_by_filter(
+            filter={"worker_id": worker_id},
             collection="worker_ratings",
             limit=limit
         )
@@ -347,8 +347,8 @@ class RatingSystem:
         created_at = datetime.now()
         
         # Store in Postgres
-        await self.memory_router.write(
-            {
+        await self.memory_router.write_to_collection(
+            data={
                 "type": "worker_comparison",
                 "comparison_id": comparison_id,
                 "task_id": task_id,

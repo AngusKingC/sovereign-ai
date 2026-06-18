@@ -19,6 +19,10 @@ class TestTraceOptimiser:
         """Create a mock MemoryRouter."""
         router = Mock()
         router.fetch = AsyncMock()
+        router.fetch_by_filter = AsyncMock(return_value=[])
+        router.write_to_collection = AsyncMock()
+        router.get_global_context = AsyncMock(return_value=None)
+        router.set_global_context = AsyncMock()
         return router
 
     @pytest.fixture

@@ -191,12 +191,13 @@ class ResourceManager:
     async def _store_snapshot(self, snapshot: ResourceSnapshot) -> None:
         """Store snapshot to Postgres."""
         try:
-            await self.memory_router.write(
-                {
+            await self.memory_router.write_to_collection(
+                data={
                     "content": snapshot.model_dump_json(),
                     "task_id": "resource_snapshot",
                     "metadata": {"type": "resource_snapshot"},
-                }
+                },
+                collection="resource_snapshots"
             )
         except Exception as e:
             try:
@@ -884,7 +885,7 @@ class ResourceManager:
                 # No model_id available, emit warning and return
                 try:
                     event = TraceEvent(
-                        event_type=TraceEventType.OPERATION_WARNING,
+                        event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.SYSTEM,
                         message="Cannot ensure model: adapter has no model_id",
                         level=TraceLevel.WARNING,
@@ -924,7 +925,7 @@ class ResourceManager:
                         # Reload failed, emit warning
                         try:
                             event = TraceEvent(
-                                event_type=TraceEventType.OPERATION_WARNING,
+                                event_type=TraceEventType.OPERATION_ERROR,
                                 component=TraceComponent.SYSTEM,
                                 message=f"Failed to reload model {model_id}",
                                 level=TraceLevel.WARNING,
@@ -938,7 +939,7 @@ class ResourceManager:
                     # Reload not supported, emit warning and return
                     try:
                         event = TraceEvent(
-                            event_type=TraceEventType.OPERATION_WARNING,
+                            event_type=TraceEventType.OPERATION_ERROR,
                             component=TraceComponent.SYSTEM,
                             message=f"Model {model_id} evicted and reload not supported",
                             level=TraceLevel.WARNING,
@@ -984,12 +985,13 @@ class ResourceManager:
                 "loaded_models": [m.model_dump() for m in self._loaded_models.values()],
                 "timestamp": datetime.now().isoformat(),
             }
-            await self.memory_router.write(
-                {
+            await self.memory_router.write_to_collection(
+                data={
                     "content": str(state),
                     "task_id": "resource_manager_state",
                     "metadata": {"type": "loaded_models_state"},
-                }
+                },
+                collection="resource_manager_state"
             )
         except Exception as e:
             try:
@@ -1010,13 +1012,13 @@ class ResourceManager:
         try:
             # Load persisted state
             try:
-                results = await self.memory_router.fetch(
-                    task_id="resource_manager_state",
-                    query="loaded_models_state",
+                results = await self.memory_router.fetch_by_filter(
+                    filter={"task_id": "resource_manager_state", "query": "loaded_models_state"},
+                    collection="resource_manager_state"
                 )
-                if results and results.data:
+                if results:
                     # Reconstruct loaded models from persisted state
-                    for item in results.data:
+                    for item in results:
                         if isinstance(item, dict) and "loaded_models" in item:
                             for model_data in item["loaded_models"]:
                                 loaded_model = LoadedModel.model_validate(model_data)

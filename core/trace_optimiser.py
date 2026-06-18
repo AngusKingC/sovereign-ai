@@ -53,8 +53,8 @@ class TraceOptimiser:
         """
         try:
             # Fetch recent traces for this worker
-            traces = await self.memory_router.fetch(
-                {"worker_id": worker_id},
+            traces = await self.memory_router.fetch_by_filter(
+                filter={"worker_id": worker_id},
                 collection="traces",
                 limit=n
             )

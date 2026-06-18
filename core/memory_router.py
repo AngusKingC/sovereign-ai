@@ -361,3 +361,188 @@ class MemoryRouter:
         await self.emitter.emit(event)
 
         return all_keys
+
+    async def fetch_by_filter(
+        self,
+        filter: dict[str, Any],
+        collection: str | None = None,
+        limit: int | None = None,
+        filter_func: Any = None,
+    ) -> list[dict[str, Any]]:
+        """Fetch memory entries matching a filter dictionary.
+
+        This is the document-store-style query interface. Callers that need
+        filtered retrieval (by collection, by document_id, by arbitrary filter
+        dict, or by a callable filter_func) should use this method instead of
+        fetch(task), which is for task-based routing queries.
+
+        Args:
+            filter: Dictionary of key-value pairs to match against stored entries.
+            collection: Optional collection/scope name to restrict the search.
+            limit: Optional maximum number of results to return.
+            filter_func: Optional callable that takes a dict and returns bool.
+                         If provided, only entries where filter_func(entry) is True are returned.
+
+        Returns:
+            List of matching memory entries (dicts).
+        """
+        import time
+        from datetime import datetime
+        from uuid import uuid4
+
+        start_time = time.perf_counter()
+        all_results: list[dict[str, Any]] = []
+
+        for backend_name, backend in self.backends.items():
+            try:
+                # Backends implement fetch(task: Task). We construct a minimal
+                # Task from the filter dict so the existing backend interface
+                # works without modification.
+                from core.schemas import Task, TaskPriority, TaskStatus
+                task = Task(
+                    task_id=uuid4(),
+                    intent=str(filter),
+                    complexity_score=0.0,
+                    priority=TaskPriority.NORMAL,
+                    current_state=TaskStatus.RECEIVED,
+                    created_at=datetime.utcnow(),
+                )
+                results = await backend.fetch(task)
+                # Apply filter matching in Python (backends don't support filtered queries natively)
+                for entry in results:
+                    content = entry.get("content", entry)
+                    if isinstance(content, dict):
+                        match = all(content.get(k) == v for k, v in filter.items())
+                    else:
+                        match = True  # Can't filter, return as-is
+                    if match and filter_func is not None:
+                        match = filter_func(entry)
+                    if match:
+                        all_results.append(entry)
+            except Exception as e:
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.DATA_READ,
+                        component=TraceComponent.MEMORY_ROUTER,
+                        level=TraceLevel.WARNING,
+                        message=f"fetch_by_filter backend error: {backend_name}",
+                        data={"error": str(e)},
+                        duration_ms=0,
+                    )
+                    await self.emitter.emit(event)
+                except Exception:
+                    pass
+
+        # Apply limit
+        if limit is not None:
+            all_results = all_results[:limit]
+
+        duration_ms = int((time.perf_counter() - start_time) * 1000)
+        try:
+            event = TraceEvent(
+                event_type=TraceEventType.DATA_READ,
+                component=TraceComponent.MEMORY_ROUTER,
+                level=TraceLevel.INFO,
+                message="fetch_by_filter completed",
+                data={"filter": filter, "collection": collection, "result_count": len(all_results)},
+                duration_ms=duration_ms,
+            )
+            await self.emitter.emit(event)
+        except Exception:
+            pass
+
+        return all_results
+
+    async def write_to_collection(
+        self,
+        data: dict[str, Any],
+        collection: str,
+        document_id: str | None = None,
+    ) -> None:
+        """Write data to a named collection.
+
+        This is the document-store-style write interface. Callers that need
+        to write to a specific collection (ratings, evaluations, instructions,
+        etc.) with an optional document_id should use this method instead of
+        write(data), which writes to all backends without collection scoping.
+
+        Args:
+            data: Dictionary of data to write.
+            collection: Collection/scope name (e.g., "ratings", "evaluations").
+            document_id: Optional document identifier. If provided, the data
+                         dict is augmented with collection and document_id fields.
+        """
+        import time
+
+        start_time = time.perf_counter()
+
+        # Augment data with collection and document_id metadata
+        write_data = data.copy()
+        write_data["_collection"] = collection
+        if document_id is not None:
+            write_data["_document_id"] = document_id
+
+        for backend_name, backend in self.backends.items():
+            try:
+                await backend.write(write_data)
+            except Exception as e:
+                try:
+                    event = TraceEvent(
+                        event_type=TraceEventType.DATA_WRITE,
+                        component=TraceComponent.MEMORY_ROUTER,
+                        level=TraceLevel.WARNING,
+                        message=f"write_to_collection backend error: {backend_name}",
+                        data={"collection": collection, "error": str(e)},
+                        duration_ms=0,
+                    )
+                    await self.emitter.emit(event)
+                except Exception:
+                    pass
+
+        duration_ms = int((time.perf_counter() - start_time) * 1000)
+        try:
+            event = TraceEvent(
+                event_type=TraceEventType.DATA_WRITE,
+                component=TraceComponent.MEMORY_ROUTER,
+                level=TraceLevel.INFO,
+                message="write_to_collection completed",
+                data={"collection": collection, "document_id": document_id},
+                duration_ms=duration_ms,
+            )
+            await self.emitter.emit(event)
+        except Exception:
+            pass
+
+    async def get_global_context(self, caller_id: str = "orchestrator") -> Any:
+        """Get the shared global StrategicContext.
+
+        Args:
+            caller_id: Identifier of the caller (for access control logging).
+
+        Returns:
+            StrategicContext if set, None otherwise.
+        """
+        from core.schemas import StrategicContext
+        results = await self.fetch_by_filter(
+            filter={"_collection": "global_context"},
+            collection="global_context",
+            limit=1,
+        )
+        if results:
+            content = results[0].get("content", results[0])
+            if isinstance(content, dict) and "context" in content:
+                return StrategicContext(**content["context"])
+        return None
+
+    async def set_global_context(self, context: Any, caller_id: str = "orchestrator") -> None:
+        """Set the shared global StrategicContext.
+
+        Args:
+            context: StrategicContext to store.
+            caller_id: Identifier of the caller (for access control logging).
+        """
+        await self.write_to_collection(
+            data={"context": context.model_dump() if hasattr(context, "model_dump") else context},
+            collection="global_context",
+            document_id="current",
+        )

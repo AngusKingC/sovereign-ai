@@ -61,8 +61,8 @@ class OrchestratorImprovementLoop:
             metrics: OrchestratorMetrics to persist
         """
         # Persist metrics via MemoryRouter
-        await self.memory_router.write(
-            {
+        await self.memory_router.write_to_collection(
+            data={
                 "type": "orchestrator_metrics",
                 "task_id": metrics.task_id,
                 "routed_to_worker_id": metrics.routed_to_worker_id,
@@ -71,6 +71,7 @@ class OrchestratorImprovementLoop:
                 "user_rating": metrics.user_rating,
                 "timestamp": metrics.timestamp.isoformat()
             },
+            collection="orchestrator_metrics",
             document_id=f"orchestrator_metrics:{metrics.task_id}"
         )
         
@@ -100,8 +101,8 @@ class OrchestratorImprovementLoop:
             Routing accuracy as float 0.0-1.0, or 0.0 if fewer than min_samples records exist
         """
         # Retrieve last N orchestrator metrics
-        results = await self.memory_router.fetch(
-            {"type": "orchestrator_metrics"},
+        results = await self.memory_router.fetch_by_filter(
+            filter={"type": "orchestrator_metrics"},
             collection="orchestrator_metrics",
             limit=n
         )
@@ -131,8 +132,8 @@ class OrchestratorImprovementLoop:
             or 0.0 if fewer than min_ratings rated records exist
         """
         # Retrieve last N orchestrator metrics
-        results = await self.memory_router.fetch(
-            {"type": "orchestrator_metrics"},
+        results = await self.memory_router.fetch_by_filter(
+            filter={"type": "orchestrator_metrics"},
             collection="orchestrator_metrics",
             limit=n * 2  # Get more to filter for rated ones
         )
@@ -235,9 +236,8 @@ class OrchestratorImprovementLoop:
         """
         # Retrieve the OrchestratorMetrics record for task_id
         document_id = f"orchestrator_metrics:{task_id}"
-        result = await self.memory_router.fetch(
-            {"task_id": task_id},
-            document_id=document_id,
+        result = await self.memory_router.fetch_by_filter(
+            filter={"task_id": task_id, "_document_id": document_id},
             limit=1
         )
         
@@ -261,8 +261,9 @@ class OrchestratorImprovementLoop:
         metrics_data["updated_at"] = datetime.utcnow().isoformat()
         
         # Persist the updated record
-        await self.memory_router.write(
-            metrics_data,
+        await self.memory_router.write_to_collection(
+            data=metrics_data,
+            collection="orchestrator_metrics",
             document_id=document_id
         )
         

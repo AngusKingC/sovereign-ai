@@ -86,8 +86,8 @@ class InstructionGenerator:
         )
         
         # Store in memory router
-        await self.memory_router.write(
-            {
+        await self.memory_router.write_to_collection(
+            data={
                 "type": "instruction_file",
                 "worker_id": profile.worker_id,
                 "version": version,
@@ -113,8 +113,8 @@ class InstructionGenerator:
             created_at=created_at
         )
         
-        await self.memory_router.write(
-            {
+        await self.memory_router.write_to_collection(
+            data={
                 "type": "instruction_changelog",
                 "worker_id": profile.worker_id,
                 "version": version,
@@ -208,8 +208,8 @@ class InstructionGenerator:
         )
         
         # Store in memory router
-        await self.memory_router.write(
-            {
+        await self.memory_router.write_to_collection(
+            data={
                 "type": "instruction_file",
                 "worker_id": profile.worker_id,
                 "version": new_version,
@@ -235,8 +235,8 @@ class InstructionGenerator:
             created_at=created_at
         )
         
-        await self.memory_router.write(
-            {
+        await self.memory_router.write_to_collection(
+            data={
                 "type": "instruction_changelog",
                 "worker_id": profile.worker_id,
                 "version": new_version,
@@ -285,8 +285,8 @@ class InstructionGenerator:
         Returns:
             Latest InstructionFile, or None if not found
         """
-        results = await self.memory_router.fetch(
-            {"worker_id": worker_id},
+        results = await self.memory_router.fetch_by_filter(
+            filter={"worker_id": worker_id},
             collection="instruction_files",
             limit=1
         )
@@ -321,8 +321,8 @@ class InstructionGenerator:
         Returns:
             List of changelog entries in chronological order
         """
-        results = await self.memory_router.fetch(
-            {"worker_id": worker_id},
+        results = await self.memory_router.fetch_by_filter(
+            filter={"worker_id": worker_id},
             collection="instruction_changelogs",
             limit=100
         )

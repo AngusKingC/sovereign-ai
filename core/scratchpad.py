@@ -158,14 +158,17 @@ class ScratchpadManager:
         await self._persist_scratchpad(scratchpad)
         
         # Write compacted summary to long-term memory
-        await self.memory_router.write(
-            task_id=str(task_id),
-            content=f"Task scratchpad summary: {summary}",
-            metadata={
-                "type": "scratchpad_summary",
-                "task_id": str(task_id),
-                "entry_count": len(scratchpad.entries),
+        await self.memory_router.write_to_collection(
+            data={
+                "content": f"Task scratchpad summary: {summary}",
+                "metadata": {
+                    "type": "scratchpad_summary",
+                    "task_id": str(task_id),
+                    "entry_count": len(scratchpad.entries),
+                },
             },
+            collection="scratchpad",
+            document_id=str(task_id),
         )
         
         # Emit trace event

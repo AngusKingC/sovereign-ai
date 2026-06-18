@@ -172,12 +172,10 @@ class WorkerFactory:
                 except Exception:
                     pass
         else:
-            # Fallback to memory_router.write for backward compatibility
+            # Fallback to memory_router.write_to_collection for backward compatibility
             try:
-                await self.memory_router.write(
-                    collection="workers",
-                    document_id=profile.worker_id,
-                    document={
+                await self.memory_router.write_to_collection(
+                    data={
                         "type": "worker_profile",
                         "worker_id": profile.worker_id,
                         "worker_type": profile.worker_type,
@@ -188,7 +186,9 @@ class WorkerFactory:
                         "complexity_max": profile.complexity_max,
                         "preferred_complexity": profile.preferred_complexity,
                         "created_at": datetime.utcnow().isoformat(),
-                    }
+                    },
+                    collection="workers",
+                    document_id=profile.worker_id
                 )
             except Exception as e:
                 try:

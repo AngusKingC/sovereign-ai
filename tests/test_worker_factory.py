@@ -62,6 +62,22 @@ class MockMemoryRouter:
     async def fetch(self, task):
         """Fetch memory for a task."""
         return []
+    
+    async def fetch_by_filter(self, filter: dict, collection: str | None, limit: int | None):
+        """Mock fetch_by_filter."""
+        return []
+    
+    async def write_to_collection(self, data: dict, collection: str, document_id: str | None):
+        """Mock write_to_collection."""
+        self._data[f"{collection}:{document_id}"] = data
+    
+    async def get_global_context(self, caller_id: str = "orchestrator"):
+        """Mock get_global_context."""
+        return None
+    
+    async def set_global_context(self, context, caller_id: str = "orchestrator"):
+        """Mock set_global_context."""
+        pass
 
 
 class TestWorkerFactory:

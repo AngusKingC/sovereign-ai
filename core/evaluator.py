@@ -131,7 +131,7 @@ Where:
         try:
             await self.emitter.emit(TraceEvent(
                 event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.EVALUATOR,
+                component=TraceComponent.SYSTEM,
                 message=f"Output evaluated for task {task_id}",
                 level=TraceLevel.INFO,
                 data={
@@ -185,8 +185,8 @@ Where:
         )
         
         # Persist to memory router
-        await self.memory_router.write(
-            {
+        await self.memory_router.write_to_collection(
+            data={
                 "type": "evaluation_record",
                 "record_id": record.record_id,
                 "task_id": record.task_id,
@@ -196,6 +196,7 @@ Where:
                 "final_score": record.final_score,
                 "timestamp": record.timestamp.isoformat()
             },
+            collection="evaluation_records",
             document_id=f"evaluation:{task_id}:{worker_id}"
         )
         
@@ -203,7 +204,7 @@ Where:
         try:
             await self.emitter.emit(TraceEvent(
                 event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.EVALUATOR,
+                component=TraceComponent.SYSTEM,
                 message=f"Evaluation recorded for task {task_id}",
                 level=TraceLevel.INFO,
                 data={
@@ -226,8 +227,8 @@ Where:
         Returns:
             List of EvaluationRecord objects, empty if none exist
         """
-        results = await self.memory_router.fetch(
-            {"worker_id": worker_id},
+        results = await self.memory_router.fetch_by_filter(
+            filter={"worker_id": worker_id},
             collection="evaluation_records",
             limit=n
         )

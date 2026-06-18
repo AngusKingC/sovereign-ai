@@ -205,3 +205,89 @@ class TestMemoryRouter:
         router = MemoryRouter()
         assert router.backends == {}
         assert len(router.backends) == 0
+
+    def test_fetch_by_filter_basic(self, mock_backend):
+        """Test fetch_by_filter with a simple filter."""
+        router = MemoryRouter(backends={"mock": mock_backend})
+
+        import asyncio
+
+        results = asyncio.run(router.fetch_by_filter(filter={"type": "test"}, collection="test_collection"))
+
+        # Mock backend returns a single entry, filter matching should pass it through
+        assert len(results) == 1
+
+    def test_fetch_by_filter_with_limit(self, mock_backend):
+        """Test fetch_by_filter with limit parameter."""
+        router = MemoryRouter(backends={"mock": mock_backend})
+
+        import asyncio
+
+        results = asyncio.run(router.fetch_by_filter(filter={"type": "test"}, collection="test_collection", limit=5))
+
+        # With limit, should return at most 5 results
+        assert len(results) <= 5
+
+    def test_write_to_collection_basic(self, mock_backend):
+        """Test write_to_collection with data and collection."""
+        router = MemoryRouter(backends={"mock": mock_backend})
+
+        import asyncio
+
+        data = {"content": "test data", "type": "test"}
+        asyncio.run(router.write_to_collection(data=data, collection="test_collection"))
+
+        # Verify data was written to backend
+        assert len(mock_backend.storage) == 1
+        assert mock_backend.storage[0]["_collection"] == "test_collection"
+
+    def test_write_to_collection_with_document_id(self, mock_backend):
+        """Test write_to_collection with document_id."""
+        router = MemoryRouter(backends={"mock": mock_backend})
+
+        import asyncio
+
+        data = {"content": "test data", "type": "test"}
+        asyncio.run(router.write_to_collection(data=data, collection="test_collection", document_id="doc123"))
+
+        # Verify data was written with document_id
+        assert len(mock_backend.storage) == 1
+        assert mock_backend.storage[0]["_collection"] == "test_collection"
+        assert mock_backend.storage[0]["_document_id"] == "doc123"
+
+    def test_get_global_context_no_context(self, mock_backend):
+        """Test get_global_context when no context is set."""
+        router = MemoryRouter(backends={"mock": mock_backend})
+
+        import asyncio
+
+        context = asyncio.run(router.get_global_context())
+
+        # Should return None when no context exists
+        assert context is None
+
+    def test_set_and_get_global_context(self, mock_backend):
+        """Test set_global_context and get_global_context roundtrip."""
+        router = MemoryRouter(backends={"mock": mock_backend})
+
+        import asyncio
+        from core.schemas import StrategicContext
+        from datetime import datetime
+
+        # Create a StrategicContext
+        context = StrategicContext(
+            last_updated=datetime.utcnow(),
+            active_goals=["goal1", "goal2"],
+            constraints=["constraint1"]
+        )
+
+        # Set the context
+        asyncio.run(router.set_global_context(context))
+
+        # Get the context back
+        retrieved = asyncio.run(router.get_global_context())
+
+        # Verify the context was stored and retrieved
+        assert retrieved is not None
+        assert retrieved.last_updated == context.last_updated
+        assert retrieved.active_goals == context.active_goals
