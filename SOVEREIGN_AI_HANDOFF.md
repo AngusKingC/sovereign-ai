@@ -1,7 +1,7 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-18 — post prompt-36. F1, F2, F3, F5 fixed; jarvis serve now starts and returns worker listings.
-**Test baseline**: 1044 passed, 64 warnings, 1 pre-existing flaky (`test_lm_studio_adapter.py::test_health_check_without_server`).
+**Last updated**: 2026-06-18 — post prompt-36.5. llama_cpp test collection fixed; --ignore flag no longer needed.
+**Test baseline**: 1072 passed, 23 skipped, 1 failed, 63 warnings (measured with python -m pytest tests/ -q, no --ignore flag needed).
 **Static analysis baseline**: 365 ruff errors, 116 mypy errors. CI will fail on first run. This is the worklist, not a problem.
 
 ---
@@ -352,6 +352,7 @@ Once Plans 36-40 land, the foundation is solid: `jarvis serve` works, `jarvis` w
 | 35.6e | CI workflow | 1065 | Will fail on first run (365 ruff + 116 mypy errors) |
 | 35.6f | Wire Cognition Stack End-to-End | 1058 | Registered OllamaWorker in serve.py; fixed F3 in test only |
 | 36 | Fix jarvis serve end-to-end (F1, F2, F3, F5) | 1044 | Fixed 4 regressions; jarvis serve now starts and returns worker listings |
+| 36.5 | Fix llama_cpp test collection | 1072 | Added pytest.importorskip("llama_cpp"); --ignore flag no longer needed |
 
 ---
 

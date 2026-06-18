@@ -6451,3 +6451,36 @@ e4ec2fd6491b29ffe3a3cc816b5e9ac6b82bdd3a
 
 ### Checkpoint Commit
 43e9e3b635717786f7832e7d7df2e70d63e154b6
+
+---
+
+## 2026-06-18 15:12 - Prompt 36.5: Fix llama_cpp test collection
+
+### Files Modified
+- tests/test_llama_cpp_adapter.py
+  - Added `pytest.importorskip("llama_cpp")` after the module docstring and `import pytest` line, before `from adapters.llama_cpp import LlamaCppAdapter`
+  - Added explanatory comment documenting why importorskip is needed
+  - No other changes
+
+### Implementation Notes
+- No mid-prompt failures encountered
+- Drift check passed: no changes to tests/test_llama_cpp_adapter.py since prompt-36
+- All gates passed on first run
+
+### Testing Results
+- **Baseline**: 1044 passed, 64 warnings, 1 pre-existing flaky failure (with --ignore=tests/test_llama_cpp_adapter.py)
+- **Final**: 1072 passed, 23 skipped, 63 warnings, 1 pre-existing flaky failure (WITHOUT --ignore)
+- **Test Command**: `python -m pytest tests/ -q --tb=no`
+- **Key change**: --ignore flag no longer needed; test_llama_cpp_adapter.py tests now PASS cleanly when llama_cpp is installed (would SKIP if not installed)
+- **New baseline for Plan 37 onwards**: 1072 passed, 23 skipped (measured with python -m pytest tests/ -q, no --ignore flag needed)
+
+### Verification Gate Output
+- **Gate 1 (Drift)**: empty output (no drift)
+- **Gate 2 (Collection)**: 9 tests collected in 0.40s (llama_cpp is installed on this machine)
+- **Gate 3 (Full suite)**: 1 failed, 1072 passed, 23 skipped, 63 warnings in 83.41s (NO `Interrupted: N errors during collection`)
+- **Gate 4 (Baseline)**: 1 failed, 1072 passed, 23 skipped, 63 warnings in 80.94s
+- **Gate 5 (Skip status)**: 9 PASSED (llama_cpp installed, so tests run instead of skip)
+- **Gate 6 (Lint)**: ruff not installed, skipped
+
+### Checkpoint Commit
+4f29077605774a56e38a4227bef522f4df013922
