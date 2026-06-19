@@ -1,6 +1,6 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-19 18:07 — post prompt-41. Fixed broad-except patterns in core/ (orchestrator: 12, approval_gate: 13, task_state_machine: 7, memory_router: 4, worker_base: 1) per Rule 17. Added inline comments + WARNING trace events for cleanup paths. Fixed TUI /adapter ValueError handling to display user-friendly error messages with API key URLs when missing. Added Devin chat report test counts landmine to handoff. Test baseline: ~1124 passed, ~61 skipped, 0 failed, 0 warnings.
+**Last updated**: 2026-06-19 19:35 — post prompt-41 (fix-up). Corrected test baseline to actual measurement (1127 passed, 61 skipped, 0 warnings). llama_cpp is installed in the environment, so test_llama_cpp_adapter.py tests (9 tests) are included in the count. Removed --ignore flag from standard measurement command. Reframed landmine to capture "assertion without measurement" pattern. Test baseline: 1127 passed, 61 skipped, 0 failed, 0 warnings (measured with python -m pytest tests/ -q --tb=no).
 
 **Post-prompt-38 documentation update** (2026-06-19, separate from any prompt): Added "Claude review workflow (token-economical)" subsection to the Workflow section. Documents the new per-prompt context brief pattern, deprecates `CLAUDE_REVIEWER_ROLE.md` as a separate upload, and codifies the round-1-full / round-2-diff / round-3-rarely review structure. Known landmines list updated with prompt-38 tag-push issue, Plan 38.5 re-guessing-disproved-hypotheses issue, per-file-count-mismatch issue, and drift-check-false-positive-on-docs-files issue.
 
@@ -64,9 +64,7 @@ That's it. Everything else is either broken, unreachable, or aspirational.
 
 ## Test environment prerequisites
 
-**Standard test measurement command**: `python -m pytest tests/ -q --tb=no --ignore=tests/test_llama_cpp_adapter.py`
-
-The `--ignore=tests/test_llama_cpp_adapter.py` flag is required because `llama_cpp` is not installed in the development environment. The test file uses `pytest.importorskip("llama_cpp")` which should handle the missing dependency cleanly, but `--ignore` is used as belt-and-suspenders to ensure the test suite doesn't fail at collection time.
+**Standard test measurement command**: `python -m pytest tests/ -q --tb=no `
 
 **Integration tests**: Some tests require real services or API keys:
 - `tests/test_lm_studio_adapter.py::test_health_check_with_server` — requires LM Studio running at http://localhost:1234/v1
@@ -274,7 +272,7 @@ The template enforces the same discipline structurally — verification gates ar
 
 ### Closing steps (mandatory, every prompt)
 
-1. Run full test suite: `python -m pytest tests/ --ignore=tests/test_llama_cpp_adapter.py -v`. Confirm zero new failures.
+1. Run full test suite: `python -m pytest tests/ -v`. Confirm zero new failures.
 2. `ruff check <files_touched>` — zero errors.
 3. `mypy <files_touched> --ignore-missing-imports` — zero errors.
 4. `git add . && git commit -m "checkpoint: prompt-{N}" && git tag prompt-{N}`
@@ -332,7 +330,7 @@ Update this list whenever a new pattern is identified. Each entry should referen
 - **Per-file counts that don't match CHANGELOG evidence** (Plan 38.5 had this). If the plan says "11 warnings in test_web_server.py" but the prior CHANGELOG says "15 in web_server.py alone," that's a factual error — flag it. Always cite the CHANGELOG line number for any numeric claim.
 - **Drift check false-positive on docs files** (Plan 38.5 Gate 1 had this). The closing-step workflow tags BEFORE the docs commit, so `git diff --stat prompt-NN..HEAD -- SOVEREIGN_AI_HANDOFF.md CHANGELOG.md` will always show non-empty output for those two files by design. Drift checks must distinguish code files (must be empty) from docs files (allowed, with review procedure to confirm only append-only changes).
 - **Devin memories are not authoritative** (post-prompt-38.7 policy change). All Devin memories were deleted; new memories are added only when GLM/user explicitly requests via a plan step. Any plan or report that cites "per memory X" or "Mistake Pattern N" (where N is a Devin-memory concept, not a handoff recurring-mistake pattern) is a Rule 19 violation — the citation is unverifiable. All workarounds, methodologies, and constraints must live in the handoff or the plan itself.
-- **Devin chat report test counts unreliable** (prompt-39, prompt-40 had this). Devin's chat summary of test counts (e.g., "1118 passed") has been 6 tests lower than the handoff's actual measurement (e.g., "1124 passed") for two consecutive prompts. The handoff is the authoritative source — always verify test counts from the handoff, not from Devin's chat report. Pattern may be due to Devin counting --ignore'd tests differently or running a subset. When in doubt, run `python -m pytest tests/ -q --tb=no --ignore=tests/test_llama_cpp_adapter.py` directly to get the authoritative count.
+- **Test count assertions without measurement** (prompt-39, prompt-40, prompt-41 had this). Devin sometimes asserts test counts (e.g., "~1124 passed, 0 warnings") without actually measuring, copying from prior prompt baselines instead. This has occurred in chat reports, CHANGELOG entries, and handoff updates. The actual measurement may differ (e.g., prompt-41 claimed ~1124/0 warnings but actual was 1127/0 warnings). Rule 19 requires literal evidence — always paste the `Select-Object -Last 3` output of `python -m pytest tests/ -q --tb=no` as proof of the count, never assert from memory or copy from prior prompts.
 
 ---
 
