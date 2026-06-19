@@ -7538,3 +7538,61 @@ python -m pytest tests/ -q --tb=no 2>&1 | Select-Object -Last 1
 Result: `1 failed, 1080 passed, 29 skipped, 1 warning in 86.88s (0:01:26)`
 **PASS**: 1080 passed, 29 skipped, 1 failed (pre-existing flaky), 1 warning (Gemini FutureWarning with ticket reference)
 
+---
+
+## Prompt 38.6 — Manual TUI verification for prompt-37.6.1 Gates 5/6 (Rule 19 remediation)
+
+### Why this matters
+
+Prompt-37.6.1 violated Rule 19 by marking Gates 5/6 SKIPPED with "manual verification requires interactive TUI session" reasoning. This plan either executes the verification or formally defers again — no silent skip.
+
+### Step 1 — Drift check + baseline evidence
+
+**Drift check**:
+```
+git diff --stat prompt-38.5..HEAD -- cli/tui.py cli/main.py SOVEREIGN_AI_HANDOFF.md CHANGELOG.md
+```
+Result: empty output (no code drift since prompt-38.5)
+
+**Baseline test counts**:
+```
+python -m pytest tests/ -q --tb=short 2>&1 | Select-Object -Last 3
+```
+Result: `1 failed, 1080 passed, 29 skipped, 1 warning in 91.68s (0:01:31)`
+
+**Baseline analysis**: Test counts match expected (1080/29/1/1). No drift since prompt-38.5.
+
+### Step 2 — F7 fix verification
+
+**Verify WorkerBase default emitter is MemoryTraceEmitter**:
+```
+Select-String -Path C:\Jarvis\core\worker_base.py -Pattern "MemoryTraceEmitter|ConsoleTraceEmitter"
+```
+Result:
+```
+core\worker_base.py:89:            from core.observability import MemoryTraceEmitter
+core\worker_base.py:90:            emitter = MemoryTraceEmitter()
+```
+
+**F7 fix verification**: MemoryTraceEmitter is the default (lines 89-90). No ConsoleTraceEmitter as default. F7 fix from prompt-38 is still in place.
+
+#### Gate 5 — Manual TUI test (prompt-37.6.1 remediation) — SECOND DEFERRAL
+
+Plan 38.6 was created to execute the manual TUI verification deferred from prompt-37.6.1. Plan 38.6 also lacks an interactive shell in this execution environment. Per Rule 19, this cannot be silently skipped — it must be formally deferred again.
+
+**New deferral target**: Plan 38.8 — Manual TUI verification (second deferral).
+
+**When Plan 38.8 will become possible**: When the user executes this plan manually on their Windows machine with an interactive shell, or when the execution environment gains an interactive shell capability.
+
+#### Gate 6 — Adapter swap test (prompt-37.6.1 remediation) — SECOND DEFERRAL
+
+Plan 38.6 also lacks an interactive shell. Deferred to Plan 38.8 alongside Gate 5. See Gate 5 second deferral entry above for details.
+
+### Step 5 — TUI exit
+
+Not applicable — TUI was not started (deferred).
+
+### Result
+
+Gates 5/6 deferred to Plan 38.8 — Rule 19 violation still open, formally tracked. This is the second deferral (prompt-37.6.1 → Plan 38.6 → Plan 38.8). A third deferral should trigger re-evaluation of whether manual TUI verification is the right approach (automated verification or removal of manual verification requirement from plan template).
+
