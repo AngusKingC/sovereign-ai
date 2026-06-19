@@ -33,7 +33,7 @@ class GroqAdapter(LLMAdapter):
     def __init__(
         self,
         api_key: str,
-        model_name: str = "llama3-70b-8192",
+        model_name: str = "llama-3.3-70b-versatile",
         temperature: float = 0.1,
         emitter: TraceEmitter | None = None,
     ) -> None:

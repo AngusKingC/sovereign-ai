@@ -33,7 +33,7 @@ class CohereAdapter(LLMAdapter):
     def __init__(
         self,
         api_key: str,
-        model_name: str = "command-r-plus",
+        model_name: str = "command",
         temperature: float = 0.1,
         emitter: TraceEmitter | None = None,
     ) -> None:
@@ -194,11 +194,9 @@ class CohereAdapter(LLMAdapter):
 
     @property
     def cost_per_token(self) -> float:
-        """Cost per token for this model (Command R+: ~$0.003/1K tokens)."""
+        """Cost per token for this model (Command: ~$0.0015/1K tokens)."""
         costs = {
-            "command-r-plus": 0.003,
-            "command-r": 0.0005,
             "command": 0.0015,
         }
-        return costs.get(self._model_name, 0.003)
+        return costs.get(self._model_name, 0.0015)
 

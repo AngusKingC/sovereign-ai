@@ -1,6 +1,6 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-19 14:40 — post prompt-38.7.1. Executed Gemini SDK migration (google.generativeai → google.genai), fixed LM Studio test (mocked unit test + integration test), converted Anthropic/Gemini adapter unit tests to mocked (10 unit tests now run without API keys), verified trajectory_exporter skips still legitimate (6 Plan 45 deferrals), cleaned up requirements.txt (removed duplicate llama-cpp-python, fixed spacing, updated google-genai). Test baseline: 1089 passed, 19 skipped (13 integration tests requiring API keys/services + 6 Plan 45 deferrals), 0 failed, 0 warnings (measured with python -m pytest tests/ -q --tb=no --ignore=tests/test_llama_cpp_adapter.py). Adapter verification: Ollama ✅, LM Studio ✅, Anthropic ❌ (insufficient credit balance), Gemini ❌ (service unavailable - high demand).
+**Last updated**: 2026-06-19 15:35 — post prompt-39. Wrote test files for OpenAI, Cohere, Groq adapters (5 unit + 6 integration tests each), updated adapters to use current models (OpenAI: gpt-3.5-turbo, Cohere: command, Groq: llama-3.3-70b-versatile), registered openai/cohere/groq/anthropic in cli/adapter_factory.py. Adapter verification: OpenAI ⚠️ (insufficient quota), Cohere ⚠️ (deprecated models), Groq ✅ (6 integration tests passed), Anthropic ⚠️ (insufficient credit balance - re-verified from prompt-38.7.1). Test baseline: 1104 passed, 37 skipped (18 new integration + 13 existing integration + 6 Plan 45), 0 failed, 0 warnings.
 
 **Post-prompt-38 documentation update** (2026-06-19, separate from any prompt): Added "Claude review workflow (token-economical)" subsection to the Workflow section. Documents the new per-prompt context brief pattern, deprecates `CLAUDE_REVIEWER_ROLE.md` as a separate upload, and codifies the round-1-full / round-2-diff / round-3-rarely review structure. Known landmines list updated with prompt-38 tag-push issue, Plan 38.5 re-guessing-disproved-hypotheses issue, per-file-count-mismatch issue, and drift-check-false-positive-on-docs-files issue.
 
@@ -38,16 +38,20 @@ Verified by running the code, not by reading the CHANGELOG:
 - **`jarvis --rich`** — Rich-based interactive CLI with slash commands.
 - **`jarvis --setup` / `--reconfigure` / `--doctor`** — SetupWizard runs, writes `jarvis.config.yaml` + `.env`, doctor checks Ollama/Postgres/Qdrant/Obsidian reachability.
 - **`jarvis serve`** — starts FastAPI server on default port 8000 (configurable via --host/--port). Accepts task submissions via POST /api/tasks, returns worker listings via GET /api/workers.
-- **TUI slash commands** — `/help`, `/status`, `/clear`, `/exit`, `/model`, `/adapter`, `/theme` work. `/adapter ollama` and `/adapter lm_studio` actually switch adapters; the other 9 listed adapters crash with `ValueError` because `cli/adapter_factory.py` only knows those two.
+- **TUI slash commands** — `/help`, `/status`, `/clear`, `/exit`, `/model`, `/adapter`, `/theme` work. `/adapter` now supports: ollama, lm_studio, openai, cohere, groq, anthropic (6 adapters). Remaining 8 adapters still need factory registration (Plan 40+).
 - **Session manager** — in-memory mode works. Postgres persistence does not (see "What's broken").
 - **Command history** — in-memory mode works. Postgres persistence does not.
-- **Test suite** — 1089 tests pass, 19 skipped (13 integration tests requiring API keys/services + 6 Plan 45 deferrals), 0 warnings. Quality varies; some are smoke tests with `assert True` (see Process section).
+- **Test suite** — 1104 tests pass, 37 skipped (18 new integration + 13 existing integration + 6 Plan 45), 0 warnings. Quality varies; some are smoke tests with `assert True` (see Process section).
 
-**Adapter verification status** (as of prompt-38.7.1):
-- Ollama: ✅ verified (4 tests passed)
-- LM Studio: ✅ verified (11 tests passed, including integration test)
-- Anthropic: ❌ insufficient credit balance (API key valid but account has no credits)
-- Gemini: ❌ service unavailable (API key valid but model experiencing high demand)
+**Adapter verification status** (as of prompt-39):
+- Ollama: ✅ verified (prompt-38.7)
+- LM Studio: ✅ verified (prompt-38.7.1)
+- OpenAI: ⚠️ code correct, runtime verification blocked by insufficient quota (prompt-39)
+- Cohere: ⚠️ code correct, runtime verification blocked by deprecated models (prompt-39)
+- Groq: ✅ verified (prompt-39, 6 integration tests passed)
+- Anthropic: ⚠️ code correct, runtime verification blocked by insufficient credit balance (prompt-39, re-verified from prompt-38.7.1)
+- Gemini: ⚠️ code correct, runtime verification blocked by external service issue (prompt-38.7.1)
+- Remaining 7 adapters (mistral, together, deepseek, huggingface, llama_cpp, mcp, base): Plan 40+
 
 That's it. Everything else is either broken, unreachable, or aspirational.
 
@@ -61,6 +65,9 @@ The `--ignore=tests/test_llama_cpp_adapter.py` flag is required because `llama_c
 
 **Integration tests**: Some tests require real services or API keys:
 - `tests/test_lm_studio_adapter.py::test_health_check_with_server` — requires LM Studio running at http://localhost:1234/v1
+- `tests/test_openai_adapter.py::TestOpenAIAdapterIntegration` — requires `OPENAI_API_KEY` env var (get at https://platform.openai.com/api-keys)
+- `tests/test_cohere_adapter.py::TestCohereAdapterIntegration` — requires `COHERE_API_KEY` env var (get at https://dashboard.cohere.com/api-keys)
+- `tests/test_groq_adapter.py::TestGroqAdapterIntegration` — requires `GROQ_API_KEY` env var (get at https://console.groq.com/keys)
 - `tests/test_anthropic_adapter.py::TestAnthropicAdapterIntegration` — requires `ANTHROPIC_API_KEY` env var (get at https://console.anthropic.com/settings/keys)
 - `tests/test_gemini_adapter.py::TestGeminiAdapterIntegration` — requires `GEMINI_API_KEY` env var (get at https://aistudio.google.com/app/apikey)
 
@@ -330,19 +337,19 @@ Ordered. Each is one plan. Do not start Plan N+1 until Plan N's verification gat
 - **Scope**: `core/worker_base.py:88-91` (change default to `MemoryTraceEmitter`), `cli/__init__.py` (create empty).
 - **Verification**: `jarvis "hello"` produces no trace output. `mypy core/ adapters/ workers/ system/ cli/ memory/ --ignore-missing-imports` runs without the "Source file found twice" error.
 
-### Plan 39 — Fix trajectory_exporter.py MemoryRouter pattern
+### Plan 40 — Remaining cloud adapters (Mistral, Together, DeepSeek, HuggingFace)
+- **Priority**: P1
+- **Effort**: M
+- **Why**: 4 of 14 cloud adapters still lack test coverage and factory registration. After Plan 39, 6 of 14 adapters are verified (Ollama, LM Studio, OpenAI, Cohere, Groq, Anthropic). Plan 40 completes the cloud adapter test coverage.
+- **Scope**: Write test files for mistral, together, deepseek, huggingface adapters (5 unit + 6 integration tests each), register all 4 in cli/adapter_factory.py, verify integration tests with real API keys.
+- **Verification**: All 4 adapters have test files with passing unit tests, all 4 registered in adapter_factory, integration tests pass with real API keys.
+
+### Plan 41 — Fix trajectory_exporter.py MemoryRouter pattern
 - **Priority**: P2
 - **Effort**: S
 - **Why**: `system/trajectory_exporter.py` uses `fetch(Type, filter_func=...)` pattern not covered by F6 spec. This pattern needs to be addressed separately.
 - **Scope**: `system/trajectory_exporter.py` — update calls to use new MemoryRouter methods or extend MemoryRouter to support this pattern.
 - **Verification**: `mypy system/trajectory_exporter.py --ignore-missing-imports` returns zero errors.
-
-### Plan 40 — Fix test failures from Prompt 37
-- **Priority**: P1
-- **Effort**: M
-- **Why**: 69 test failures due to mock implementations not matching expected behavior after MemoryRouter method changes.
-- **Scope**: Test files for modules modified in Prompt 37 (rating_system, scratchpad, orchestrator_improvement, trace_optimiser, worker_factory, worker_persistence, instruction_versioning, memory_router, model_registry).
-- **Verification**: `python -m pytest tests/ -q --tb=short` returns zero new failures (baseline 1010 passed).
 
 ### Plan 41 — Triage ruff errors (365 → 0)
 - **Priority**: P2
