@@ -8274,7 +8274,7 @@ Output: (pending â€” tag not yet pushed)
 - Gate 3 (Per-file tests pass): PASSED - python -m pytest tests/skills/test_notes_skill.py tests/skills/test_calendar_skill.py tests/skills/test_reminder_skill.py -v --tb=short (42 passed in 0.66s)
 - Gate 4 (Full test suite measurement): 1127 passed, 61 skipped, 0 failed, 0 warnings in 93.31s (measured with python -m pytest tests/ -q --tb=no)
 - Gate 5 (Handoff updated): PASSED - Select-String -Path SOVEREIGN_AI_HANDOFF.md -Pattern "prompt-43a" and Select-String -Path SOVEREIGN_AI_HANDOFF.md -Pattern "Plan 43a.*COMPLETED"
-- Gate 6 (Tag-push verification): PENDING
+- Gate 6 (Tag-push verification): PASSED - git ls-remote --tags origin | findstr prompt-43a (d08774595d7de936e258be1bd62023a2096cd9d7 refs/tags/prompt-43a)
 
 **Baseline comparison:**
 - Baseline (pre-prompt-43a): 1127 passed, 61 skipped, 0 failed, 0 warnings (from prompt-42)
