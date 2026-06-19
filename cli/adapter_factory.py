@@ -76,8 +76,32 @@ def create_adapter(
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY environment variable not set")
         return AnthropicAdapter(api_key=api_key, model_name=model_name)
+    elif adapter_name_lower == "mistral":
+        from adapters.mistral import MistralAdapter
+        api_key = os.getenv("MISTRAL_API_KEY")
+        if not api_key:
+            raise ValueError("MISTRAL_API_KEY environment variable not set")
+        return MistralAdapter(api_key=api_key, model_name=model_name)
+    elif adapter_name_lower == "together":
+        from adapters.together import TogetherAdapter
+        api_key = os.getenv("TOGETHER_API_KEY")
+        if not api_key:
+            raise ValueError("TOGETHER_API_KEY environment variable not set")
+        return TogetherAdapter(api_key=api_key, model_name=model_name)
+    elif adapter_name_lower == "deepseek":
+        from adapters.deepseek import DeepSeekAdapter
+        api_key = os.getenv("DEEPSEEK_API_KEY")
+        if not api_key:
+            raise ValueError("DEEPSEEK_API_KEY environment variable not set")
+        return DeepSeekAdapter(api_key=api_key, model_name=model_name)
+    elif adapter_name_lower == "huggingface":
+        from adapters.huggingface import HuggingFaceAdapter
+        api_key = os.getenv("HUGGINGFACE_API_KEY") or os.getenv("HF_TOKEN")
+        if not api_key:
+            raise ValueError("HUGGINGFACE_API_KEY (or HF_TOKEN) environment variable not set")
+        return HuggingFaceAdapter(api_key=api_key, model_name=model_name)
     else:
-        available = ["ollama", "lm_studio", "openai", "cohere", "groq", "anthropic"]
+        available = ["ollama", "lm_studio", "openai", "cohere", "groq", "anthropic", "mistral", "together", "deepseek", "huggingface"]
         raise ValueError(
             f"Unknown adapter: {adapter_name}. Available adapters: {', '.join(available)}"
         )
