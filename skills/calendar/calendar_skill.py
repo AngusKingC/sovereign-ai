@@ -59,6 +59,7 @@ class CalendarSkill:
             import asyncio
             start_time = asyncio.get_event_loop().time()
         except Exception:
+            # Event loop timing failure - non-critical, continue
             pass
 
         try:
@@ -71,6 +72,7 @@ class CalendarSkill:
                 duration_ms=0,
             ))
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         if not self._calendar_path:
@@ -129,6 +131,7 @@ class CalendarSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -141,6 +144,7 @@ class CalendarSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             return events
@@ -150,6 +154,7 @@ class CalendarSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -162,6 +167,7 @@ class CalendarSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             raise SkillExecutionError(f"Calendar file not found: {self._calendar_path}")
@@ -170,6 +176,7 @@ class CalendarSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -182,6 +189,7 @@ class CalendarSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             raise SkillExecutionError(f"Failed to parse calendar: {str(e)}")
@@ -208,6 +216,7 @@ class CalendarSkill:
             import asyncio
             start_time = asyncio.get_event_loop().time()
         except Exception:
+            # Event loop timing failure - non-critical, continue
             pass
 
         try:
@@ -220,6 +229,7 @@ class CalendarSkill:
                 duration_ms=0,
             ))
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Check approval gate
@@ -245,6 +255,7 @@ class CalendarSkill:
                 try:
                     duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                 except Exception:
+                    # Event loop timing failure - non-critical, continue
                     pass
                 
                 try:
@@ -257,6 +268,7 @@ class CalendarSkill:
                         duration_ms=duration_ms,
                     ))
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
                 
                 raise SkillExecutionError(f"Approval denied: {response.decision_reason}")
@@ -267,6 +279,7 @@ class CalendarSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -279,6 +292,7 @@ class CalendarSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             raise SkillExecutionError(f"Approval request failed: {str(e)}")
@@ -333,6 +347,7 @@ class CalendarSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -345,6 +360,7 @@ class CalendarSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             return str(event.get("uid"))
@@ -354,6 +370,7 @@ class CalendarSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -366,6 +383,7 @@ class CalendarSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             raise SkillExecutionError(f"Failed to create event: {str(e)}")
@@ -388,6 +406,7 @@ class CalendarSkill:
             import asyncio
             start_time = asyncio.get_event_loop().time()
         except Exception:
+            # Event loop timing failure - non-critical, continue
             pass
 
         try:
@@ -400,6 +419,7 @@ class CalendarSkill:
                 duration_ms=0,
             ))
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Check approval gate
@@ -425,6 +445,7 @@ class CalendarSkill:
                 try:
                     duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                 except Exception:
+                    # Event loop timing failure - non-critical, continue
                     pass
                 
                 try:
@@ -437,6 +458,7 @@ class CalendarSkill:
                         duration_ms=duration_ms,
                     ))
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
                 
                 raise SkillExecutionError(f"Approval denied: {response.decision_reason}")
@@ -447,6 +469,7 @@ class CalendarSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -459,6 +482,7 @@ class CalendarSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             raise SkillExecutionError(f"Approval request failed: {str(e)}")
@@ -497,6 +521,7 @@ class CalendarSkill:
                 try:
                     duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                 except Exception:
+                    # Event loop timing failure - non-critical, continue
                     pass
                 
                 try:
@@ -509,6 +534,7 @@ class CalendarSkill:
                         duration_ms=duration_ms,
                     ))
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
                 
                 return False
@@ -524,6 +550,7 @@ class CalendarSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -536,6 +563,7 @@ class CalendarSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             return True
@@ -545,6 +573,7 @@ class CalendarSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -557,6 +586,7 @@ class CalendarSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             raise SkillExecutionError(f"Failed to cancel event: {str(e)}")

@@ -8253,5 +8253,33 @@ Output: (pending â€” tag not yet pushed)
 - Gate 3 (Both files' tests still pass): PASSED - python -m pytest tests/test_audio_capture.py tests/test_model_evaluator.py -v --tb=short (25 passed)
 - Gate 4 (Full test suite measurement): 1127 passed, 61 skipped, 0 failed, 0 warnings in 83.70s (measured with python -m pytest tests/ -q --tb=no)
 - Gate 5 (Handoff updated): PASSED - Select-String -Path SOVEREIGN_AI_HANDOFF.md -Pattern "prompt-42.1" and Select-String -Path SOVEREIGN_AI_HANDOFF.md -Pattern "system/ is now FULLY Rule 17 compliant\|system/.*fully compliant"
-- Gate 6 (Commit pushed to master): PENDING - to be verified after push
+- Gate 6 (Commit pushed to master): PASSED - git ls-remote https://github.com/AngusKingC/sovereign-ai refs/heads/master (HEAD at 23c13e1, past 27c8ae4)
+
+## Prompt-43: Broad-except audit, part 3 (skills/ - Plan 43a)
+
+**Scope:** Files with 20+ violations in skills/ (split from Plan 43 due to total count exceeding 200)
+- skills/notes/notes_skill.py: 46 violations
+- skills/calendar/calendar_skill.py: 30 violations
+- skills/reminder/reminder_skill.py: 24 violations
+
+**Total violations fixed:** 100 (46 + 30 + 24)
+
+**Approach:** All violations were cleanup paths (trace emission failure and event loop timing failure). Added inline comments per Rule 17:
+- `# Trace emission failure - non-critical, continue`
+- `# Event loop timing failure - non-critical, continue`
+
+**Verification Gate Output:**
+- Gate 1 (Drift check): PASSED - git diff --stat prompt-42..HEAD -- skills/ (empty output - no changes since prompt-42)
+- Gate 2 (Zero except Exception: pass in Plan 43a files): PASSED - Get-ChildItem -Path skills\notes\notes_skill.py, skills\calendar\calendar_skill.py, skills\reminder\reminder_skill.py | ForEach-Object { $matches = Select-String -Path $_.FullName -Pattern "except Exception" -Context 0,1 | Where-Object { $_.Context.PostContext -match "pass" -and $_.Context.PostContext -notmatch "#" }; if ($matches.Count -gt 0) { Write-Host "$($_.Name): $($matches.Count) violations" } } (no output - zero violations)
+- Gate 3 (Per-file tests pass): PASSED - python -m pytest tests/skills/test_notes_skill.py tests/skills/test_calendar_skill.py tests/skills/test_reminder_skill.py -v --tb=short (42 passed in 0.66s)
+- Gate 4 (Full test suite measurement): 1127 passed, 61 skipped, 0 failed, 0 warnings in 93.31s (measured with python -m pytest tests/ -q --tb=no)
+- Gate 5 (Handoff updated): PENDING
+- Gate 6 (Tag-push verification): PENDING
+
+**Baseline comparison:**
+- Baseline (pre-prompt-43a): 1127 passed, 61 skipped, 0 failed, 0 warnings (from prompt-42)
+- Final (post-prompt-43a): 1127 passed, 61 skipped, 0 failed, 0 warnings
+- Net Change: 0 passed, 0 skipped, 0 failed, 0 warnings (behavior unchanged - only added inline comments)
+
+**Remaining work (Plan 43b):** 18 files with <20 violations in skills/ (total 119 violations remaining)
 

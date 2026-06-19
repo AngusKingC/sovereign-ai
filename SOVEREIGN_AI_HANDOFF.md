@@ -1,6 +1,6 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-19 22:05 — post prompt-42.1 fix-up. Remaining system/ broad-except patterns (audio_capture.py: 3, model_evaluator.py: 5) fixed. system/ is now FULLY Rule 17 compliant — zero except Exception: pass patterns across ALL system/ files (103 patterns total: 95 from prompt-42 + 8 from prompt-42.1). Test baseline: 1127 passed, 61 skipped, 0 failed, 0 warnings (measured with python -m pytest tests/ -q --tb=no).
+**Last updated**: 2026-06-20 00:58 — post prompt-43a. Fixed 100 broad-except patterns in skills/ files with 20+ violations (notes_skill.py: 46, calendar_skill.py: 30, reminder_skill.py: 24). All violations were cleanup paths (trace emission failure and event loop timing failure). Added inline comments per Rule 17. Test baseline: 1127 passed, 61 skipped, 0 failed, 0 warnings (measured with python -m pytest tests/ -q --tb=no).
 
 **Post-prompt-38 documentation update** (2026-06-19, separate from any prompt): Added "Claude review workflow (token-economical)" subsection to the Workflow section. Documents the new per-prompt context brief pattern, deprecates `CLAUDE_REVIEWER_ROLE.md` as a separate upload, and codifies the round-1-full / round-2-diff / round-3-rarely review structure. Known landmines list updated with prompt-38 tag-push issue, Plan 38.5 re-guessing-disproved-hypotheses issue, per-file-count-mismatch issue, and drift-check-false-positive-on-docs-files issue.
 
@@ -346,15 +346,28 @@ Update this list whenever a new pattern is identified. Each entry should referen
 
 ---
 
+## Completed prompts
+
+### Plan 43a — Broad-except audit, part 3 (skills/) — COMPLETED
+- **Priority**: P1
+- **Effort**: L (split from Plan 43 due to total count exceeding 200)
+- **Why**: Same as Plan 41, but for `skills/` directory. Total violations across skills/: 219. Split into 43a (files with 20+ violations) and 43b (files with <20 violations).
+- **Scope**: Audit skills/ files with 20+ violations for broad `except Exception` blocks. Apply same three-option fix pattern.
+- **Files**: notes/notes_skill.py (46 violations), calendar/calendar_skill.py (30 violations), reminder/reminder_skill.py (24 violations).
+- **Verification**: `Select-String -Path skills\notes\notes_skill.py, skills\calendar\calendar_skill.py, skills\reminder\reminder_skill.py -Pattern "except Exception" -Context 0,1 | Where-Object { $_.Context.PostContext -match "pass" -and $_.Context.PostContext -notmatch "#" }` returns zero hits.
+- **Result**: Fixed 100 broad-except patterns across 3 files. All violations were cleanup paths (trace emission failure and event loop timing failure). Added inline comments per Rule 17. Test suite unchanged: 1127 passed, 61 skipped, 0 failed, 0 warnings.
+
+---
+
 ## Next 5 prompts
 
 Ordered. Each is one plan. Do not start Plan N+1 until Plan N's verification gates pass.
 
-### Plan 43 — Broad-except audit, part 3 (skills/)
+### Plan 43b — Broad-except audit, part 3 (skills/ - remainder)
 - **Priority**: P1
 - **Effort**: M
-- **Why**: Same as Plan 41, but for `skills/` directory.
-- **Scope**: Audit `skills/` for broad `except Exception` blocks. Apply same three-option fix pattern.
+- **Why**: Same as Plan 43a, but for the remaining 18 skills/ files with <20 violations each (total 119 violations remaining).
+- **Scope**: Audit remaining skills/ files for broad `except Exception` blocks. Apply same three-option fix pattern.
 - **Verification**: `Select-String -Path skills\ -Pattern "except Exception" -Recurse` returns zero hits (or only hits with inline comments and trace events).
 
 ### Plan 44 — InputSanitiser wiring

@@ -61,6 +61,7 @@ class NotesSkill:
             import asyncio
             start_time = asyncio.get_event_loop().time()
         except Exception:
+            # Event loop timing failure - non-critical, continue
             pass
 
         try:
@@ -73,6 +74,7 @@ class NotesSkill:
                 duration_ms=0,
             ))
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Request approval if gate is present
@@ -95,6 +97,7 @@ class NotesSkill:
                     try:
                         duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                     except Exception:
+                        # Event loop timing failure - non-critical, continue
                         pass
                     
                     try:
@@ -107,6 +110,7 @@ class NotesSkill:
                             duration_ms=duration_ms,
                         ))
                     except Exception:
+                        # Trace emission failure - non-critical, continue
                         pass
                     
                     raise SkillExecutionError(f"Approval denied: {response.decision_reason}")
@@ -117,6 +121,7 @@ class NotesSkill:
                 try:
                     duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                 except Exception:
+                    # Event loop timing failure - non-critical, continue
                     pass
                 
                 try:
@@ -129,6 +134,7 @@ class NotesSkill:
                         duration_ms=duration_ms,
                     ))
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
                 
                 raise SkillExecutionError(f"Approval request failed: {str(e)}")
@@ -150,6 +156,7 @@ class NotesSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -162,6 +169,7 @@ class NotesSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             return note_id
@@ -171,6 +179,7 @@ class NotesSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -183,6 +192,7 @@ class NotesSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             raise SkillExecutionError(f"Failed to create note: {str(e)}")
@@ -202,6 +212,7 @@ class NotesSkill:
             import asyncio
             start_time = asyncio.get_event_loop().time()
         except Exception:
+            # Event loop timing failure - non-critical, continue
             pass
 
         try:
@@ -214,6 +225,7 @@ class NotesSkill:
                 duration_ms=0,
             ))
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         try:
@@ -226,6 +238,7 @@ class NotesSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -238,6 +251,7 @@ class NotesSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             return notes
@@ -247,6 +261,7 @@ class NotesSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -259,6 +274,7 @@ class NotesSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             raise SkillExecutionError(f"Failed to list notes: {str(e)}")
@@ -281,6 +297,7 @@ class NotesSkill:
             import asyncio
             start_time = asyncio.get_event_loop().time()
         except Exception:
+            # Event loop timing failure - non-critical, continue
             pass
 
         try:
@@ -293,6 +310,7 @@ class NotesSkill:
                 duration_ms=0,
             ))
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         try:
@@ -302,6 +320,7 @@ class NotesSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -314,6 +333,7 @@ class NotesSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             return note
@@ -323,6 +343,7 @@ class NotesSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -335,6 +356,7 @@ class NotesSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             raise SkillExecutionError(f"Failed to get note: {str(e)}")
@@ -360,6 +382,7 @@ class NotesSkill:
             import asyncio
             start_time = asyncio.get_event_loop().time()
         except Exception:
+            # Event loop timing failure - non-critical, continue
             pass
 
         try:
@@ -372,6 +395,7 @@ class NotesSkill:
                 duration_ms=0,
             ))
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Request approval if gate is present
@@ -394,6 +418,7 @@ class NotesSkill:
                     try:
                         duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                     except Exception:
+                        # Event loop timing failure - non-critical, continue
                         pass
                     
                     try:
@@ -406,6 +431,7 @@ class NotesSkill:
                             duration_ms=duration_ms,
                         ))
                     except Exception:
+                        # Trace emission failure - non-critical, continue
                         pass
                     
                     raise SkillExecutionError(f"Approval denied: {response.decision_reason}")
@@ -416,6 +442,7 @@ class NotesSkill:
                 try:
                     duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                 except Exception:
+                    # Event loop timing failure - non-critical, continue
                     pass
                 
                 try:
@@ -428,6 +455,7 @@ class NotesSkill:
                         duration_ms=duration_ms,
                     ))
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
                 
                 raise SkillExecutionError(f"Approval request failed: {str(e)}")
@@ -440,6 +468,7 @@ class NotesSkill:
                 try:
                     duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                 except Exception:
+                    # Event loop timing failure - non-critical, continue
                     pass
                 
                 try:
@@ -452,6 +481,7 @@ class NotesSkill:
                         duration_ms=duration_ms,
                     ))
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
                 
                 return False
@@ -470,6 +500,7 @@ class NotesSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -482,6 +513,7 @@ class NotesSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             return True
@@ -491,6 +523,7 @@ class NotesSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -503,6 +536,7 @@ class NotesSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             raise SkillExecutionError(f"Failed to update note: {str(e)}")
@@ -525,6 +559,7 @@ class NotesSkill:
             import asyncio
             start_time = asyncio.get_event_loop().time()
         except Exception:
+            # Event loop timing failure - non-critical, continue
             pass
 
         try:
@@ -537,6 +572,7 @@ class NotesSkill:
                 duration_ms=0,
             ))
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Request approval if gate is present
@@ -559,6 +595,7 @@ class NotesSkill:
                     try:
                         duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                     except Exception:
+                        # Event loop timing failure - non-critical, continue
                         pass
                     
                     try:
@@ -571,6 +608,7 @@ class NotesSkill:
                             duration_ms=duration_ms,
                         ))
                     except Exception:
+                        # Trace emission failure - non-critical, continue
                         pass
                     
                     raise SkillExecutionError(f"Approval denied: {response.decision_reason}")
@@ -581,6 +619,7 @@ class NotesSkill:
                 try:
                     duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                 except Exception:
+                    # Event loop timing failure - non-critical, continue
                     pass
                 
                 try:
@@ -593,6 +632,7 @@ class NotesSkill:
                         duration_ms=duration_ms,
                     ))
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
                 
                 raise SkillExecutionError(f"Approval request failed: {str(e)}")
@@ -605,6 +645,7 @@ class NotesSkill:
                 try:
                     duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                 except Exception:
+                    # Event loop timing failure - non-critical, continue
                     pass
                 
                 try:
@@ -617,6 +658,7 @@ class NotesSkill:
                         duration_ms=duration_ms,
                     ))
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
                 
                 return False
@@ -627,6 +669,7 @@ class NotesSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -639,6 +682,7 @@ class NotesSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             return True
@@ -648,6 +692,7 @@ class NotesSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -660,6 +705,7 @@ class NotesSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             raise SkillExecutionError(f"Failed to delete note: {str(e)}")

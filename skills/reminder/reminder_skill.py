@@ -61,6 +61,7 @@ class ReminderSkill:
             import asyncio
             start_time = asyncio.get_event_loop().time()
         except Exception:
+            # Event loop timing failure - non-critical, continue
             pass
 
         try:
@@ -73,6 +74,7 @@ class ReminderSkill:
                 duration_ms=0,
             ))
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Request approval if gate is present (optional for create)
@@ -95,6 +97,7 @@ class ReminderSkill:
                     try:
                         duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                     except Exception:
+                        # Event loop timing failure - non-critical, continue
                         pass
                     
                     try:
@@ -107,6 +110,7 @@ class ReminderSkill:
                             duration_ms=duration_ms,
                         ))
                     except Exception:
+                        # Trace emission failure - non-critical, continue
                         pass
                     
                     raise SkillExecutionError(f"Approval denied: {response.decision_reason}")
@@ -117,6 +121,7 @@ class ReminderSkill:
                 try:
                     duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                 except Exception:
+                    # Event loop timing failure - non-critical, continue
                     pass
                 
                 try:
@@ -129,6 +134,7 @@ class ReminderSkill:
                         duration_ms=duration_ms,
                     ))
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
                 
                 raise SkillExecutionError(f"Approval request failed: {str(e)}")
@@ -149,6 +155,7 @@ class ReminderSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -161,6 +168,7 @@ class ReminderSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             return reminder_id
@@ -170,6 +178,7 @@ class ReminderSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -182,6 +191,7 @@ class ReminderSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             raise SkillExecutionError(f"Failed to create reminder: {str(e)}")
@@ -201,6 +211,7 @@ class ReminderSkill:
             import asyncio
             start_time = asyncio.get_event_loop().time()
         except Exception:
+            # Event loop timing failure - non-critical, continue
             pass
 
         try:
@@ -213,6 +224,7 @@ class ReminderSkill:
                 duration_ms=0,
             ))
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         try:
@@ -228,6 +240,7 @@ class ReminderSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -240,6 +253,7 @@ class ReminderSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             return pending
@@ -249,6 +263,7 @@ class ReminderSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -261,6 +276,7 @@ class ReminderSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             raise SkillExecutionError(f"Failed to list reminders: {str(e)}")
@@ -283,6 +299,7 @@ class ReminderSkill:
             import asyncio
             start_time = asyncio.get_event_loop().time()
         except Exception:
+            # Event loop timing failure - non-critical, continue
             pass
 
         try:
@@ -295,6 +312,7 @@ class ReminderSkill:
                 duration_ms=0,
             ))
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         try:
@@ -305,6 +323,7 @@ class ReminderSkill:
                 try:
                     duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                 except Exception:
+                    # Event loop timing failure - non-critical, continue
                     pass
                 
                 try:
@@ -317,6 +336,7 @@ class ReminderSkill:
                         duration_ms=duration_ms,
                     ))
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
                 
                 return False
@@ -328,6 +348,7 @@ class ReminderSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -340,6 +361,7 @@ class ReminderSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             return True
@@ -349,6 +371,7 @@ class ReminderSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Event loop timing failure - non-critical, continue
                 pass
             
             try:
@@ -361,6 +384,7 @@ class ReminderSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             raise SkillExecutionError(f"Failed to mark reminder delivered: {str(e)}")
