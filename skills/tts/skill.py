@@ -81,6 +81,7 @@ class TTSSkill:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
 
             return stdout
@@ -106,6 +107,7 @@ class TTSSkill:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             raise SkillExecutionError("tts", f"Failed to synthesise: {str(e)}")
 
@@ -157,6 +159,7 @@ class TTSSkill:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
 
         except Exception as e:

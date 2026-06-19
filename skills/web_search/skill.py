@@ -75,6 +75,7 @@ class WebSearchSkill:
                 duration_ms=0,
             ))
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Check if any backend is configured
@@ -92,6 +93,7 @@ class WebSearchSkill:
                     duration_ms=int((asyncio.get_event_loop().time() - start_time) * 1000),
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             return {
                 "success": False,
@@ -139,6 +141,7 @@ class WebSearchSkill:
                         duration_ms=duration_ms,
                     ))
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
 
                 return {
@@ -166,6 +169,7 @@ class WebSearchSkill:
                             duration_ms=int((asyncio.get_event_loop().time() - start_time) * 1000),
                         ))
                     except Exception:
+                        # Trace emission failure - non-critical, continue
                         pass
                     return {
                         "success": False,
@@ -213,6 +217,7 @@ class WebSearchSkill:
                         duration_ms=duration_ms,
                     ))
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
 
                 return {
@@ -236,6 +241,7 @@ class WebSearchSkill:
                         duration_ms=int((asyncio.get_event_loop().time() - start_time) * 1000),
                     ))
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
                 return {
                     "success": False,

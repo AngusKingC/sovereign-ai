@@ -82,6 +82,7 @@ class ScreenshotSkill:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
 
             return png_bytes
@@ -102,6 +103,7 @@ class ScreenshotSkill:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             raise SkillExecutionError("screenshot", f"Failed to capture screenshot: {str(e)}")
 

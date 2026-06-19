@@ -56,6 +56,7 @@ class PdfSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Check if file exists - raise FileNotFoundError outside try-except
@@ -88,6 +89,7 @@ class PdfSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return text
@@ -115,6 +117,7 @@ class PdfSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         import pdfplumber
@@ -145,6 +148,7 @@ class PdfSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return text
@@ -171,6 +175,7 @@ class PdfSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         import pdfplumber
@@ -194,6 +199,7 @@ class PdfSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return count
@@ -233,6 +239,7 @@ class PdfSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Try reportlab first, fall back to fpdf2
@@ -295,6 +302,7 @@ class PdfSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return {

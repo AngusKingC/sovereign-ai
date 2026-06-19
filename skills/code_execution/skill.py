@@ -70,6 +70,7 @@ class CodeExecutionSkill:
                 duration_ms=0,
             ))
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Request approval if gate is present
@@ -104,6 +105,7 @@ class CodeExecutionSkill:
                             duration_ms=int((asyncio.get_event_loop().time() - start_time) * 1000),
                         ))
                     except Exception:
+                        # Trace emission failure - non-critical, continue
                         pass
                     return {
                         "success": False,
@@ -126,6 +128,7 @@ class CodeExecutionSkill:
                         duration_ms=int((asyncio.get_event_loop().time() - start_time) * 1000),
                     ))
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
                 return {
                     "success": False,
@@ -163,6 +166,7 @@ class CodeExecutionSkill:
                         duration_ms=int((asyncio.get_event_loop().time() - start_time) * 1000),
                     ))
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
                 return {
                     "success": False,
@@ -193,6 +197,7 @@ class CodeExecutionSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
 
             return {
@@ -217,6 +222,7 @@ class CodeExecutionSkill:
                     duration_ms=int((asyncio.get_event_loop().time() - start_time) * 1000),
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             return {
                 "success": False,

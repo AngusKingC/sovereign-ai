@@ -50,6 +50,7 @@ class ClipboardSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         loop = asyncio.get_event_loop()
@@ -72,6 +73,7 @@ class ClipboardSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return content
@@ -108,6 +110,7 @@ class ClipboardSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         loop = asyncio.get_event_loop()
@@ -131,6 +134,7 @@ class ClipboardSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return {
@@ -166,6 +170,7 @@ class ClipboardSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         loop = asyncio.get_event_loop()
@@ -189,6 +194,7 @@ class ClipboardSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return {

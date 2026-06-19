@@ -73,6 +73,7 @@ class WebScraperSkill:
                     )
                     await self._emitter.emit(event)
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
 
                 return content
@@ -93,5 +94,6 @@ class WebScraperSkill:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             raise

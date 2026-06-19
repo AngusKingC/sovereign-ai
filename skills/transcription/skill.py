@@ -76,6 +76,7 @@ class TranscriptionSkill:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
 
             return text
@@ -96,6 +97,7 @@ class TranscriptionSkill:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             raise SkillExecutionError("transcription", f"Failed to transcribe: {str(e)}")
 
@@ -127,4 +129,5 @@ class TranscriptionSkill:
             try:
                 os.unlink(temp_path)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass

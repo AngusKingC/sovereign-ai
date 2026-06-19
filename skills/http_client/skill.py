@@ -64,6 +64,7 @@ class HttpClientSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -82,6 +83,7 @@ class HttpClientSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return {
@@ -131,6 +133,7 @@ class HttpClientSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -149,6 +152,7 @@ class HttpClientSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return {
@@ -198,6 +202,7 @@ class HttpClientSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -216,6 +221,7 @@ class HttpClientSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return {
@@ -263,6 +269,7 @@ class HttpClientSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -281,6 +288,7 @@ class HttpClientSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return {

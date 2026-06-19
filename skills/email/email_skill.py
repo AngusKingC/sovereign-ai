@@ -88,6 +88,7 @@ class EmailSkill:
             import asyncio
             start_time = asyncio.get_event_loop().time()
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         try:
@@ -100,6 +101,7 @@ class EmailSkill:
                 duration_ms=0,
             ))
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Check credentials
@@ -198,6 +200,7 @@ class EmailSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             try:
@@ -210,6 +213,7 @@ class EmailSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             return messages_data
@@ -219,6 +223,7 @@ class EmailSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             try:
@@ -231,6 +236,7 @@ class EmailSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             raise SkillExecutionError(f"Failed to read inbox: {str(e)}")
@@ -255,6 +261,7 @@ class EmailSkill:
             import asyncio
             start_time = asyncio.get_event_loop().time()
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         try:
@@ -267,6 +274,7 @@ class EmailSkill:
                 duration_ms=0,
             ))
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Check approval gate
@@ -295,6 +303,7 @@ class EmailSkill:
                 try:
                     duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
                 
                 try:
@@ -307,6 +316,7 @@ class EmailSkill:
                         duration_ms=duration_ms,
                     ))
                 except Exception:
+                    # Trace emission failure - non-critical, continue
                     pass
                 
                 raise SkillExecutionError(f"Approval denied: {response.decision_reason}")
@@ -317,6 +327,7 @@ class EmailSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             try:
@@ -329,6 +340,7 @@ class EmailSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             raise SkillExecutionError(f"Approval request failed: {str(e)}")
@@ -380,6 +392,7 @@ class EmailSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             try:
@@ -392,6 +405,7 @@ class EmailSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             return True
@@ -401,6 +415,7 @@ class EmailSkill:
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             try:
@@ -413,6 +428,7 @@ class EmailSkill:
                     duration_ms=duration_ms,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             
             raise SkillExecutionError(f"Failed to send email: {str(e)}")

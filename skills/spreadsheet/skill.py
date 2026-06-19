@@ -57,6 +57,7 @@ class SpreadsheetSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Check if file exists - raise FileNotFoundError outside try-except
@@ -83,6 +84,7 @@ class SpreadsheetSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return rows
@@ -124,6 +126,7 @@ class SpreadsheetSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         if not rows:
@@ -149,6 +152,7 @@ class SpreadsheetSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return {
@@ -182,6 +186,7 @@ class SpreadsheetSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Check if file exists - raise FileNotFoundError outside try-except
@@ -224,6 +229,7 @@ class SpreadsheetSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return rows
@@ -263,6 +269,7 @@ class SpreadsheetSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         from openpyxl import Workbook
@@ -295,6 +302,7 @@ class SpreadsheetSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return {
@@ -327,6 +335,7 @@ class SpreadsheetSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Check if file exists - raise FileNotFoundError outside try-except
@@ -353,6 +362,7 @@ class SpreadsheetSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return names

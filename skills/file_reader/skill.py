@@ -64,6 +64,7 @@ class FileReaderSkill:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
 
             return content
@@ -84,6 +85,7 @@ class FileReaderSkill:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             raise
         except IOError as e:
@@ -102,5 +104,6 @@ class FileReaderSkill:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             raise

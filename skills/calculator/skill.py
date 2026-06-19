@@ -108,6 +108,7 @@ class CalculatorSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Check for dangerous expressions
@@ -143,6 +144,7 @@ class CalculatorSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return {
@@ -239,6 +241,7 @@ class CalculatorSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Check if units are supported
@@ -294,6 +297,7 @@ class CalculatorSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return {
@@ -353,6 +357,7 @@ class CalculatorSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
@@ -368,6 +373,7 @@ class CalculatorSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return self._UNIT_CATEGORIES.copy()

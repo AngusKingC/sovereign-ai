@@ -57,6 +57,7 @@ class DockerSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         args = ["ps", "--format", "json"]
@@ -78,6 +79,7 @@ class DockerSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Parse JSON output
@@ -121,6 +123,7 @@ class DockerSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         stdout, stderr, returncode = await self._run_docker(["start", container_id])
@@ -138,6 +141,7 @@ class DockerSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return {
@@ -178,6 +182,7 @@ class DockerSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         stdout, stderr, returncode = await self._run_docker(["stop", container_id])
@@ -195,6 +200,7 @@ class DockerSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return {
@@ -225,6 +231,7 @@ class DockerSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         stdout, stderr, returncode = await self._run_docker(["logs", "--tail", str(tail), container_id])
@@ -242,6 +249,7 @@ class DockerSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return stdout
@@ -281,6 +289,7 @@ class DockerSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         stdout, stderr, returncode = await self._run_docker(["exec", container_id, command])
@@ -298,6 +307,7 @@ class DockerSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return {

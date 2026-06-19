@@ -56,6 +56,7 @@ class GitSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         stdout, stderr, returncode = await self._run_git(["status", "--porcelain"])
@@ -73,6 +74,7 @@ class GitSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Parse git status output
@@ -126,6 +128,7 @@ class GitSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         args = ["diff"]
@@ -147,6 +150,7 @@ class GitSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return stdout
@@ -185,6 +189,7 @@ class GitSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         stdout, stderr, returncode = await self._run_git(["commit", "-m", message])
@@ -202,6 +207,7 @@ class GitSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Extract commit hash from output
@@ -252,6 +258,7 @@ class GitSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         stdout, stderr, returncode = await self._run_git(["push", remote, branch])
@@ -269,6 +276,7 @@ class GitSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return {
@@ -310,6 +318,7 @@ class GitSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         args = ["pull", remote]
@@ -331,6 +340,7 @@ class GitSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         return {
@@ -360,6 +370,7 @@ class GitSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         stdout, stderr, returncode = await self._run_git(["log", "--oneline", f"-n{n}"])
@@ -377,6 +388,7 @@ class GitSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Parse log output
@@ -410,6 +422,7 @@ class GitSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         stdout, stderr, returncode = await self._run_git(["branch"])
@@ -427,6 +440,7 @@ class GitSkill:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Trace emission failure - non-critical, continue
             pass
 
         # Parse branch output

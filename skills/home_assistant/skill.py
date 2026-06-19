@@ -72,6 +72,7 @@ class HomeAssistantSkill:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
 
             return states
@@ -91,6 +92,7 @@ class HomeAssistantSkill:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             raise SkillExecutionError("home_assistant", f"Failed to fetch states: {str(e)}")
 
@@ -145,6 +147,7 @@ class HomeAssistantSkill:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
 
             return state
@@ -165,6 +168,7 @@ class HomeAssistantSkill:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             raise SkillExecutionError("home_assistant", f"Failed to fetch state: {str(e)}")
 
@@ -240,6 +244,7 @@ class HomeAssistantSkill:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
 
             return True
@@ -262,5 +267,6 @@ class HomeAssistantSkill:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             raise SkillExecutionError("home_assistant", f"Failed to call service: {str(e)}")

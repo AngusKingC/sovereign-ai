@@ -114,6 +114,7 @@ class FileWriterSkill:
                                 duration_ms=0,
                             ))
                         except Exception:
+                            # Trace emission failure - non-critical, continue
                             pass
                         return False, 0
                 except Exception:
@@ -135,6 +136,7 @@ class FileWriterSkill:
                             duration_ms=0,
                         ))
                     except Exception:
+                        # Trace emission failure - non-critical, continue
                         pass
                     return False, 0
 
@@ -162,6 +164,7 @@ class FileWriterSkill:
                     duration_ms=0,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
 
             return True, bytes_written
@@ -183,5 +186,6 @@ class FileWriterSkill:
                     duration_ms=0,
                 ))
             except Exception:
+                # Trace emission failure - non-critical, continue
                 pass
             raise
