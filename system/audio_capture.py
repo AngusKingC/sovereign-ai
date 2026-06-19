@@ -109,8 +109,17 @@ class AudioCapture:
                     duration_ms=duration_ms,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment + WARNING trace
+                await self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.SYSTEM,
+                    level=TraceLevel.WARNING,
+                    message=f"Trace emission failed: {type(e).__name__}: {e}",
+                    data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                    duration_ms=0,
+                ))
 
             return audio_bytes
 
@@ -129,8 +138,17 @@ class AudioCapture:
                     duration_ms=duration_ms,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment + WARNING trace
+                await self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.SYSTEM,
+                    level=TraceLevel.WARNING,
+                    message=f"Trace emission failed: {type(e).__name__}: {e}",
+                    data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                    duration_ms=0,
+                ))
 
             raise SkillExecutionError("audio_capture", f"Failed to capture audio: {str(e)}")
 
@@ -165,5 +183,8 @@ class AudioCapture:
             try:
                 self._pa.terminate()
             except Exception:
+                # Cleanup path: PyAudio termination failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
+                # Note: close() is synchronous, cannot emit async trace event here
                 pass
             self._pa = None

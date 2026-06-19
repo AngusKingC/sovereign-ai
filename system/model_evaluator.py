@@ -105,8 +105,17 @@ class ModelEvaluator:
                 },
                 duration_ms=0,
             ))
-        except Exception:
-            pass
+        except Exception as e:
+            # Cleanup path: trace event emission failed, don't crash the application
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.OPERATION_ERROR,
+                component=TraceComponent.SYSTEM,
+                level=TraceLevel.WARNING,
+                message=f"Trace emission failed: {type(e).__name__}: {e}",
+                data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                duration_ms=0,
+            ))
 
         # Get hardware snapshot
         from system.profiler import SystemProfiler
@@ -134,8 +143,17 @@ class ModelEvaluator:
                     data={"worker_id": worker_id, "recommendation_count": 0},
                     duration_ms=0,
                 ))
-            except Exception:
-                pass
+            except Exception as e:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment + WARNING trace
+                await self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.SYSTEM,
+                    level=TraceLevel.WARNING,
+                    message=f"Trace emission failed: {type(e).__name__}: {e}",
+                    data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                    duration_ms=0,
+                ))
             
             return result
 
@@ -248,8 +266,17 @@ class ModelEvaluator:
                 },
                 duration_ms=0,
             ))
-        except Exception:
-            pass
+        except Exception as e:
+            # Cleanup path: trace event emission failed, don't crash the application
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.OPERATION_ERROR,
+                component=TraceComponent.SYSTEM,
+                level=TraceLevel.WARNING,
+                message=f"Trace emission failed: {type(e).__name__}: {e}",
+                data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                duration_ms=0,
+            ))
 
         return result
 
@@ -305,8 +332,17 @@ class ModelEvaluator:
                 },
                 duration_ms=0,
             ))
-        except Exception:
-            pass
+        except Exception as e:
+            # Cleanup path: trace event emission failed, don't crash the application
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.OPERATION_ERROR,
+                component=TraceComponent.SYSTEM,
+                level=TraceLevel.WARNING,
+                message=f"Trace emission failed: {type(e).__name__}: {e}",
+                data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                duration_ms=0,
+            ))
 
         # Update ModelRegistry download status if needed
         try:
@@ -315,8 +351,17 @@ class ModelEvaluator:
                 await self.model_registry.update_download_status(
                     model_id, DownloadStatus.DOWNLOADED, quantisation
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            # Cleanup path: model download status update failed, don't crash the application
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.OPERATION_ERROR,
+                component=TraceComponent.SYSTEM,
+                level=TraceLevel.WARNING,
+                message=f"Model download status update failed: {type(e).__name__}: {e}",
+                data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                duration_ms=0,
+            ))
 
     def historical_performance_weight(
         self,
