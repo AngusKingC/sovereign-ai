@@ -8332,3 +8332,42 @@ Output: (pending â€” tag not yet pushed)
 **Baseline comparison:** Test suite unchanged from prompt-43a baseline (1127 passed, 61 skipped, 0 failed, 0 warnings).
 
 - Net Change: 0 passed, 0 skipped, 0 failed, 0 warnings (behavior unchanged - only added inline comments)
+
+## Prompt 43c: Eliminate broad-except patterns in web/, adapters/, gateways/
+
+**Files Modified:**
+- web/server.py
+- web/middleware/auth_middleware.py
+- adapters/anthropic.py
+- adapters/cohere.py
+- adapters/deepseek.py
+- adapters/groq.py
+- adapters/huggingface.py
+- adapters/lm_studio.py
+- adapters/mistral.py
+- adapters/openai.py
+- adapters/together.py
+- adapters/gemini.py
+- adapters/llama_cpp.py
+- adapters/ollama.py
+- gateways/telegram/gateway.py
+
+**Implementation Notes:**
+- Fixed 59 broad-except patterns across web/, adapters/, and gateways/ directories
+- Pattern types: 44 pass, 14 return-fallback, 1 continue
+- Each except block now includes WARNING trace/logging before pass/return/continue
+- Followed each file's existing logging convention:
+  - web/ files: logging.warning() for sync contexts
+  - adapters/ files: await self._emitter.emit(TraceEvent(...)) for async contexts
+  - gateways/telegram/gateway.py: await self._emitter.emit(TraceEvent(...)) for async, print() for sync method
+- Fixed one missed return-fallback in adapters/ollama.py health_check during verification
+
+**Testing Results:**
+- Per-file tests: 84 passed, 55 skipped
+- Full test suite: 1127 passed, 61 skipped, 0 failed, 0 warnings
+
+**Verification Gate Output:**
+- Drift check: passed (no changes since e5b74be)
+- Pre-execution count: 59 fixable blocks verified
+- Zero except Exception: pass without comment violations
+- Zero except Exception: return/continue without logging violations

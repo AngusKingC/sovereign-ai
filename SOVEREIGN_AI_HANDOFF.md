@@ -1,8 +1,8 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-20 — post prompt-43b, handoff amended by GLM session 4.
+**Last updated**: 2026-06-20 — post prompt-43c, handoff amended by GLM session 5.
 
-**Broad-except audit status (Rule 17)**: core/ ✅ (29 patterns, prompt-41), system/ ✅ (103 patterns, prompt-42+42.1), skills/ ✅ (219 patterns, prompt-43a+43b). **web/, adapters/, gateways/ still pending** — Plan 43c.
+**Broad-except audit status (Rule 17)**: core/ ✅ (29 patterns, prompt-41), system/ ✅ (103 patterns, prompt-42+42.1), skills/ ✅ (219 patterns, prompt-43a+43b), web/ ✅ (10 patterns, prompt-43c), adapters/ ✅ (43 patterns, prompt-43c), gateways/ ✅ (5 patterns, prompt-43c). **All directories now fully compliant**.
 
 **Test baseline**: 1127 passed, 61 skipped, 0 failed, 0 warnings (measured with `python -m pytest tests/ -q --tb=no`).
 
@@ -359,18 +359,20 @@ Update this list whenever a new pattern is identified. Each entry should referen
 - **Verification**: `Select-String -Path skills\ -Pattern "except Exception" -Recurse` returns zero hits (or only hits with inline comments and trace events).
 - **Result**: Fixed 119 broad-except patterns across 18 files. All violations were cleanup paths (trace emission failure and event loop timing failure). Added inline comments per Rule 17. Test suite unchanged: 1127 passed, 61 skipped, 0 failed, 0 warnings.
 
+### Plan 43c — Broad-except audit, part 4 (web/, adapters/, gateways/) — COMPLETED
+- **Priority**: P1
+- **Effort**: M
+- **Why**: Architecture Rule 17 violation: core/, system/, and skills/ are now fully compliant, but web/, adapters/, and gateways/ have not been audited. The same broad `except Exception: pass` patterns that hid dead wiring in core/ and system/ likely exist here too.
+- **Scope**: Audit `web/`, `adapters/`, and `gateways/` for broad `except Exception` blocks. Apply same three-option fix pattern as Plans 41-43b. Use the broader grep (`-match "pass"`) that catches `pass # comment` patterns — learned the hard way in prompt-42.
+- **Files**: web/server.py (10), web/middleware/auth_middleware.py (1), adapters/anthropic.py (3), adapters/cohere.py (4), adapters/deepseek.py (4), adapters/groq.py (4), adapters/huggingface.py (4), adapters/lm_studio.py (4), adapters/mistral.py (4), adapters/openai.py (4), adapters/together.py (4), adapters/gemini.py (1), adapters/llama_cpp.py (2), adapters/ollama.py (5), gateways/telegram/gateway.py (5).
+- **Verification**: `Select-String -Path web\,adapters\,gateways\ -Pattern "except Exception" -Recurse` returns zero hits (or only hits with inline comments and trace events).
+- **Result**: Fixed 59 broad-except patterns across 15 files: 44 pass, 14 return-fallback, 1 continue. All now have WARNING trace/logging before pass/return/continue. Followed each file's existing logging convention (logging.warning() for sync contexts, await self._emitter.emit(TraceEvent(...)) for async contexts, print() for sync method). Fixed one missed return-fallback in adapters/ollama.py health_check during verification. Test suite unchanged: 1127 passed, 61 skipped, 0 failed, 0 warnings.
+
 ---
 
 ## Next 5 prompts
 
 Ordered. Each is one plan. Do not start Plan N+1 until Plan N's verification gates pass.
-
-### Plan 43c — Broad-except audit, part 4 (web/, adapters/, gateways/)
-- **Priority**: P1
-- **Effort**: M
-- **Why**: Architecture Rule 17 violation: core/, system/, and skills/ are now fully compliant, but web/, adapters/, and gateways/ have not been audited. The same broad `except Exception: pass` patterns that hid dead wiring in core/ and system/ likely exist here too.
-- **Scope**: Audit `web/`, `adapters/`, and `gateways/` for broad `except Exception` blocks. Apply same three-option fix pattern as Plans 41-43b. Use the broader grep (`-match "pass"`) that catches `pass # comment` patterns — learned the hard way in prompt-42.
-- **Verification**: `Select-String -Path web\,adapters\,gateways\ -Pattern "except Exception" -Recurse` returns zero hits (or only hits with inline comments and trace events).
 
 ### Plan 44 — InputSanitiser wiring
 - **Priority**: P1
@@ -485,6 +487,7 @@ Once Plans 43c-47 land, the foundation is solid: all layers Rule 17 compliant, I
 | 42.1 | Fix-up — remaining system/ broad-except patterns | 1127 | Fixed 8 broad-except patterns across 2 files: audio_capture (3), model_evaluator (5). All now have WARNING trace events per Rule 17. system/ is now FULLY Rule 17 compliant — zero except Exception: pass patterns across ALL system/ files (103 patterns total: 95 from prompt-42 + 8 from prompt-42.1). Note: audio_capture.py close() method is synchronous, so one pattern uses inline comment only (cannot emit async trace event). Test baseline unchanged: 1127 passed, 61 skipped, 0 failed, 0 warnings. |
 | 43a | Broad-except audit, part 3a (skills/ - 20+ violations) | 1127 | Fixed 100 broad-except patterns across 3 files: notes_skill (46), calendar_skill (30), reminder_skill (24). All violations were cleanup paths (trace emission failure, event loop timing failure). Added inline comments per Rule 17. Test suite unchanged. |
 | 43b | Broad-except audit, part 3b (skills/ - remainder) | 1127 | Fixed 119 broad-except patterns across 18 files (calculator: 6, clipboard: 6, code_execution: 6, docker: 10, email: 16, file_reader: 3, file_writer: 4, git: 14, home_assistant: 6, http_client: 8, pdf: 8, screenshot: 2, spreadsheet: 10, terminal: 6, transcription: 3, tts: 3, web_scraper: 2, web_search: 6). skills/ is now FULLY Rule 17 compliant — 219 patterns total (100 from 43a + 119 from 43b). Test suite unchanged. |
+| 43c | Broad-except audit, part 4 (web/, adapters/, gateways/) | 1127 | Fixed 59 broad-except patterns across 15 files: web/ (11), adapters/ (43), gateways/ (5). Pattern types: 44 pass, 14 return-fallback, 1 continue. All now have WARNING trace/logging before pass/return/continue. Followed each file's existing logging convention. Test suite unchanged. All directories now fully Rule 17 compliant. |
 
 ---
 
