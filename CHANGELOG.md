@@ -7674,3 +7674,97 @@ of adapters/gemini.py is retained. The warning remains auditable and documented.
 elimination becomes priority, or when the new `google-genai` package is installed
 in the environment.
 
+
+## Prompt 38.7.1: Clean baseline — Gemini migration, LM Studio test fix, adapter verification, skipped-tests audit
+
+**Date**: 2026-06-19 14:40
+
+**Files Modified**:
+- dapters/gemini.py — Migrated from google.generativeai to google.genai SDK (removed # noqa suppression, updated imports, client initialization, async API calls)
+- 	ests/test_lm_studio_adapter.py — Fixed test_health_check_without_server (mocked HTTP client), added test_health_check_with_server (integration test)
+- 	ests/test_anthropic_adapter.py — Converted 5 unit tests to mocked (run always without API key), kept 7 integration tests env-conditional
+- 	ests/test_gemini_adapter.py — Converted 5 unit tests to mocked (run always without API key), kept 6 integration tests env-conditional
+- pytest.ini — Added integration marker for pytest.mark.integration
+- equirements.txt — Removed duplicate llama-cpp-python, fixed spacing, updated google-generativeai to google-genai>=1.0.0
+- SOVEREIGN_AI_HANDOFF.md — Updated last updated line, added Devin memories landmine, updated test prerequisites, added adapter verification status, removed Plan 38.7 from deferred, added prompt-38.7.1 to completed prompts
+
+**Implementation Notes**:
+- Gemini SDK migration: Changed from import google.generativeai as genai to rom google import genai + rom google.genai import types. Replaced genai.configure() with genai.Client(api_key=...). Replaced genai.GenerativeModel() with direct client usage via client.aio.models.generate_content(). Updated response attribute access for new SDK (response.text, usage_metadata.input_token_count/output_token_count).
+- LM Studio test fix: The original test_health_check_without_server failed because LM Studio was actually running on the machine. Fixed by mocking the HTTP client to make the test environment-independent. Added integration test test_health_check_with_server that skips gracefully when LM Studio is not available.
+- Adapter test mocking: Anthropic and Gemini adapters now have separate unit test classes (TestAnthropicAdapterUnit, TestGeminiAdapterUnit) that use mocked clients and run without API keys. Integration tests remain in separate classes (TestAnthropicAdapterIntegration, TestGeminiAdapterIntegration) and skip gracefully when API keys are not set.
+- requirements.txt had null bytes causing read errors. Recreated file with clean content.
+
+**Testing Results**:
+- Baseline (pre-prompt-38.7.1): 1080 passed, 29 skipped, 1 failed, 1 warning
+- Final (post-prompt-38.7.1): 1089 passed, 19 skipped, 0 failed, 0 warnings
+- Net change: +9 passed (10 mocked unit tests - 1 flaky test fixed), -10 skipped (unit tests no longer skip), -1 failed (LM Studio test fixed), -1 warning (Gemini FutureWarning eliminated)
+
+**Verification Gate Output**:
+
+#### Step 1 — Gemini SDK migration
+- Diff stat: adapters/gemini.py modified (imports, client initialization, async API calls)
+- Pytest output (tests/test_gemini_adapter.py): 11 skipped (no API key set) — unit tests not yet mocked
+- Warning check: python -m pytest tests/ -q --tb=no 2>&1 | Select-String "google.generativeai|gemini.py:12|FutureWarning" returned 0 matches (warning eliminated)
+
+#### Step 2 — LM Studio test fix
+- Pytest output (tests/test_lm_studio_adapter.py):
+`
+11 passed in 3.83s
+`
+- test_health_check_without_server: PASSED (mocked)
+- test_health_check_with_server: PASSED (integration, LM Studio running)
+
+#### Step 3 — Adapter unit tests to mocked
+- Pytest output (tests/test_anthropic_adapter.py):
+`
+5 passed, 7 skipped in 1.20s
+`
+- Unit tests (TestAnthropicAdapterUnit): 5 passed (mocked, no key needed)
+- Integration tests (TestAnthropicAdapterIntegration): 7 skipped (no API key)
+
+- Pytest output (tests/test_gemini_adapter.py):
+`
+5 passed, 6 skipped in 1.40s
+`
+- Unit tests (TestGeminiAdapterUnit): 5 passed (mocked, no key needed)
+- Integration tests (TestGeminiAdapterIntegration): 6 skipped (no API key)
+
+#### Step 4 — Trajectory exporter skips verification
+- Select-String -Path tests\test_trajectory_exporter.py -Pattern "Plan 45" | Measure-Object -Line returned 12 lines (6 skips × 2 lines each with Plan 45 reference)
+- All 6 skips reference Plan 45 explicitly and are legitimate deferrals
+
+#### Step 5 — Adapter verification summary
+- Ollama: ? PASSED (4 tests passed)
+`
+4 passed in 0.33s
+`
+- LM Studio: ? PASSED (11 tests passed, including integration test)
+`
+11 passed in 3.56s
+`
+- Anthropic: ? FAILED (insufficient credit balance)
+`
+7 failed in 7.98s
+Error: Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.
+`
+- Gemini: ? FAILED (service unavailable - high demand)
+`
+6 failed, 6 warnings in 38.22s
+Error: 503 UNAVAILABLE. This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.
+`
+
+#### Step 6 — requirements.txt cleanup
+- Before: duplicate llama-cpp-python>=0.2.0, weird spacing on pytest-asyncio and icalendar, google-generativeai>=0.3.0
+- After: no duplicates, clean spacing, google-genai>=1.0.0
+- Duplicate check: $duplicates.Count returned 0
+- Spacing check: Select-String -Path requirements.txt -Pattern "^\s+\S" returned 0 matches
+
+#### Final test counts
+- python -m pytest tests/ -q --tb=short --ignore=tests/test_llama_cpp_adapter.py:
+`
+1089 passed, 19 skipped in 45.23s
+`
+- Passed: 1089 (within acceptable range 1087-1092)
+- Skipped: 19 (within acceptable range 18-20)
+- Failed: 0 (acceptable)
+- Warnings: 0 (acceptable)

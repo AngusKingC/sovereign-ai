@@ -59,11 +59,42 @@ class TestLMStudioAdapter:
         assert openai_format[1] == {"role": "user", "content": "User message"}
 
     def test_health_check_without_server(self, lm_studio_adapter):
-        """Test health check returns False when server not available."""
+        """Test health check returns False when server not available (unit test, mocked)."""
         import asyncio
+        from unittest.mock import AsyncMock, MagicMock, patch
 
+        # Mock _client to raise on GET (simulating no server).
+        # This makes the test environment-independent — passes regardless of
+        # whether LM Studio is actually running.
+        with patch.object(lm_studio_adapter, '_ensure_client'):
+            mock_client = MagicMock()
+            mock_client.get = AsyncMock(side_effect=Exception("Connection refused"))
+            lm_studio_adapter._client = mock_client
+
+            result = asyncio.run(lm_studio_adapter.health_check())
+            assert result is False
+
+    @pytest.mark.integration
+    def test_health_check_with_server(self, lm_studio_adapter):
+        """Test health check returns True when LM Studio server is running (integration test).
+
+        This test requires LM Studio to be running at http://localhost:1234/v1.
+        Skip if not available — this is an integration test, not a unit test.
+        """
+        import asyncio
+        import httpx
+
+        # Check if LM Studio is actually running
+        try:
+            response = httpx.get(f"{lm_studio_adapter.base_url}/models", timeout=2.0)
+            if response.status_code != 200:
+                pytest.skip("LM Studio not running at http://localhost:1234/v1")
+        except Exception:
+            pytest.skip("LM Studio not running at http://localhost:1234/v1")
+
+        # LM Studio is running — verify health_check returns True
         result = asyncio.run(lm_studio_adapter.health_check())
-        assert result is False
+        assert result is True
 
     def test_generate_without_server_raises_error(self, lm_studio_adapter):
         """Test generate raises error when server not available."""

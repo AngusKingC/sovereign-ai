@@ -1,6 +1,6 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-19 13:20 — post prompt-38.7. Executed Plan 38.6 Track A via scripts/verify_tui_e2e.py (Rule 19 remediation complete - all three gates passed). Gemini SDK migration deferred (20-line guard exceeded). Test baseline: 1071 passed, 29 skipped, 1 failed, 1 warning (measured with python -m pytest tests/ -q --tb=no --ignore=tests/test_llama_cpp_adapter.py). 1 pre-existing flaky failure (test_lm_studio_adapter.py::test_health_check_without_server).
+**Last updated**: 2026-06-19 14:40 — post prompt-38.7.1. Executed Gemini SDK migration (google.generativeai → google.genai), fixed LM Studio test (mocked unit test + integration test), converted Anthropic/Gemini adapter unit tests to mocked (10 unit tests now run without API keys), verified trajectory_exporter skips still legitimate (6 Plan 45 deferrals), cleaned up requirements.txt (removed duplicate llama-cpp-python, fixed spacing, updated google-genai). Test baseline: 1089 passed, 19 skipped (13 integration tests requiring API keys/services + 6 Plan 45 deferrals), 0 failed, 0 warnings (measured with python -m pytest tests/ -q --tb=no --ignore=tests/test_llama_cpp_adapter.py). Adapter verification: Ollama ✅, LM Studio ✅, Anthropic ❌ (insufficient credit balance), Gemini ❌ (service unavailable - high demand).
 
 **Post-prompt-38 documentation update** (2026-06-19, separate from any prompt): Added "Claude review workflow (token-economical)" subsection to the Workflow section. Documents the new per-prompt context brief pattern, deprecates `CLAUDE_REVIEWER_ROLE.md` as a separate upload, and codifies the round-1-full / round-2-diff / round-3-rarely review structure. Known landmines list updated with prompt-38 tag-push issue, Plan 38.5 re-guessing-disproved-hypotheses issue, per-file-count-mismatch issue, and drift-check-false-positive-on-docs-files issue.
 
@@ -41,7 +41,13 @@ Verified by running the code, not by reading the CHANGELOG:
 - **TUI slash commands** — `/help`, `/status`, `/clear`, `/exit`, `/model`, `/adapter`, `/theme` work. `/adapter ollama` and `/adapter lm_studio` actually switch adapters; the other 9 listed adapters crash with `ValueError` because `cli/adapter_factory.py` only knows those two.
 - **Session manager** — in-memory mode works. Postgres persistence does not (see "What's broken").
 - **Command history** — in-memory mode works. Postgres persistence does not.
-- **Test suite** — 1080 tests pass. Quality varies; some are smoke tests with `assert True` (see Process section).
+- **Test suite** — 1089 tests pass, 19 skipped (13 integration tests requiring API keys/services + 6 Plan 45 deferrals), 0 warnings. Quality varies; some are smoke tests with `assert True` (see Process section).
+
+**Adapter verification status** (as of prompt-38.7.1):
+- Ollama: ✅ verified (4 tests passed)
+- LM Studio: ✅ verified (11 tests passed, including integration test)
+- Anthropic: ❌ insufficient credit balance (API key valid but account has no credits)
+- Gemini: ❌ service unavailable (API key valid but model experiencing high demand)
 
 That's it. Everything else is either broken, unreachable, or aspirational.
 
@@ -49,12 +55,16 @@ That's it. Everything else is either broken, unreachable, or aspirational.
 
 ## Test environment prerequisites
 
-The following environment variables are required for full test coverage:
+**Standard test measurement command**: `python -m pytest tests/ -q --tb=no --ignore=tests/test_llama_cpp_adapter.py`
 
-- **ANTHROPIC_API_KEY** — Required for `test_anthropic_adapter.py` (12 tests). Without this key, these tests are skipped.
-- **GEMINI_API_KEY** — Required for `test_gemini_adapter.py` (11 tests). Without this key, these tests are skipped.
+The `--ignore=tests/test_llama_cpp_adapter.py` flag is required because `llama_cpp` is not installed in the development environment. The test file uses `pytest.importorskip("llama_cpp")` which should handle the missing dependency cleanly, but `--ignore` is used as belt-and-suspenders to ensure the test suite doesn't fail at collection time.
 
-These are legitimate environment-conditional skips. The core test suite (1080 tests) runs without these keys.
+**Integration tests**: Some tests require real services or API keys:
+- `tests/test_lm_studio_adapter.py::test_health_check_with_server` — requires LM Studio running at http://localhost:1234/v1
+- `tests/test_anthropic_adapter.py::TestAnthropicAdapterIntegration` — requires `ANTHROPIC_API_KEY` env var (get at https://console.anthropic.com/settings/keys)
+- `tests/test_gemini_adapter.py::TestGeminiAdapterIntegration` — requires `GEMINI_API_KEY` env var (get at https://aistudio.google.com/app/apikey)
+
+Integration tests skip gracefully when prerequisites aren't available. Run them with prerequisites set to verify end-to-end behavior.
 
 ---
 
@@ -142,14 +152,13 @@ When the next prompt wires one of these into a runtime entry point, remove it fr
 
 These are real product features that the plan calls for but no code exists for. They are not "in progress" — they are queued. Listed in priority order.
 
-1. **Plan 38.7 — Gemini SDK migration** — Executed Track A (Rule 19 remediation) via scripts/verify_tui_e2e.py - all three gates passed. Gemini SDK migration deferred (20-line guard exceeded - 51 lines changed). Inline `# noqa: Plan 38.7` suppression retained in adapters/gemini.py.
-2. **Marine stack** (Prompts 28.7, 31.5 in old plan) — weather, marine_weather, AIS, tidal, passage_planner, vhf_monitor, satellite_comms. Zero lines of code exist. This is the moat. Should ship as portable SKILL.md files (see Skills Ecosystem section).
-3. **Sandboxed execution** for `skills/terminal/` and `skills/code_execution/`. Currently runs subprocesses on host with no isolation. OpenHands ships Docker sandboxing by default; Sovereign has nothing.
-4. **Streaming output** from Ollama through the worker pipeline to the TUI/Web GUI. Every cloud coding agent streams tokens; Sovereign waits for the full response.
-5. **Function-calling / tool-use loop.** Modern agent frameworks let the LLM decide which skills to call. Sovereign's "route once, generate once" model is a generation behind.
-6. **Deployment story.** Docker compose with Postgres + Qdrant + Jarvis + Ollama. systemd unit / Windows service. Without this, "Jarvis that runs in the background" has no delivery path.
-7. **Eval harness.** A held-out task suite to measure whether self-improvement is actually happening. Without this, "self-improving" is an assertion.
-8. **Plan mode.** Agent proposes a plan, user approves, agent executes. Table stakes for agentic coding in 2026.
+1. **Marine stack** (Prompts 28.7, 31.5 in old plan) — weather, marine_weather, AIS, tidal, passage_planner, vhf_monitor, satellite_comms. Zero lines of code exist. This is the moat. Should ship as portable SKILL.md files (see Skills Ecosystem section).
+2. **Sandboxed execution** for `skills/terminal/` and `skills/code_execution/`. Currently runs subprocesses on host with no isolation. OpenHands ships Docker sandboxing by default; Sovereign has nothing.
+3. **Streaming output** from Ollama through the worker pipeline to the TUI/Web GUI. Every cloud coding agent streams tokens; Sovereign waits for the full response.
+4. **Function-calling / tool-use loop.** Modern agent frameworks let the LLM decide which skills to call. Sovereign's "route once, generate once" model is a generation behind.
+5. **Deployment story.** Docker compose with Postgres + Qdrant + Jarvis + Ollama. systemd unit / Windows service. Without this, "Jarvis that runs in the background" has no delivery path.
+6. **Eval harness.** A held-out task suite to measure whether self-improvement is actually happening. Without this, "self-improving" is an assertion.
+7. **Plan mode.** Agent proposes a plan, user approves, agent executes. Table stakes for agentic coding in 2026.
 
 ---
 
@@ -306,6 +315,7 @@ Update this list whenever a new pattern is identified. Each entry should referen
 - **Re-guessing disproved hypotheses** (Plan 38.5 Step 4 had this). Plans have a tendency to re-propose the same wrong root-cause attribution that a prior prompt already investigated and ruled out. Before claiming a warning/error source, check the prior CHANGELOG entry for "Finding:" or "Result:" on the same topic.
 - **Per-file counts that don't match CHANGELOG evidence** (Plan 38.5 had this). If the plan says "11 warnings in test_web_server.py" but the prior CHANGELOG says "15 in web_server.py alone," that's a factual error — flag it. Always cite the CHANGELOG line number for any numeric claim.
 - **Drift check false-positive on docs files** (Plan 38.5 Gate 1 had this). The closing-step workflow tags BEFORE the docs commit, so `git diff --stat prompt-NN..HEAD -- SOVEREIGN_AI_HANDOFF.md CHANGELOG.md` will always show non-empty output for those two files by design. Drift checks must distinguish code files (must be empty) from docs files (allowed, with review procedure to confirm only append-only changes).
+- **Devin memories are not authoritative** (post-prompt-38.7 policy change). All Devin memories were deleted; new memories are added only when GLM/user explicitly requests via a plan step. Any plan or report that cites "per memory X" or "Mistake Pattern N" (where N is a Devin-memory concept, not a handoff recurring-mistake pattern) is a Rule 19 violation — the citation is unverifiable. All workarounds, methodologies, and constraints must live in the handoff or the plan itself.
 
 ---
 
@@ -426,6 +436,7 @@ Once Plans 36-40 land, the foundation is solid: `jarvis serve` works, `jarvis` w
 | 37.6 | Wire TUI Cognition Stack | 1072 | Wired full cognition stack into TUI (Orchestrator, MemoryRouter, ApprovalGate, EscalationEngine, AdapterFallbackChain, WorkerFactory, RatingSystem, InstructionGenerator, InstructionVersionManager, OutputEvaluator, TraceOptimiser, OrchestratorImprovementLoop); 12 subsystems removed from "Built but not reachable" table; 8 new tests in test_tui.py skipped due to OllamaAdapter initialization complexity |
 | 37.6.1 | Process discipline rule + 37.6 verification fix-ups | 1080 | Added Rule 19 (process discipline) and recurring mistake pattern #6 to handoff. Fixed 8 skipped tests in test_tui.py using mock-at-instantiation pattern. Completed verification work from prompt-37.6 (Gate 3 output documented). Added mirror rule to global_rules.md (Rule 24). |
 | 38 | Warnings, skipped tests, F7, Rule 19 remediation | 1080 | Fixed category 4 (on_event deprecation), category 3 (module-level pytestmark.asyncio on 8 test files), category 6 (invalid escape sequences), category 5 (unawaited coroutine warnings). Partially fixed category 2 (unclosed asyncio transports: 6→4 warnings). Skipped category 1 (google.generativeai deprecation deferred to Phase 9). F7: Changed WorkerBase default emitter to MemoryTraceEmitter. Created cli/__init__.py. Audited skipped tests: 29 legitimate (23 ENV-CONDITIONAL, 6 LEGITIMATE-DEFER). Rule 19 remediation: Deferred manual TUI verification to Plan 38.6. Updated handoff test baseline (63→26 warnings) and added Test environment prerequisites. Verification gates: 8/12 passed (partial success due to warning/skipped count targets exceeded). |
+| 38.7.1 | Clean baseline — Gemini migration, LM Studio test fix, adapter verification | 1089 | Gemini SDK migration (google.generativeai → google.genai), fixed LM Studio test (mocked unit test + integration test), converted Anthropic/Gemini adapter unit tests to mocked (10 unit tests now run without API keys), verified trajectory_exporter skips still legitimate (6 Plan 45 deferrals), cleaned up requirements.txt (removed duplicate llama-cpp-python, fixed spacing, updated google-genai). Test baseline: 1089 passed, 19 skipped (13 integration tests + 6 Plan 45), 0 warnings. Adapter verification: Ollama ✅, LM Studio ✅, Anthropic ❌ (insufficient credit), Gemini ❌ (service unavailable). |
 
 ---
 

@@ -9,7 +9,8 @@ import asyncio
 import time
 from typing import TYPE_CHECKING, Any
 
-import google.generativeai as genai  # noqa: Plan 38.7: migrate to google.genai
+from google import genai
+from google.genai import types
 
 from core.schemas import Message
 from core.worker_base import LLMAdapter, LLMResponse
@@ -39,13 +40,12 @@ class GeminiAdapter(LLMAdapter):
         self.api_key = api_key
         self._model_name = model_name
         self.temperature = temperature
-        genai.configure(api_key=api_key, transport='rest')
-        self._model: genai.GenerativeModel | None = None
+        self._client: genai.Client | None = None
 
-    def _ensure_model(self) -> None:
-        """Ensure Gemini model is initialized."""
-        if self._model is None:
-            self._model = genai.GenerativeModel(self._model_name)
+    def _ensure_client(self) -> None:
+        """Ensure Gemini client is initialized."""
+        if self._client is None:
+            self._client = genai.Client(api_key=self.api_key)
 
     def _messages_to_gemini_format(self, messages: list[Message]) -> str:
         """Convert messages to Gemini format (single string)."""
@@ -89,24 +89,21 @@ class GeminiAdapter(LLMAdapter):
                 },
             )
 
-            self._ensure_model()
+            self._ensure_client()
 
-            if self._model is None:
-                raise RuntimeError("Gemini model failed to initialize")
+            if self._client is None:
+                raise RuntimeError("Gemini client failed to initialize")
 
             prompt = self._messages_to_gemini_format(messages)
 
-            # Run synchronous SDK call in thread pool to avoid blocking event loop
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None,
-                lambda: self._model.generate_content(
-                    prompt,
-                    generation_config=genai.types.GenerationConfig(
-                        temperature=temperature or self.temperature,
-                        max_output_tokens=max_tokens,
-                    ),
-                )
+            # Use new SDK async API
+            response = await self._client.aio.models.generate_content(
+                model=self._model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=temperature or self.temperature,
+                    max_output_tokens=max_tokens,
+                ),
             )
 
             duration_ms = int((time.perf_counter() - start_time) * 1000)
@@ -160,16 +157,16 @@ class GeminiAdapter(LLMAdapter):
     async def health_check(self) -> bool:
         """Check if Gemini API is accessible."""
         try:
-            self._ensure_model()
+            self._ensure_client()
 
-            if self._model is None:
+            if self._client is None:
                 return False
 
-            # Run synchronous SDK call in thread pool to avoid blocking event loop
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(
-                None,
-                lambda: self._model.generate_content("test", generation_config=genai.types.GenerationConfig(max_output_tokens=1))
+            # Use new SDK async API
+            await self._client.aio.models.generate_content(
+                model=self._model_name,
+                contents="test",
+                config=types.GenerateContentConfig(max_output_tokens=1),
             )
             return True
         except Exception as e:
@@ -178,7 +175,7 @@ class GeminiAdapter(LLMAdapter):
 
     async def close(self) -> None:
         """Cleanup resources (no explicit close needed for Gemini)."""
-        self._model = None
+        self._client = None
 
     @property
     def model_name(self) -> str:
