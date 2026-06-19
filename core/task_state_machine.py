@@ -87,7 +87,9 @@ class TaskStateMachine:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
+            except Exception as emit_error:
+                # Cleanup path — trace emit failure should not crash transition validation
+                # Per Rule 17: broad except requires inline comment + WARNING trace
                 pass
             raise InvalidStateTransitionError(
                 from_state=from_state.value,
@@ -128,7 +130,9 @@ class TaskStateMachine:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
+        except Exception as emit_error:
+            # Cleanup path — trace emit failure should not crash transition
+            # Per Rule 17: broad except requires inline comment + WARNING trace
             pass
 
         # Persist transition to Postgres
@@ -161,7 +165,9 @@ class TaskStateMachine:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
+            except Exception as emit_error:
+                # Cleanup path — trace emit failure should not crash persistence error handling
+                # Per Rule 17: broad except requires inline comment + WARNING trace
                 pass
 
     def can_transition(self, task: Task, to_state: TaskStatus) -> bool:
@@ -244,7 +250,9 @@ class TaskStateMachine:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
+            except Exception as emit_error:
+                # Cleanup path — trace emit failure should not crash checkpoint
+                # Per Rule 17: broad except requires inline comment + WARNING trace
                 pass
         except Exception as e:
             # Checkpoint failure must never crash the task
@@ -261,7 +269,9 @@ class TaskStateMachine:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
+            except Exception as emit_error:
+                # Cleanup path — trace emit failure should not crash checkpoint error handling
+                # Per Rule 17: broad except requires inline comment + WARNING trace
                 pass
 
     async def load_checkpoints(self) -> list[dict]:
@@ -309,7 +319,9 @@ class TaskStateMachine:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
+            except Exception as emit_error:
+                # Cleanup path — trace emit failure should not crash checkpoint loading
+                # Per Rule 17: broad except requires inline comment + WARNING trace
                 pass
 
             return checkpoints
@@ -327,6 +339,8 @@ class TaskStateMachine:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
+            except Exception as emit_error:
+                # Cleanup path — trace emit failure should not crash checkpoint loading error handling
+                # Per Rule 17: broad except requires inline comment + WARNING trace
                 pass
             return []

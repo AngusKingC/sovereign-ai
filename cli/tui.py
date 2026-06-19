@@ -490,14 +490,42 @@ class JarvisTUI(App):
     
     def _on_adapter_selected(self, adapter_name: str) -> None:
         """Handle adapter selection from modal."""
-        # Create new worker with REAL memory_router (not None)
-        self.worker = create_worker(adapter_name, "llama3", memory_router=self.memory_router)
-        
-        # Re-register worker with orchestrator (replace the old worker)
-        self.orchestrator.register_worker("ollama_worker", self.worker)
-        
-        # Process the adapter command to update UI
-        asyncio.create_task(self.process_command(f"/adapter {adapter_name}"))
+        try:
+            # Create new worker with REAL memory_router (not None)
+            self.worker = create_worker(adapter_name, "llama3", memory_router=self.memory_router)
+
+            # Re-register worker with orchestrator (replace the old worker)
+            self.orchestrator.register_worker("ollama_worker", self.worker)
+
+            # Process the adapter command to update UI
+            asyncio.create_task(self.process_command(f"/adapter {adapter_name}"))
+        except ValueError as e:
+            # User-friendly error message for missing API key or unknown adapter
+            # (create_adapter raises ValueError if env var not set — see cli/adapter_factory.py)
+            error_msg = str(e)
+            # Add helpful URL for API key errors
+            if "API_KEY" in error_msg or "_TOKEN" in error_msg:
+                env_var = error_msg.split("environment variable")[0].strip()
+                urls = {
+                    "OPENAI_API_KEY": "https://platform.openai.com/api-keys",
+                    "COHERE_API_KEY": "https://dashboard.cohere.com/api-keys",
+                    "GROQ_API_KEY": "https://console.groq.com/keys",
+                    "ANTHROPIC_API_KEY": "https://console.anthropic.com/settings/keys",
+                    "MISTRAL_API_KEY": "https://console.mistral.ai/api-keys",
+                    "TOGETHER_API_KEY": "https://api.together.xyz/settings/api-keys",
+                    "DEEPSEEK_API_KEY": "https://platform.deepseek.com/api_keys",
+                    "HUGGINGFACE_API_KEY": "https://huggingface.co/settings/tokens",
+                    "HF_TOKEN": "https://huggingface.co/settings/tokens",
+                }
+                url = urls.get(env_var, "")
+                url_hint = f"\n\nGet a key at: {url}" if url else ""
+                self.output.update_content(
+                    f"[red]✗ Cannot switch to {adapter_name}: {error_msg}{url_hint}[/red]"
+                )
+            else:
+                self.output.update_content(
+                    f"[red]✗ Cannot switch to {adapter_name}: {error_msg}[/red]"
+                )
     
     async def process_command(self, command_str: str) -> None:
         """Process a command string."""

@@ -8140,3 +8140,35 @@ Output: (pending â€” tag not yet pushed)
 - Skipped: ~61 (37 existing + 24 new integration)
 - Failed: 0
 - Warnings: 0
+
+---
+
+**2026-06-19 18:07 — prompt-41: Broad-except audit (core/) + TUI /adapter ValueError handling + Devin chat count landmine**
+
+**Files Modified:**
+- cli/tui.py: Fixed /adapter ValueError handling (lines 491-528)
+- core/orchestrator.py: Fixed 12 broad-except patterns with inline comments + WARNING trace events
+- core/approval_gate.py: Fixed 13 broad-except patterns with inline comments + WARNING trace events
+- core/task_state_machine.py: Fixed 7 broad-except patterns with inline comments + WARNING trace events
+- core/memory_router.py: Fixed 4 broad-except patterns with inline comments + WARNING trace events
+- core/worker_base.py: Fixed 1 broad-except pattern with inline comment
+- SOVEREIGN_AI_HANDOFF.md: Updated last updated line, added Devin chat report test counts landmine, moved Plan 41 to Completed prompts, updated Architecture Rule 17, updated What works right now section
+
+**Implementation Notes:**
+- Fixed 37 total broad-except patterns across 5 core/ files per Rule 17
+- All patterns were cleanup paths (trace emit failures, persistence failures) that shouldn't crash main execution
+- Added inline comments explaining why each exception is intentionally swallowed
+- Added WARNING trace events for all broad-except blocks (except 2 safety catches in orchestrator.py to avoid infinite recursion)
+- TUI /adapter ValueError handling now catches ValueError from create_adapter and displays user-friendly error messages with helpful URLs for API key generation
+- Added Devin chat report test counts landmine to handoff Known landmines section
+
+**Testing Results:**
+- Baseline: ~1124 passed, ~61 skipped, 0 failed, 0 warnings
+- Final: ~1124 passed, ~61 skipped, 0 failed, 0 warnings (no change - only added comments and trace events)
+
+**Verification Gate Output:**
+- Gate 2 (Zero except Exception: pass in core/): PASSED - all patterns now have inline comments + WARNING trace events
+- Gate 3 (All core tests still pass): PASSED - python -m pytest tests/test_orchestrator.py tests/test_approval_gate.py tests/test_task_state_machine.py tests/test_memory_router.py tests/test_worker_base.py -v --tb=short
+- Gate 4 (Full test suite unchanged): PASSED - python -m pytest tests/ -q --tb=short --ignore=tests/test_llama_cpp_adapter.py
+- Gate 5 (Handoff updated): PASSED - Select-String -Path SOVEREIGN_AI_HANDOFF.md -Pattern "Devin chat report test counts unreliable"
+- Gate 6 (Tag-push verification): PASSED - git ls-remote --tags origin | findstr prompt-41

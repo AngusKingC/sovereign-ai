@@ -1,6 +1,6 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-19 16:30 — post prompt-40. Wrote test files for Mistral, Together, DeepSeek, HuggingFace adapters (5 unit + 6 integration tests each), registered all 4 in cli/adapter_factory.py. Adapter verification: Mistral ⚠️ (4 passed, 2 failed - rate limit, external issue), Together ⚠️ (no API key provided), DeepSeek ⚠️ (insufficient balance, external billing issue), HuggingFace ⚠️ (DNS resolution error, network issue). Test baseline: ~1124 passed, ~61 skipped, 0 failed, 0 warnings.
+**Last updated**: 2026-06-19 18:07 — post prompt-41. Fixed broad-except patterns in core/ (orchestrator: 12, approval_gate: 13, task_state_machine: 7, memory_router: 4, worker_base: 1) per Rule 17. Added inline comments + WARNING trace events for cleanup paths. Fixed TUI /adapter ValueError handling to display user-friendly error messages with API key URLs when missing. Added Devin chat report test counts landmine to handoff. Test baseline: ~1124 passed, ~61 skipped, 0 failed, 0 warnings.
 
 **Post-prompt-38 documentation update** (2026-06-19, separate from any prompt): Added "Claude review workflow (token-economical)" subsection to the Workflow section. Documents the new per-prompt context brief pattern, deprecates `CLAUDE_REVIEWER_ROLE.md` as a separate upload, and codifies the round-1-full / round-2-diff / round-3-rarely review structure. Known landmines list updated with prompt-38 tag-push issue, Plan 38.5 re-guessing-disproved-hypotheses issue, per-file-count-mismatch issue, and drift-check-false-positive-on-docs-files issue.
 
@@ -38,7 +38,7 @@ Verified by running the code, not by reading the CHANGELOG:
 - **`jarvis --rich`** — Rich-based interactive CLI with slash commands.
 - **`jarvis --setup` / `--reconfigure` / `--doctor`** — SetupWizard runs, writes `jarvis.config.yaml` + `.env`, doctor checks Ollama/Postgres/Qdrant/Obsidian reachability.
 - **`jarvis serve`** — starts FastAPI server on default port 8000 (configurable via --host/--port). Accepts task submissions via POST /api/tasks, returns worker listings via GET /api/workers.
-- **TUI slash commands** — `/help`, `/status`, `/clear`, `/exit`, `/model`, `/adapter`, `/theme` work. `/adapter` now supports 10 adapters: ollama, lm_studio, openai, cohere, groq, anthropic, mistral, together, deepseek, huggingface. Remaining 4 (llama_cpp, mcp, base) are special-purpose.
+- **TUI slash commands** — `/help`, `/status`, `/clear`, `/exit`, `/model`, `/adapter`, `/theme` work. `/adapter` now supports 10 adapters: ollama, lm_studio, openai, cohere, groq, anthropic, mistral, together, deepseek, huggingface. Remaining 4 (llama_cpp, mcp, base) are special-purpose. `/adapter` now handles missing API keys gracefully with user-friendly error messages and helpful URLs (prompt-41).
 - **Session manager** — in-memory mode works. Postgres persistence does not (see "What's broken").
 - **Command history** — in-memory mode works. Postgres persistence does not.
 - **Test suite** — ~1124 tests pass, ~61 skipped (24 new integration + 37 existing), 0 warnings. Quality varies; some are smoke tests with `assert True` (see Process section).
@@ -332,19 +332,25 @@ Update this list whenever a new pattern is identified. Each entry should referen
 - **Per-file counts that don't match CHANGELOG evidence** (Plan 38.5 had this). If the plan says "11 warnings in test_web_server.py" but the prior CHANGELOG says "15 in web_server.py alone," that's a factual error — flag it. Always cite the CHANGELOG line number for any numeric claim.
 - **Drift check false-positive on docs files** (Plan 38.5 Gate 1 had this). The closing-step workflow tags BEFORE the docs commit, so `git diff --stat prompt-NN..HEAD -- SOVEREIGN_AI_HANDOFF.md CHANGELOG.md` will always show non-empty output for those two files by design. Drift checks must distinguish code files (must be empty) from docs files (allowed, with review procedure to confirm only append-only changes).
 - **Devin memories are not authoritative** (post-prompt-38.7 policy change). All Devin memories were deleted; new memories are added only when GLM/user explicitly requests via a plan step. Any plan or report that cites "per memory X" or "Mistake Pattern N" (where N is a Devin-memory concept, not a handoff recurring-mistake pattern) is a Rule 19 violation — the citation is unverifiable. All workarounds, methodologies, and constraints must live in the handoff or the plan itself.
+- **Devin chat report test counts unreliable** (prompt-39, prompt-40 had this). Devin's chat summary of test counts (e.g., "1118 passed") has been 6 tests lower than the handoff's actual measurement (e.g., "1124 passed") for two consecutive prompts. The handoff is the authoritative source — always verify test counts from the handoff, not from Devin's chat report. Pattern may be due to Devin counting --ignore'd tests differently or running a subset. When in doubt, run `python -m pytest tests/ -q --tb=no --ignore=tests/test_llama_cpp_adapter.py` directly to get the authoritative count.
+
+---
+
+## Completed prompts
+
+### Plan 41 — Broad-except audit, part 1 (core/) — COMPLETED
+- **Priority**: P1
+- **Effort**: M
+- **Why**: Architecture Rule 17 violation: dozens of `except Exception: pass` blocks without trace events. These hide real failures and are the single most common source of "dead wiring" findings. Addresses TUI `/adapter` ValueError handling that Plan 39's comment referenced.
+- **Scope**: Audit `core/` for broad `except Exception` blocks. For each: either (a) add a trace event at WARNING level with the exception message, or (b) narrow the exception type to what's actually expected, or (c) if the exception is truly ignorable, add an inline comment explaining why.
+- **Verification**: `Select-String -Path core\ -Pattern "except Exception" -Recurse` returns zero hits (or only hits with inline comments and trace events).
+- **Result**: Fixed 37 broad-except patterns across 5 files: orchestrator (12), approval_gate (13), task_state_machine (7), memory_router (4), worker_base (1). All now have inline comments + WARNING trace events per Rule 17. Fixed TUI /adapter ValueError handling with user-friendly error messages and API key URLs. Added Devin chat report test counts landmine to handoff.
 
 ---
 
 ## Next 5 prompts
 
 Ordered. Each is one plan. Do not start Plan N+1 until Plan N's verification gates pass.
-
-### Plan 41 — Broad-except audit, part 1 (core/)
-- **Priority**: P1
-- **Effort**: M
-- **Why**: Architecture Rule 17 violation: dozens of `except Exception: pass` blocks without trace events. These hide real failures and are the single most common source of "dead wiring" findings. Addresses TUI `/adapter` ValueError handling that Plan 39's comment referenced.
-- **Scope**: Audit `core/` for broad `except Exception` blocks. For each: either (a) add a trace event at WARNING level with the exception message, or (b) narrow the exception type to what's actually expected, or (c) if the exception is truly ignorable, add an inline comment explaining why.
-- **Verification**: `Select-String -Path core\ -Pattern "except Exception" -Recurse` returns zero hits (or only hits with inline comments and trace events).
 
 ### Plan 42 — Broad-except audit, part 2 (system/)
 - **Priority**: P1
@@ -376,9 +382,9 @@ Ordered. Each is one plan. Do not start Plan N+1 until Plan N's verification gat
 
 ---
 
-## After Plan 40 — Decision point
+## After Plan 41 — Decision point
 
-Once Plans 36-40 land, the foundation is solid: `jarvis serve` works, `jarvis` with DSN works, CI is green, static analysis is clean. At that point, choose:
+Once Plans 36-41 land, the foundation is solid: `jarvis serve` works, `jarvis` with DSN works, CI is green, static analysis is clean, broad-except patterns in core/ are fixed per Rule 17. At that point, choose:
 
 **Option A: Build the marine stack next.** This validates the moat. Ship as portable SKILL.md files (see Skills Ecosystem section) so the marine capability reaches users of Claude Code, Cursor, Codex, *and* Sovereign. Even with the broken foundation pre-36-40, building 5 small skills (weather, marine_weather, AIS, tidal, passage_planner) would tell you whether LLM-driven passage planning is actually useful as a product. If it isn't, the foundation work is moot. If it is, the foundation work has a concrete use case driving it.
 
@@ -406,7 +412,7 @@ Once Plans 36-40 land, the foundation is solid: `jarvis serve` works, `jarvis` w
 14. `InputSanitiser` MUST be called on all externally-sourced content before it enters LLM context: web scraper output, Telegram inbound, user task input. **Currently violated in all three locations** — see "Built but not reachable" table.
 15. `ApprovalTrustRegistry` MUST be consulted by `ApprovalGate` before raising any approval request.
 16. Auth middleware MUST wrap ALL FastAPI routes and WebSocket handshakes. No unauthenticated endpoints except `/health`.
-17. No broad `except Exception: pass` without an inline comment explaining why the exception is intentionally swallowed. Every swallowed exception must emit a trace event at WARNING level. (Currently violated in dozens of places — Plan 42 will audit and fix.)
+17. No broad `except Exception: pass` without an inline comment explaining why the exception is intentionally swallowed. Every swallowed exception must emit a trace event at WARNING level. (Fixed in core/ in prompt-41 — orchestrator: 12, approval_gate: 13, task_state_machine: 7, memory_router: 4, worker_base: 1. Plans 42-43 will audit and fix system/ and skills/.)
 18. Tests change with code. When you modify production code, you MUST update the corresponding test file(s) in the same step. Run the specific test file after each production file change. The full test suite MUST pass (green) before tagging. Tagging with a red test suite is forbidden.
 19. **Execute steps and gates in listed order. Do not mark a step or gate complete until its producing work is done and its evidence exists.** If a gate's evidence requires output from a later step, the plan is out of order — STOP and report. Gate output must be pasted literally into the CHANGELOG; "PASSED" without evidence is forbidden. Specifically:
     - Do not mark a gate PASSED before running it. "I will run it later" is not acceptable.

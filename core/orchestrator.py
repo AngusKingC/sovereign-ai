@@ -92,8 +92,22 @@ class Orchestrator:
                 },
                 duration_ms=0,
             )))
-        except Exception:
-            pass  # Trace failure should not crash main path
+        except Exception as e:
+            # Cleanup path — trace failure should not crash main path
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            try:
+                import asyncio
+                loop = asyncio.get_event_loop()
+                loop.create_task(self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.ORCHESTRATOR,
+                    level=TraceLevel.WARNING,
+                    message=f"Worker registration trace failed: {type(e).__name__}: {e}",
+                    data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                    duration_ms=0,
+                )))
+            except Exception:
+                pass  # Avoid infinite recursion if trace emit fails
 
     async def get_top_candidates(self, task: str, n: int) -> list[str]:
         """Returns IDs of the top n registered workers ordered by routing score for this task.
@@ -227,8 +241,17 @@ class Orchestrator:
                 if self.improvement_loop:
                     try:
                         await self.improvement_loop.mark_task_completed(str(task.task_id))
-                    except Exception:
-                        pass  # Metrics update failure should not crash task completion
+                    except Exception as e:
+                        # Cleanup path — metrics update failure should not crash task completion
+                        # Per Rule 17: broad except requires inline comment + WARNING trace
+                        await self._emitter.emit(TraceEvent(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.ORCHESTRATOR,
+                            level=TraceLevel.WARNING,
+                            message=f"Metrics update failed: {type(e).__name__}: {e}",
+                            data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                            duration_ms=0,
+                        ))
             else:
                 task = await self.state_machine.transition(
                     task, TaskStatus.FAILED, reason="Validation failed: empty output", actor="orchestrator"
@@ -244,9 +267,18 @@ class Orchestrator:
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    pass
-            
+                except Exception as e:
+                    # Cleanup path — trace emit failure should not crash task processing
+                    # Per Rule 17: broad except requires inline comment + WARNING trace
+                    await self._emitter.emit(TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.WARNING,
+                        message=f"Trace emit failed: {type(e).__name__}: {e}",
+                        data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                        duration_ms=0,
+                    ))
+
             return output
         except Exception as e:
             # On any failure, transition to FAILED if possible
@@ -265,8 +297,17 @@ class Orchestrator:
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    pass
+                except Exception as e:
+                    # Cleanup path — trace emit failure should not crash task processing
+                    # Per Rule 17: broad except requires inline comment + WARNING trace
+                    await self._emitter.emit(TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.WARNING,
+                        message=f"Trace emit failed: {type(e).__name__}: {e}",
+                        data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                        duration_ms=0,
+                    ))
             raise
 
     async def route_task(self, task: Task) -> WorkerOutput:
@@ -317,8 +358,17 @@ class Orchestrator:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass
+        except Exception as e:
+            # Cleanup path — trace emit failure should not crash routing
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.OPERATION_ERROR,
+                component=TraceComponent.ORCHESTRATOR,
+                level=TraceLevel.WARNING,
+                message=f"Trace emit failed: {type(e).__name__}: {e}",
+                data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                duration_ms=0,
+            ))
 
         # Transition to PLANNED before routing
         try:
@@ -361,8 +411,17 @@ class Orchestrator:
                 )
                 try:
                     await self.improvement_loop.record_routing_decision(metrics)
-                except Exception:
-                    pass  # Metrics recording failure should not crash routing
+                except Exception as e:
+                    # Cleanup path — metrics recording failure should not crash routing
+                    # Per Rule 17: broad except requires inline comment + WARNING trace
+                    await self._emitter.emit(TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.WARNING,
+                        message=f"Metrics recording failed: {type(e).__name__}: {e}",
+                        data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                        duration_ms=0,
+                    ))
             
             try:
                 event = TraceEvent(
@@ -377,9 +436,18 @@ class Orchestrator:
                     duration_ms=duration_ms,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
-            
+            except Exception as e:
+                # Cleanup path — trace emit failure should not crash routing
+                # Per Rule 17: broad except requires inline comment + WARNING trace
+                await self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.ORCHESTRATOR,
+                    level=TraceLevel.WARNING,
+                    message=f"Trace emit failed: {type(e).__name__}: {e}",
+                    data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                    duration_ms=0,
+                ))
+
             # Update StrategicContext after successful routing decision
             try:
                 current_context = await self.memory_router.get_global_context(caller_id="orchestrator")
@@ -398,8 +466,17 @@ class Orchestrator:
                 current_context.last_updated = datetime.utcnow()
                 
                 await self.memory_router.set_global_context(current_context, caller_id="orchestrator")
-            except Exception:
-                pass  # Context update failure should not crash routing
+            except Exception as e:
+                # Cleanup path — context update failure should not crash routing
+                # Per Rule 17: broad except requires inline comment + WARNING trace
+                await self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.ORCHESTRATOR,
+                    level=TraceLevel.WARNING,
+                    message=f"Context update failed: {type(e).__name__}: {e}",
+                    data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                    duration_ms=0,
+                ))
             
             return await self.process_task(task, worker_id)
 
@@ -458,8 +535,17 @@ class Orchestrator:
             )
             try:
                 await self.improvement_loop.record_routing_decision(metrics)
-            except Exception:
-                pass  # Metrics recording failure should not crash routing
+            except Exception as e:
+                # Cleanup path — metrics recording failure should not crash routing
+                # Per Rule 17: broad except requires inline comment + WARNING trace
+                await self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.ORCHESTRATOR,
+                    level=TraceLevel.WARNING,
+                    message=f"Metrics recording failed: {type(e).__name__}: {e}",
+                    data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                    duration_ms=0,
+                ))
         
         try:
             event = TraceEvent(
@@ -474,9 +560,18 @@ class Orchestrator:
                 duration_ms=duration_ms,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass
-        
+        except Exception as e:
+            # Cleanup path — trace emit failure should not crash routing
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.OPERATION_ERROR,
+                component=TraceComponent.ORCHESTRATOR,
+                level=TraceLevel.WARNING,
+                message=f"Trace emit failed: {type(e).__name__}: {e}",
+                data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                duration_ms=0,
+            ))
+
         # Update StrategicContext after successful routing decision
         try:
             current_context = await self.memory_router.get_global_context(caller_id="orchestrator")
@@ -495,8 +590,17 @@ class Orchestrator:
             current_context.last_updated = datetime.utcnow()
             
             await self.memory_router.set_global_context(current_context, caller_id="orchestrator")
-        except Exception:
-            pass  # Context update failure should not crash routing
+        except Exception as e:
+            # Cleanup path — context update failure should not crash routing
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.OPERATION_ERROR,
+                component=TraceComponent.ORCHESTRATOR,
+                level=TraceLevel.WARNING,
+                message=f"Context update failed: {type(e).__name__}: {e}",
+                data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                duration_ms=0,
+            ))
         
         return await self.process_task(task, selected_worker_id)
 
@@ -597,8 +701,22 @@ class Orchestrator:
                 },
                 duration_ms=0,
             )))
-        except Exception:
-            pass  # Trace failure should not crash main path
+        except Exception as e:
+            # Cleanup path — trace failure should not crash main path
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            try:
+                import asyncio
+                loop = asyncio.get_event_loop()
+                loop.create_task(self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.ORCHESTRATOR,
+                    level=TraceLevel.WARNING,
+                    message=f"Worker deregistration trace failed: {type(e).__name__}: {e}",
+                    data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                    duration_ms=0,
+                )))
+            except Exception:
+                pass  # Avoid infinite recursion if trace emit fails
 
     async def submit_subtask(self, request: "A2ARequest") -> "A2AResponse":
         """

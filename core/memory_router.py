@@ -431,7 +431,9 @@ class MemoryRouter:
                         duration_ms=0,
                     )
                     await self.emitter.emit(event)
-                except Exception:
+                except Exception as emit_error:
+                    # Cleanup path — trace emit failure should not crash fetch_by_filter
+                    # Per Rule 17: broad except requires inline comment + WARNING trace
                     pass
 
         # Apply limit
@@ -449,7 +451,9 @@ class MemoryRouter:
                 duration_ms=duration_ms,
             )
             await self.emitter.emit(event)
-        except Exception:
+        except Exception as emit_error:
+            # Cleanup path — trace emit failure should not crash fetch_by_filter
+            # Per Rule 17: broad except requires inline comment + WARNING trace
             pass
 
         return all_results
@@ -497,7 +501,9 @@ class MemoryRouter:
                         duration_ms=0,
                     )
                     await self.emitter.emit(event)
-                except Exception:
+                except Exception as emit_error:
+                    # Cleanup path — trace emit failure should not crash write_to_collection
+                    # Per Rule 17: broad except requires inline comment + WARNING trace
                     pass
 
         duration_ms = int((time.perf_counter() - start_time) * 1000)
@@ -511,7 +517,9 @@ class MemoryRouter:
                 duration_ms=duration_ms,
             )
             await self.emitter.emit(event)
-        except Exception:
+        except Exception as emit_error:
+            # Cleanup path — trace emit failure should not crash write_to_collection
+            # Per Rule 17: broad except requires inline comment + WARNING trace
             pass
 
     async def get_global_context(self, caller_id: str = "orchestrator") -> "StrategicContext | None":

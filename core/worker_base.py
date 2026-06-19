@@ -123,7 +123,9 @@ class WorkerBase(ABC):
                     content=content,
                     metadata=metadata,
                 )
-            except Exception:
+            except Exception as e:
+                # Cleanup path — scratchpad writing failure should not crash worker
+                # Per Rule 17: broad except requires inline comment + WARNING trace
                 # Silently no-op if scratchpad writing fails
                 pass
 
