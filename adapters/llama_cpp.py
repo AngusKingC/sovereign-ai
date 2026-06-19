@@ -153,7 +153,15 @@ class LlamaCppAdapter(LLMAdapter):
                     error_type=type(e).__name__,
                     error_message=str(e),
                 ))
-            except Exception:
+            except Exception as e:
+                await self.emitter.emit(TraceEvent(
+                    event_type=TraceEventType.ADAPTER_ERROR,
+                    component=TraceComponent.ADAPTER,
+                    message="Trace emission failed in Llama.cpp adapter error handler",
+                    level=TraceLevel.WARNING,
+                    data={"error": str(e)},
+                    duration_ms=0,
+                ))
                 pass  # Trace failure should not crash main path
             raise RuntimeError(f"llama.cpp generation failed: {e}")
 
@@ -162,7 +170,15 @@ class LlamaCppAdapter(LLMAdapter):
         try:
             self._ensure_model()
             return self._model is not None
-        except Exception:
+        except Exception as e:
+            await self.emitter.emit(TraceEvent(
+                event_type=TraceEventType.ADAPTER_ERROR,
+                component=TraceComponent.ADAPTER,
+                message="Llama.cpp health check failed",
+                level=TraceLevel.WARNING,
+                data={"error": str(e)},
+                duration_ms=0,
+            ))
             return False
 
     @property

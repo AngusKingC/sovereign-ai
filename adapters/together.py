@@ -91,7 +91,15 @@ class TogetherAdapter(LLMAdapter):
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
+            except Exception as e:
+                await self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.ADAPTER_ERROR,
+                    component=TraceComponent.ADAPTER,
+                    message="Trace emission failed in Together adapter call start",
+                    level=TraceLevel.WARNING,
+                    data={"error": str(e)},
+                    duration_ms=0,
+                ))
                 pass
 
             self._ensure_client()
@@ -128,7 +136,15 @@ class TogetherAdapter(LLMAdapter):
                     duration_ms=duration_ms,
                 )
                 await self._emitter.emit(event)
-            except Exception:
+            except Exception as e:
+                await self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.ADAPTER_ERROR,
+                    component=TraceComponent.ADAPTER,
+                    message="Trace emission failed in Together adapter response",
+                    level=TraceLevel.WARNING,
+                    data={"error": str(e)},
+                    duration_ms=0,
+                ))
                 pass
 
             return LLMResponse(
@@ -157,7 +173,15 @@ class TogetherAdapter(LLMAdapter):
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
+            except Exception as e:
+                await self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.ADAPTER_ERROR,
+                    component=TraceComponent.ADAPTER,
+                    message="Trace emission failed in Together adapter error handler",
+                    level=TraceLevel.WARNING,
+                    data={"error": str(e)},
+                    duration_ms=0,
+                ))
                 pass  # Trace failure should not crash main path
             raise RuntimeError(f"Together AI generation failed: {e}")
 
@@ -175,7 +199,15 @@ class TogetherAdapter(LLMAdapter):
                 max_tokens=1,
             )
             return True
-        except Exception:
+        except Exception as e:
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.ADAPTER_ERROR,
+                component=TraceComponent.ADAPTER,
+                message="Together health check failed",
+                level=TraceLevel.WARNING,
+                data={"error": str(e)},
+                duration_ms=0,
+            ))
             return False
 
     async def close(self) -> None:

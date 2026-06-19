@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
+
+logger = logging.getLogger(__name__)
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -129,7 +132,8 @@ class SecretsAudit:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass  # Trace failure should not abort operation
+            except Exception as e:
+                logger.warning(f"Trace emission failed in secrets audit: {e}")  # Trace failure should not abort operation
+                pass
 
         return offending_keys

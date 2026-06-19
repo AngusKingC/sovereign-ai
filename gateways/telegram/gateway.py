@@ -75,7 +75,15 @@ class TelegramGateway:
                         },
                         duration_ms=0,
                     ))
-                except Exception:
+                except Exception as e:
+                    await self._emitter.emit(TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.WARNING,
+                        message="Trace emission failed in send_message success",
+                        data={"error": str(e)},
+                        duration_ms=0,
+                    ))
                     pass
 
                 return True
@@ -92,7 +100,15 @@ class TelegramGateway:
                     },
                     duration_ms=0,
                 ))
-            except Exception:
+            except Exception as e:
+                await self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.WARNING,
+                    message="Trace emission failed in send_message error",
+                    data={"error": str(e)},
+                    duration_ms=0,
+                ))
                 pass
             return False
 
@@ -152,7 +168,15 @@ class TelegramGateway:
                         },
                         duration_ms=0,
                     ))
-                except Exception:
+                except Exception as e:
+                    await self._emitter.emit(TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.WARNING,
+                        message="Trace emission failed in poll_updates success",
+                        data={"error": str(e)},
+                        duration_ms=0,
+                    ))
                     pass
 
                 return data.get("result", [])
@@ -169,7 +193,15 @@ class TelegramGateway:
                     },
                     duration_ms=0,
                 ))
-            except Exception:
+            except Exception as e:
+                await self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.WARNING,
+                    message="Trace emission failed in poll_updates error",
+                    data={"error": str(e)},
+                    duration_ms=0,
+                ))
                 pass
             return []
 
@@ -190,6 +222,7 @@ class TelegramGateway:
                 text = message.get("text", "")
                 if text.startswith("/"):
                     commands.append(text)
-            except Exception:
+            except Exception as e:
+                print(f"Failed to extract command from update: {e}")
                 continue
         return commands

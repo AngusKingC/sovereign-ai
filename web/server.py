@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
+
+logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
@@ -33,8 +36,9 @@ async def lifespan(app: FastAPI):
         _emitter = app.state._emitter
         audit = SecretsAudit(emitter=_emitter)
         await audit.audit()
-    except Exception:
-        pass  # Secrets audit failure should not crash the server
+    except Exception as e:
+        logger.warning(f"Secrets audit failed: {e}")  # Secrets audit failure should not crash the server
+        pass
     yield
     # Shutdown: no cleanup needed currently
 
@@ -76,7 +80,8 @@ def create_app(
                 tasks = await orchestrator.list_tasks()
                 return {"tasks": tasks}
             return {"tasks": []}
-        except Exception:
+        except Exception as e:
+            logger.warning(f"get_tasks failed: {e}")
             return {"tasks": []}
 
     # POST /api/tasks — auth required
@@ -100,11 +105,13 @@ def create_app(
                     duration_ms=0,
                 )
                 await _emitter.emit(event)
-            except Exception:
-                pass  # Trace failure should not abort operation
+            except Exception as e:
+                logger.warning(f"Trace emission failed in create_task: {e}")  # Trace failure should not abort operation
+                pass
 
             return {"task_id": task_id, "status": "queued"}
-        except Exception:
+        except Exception as e:
+            logger.warning(f"create_task failed: {e}")
             return {"task_id": "", "status": "error"}
 
     # GET /api/workers — auth required
@@ -116,7 +123,8 @@ def create_app(
                 workers = await orchestrator.list_workers()
                 return {"workers": workers}
             return {"workers": []}
-        except Exception:
+        except Exception as e:
+            logger.warning(f"get_workers failed: {e}")
             return {"workers": []}
 
     # GET /api/trace — auth required
@@ -127,7 +135,8 @@ def create_app(
             events = _emitter.get_events()
             last_100 = events[-100:] if len(events) > 100 else events
             return {"events": last_100}
-        except Exception:
+        except Exception as e:
+            logger.warning(f"get_trace failed: {e}")
             return {"events": []}
 
     # WebSocket /ws — auth required via ?token=<value> query param
@@ -159,8 +168,9 @@ def create_app(
                 duration_ms=0,
             )
             await _emitter.emit(event)
-        except Exception:
-            pass  # Trace failure should not abort operation
+        except Exception as e:
+            logger.warning(f"Trace emission failed in websocket connect: {e}")  # Trace failure should not abort operation
+            pass
 
         try:
             while True:
@@ -181,8 +191,9 @@ def create_app(
                         duration_ms=0,
                     )
                     await _emitter.emit(event)
-                except Exception:
-                    pass  # Trace failure should not abort operation
+                except Exception as e:
+                    logger.warning(f"Trace emission failed in websocket message: {e}")  # Trace failure should not abort operation
+                    pass
 
                 # Send response back to client
                 await websocket.send_json({"task_id": task_id, "status": "queued"})
@@ -197,9 +208,11 @@ def create_app(
                     duration_ms=0,
                 )
                 await _emitter.emit(event)
-            except Exception:
-                pass  # Trace failure should not abort operation
-        except Exception:
+            except Exception as e:
+                logger.warning(f"Trace emission failed in websocket disconnect: {e}")  # Trace failure should not abort operation
+                pass
+        except Exception as e:
+            logger.warning(f"WebSocket handler error: {e}")
             pass
 
     # Mount static files

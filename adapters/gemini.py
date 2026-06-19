@@ -150,7 +150,14 @@ class GeminiAdapter(LLMAdapter):
                     error_type=type(e).__name__,
                     error_message=str(e),
                 )
-            except Exception:
+            except Exception as e:
+                await emit_trace(
+                    event_type=TraceEventType.ADAPTER_ERROR,
+                    component=TraceComponent.ADAPTER,
+                    message="Trace emission failed in Gemini adapter error handler",
+                    level=TraceLevel.WARNING,
+                    data={"error": str(e)},
+                )
                 pass  # Trace failure should not crash main path
             raise RuntimeError(f"Gemini generation failed: {e}")
 

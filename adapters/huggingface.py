@@ -97,7 +97,15 @@ class HuggingFaceAdapter(LLMAdapter):
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
+            except Exception as e:
+                await self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.ADAPTER_ERROR,
+                    component=TraceComponent.ADAPTER,
+                    message="Trace emission failed in HuggingFace adapter call start",
+                    level=TraceLevel.WARNING,
+                    data={"error": str(e)},
+                    duration_ms=0,
+                ))
                 pass
 
             self._ensure_client()
@@ -149,7 +157,15 @@ class HuggingFaceAdapter(LLMAdapter):
                     duration_ms=duration_ms,
                 )
                 await self._emitter.emit(event)
-            except Exception:
+            except Exception as e:
+                await self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.ADAPTER_ERROR,
+                    component=TraceComponent.ADAPTER,
+                    message="Trace emission failed in HuggingFace adapter response",
+                    level=TraceLevel.WARNING,
+                    data={"error": str(e)},
+                    duration_ms=0,
+                ))
                 pass
 
             return LLMResponse(
@@ -178,7 +194,15 @@ class HuggingFaceAdapter(LLMAdapter):
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
+            except Exception as e:
+                await self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.ADAPTER_ERROR,
+                    component=TraceComponent.ADAPTER,
+                    message="Trace emission failed in HuggingFace adapter error handler",
+                    level=TraceLevel.WARNING,
+                    data={"error": str(e)},
+                    duration_ms=0,
+                ))
                 pass  # Trace failure should not crash main path
             raise RuntimeError(f"HuggingFace generation failed: {e}")
 
@@ -195,7 +219,15 @@ class HuggingFaceAdapter(LLMAdapter):
                 json={"inputs": "test", "parameters": {"max_new_tokens": 1}},
             )
             return response.status_code == 200
-        except Exception:
+        except Exception as e:
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.ADAPTER_ERROR,
+                component=TraceComponent.ADAPTER,
+                message="HuggingFace health check failed",
+                level=TraceLevel.WARNING,
+                data={"error": str(e)},
+                duration_ms=0,
+            ))
             return False
 
     async def close(self) -> None:

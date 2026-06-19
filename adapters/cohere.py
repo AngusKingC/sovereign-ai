@@ -93,7 +93,15 @@ class CohereAdapter(LLMAdapter):
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
+            except Exception as e:
+                await self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.ADAPTER_ERROR,
+                    component=TraceComponent.ADAPTER,
+                    message="Trace emission failed in Cohere adapter call start",
+                    level=TraceLevel.WARNING,
+                    data={"error": str(e)},
+                    duration_ms=0,
+                ))
                 pass
 
             self._ensure_client()
@@ -130,7 +138,15 @@ class CohereAdapter(LLMAdapter):
                     duration_ms=duration_ms,
                 )
                 await self._emitter.emit(event)
-            except Exception:
+            except Exception as e:
+                await self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.ADAPTER_ERROR,
+                    component=TraceComponent.ADAPTER,
+                    message="Trace emission failed in Cohere adapter response",
+                    level=TraceLevel.WARNING,
+                    data={"error": str(e)},
+                    duration_ms=0,
+                ))
                 pass
 
             return LLMResponse(
@@ -159,7 +175,15 @@ class CohereAdapter(LLMAdapter):
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
+            except Exception as e:
+                await self._emitter.emit(TraceEvent(
+                    event_type=TraceEventType.ADAPTER_ERROR,
+                    component=TraceComponent.ADAPTER,
+                    message="Trace emission failed in Cohere adapter error handler",
+                    level=TraceLevel.WARNING,
+                    data={"error": str(e)},
+                    duration_ms=0,
+                ))
                 pass  # Trace failure should not crash main path
             raise RuntimeError(f"Cohere generation failed: {e}")
 
@@ -173,7 +197,15 @@ class CohereAdapter(LLMAdapter):
 
             response = await self._client.chat(message="test", model=self._model_name, max_tokens=1)
             return True
-        except Exception:
+        except Exception as e:
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.ADAPTER_ERROR,
+                component=TraceComponent.ADAPTER,
+                message="Cohere health check failed",
+                level=TraceLevel.WARNING,
+                data={"error": str(e)},
+                duration_ms=0,
+            ))
             return False
 
     async def close(self) -> None:
