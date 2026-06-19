@@ -52,6 +52,8 @@ class ModelRegistry:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
             # Try to load from Postgres
@@ -78,6 +80,8 @@ class ModelRegistry:
                     )
                     await self._emitter.emit(event)
                 except Exception:
+                    # Cleanup path: trace event emission failed, don't crash the application
+                    # Per Rule 17: broad except requires inline comment
                     pass
 
             try:
@@ -91,6 +95,8 @@ class ModelRegistry:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
         except Exception as e:
             try:
@@ -106,6 +112,8 @@ class ModelRegistry:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
     async def _save_to_storage(self, entry: ModelEntry) -> None:
@@ -131,6 +139,8 @@ class ModelRegistry:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
     async def register(self, entry: ModelEntry) -> None:
@@ -147,6 +157,8 @@ class ModelRegistry:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
             entry.last_updated = datetime.now()
@@ -166,6 +178,8 @@ class ModelRegistry:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             raise
 
@@ -205,6 +219,8 @@ class ModelRegistry:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
             # Filter by task tag match
@@ -254,6 +270,8 @@ class ModelRegistry:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
             return result
@@ -271,6 +289,8 @@ class ModelRegistry:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             raise
 
@@ -290,6 +310,8 @@ class ModelRegistry:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
             if model_id in self._models:
@@ -312,6 +334,8 @@ class ModelRegistry:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             raise
 

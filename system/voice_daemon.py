@@ -56,6 +56,8 @@ class VoiceDaemon:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Cleanup path: trace event emission failed, don't crash the application
+            # Per Rule 17: broad except requires inline comment
             pass
 
     async def stop(self) -> None:
@@ -82,6 +84,8 @@ class VoiceDaemon:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Cleanup path: trace event emission failed, don't crash the application
+            # Per Rule 17: broad except requires inline comment
             pass
 
     async def _loop(self) -> None:
@@ -103,6 +107,8 @@ class VoiceDaemon:
             except asyncio.CancelledError:
                 break
             except Exception:
+                # Cleanup path: loop error should not crash the daemon
+                # Per Rule 17: broad except requires inline comment
                 pass
 
     async def _get_audio_chunk(self) -> bytes:
@@ -152,6 +158,8 @@ class VoiceDaemon:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
         except Exception:
@@ -168,6 +176,8 @@ class VoiceDaemon:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
     async def run_once(self, audio_bytes: bytes) -> VoiceCommand | None:

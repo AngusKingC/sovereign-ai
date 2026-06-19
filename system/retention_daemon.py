@@ -60,8 +60,17 @@ class RetentionDaemon:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass  # Trace failure should not abort start
+        except Exception as e:
+            # Trace failure should not abort start
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.OPERATION_ERROR,
+                component=TraceComponent.RETENTION_DAEMON,
+                level=TraceLevel.WARNING,
+                message=f"Trace emission failed: {type(e).__name__}: {e}",
+                data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                duration_ms=0,
+            ))
 
     async def stop(self) -> None:
         """
@@ -90,8 +99,17 @@ class RetentionDaemon:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass  # Trace failure should not abort stop
+        except Exception as e:
+            # Trace failure should not abort stop
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.OPERATION_ERROR,
+                component=TraceComponent.RETENTION_DAEMON,
+                level=TraceLevel.WARNING,
+                message=f"Trace emission failed: {type(e).__name__}: {e}",
+                data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                duration_ms=0,
+            ))
 
     async def _loop(self) -> None:
         """

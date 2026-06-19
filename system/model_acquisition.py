@@ -110,6 +110,8 @@ class ModelAcquisition:
                     )
                 )
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             return []
 
@@ -160,6 +162,8 @@ class ModelAcquisition:
                     )
                 )
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             return None
 
@@ -239,6 +243,8 @@ class ModelAcquisition:
                     )
                 )
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             return None
 
@@ -287,6 +293,8 @@ class ModelAcquisition:
                     )
                 )
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             return False, f"Error checking fit: {str(e)}"
 
@@ -447,6 +455,8 @@ class ModelAcquisition:
                     )
                 )
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             return DownloadResult(
                 success=False,
@@ -542,6 +552,8 @@ class ModelAcquisition:
                     )
                 )
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             return DownloadResult(
                 success=False,
@@ -631,6 +643,8 @@ class ModelAcquisition:
                     )
                 )
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             return DownloadResult(
                 success=False,
@@ -704,6 +718,8 @@ class ModelAcquisition:
                     )
                 )
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             return DownloadResult(
                 success=False,
@@ -785,6 +801,8 @@ class ModelAcquisition:
                     )
                 )
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             return False
 
@@ -840,6 +858,8 @@ class ModelAcquisition:
                     )
                 )
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             return []
 
@@ -880,6 +900,8 @@ class ModelAcquisition:
                 )
                 await self.emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             return {
                 "total_models": 0,

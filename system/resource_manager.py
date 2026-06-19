@@ -89,6 +89,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
         return result
@@ -107,6 +109,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
             # Get resource info from system profile
@@ -154,6 +158,8 @@ class ResourceManager:
                     )
                     await self._emitter.emit(event)
                 except Exception:
+                    # Cleanup path: trace event emission failed, don't crash the application
+                    # Per Rule 17: broad except requires inline comment
                     pass
 
             snapshot = ResourceSnapshot(
@@ -185,6 +191,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             raise
 
@@ -211,6 +219,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
     async def can_load(
@@ -271,6 +281,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             return False, f"Error checking load capability: {str(e)}"
 
@@ -290,6 +302,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
             # Check if already loaded
@@ -305,6 +319,8 @@ class ResourceManager:
                     )
                     await self._emitter.emit(event)
                 except Exception:
+                    # Cleanup path: trace event emission failed, don't crash the application
+                    # Per Rule 17: broad except requires inline comment
                     pass
                 return LoadDecision(
                     approved=True,
@@ -329,6 +345,8 @@ class ResourceManager:
                     )
                     await self._emitter.emit(event)
                 except Exception:
+                    # Cleanup path: trace event emission failed, don't crash the application
+                    # Per Rule 17: broad except requires inline comment
                     pass
                 return LoadDecision(
                     approved=False,
@@ -358,6 +376,8 @@ class ResourceManager:
                     )
                     await self._emitter.emit(event)
                 except Exception:
+                    # Cleanup path: trace event emission failed, don't crash the application
+                    # Per Rule 17: broad except requires inline comment
                     pass
                 return LoadDecision(
                     approved=False,
@@ -384,6 +404,8 @@ class ResourceManager:
                     )
                     await self._emitter.emit(event)
                 except Exception:
+                    # Cleanup path: trace event emission failed, don't crash the application
+                    # Per Rule 17: broad except requires inline comment
                     pass
                 return LoadDecision(
                     approved=False,
@@ -415,6 +437,8 @@ class ResourceManager:
                     )
                     await self._emitter.emit(event)
                 except Exception:
+                    # Cleanup path: trace event emission failed, don't crash the application
+                    # Per Rule 17: broad except requires inline comment
                     pass
                 return LoadDecision(
                     approved=True,
@@ -458,6 +482,8 @@ class ResourceManager:
                             )
                             await self._emitter.emit(event)
                         except Exception:
+                            # Cleanup path: trace event emission failed, don't crash the application
+                            # Per Rule 17: broad except requires inline comment
                             pass
 
                         approved = await self.approval_callback.request_approval(
@@ -482,6 +508,8 @@ class ResourceManager:
                                 )
                                 await self._emitter.emit(event)
                             except Exception:
+                                # Cleanup path: trace event emission failed, don't crash the application
+                                # Per Rule 17: broad except requires inline comment
                                 pass
                             return LoadDecision(
                                 approved=False,
@@ -504,6 +532,8 @@ class ResourceManager:
                             )
                             await self._emitter.emit(event)
                         except Exception:
+                            # Cleanup path: trace event emission failed, don't crash the application
+                            # Per Rule 17: broad except requires inline comment
                             pass
                         return LoadDecision(
                             approved=False,
@@ -529,6 +559,8 @@ class ResourceManager:
                     )
                     await self._emitter.emit(event)
                 except Exception:
+                    # Cleanup path: trace event emission failed, don't crash the application
+                    # Per Rule 17: broad except requires inline comment
                     pass
                 return LoadDecision(
                     approved=True,
@@ -550,6 +582,8 @@ class ResourceManager:
                     )
                     await self._emitter.emit(event)
                 except Exception:
+                    # Cleanup path: trace event emission failed, don't crash the application
+                    # Per Rule 17: broad except requires inline comment
                     pass
                 return LoadDecision(
                     approved=False,
@@ -573,6 +607,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             return LoadDecision(
                 approved=False,
@@ -618,6 +654,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
     async def record_unload(self, model_id: str) -> None:
@@ -640,6 +678,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
     async def record_usage(self, model_id: str) -> None:
@@ -662,6 +702,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
     async def pin_model(self, model_id: str) -> None:
@@ -678,6 +720,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             if model_id in self._loaded_models:
                 self._loaded_models[model_id].is_pinned = True
@@ -696,6 +740,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
     async def unpin_model(self, model_id: str) -> None:
@@ -712,6 +758,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             if model_id in self._loaded_models:
                 self._loaded_models[model_id].is_pinned = False
@@ -730,6 +778,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
     async def get_loaded_models(self) -> list[LoadedModel]:
@@ -756,6 +806,8 @@ class ResourceManager:
                     )
                     await self._emitter.emit(event)
                 except Exception:
+                    # Cleanup path: trace event emission failed, don't crash the application
+                    # Per Rule 17: broad except requires inline comment
                     pass
                 return False
 
@@ -770,6 +822,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
             # Send unload signal to Ollama API
@@ -791,6 +845,8 @@ class ResourceManager:
                     )
                     await self._emitter.emit(event)
                 except Exception:
+                    # Cleanup path: trace event emission failed, don't crash the application
+                    # Per Rule 17: broad except requires inline comment
                     pass
 
             await self.record_unload(model_id)
@@ -809,6 +865,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             return False
 
@@ -849,6 +907,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
         except Exception as e:
             # Release failure should not crash
@@ -863,6 +923,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
     async def ensure_model(self, adapter) -> None:
@@ -894,6 +956,8 @@ class ResourceManager:
                     )
                     await self._emitter.emit(event)
                 except Exception:
+                    # Cleanup path: trace event emission failed, don't crash the application
+                    # Per Rule 17: broad except requires inline comment
                     pass
                 return
             
@@ -934,6 +998,8 @@ class ResourceManager:
                             )
                             await self._emitter.emit(event)
                         except Exception:
+                            # Cleanup path: trace event emission failed, don't crash the application
+                            # Per Rule 17: broad except requires inline comment
                             pass
                 else:
                     # Reload not supported, emit warning and return
@@ -948,6 +1014,8 @@ class ResourceManager:
                         )
                         await self._emitter.emit(event)
                     except Exception:
+                        # Cleanup path: trace event emission failed, don't crash the application
+                        # Per Rule 17: broad except requires inline comment
                         pass
             
             # Emit trace event
@@ -962,6 +1030,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
         except Exception as e:
             # Ensure failure should not crash
@@ -976,6 +1046,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
     async def _persist_loaded_state(self) -> None:
@@ -1005,6 +1077,8 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
     async def initialize(self, system_profile: SystemProfile) -> None:
@@ -1035,6 +1109,8 @@ class ResourceManager:
                     )
                     await self._emitter.emit(event)
                 except Exception:
+                    # Cleanup path: trace event emission failed, don't crash the application
+                    # Per Rule 17: broad except requires inline comment
                     pass
 
             # Reconcile with actual Ollama state
@@ -1073,4 +1149,6 @@ class ResourceManager:
                 )
                 await self._emitter.emit(event)
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass

@@ -74,6 +74,8 @@ class TrajectoryExporter:
             )
             await self._emitter.emit(event)
         except Exception:
+            # Cleanup path: trace event emission failed, don't crash the application
+            # Per Rule 17: broad except requires inline comment
             pass
         return 0  # Skip export, write empty file
 

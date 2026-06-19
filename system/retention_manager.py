@@ -96,8 +96,17 @@ class RetentionManager:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass  # Trace failure should not abort operation
+        except Exception as e:
+            # Trace failure should not abort operation
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.OPERATION_ERROR,
+                component=TraceComponent.RETENTION_MANAGER,
+                level=TraceLevel.WARNING,
+                message=f"Trace emission failed: {type(e).__name__}: {e}",
+                data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                duration_ms=0,
+            ))
 
         return count
 
@@ -139,8 +148,17 @@ class RetentionManager:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass  # Trace failure should not abort operation
+        except Exception as e:
+            # Trace failure should not abort operation
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.OPERATION_ERROR,
+                component=TraceComponent.RETENTION_MANAGER,
+                level=TraceLevel.WARNING,
+                message=f"Trace emission failed: {type(e).__name__}: {e}",
+                data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                duration_ms=0,
+            ))
 
         return count
 
@@ -179,8 +197,17 @@ class RetentionManager:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass  # Trace failure should not abort operation
+        except Exception as e:
+            # Trace failure should not abort operation
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.OPERATION_ERROR,
+                component=TraceComponent.RETENTION_MANAGER,
+                level=TraceLevel.WARNING,
+                message=f"Trace emission failed: {type(e).__name__}: {e}",
+                data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                duration_ms=0,
+            ))
 
         return count
 
@@ -220,8 +247,17 @@ class RetentionManager:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass  # Trace failure should not abort operation
+        except Exception as e:
+            # Trace failure should not abort operation
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.OPERATION_ERROR,
+                component=TraceComponent.RETENTION_MANAGER,
+                level=TraceLevel.WARNING,
+                message=f"Trace emission failed: {type(e).__name__}: {e}",
+                data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                duration_ms=0,
+            ))
 
         return count
 
@@ -257,8 +293,17 @@ class RetentionManager:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass  # Trace failure should not abort run
+        except Exception as e:
+            # Trace failure should not abort run
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.OPERATION_ERROR,
+                component=TraceComponent.RETENTION_MANAGER,
+                level=TraceLevel.WARNING,
+                message=f"Trace emission failed: {type(e).__name__}: {e}",
+                data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                duration_ms=0,
+            ))
 
         # Run all four prune methods
         try:
@@ -299,8 +344,17 @@ class RetentionManager:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass  # Trace failure should not abort run
+        except Exception as e:
+            # Trace failure should not abort run
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            await self._emitter.emit(TraceEvent(
+                event_type=TraceEventType.OPERATION_ERROR,
+                component=TraceComponent.RETENTION_MANAGER,
+                level=TraceLevel.WARNING,
+                message=f"Trace emission failed: {type(e).__name__}: {e}",
+                data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                duration_ms=0,
+            ))
 
         return report
 

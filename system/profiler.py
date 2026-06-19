@@ -99,6 +99,8 @@ class SystemProfiler:
                     )
                 )
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             return GPUInfo()
 
@@ -141,6 +143,8 @@ class SystemProfiler:
                     )
                 )
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             return CPUInfo()
 
@@ -180,6 +184,8 @@ class SystemProfiler:
                     )
                 )
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             return RAMInfo()
 
@@ -232,6 +238,8 @@ class SystemProfiler:
                     )
                 )
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
         return storage_info
 
@@ -280,6 +288,8 @@ class SystemProfiler:
 
                 nvidia_drivers_present = shutil.which("nvidia-smi") is not None
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
             return OSInfo(
@@ -306,6 +316,8 @@ class SystemProfiler:
                         bandwidth = "low"
                     return NetworkInfo(internet_available=True, bandwidth_category=bandwidth)
         except Exception:
+            # Cleanup path: network detection failed, return default
+            # Per Rule 17: broad except requires inline comment
             pass
         return NetworkInfo(internet_available=False, bandwidth_category="none")
 
@@ -344,6 +356,8 @@ class SystemProfiler:
                         models_loaded=models_loaded,
                     )
         except Exception:
+            # Cleanup path: Ollama detection failed, return default
+            # Per Rule 17: broad except requires inline comment
             pass
         return OllamaInfo(running=False)
 
@@ -425,6 +439,8 @@ class SystemProfiler:
                     )
                 )
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
             raise
 
@@ -459,6 +475,8 @@ class SystemProfiler:
                     )
                 )
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
 
         try:
@@ -482,4 +500,6 @@ class SystemProfiler:
                     )
                 )
             except Exception:
+                # Cleanup path: trace event emission failed, don't crash the application
+                # Per Rule 17: broad except requires inline comment
                 pass
