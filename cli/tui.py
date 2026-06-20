@@ -47,6 +47,7 @@ from core.observability import (
     TraceEvent,
     ConsoleTraceEmitter,
 )
+from core.input_sanitiser import InputSanitiser
 from cli.adapter_factory import create_worker
 from cli.command_history import CommandHistory
 from system.worker_persistence import WorkerPersistence
@@ -361,6 +362,9 @@ class JarvisTUI(App):
             emitter=self.emitter
         )
         
+        # Create InputSanitiser
+        input_sanitiser = InputSanitiser(emitter=self.emitter)
+
         # Create Orchestrator first (needed by WorkerFactory and OrchestratorImprovementLoop)
         self.orchestrator = Orchestrator(
             memory_router=self.memory_router,
@@ -370,6 +374,7 @@ class JarvisTUI(App):
             escalation_engine=escalation_engine,
             fallback_chain=fallback_chain,
             a2a_router=None,
+            input_sanitiser=input_sanitiser,
             emitter=self.emitter
         )
         
@@ -399,7 +404,7 @@ class JarvisTUI(App):
         self.orchestrator.register_worker("ollama_worker", self.worker)
         
         # Register default handlers with orchestrator and session manager
-        register_default_handlers(self.orchestrator, self.session_manager)
+        register_default_handlers(self.orchestrator, self.session_manager, input_sanitiser)
     
     def compose(self) -> ComposeResult:
         """Compose the UI."""

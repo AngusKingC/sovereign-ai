@@ -17,6 +17,7 @@ from core.observability import (
     TraceEmitter,
     MemoryTraceEmitter,
 )
+from core.input_sanitiser import InputSanitiser
 
 
 class WebScraperSkill:
@@ -76,7 +77,10 @@ class WebScraperSkill:
                     # Trace emission failure - non-critical, continue
                     pass
 
-                return content
+                # Sanitise external content before it enters LLM context (Rule 14)
+                sanitiser = InputSanitiser(emitter=self._emitter)
+                result = await sanitiser.sanitise(content, source="web_scraper")
+                return result
 
         except httpx.HTTPError as e:
             try:

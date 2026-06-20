@@ -18,6 +18,7 @@ from core.observability import (
     MemoryTraceEmitter,
 )
 from core.notification import Notification, NotificationType
+from core.input_sanitiser import InputSanitiser
 
 
 class TelegramGateway:
@@ -40,6 +41,7 @@ class TelegramGateway:
         self._bot_token = bot_token
         self._chat_id = chat_id
         self._base_url = f"https://api.telegram.org/bot{bot_token}"
+        self._sanitiser = InputSanitiser(emitter=self._emitter)
 
     async def send_message(self, text: str, notification: Notification | None = None) -> bool:
         """
@@ -205,24 +207,19 @@ class TelegramGateway:
                 pass
             return []
 
-    def extract_commands(self, updates: list[dict]) -> list[str]:
-        """
-        Extract commands from update dicts.
-
-        Args:
-            updates: List of update dicts from Telegram
-
-        Returns:
-            List of command strings (starting with /), empty list if none
-        """
+    async def extract_commands(self, updates: list[dict]) -> list[str]:
+        """Extract and sanitise commands from update dicts (Rule 14)."""
         commands = []
         for update in updates:
             try:
                 message = update.get("message", {})
                 text = message.get("text", "")
                 if text.startswith("/"):
+                    # Sanitise external input (Rule 14)
+                    # Using sanitise() (not BLOCKED_PATTERNS directly) ensures
+                    # trace events are emitted per Rule 17
+                    text = await self._sanitiser.sanitise(text, source="telegram_inbound")
                     commands.append(text)
-            except Exception as e:
-                print(f"Failed to extract command from update: {e}")
+            except Exception:
                 continue
         return commands

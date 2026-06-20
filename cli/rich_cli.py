@@ -28,6 +28,7 @@ from core.commands import (
 from core.handlers import register_default_handlers
 from core.session import SessionManager
 from core.orchestrator import Orchestrator
+from core.input_sanitiser import InputSanitiser
 from cli.adapter_factory import create_worker
 from cli.command_history import CommandHistory
 from system.worker_persistence import WorkerPersistence
@@ -89,15 +90,21 @@ class JarvisRichCLI:
         else:
             self.worker_persistence = None
         
+        # Create InputSanitiser
+        input_sanitiser = InputSanitiser(emitter=None)
+
         # Create orchestrator
-        self.orchestrator = Orchestrator(memory_router=None)
-        
+        self.orchestrator = Orchestrator(
+            memory_router=None,
+            input_sanitiser=input_sanitiser,
+        )
+
         # Create default worker and register with orchestrator
         self.worker = create_worker("ollama", "llama3", memory_router=None)
         self.orchestrator.register_worker("ollama_worker", self.worker)
-        
+
         # Register default handlers with orchestrator and session manager
-        register_default_handlers(self.orchestrator, self.session_manager)
+        register_default_handlers(self.orchestrator, self.session_manager, input_sanitiser)
         
         # Register CLI-specific aliases
         self._register_cli_aliases()

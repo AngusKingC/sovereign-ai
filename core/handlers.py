@@ -25,13 +25,18 @@ from core.schemas import Message, MessageRole, Task, TaskPriority, TaskStatus
 from core.session import SessionManager
 
 
-def register_default_handlers(orchestrator: "Orchestrator | None" = None, session_manager: SessionManager | None = None) -> None:
+def register_default_handlers(
+    orchestrator: "Orchestrator | None" = None,
+    session_manager: SessionManager | None = None,
+    input_sanitiser: "InputSanitiser | None" = None,
+) -> None:
     """Register all default command handlers.
     
     Args:
         orchestrator: Optional Orchestrator instance for QueryHandler.
                       If None, QueryHandler will not be registered.
         session_manager: Optional session manager for conversation history.
+        input_sanitiser: Optional InputSanitiser for sanitising queries (Rule 14).
     """
     from core.commands import register_command, register_command_alias
     
@@ -47,7 +52,7 @@ def register_default_handlers(orchestrator: "Orchestrator | None" = None, sessio
     
     # Only register QueryHandler if orchestrator is provided
     if orchestrator is not None:
-        handlers[CommandType.QUERY] = QueryHandler(orchestrator, session_manager)
+        handlers[CommandType.QUERY] = QueryHandler(orchestrator, session_manager, input_sanitiser)
     
     for command_type, handler in handlers.items():
         register_command(command_type, handler)
@@ -425,16 +430,28 @@ class ThemeHandler(CommandHandler):
 class QueryHandler(CommandHandler):
     """Handler for query commands."""
     
-    def __init__(self, orchestrator: "Orchestrator", session_manager: SessionManager | None = None) -> None:
-        """Initialize QueryHandler with injected Orchestrator.
-        
+    def __init__(
+        self,
+        orchestrator: "Orchestrator",
+        session_manager: SessionManager | None = None,
+        input_sanitiser: "InputSanitiser | None" = None,
+    ) -> None:
+        """Initialize QueryHandler with injected dependencies.
+
         Args:
             orchestrator: Orchestrator instance for routing tasks to workers
             session_manager: Optional session manager for conversation history
+            input_sanitiser: Optional InputSanitiser for sanitising queries (Rule 14)
         """
         super().__init__()
         self.orchestrator = orchestrator
         self.session_manager = session_manager
+        # Security controls default to active — None means "create default"
+        if input_sanitiser is not None:
+            self._input_sanitiser = input_sanitiser
+        else:
+            from core.input_sanitiser import InputSanitiser
+            self._input_sanitiser = InputSanitiser(emitter=self.emitter)
     
     async def execute(self, command: Command) -> CommandResult:
         """Execute query command."""
@@ -469,7 +486,13 @@ class QueryHandler(CommandHandler):
             )
         
         query = " ".join(command.args)
-        
+
+        # Sanitise external input before it enters LLM context (Rule 14)
+        # This covers CLI and TUI query paths that go through route_task()
+        # (orchestrator.submit_task() has its own sanitiser, but route_task()
+        # takes a Task object — so we must sanitise before Task construction)
+        query = await self._input_sanitiser.sanitise(query, source="cli_query")
+
         # Append user message to session history if session manager available
         if self.session_manager and command.context.session_id:
             try:

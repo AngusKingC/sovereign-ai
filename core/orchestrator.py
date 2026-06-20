@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     from core.escalation import EscalationEngine
     from core.adapter_fallback import AdapterFallbackChain
 
+from core.input_sanitiser import InputSanitiser
+
 
 class Orchestrator:
     """Analytical coordination layer that routes tasks to workers."""
@@ -42,6 +44,7 @@ class Orchestrator:
         escalation_engine: "EscalationEngine | None" = None,
         fallback_chain: "AdapterFallbackChain | None" = None,
         a2a_router: "A2ARouter | None" = None,
+        input_sanitiser: InputSanitiser | None = None,
         emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the orchestrator with dependencies."""
@@ -55,6 +58,7 @@ class Orchestrator:
         self.workers: dict[str, "WorkerBase"] = {}
         self.pending_approval_queue: list[Task] = []
         self._emitter = emitter or MemoryTraceEmitter()
+        self._input_sanitiser = input_sanitiser or InputSanitiser(emitter=emitter)
         
         # Import TaskStateMachine lazily to avoid circular imports
         from core.task_state_machine import TaskStateMachine
@@ -759,6 +763,12 @@ class Orchestrator:
             priority_enum = TaskPriority(priority.lower())
         except ValueError:
             raise ValueError(f"Invalid priority: {priority}. Must be one of: normal, high, critical")
+
+        # Sanitise external input before it enters LLM context (Rule 14)
+        # Defense-in-depth: callers may also sanitise at boundary, but the sink
+        # must sanitise too in case a future caller forgets.
+        if self._input_sanitiser:
+            intent = await self._input_sanitiser.sanitise(intent, source="submit_task")
 
         # Construct Task
         task = Task(

@@ -8,6 +8,7 @@ import uvicorn
 
 from core.auth import AuthManager
 from core.observability import MemoryTraceEmitter
+from core.input_sanitiser import InputSanitiser
 from web.server import create_app
 
 
@@ -32,6 +33,7 @@ def serve(
     
     # Instantiate MemoryTraceEmitter
     emitter = MemoryTraceEmitter()
+    input_sanitiser = InputSanitiser(emitter=emitter)
     
     # Import all required components
     from core.orchestrator import Orchestrator
@@ -141,6 +143,7 @@ def serve(
         escalation_engine=escalation_engine,
         fallback_chain=fallback_chain,
         a2a_router=None,
+        input_sanitiser=input_sanitiser,
         emitter=emitter
     )
     

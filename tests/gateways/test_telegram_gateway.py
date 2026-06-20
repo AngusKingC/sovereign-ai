@@ -278,7 +278,7 @@ class TestTelegramGateway:
             {"update_id": 4, "message": {"text": "another regular"}},
         ]
 
-        result = gateway.extract_commands(updates)
+        result = await gateway.extract_commands(updates)
 
         assert len(result) == 2
         assert "/start" in result
@@ -292,7 +292,7 @@ class TestTelegramGateway:
             {"update_id": 2, "message": {"text": "another regular"}},
         ]
 
-        result = gateway.extract_commands(updates)
+        result = await gateway.extract_commands(updates)
 
         assert result == []
 

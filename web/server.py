@@ -22,6 +22,7 @@ from core.observability import (
     TraceLevel,
     TraceEvent,
 )
+from core.input_sanitiser import InputSanitiser
 
 if TYPE_CHECKING:
     from core.observability import TraceEmitter
@@ -61,6 +62,7 @@ def create_app(
     app = FastAPI(lifespan=lifespan)
     _emitter = emitter or MemoryTraceEmitter()
     app.state._emitter = _emitter
+    sanitiser = InputSanitiser(emitter=_emitter)
 
     # Wire AuthMiddleware into the app
     app.add_middleware(AuthMiddleware, auth_manager=auth_manager)
@@ -90,6 +92,8 @@ def create_app(
         """Create and submit a task to the orchestrator."""
         try:
             intent = body.get("intent", "")
+            # Sanitise external input at HTTP boundary (Rule 14)
+            intent = await sanitiser.sanitise(intent, source="http_post_tasks")
             priority = body.get("priority", "medium")
 
             # Submit task to orchestrator
@@ -177,6 +181,8 @@ def create_app(
                 # Receive message from client
                 data = await websocket.receive_json()
                 intent = data.get("intent", "")
+                # Sanitise external input at WebSocket boundary (Rule 14)
+                intent = await sanitiser.sanitise(intent, source="websocket_tasks")
 
                 # Submit task to orchestrator
                 task_id = await orchestrator.submit_task(intent, "medium")
