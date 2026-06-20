@@ -1,6 +1,6 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: post prompt-50
+**Last updated**: post prompt-52
 
 **Test baseline**: 1166 passed, 55 skipped, 1 pre-existing failure (calendar_skill — hardcoded test date, fix in Plan 53), 0 warnings
 
@@ -35,11 +35,6 @@ A local-first, self-improving AI assistant for one user's specific context: medi
 ---
 
 ## What's broken right now
-
-### F4 — `cli/serve.py` constructs cognition-loop subsystems but never wires them
-- **Cause**: Subsystems constructed with `_` prefix (Plan 46) to silence F841. Never wired into request path.
-- **Fix**: Plan 52 — wire `worker_factory`, `output_evaluator`, `trace_optimiser`, `worker_persistence` into orchestrator loop.
-- **Verification**: Start `jarvis serve`, hit `POST /api/tasks` — should return a real `task_id`.
 
 ### F9 — 55 dependency CVEs across 14 packages
 - Deferred to Plan 56. Run `pip-audit` for current list.
@@ -216,6 +211,8 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 | 49 | ApprovalGate schema + TraceEvent kwargs | 1167 | 10 Field(default=None) + 3 TraceEvent kwargs. ~108 mypy eliminated. |
 | 49b | Migrate old-API callers | 1166 | 17 call sites across 8 skills. 32 mypy eliminated. |
 | 50 | MockMemoryRouter/MockStateMachine inheritance | 1166 | 122 mypy eliminated across 8 test files. |
+| 51 | Exception shadowing + float→int + DI violations | 1166 | 13 adapters + 5 skills fixed. gemini.py DI fix. |
+| 52 | F4 wiring fix | 1166 | Wired output_evaluator, trace_optimiser, worker_factory, worker_persistence. |
 
 ---
 
@@ -270,13 +267,6 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ## Next 5 prompts
 
-### Plan 51 — Adapter type fixes + DI violations
-- **Priority**: P2 | **Effort**: S | **Risk**: LOW
-- Fix 13 exception shadowing + 14 float→int + gemini.py emit_trace→self._emitter.emit + handlers.py dead import + ConsoleTraceEmitter→MemoryTraceEmitter.
-
-### Plan 52 — F4 wiring fix (P1)
-- Wire cognition-loop subsystems into serve request path. Remove `_` prefixes from Plan 46. Unlock self-improvement.
-
 ### Plan 53 — Test suite health (P2)
 - Fix calendar test (hardcoded date). Replace /tmp with tempfile.mkdtemp() (22 B108). Replace datetime.utcnow() (908 warnings).
 
@@ -285,3 +275,9 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ### Plan 55 — Full checkpoint scan + Marine stack start (P2)
 - 5-plan milestone: full scan (ruff+mypy.+bandit+pip-audit+vulture). Then start marine stack as SKILL.md files.
+
+### Plan 56 — Dependency CVE fixes (P1)
+- Fix 55 CVEs across 14 packages. Upgrade or pin vulnerable dependencies.
+
+### Plan 57 — Vulture cleanup (P3)
+- Fix 47 high-confidence dead code findings.
