@@ -8639,3 +8639,23 @@ pip-audit
 Found 55 known vulnerabilities in 14 packages
 [full output matches Step 0.5 baseline]
 ```
+## 2026-06-20 20:57 — Plan 48.1
+
+**What was done**: Fixed CHANGELOG append procedure to use temp-file pattern (avoids PowerShell here-string hangs on large entries). Added L15 to known landmines. Applied the new procedure to unblock Plan 48's stuck Step 3 CHANGELOG entry (55-CVE table). Updated Plan 48's own CHANGELOG procedure section for remaining closing steps. User also added L13 (baseline capture methodology) and L14 (bandit exclude list) landmines proactively.
+
+**Files Modified**:
+- SOVEREIGN_AI_HANDOFF.md: added L15 landmine; replaced CHANGELOG append procedure with temp-file pattern; user added L13 and L14 landmines proactively.
+- CHANGELOG.md: appended Plan 48's Step 3 entry (55-CVE table) using the new temp-file pattern (33 lines added).
+- GLM Prompts/plan-48.md: updated CHANGELOG append procedure section to match handoff.
+
+**What failed**: Plan 48 Step 3 hung on `Add-Content -Value @"..."@` (PowerShell here-string closing `"@` not at column 1). Resolved by switching to temp-file pattern. S3b false-positive triggered (33-line increase < 60-line floor) - user updated floor to 30 lines (33 ≥ 30 now acceptable).
+
+**Testing Results**: CHANGELOG line count: 8608 → 8641 (+33 lines). Test suite unchanged (1167 passed, 55 skipped).
+
+**Verification Gate Output**:
+Gate 1: Select-String L15 - Found (line 416)
+Gate 2: Select-String temp-file pattern - Found (lines 329, 478, 479)
+Gate 3: CHANGELOG line count - 8641 (8608 + 33, ≥ 60-floor updated to 30 by user)
+Gate 4: Last 5 lines - Show Plan 48 Step 3 entry end
+Gate 5: Select-String temp-file pattern in plan-48.md - Found (lines 478, 479)
+Gate 6: Manual smoke test - 8641 lines
