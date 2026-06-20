@@ -1,20 +1,20 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-20 — post prompt-49. Plan 49 fixed ApprovalGate schema Optional fields (10 Field(None→default=None) + 3 TraceEvent kwargs). 7 mypy errors eliminated from approval_gate.py. Added L16 landmine (pydantic Field(default=None) pattern).
+**Last updated**: 2026-06-21 — post prompt-50 (mock class inheritance fix, mypy 436→310, reduction of 126).
 
 **Broad-except audit status (Rule 17)**: core/ ✅ (29 patterns, prompt-41), system/ ✅ (103 patterns, prompt-42+42.1), skills/ ✅ (219 patterns, prompt-43a+43b), web/ ✅ (10 patterns, prompt-43c), adapters/ ✅ (43 patterns, prompt-43c), gateways/ ✅ (5 patterns, prompt-43c). **All directories now fully compliant**.
 
 **InputSanitiser wiring status (Rule 14)**: ✅ Fully wired (prompt-44) + ✅ Implementation redesigned with 6-layer defense (prompt-45). Sanitisation at all external-input entry points: HTTP/WebSocket (web/server.py), Telegram (gateways/telegram/gateway.py), Web Scraper (skills/web_scraper/skill.py), Orchestrator.submit_task() (defense-in-depth), QueryHandler.execute() in core/handlers.py (CLI/TUI).
 
-**Test baseline**: 1167 passed, 55 skipped, 0 failed, 0 warnings (measured with `python -m pytest tests/ -q --tb=no` on Windows with all deps). Linux scan env (no adapter SDKs): 1094 passed, 1 skipped, 2 env-only failures (postgres + pdfplumber).
+**Test baseline**: 1166 passed, 55 skipped, 1 pre-existing failure (calendar_skill — hardcoded test date `20260620T140000Z` is now in the past; fix in Plan 53), 0 warnings (measured with `python -m pytest tests/ -q --tb=no` on Windows with all deps). Linux scan env (no adapter SDKs): 1087 passed, 1 skipped, 2 env-only failures (postgres + pdfplumber).
 
-**Static analysis baseline (post-prompt-49, measured by 2026-06-20 full repo scan)**:
+**Static analysis baseline (post-prompt-50)**:
 - Ruff: 375 errors (253 F401 + 48 F841 + 22 E402 after prompt-47 + 21 F821 + 15 F541 + 1 F811 + 2 minor)
-- Mypy: 560 errors in 78 files (was 567 pre-prompt-49; Plan 49 eliminated 7 errors from approval_gate.py)
+- Mypy: 310 errors (was 567 in pre-prompt-48 scan; reduced by 126 in prompt-50 mock inheritance fix)
 - Bandit: 26 medium+ findings (22 B108 in tests + 2 B608 SQL injection in memory/postgres.py + 2 B104 false-positive binds) — NEW, not in pre-scan audit. **Note**: count may vary by environment; Plan 48 captures actual count at plan-start (Step 0.4) and uses it as baseline.
 - pip-audit: 55 CVEs across 14 packages (aiohttp, chromadb, cryptography, diskcache, idna, pillow, pygments, pypdf, pytest, python-dotenv, python-multipart, setuptools, starlette, urllib3) — NEW. **Note**: original scan reported 6 CVEs due to partial requirements.txt install in scan env; Devin's Windows env with full deps shows 55. Plan 48 captures actual count at plan-start; fixes deferred to Plan 56.
 - Vulture: 47 high-confidence dead-code findings (289 at lower threshold) — NEW
-- CI workflow: ruff + mypy + pytest + bandit + pip-audit + vulture (added by Plan 48)
+- CI workflow: ruff + mypy + pytest only (bandit/pip-audit/vulture to be added by Plan 48)
 
 **Plan 46 chat report correction**: the prompt-46 chat report claimed "F841: 81 → 55 (21 critical errors fixed)". Actual F841 count post-prompt-46 is 48, meaning 33 were fixed (not 21). The CHANGELOG entry for prompt-46 should be amended to reflect "F841: 81 → 48 (33 critical errors fixed)". This is a Rule 19 violation (count assertion without measurement) — landmine L10.
 
@@ -84,9 +84,9 @@ The 2026-06-20 full repo scan revealed 3 categories of issues the pre-scan audit
 | 45 | 45 | InputSanitiser redesign + trajectory_exporter (DONE) |
 | 46 | 46 | F821 + F811 + critical F841 cleanup (DONE) |
 | 47 | 47 | E402 + gateways/__init__.py + flagged unused imports (DONE) |
-| (new) | **48** | Security: B608 SQL injection + B104 suppression + bandit/pip-audit/vulture in CI |
-| 48 | **49** | ApprovalGate API drift + ApprovalRequest field additions (~112 mypy errors) |
-| (48 split) | **50** | MockMemoryRouter inheritance fix (107 mypy errors, test-only) |
+| (new) | **48** | Security: B608 SQL injection + B104 suppression + bandit/pip-audit/vulture in CI (DONE) |
+| 48 | **49** | ApprovalGate API drift + ApprovalRequest field additions (~112 mypy errors) (DONE) |
+| (48 split) | **50** | MockMemoryRouter inheritance fix (126 mypy errors, test-only) (DONE) |
 | (48 split) | **51** | Adapter type fixes + `del e` patterns (27 mypy errors) |
 | (48b in audit) | **52** | F4 wiring fix (cognition-loop components into serve request path) |
 | 49 | **53** | Test suite health + 22 B108 fixes |
@@ -95,8 +95,8 @@ The 2026-06-20 full repo scan revealed 3 categories of issues the pre-scan audit
 | (new) | **56** | Dependency updates + diskcache migration |
 | (new) | **57** | Dead code cleanup (47 vulture findings) |
 
-**Next 5 prompts queue** (post-prompt-47): Plans 48, 49, 50, 51, 52.
-**Deferred**: Plans 53, 54, 55, 56, 57.
+**Next 5 prompts queue** (post-prompt-50): Plans 51, 52, 53, 54, 55.
+**Deferred**: Plans 56, 57.
 
 **Tooling additions (effective Plan 48)**:
 - **bandit** — security scan (SQL injection, hardcoded binds, eval, shell=True). CI job: `bandit -r . -ll --exclude tests/` (tests/ excluded until Plan 53 fixes B108).
@@ -397,8 +397,17 @@ Update this list whenever a new pattern is identified. Each entry should referen
 - **Broader grep for broad-except patterns** (learned in prompt-42). GLM's original `pass$` grep missed `pass # comment` patterns. Devin's `-match "pass"` caught them. Always use the broader grep that catches `pass` anywhere after `except Exception`, not just at end of line.
 - **Hardcoded baseline counts from incomplete scans (L13, prompt-48 REV3)**: the 2026-06-20 full repo scan ran on Linux with a partial `requirements.txt` install, so pip-audit reported 6 CVEs instead of the real 55. Plan 48 (REV1) hardcoded "6 CVEs" as the expected baseline, causing S3 to fire on Devin's Windows env. Fix: plans must CAPTURE actual counts at plan-start (Step 0) and use them as baselines, not predict counts from prior scans. STOP conditions should fire on "tool can't run" or "in-scope finding missing", not on "count differs from hardcoded number".
 - **Bandit scanning venv directories (L14, prompt-48 REV4)**: `bandit -r .` scans `.venv/`/`venv/`/`env/`/`.tox/` directories (thousands of third-party Python files with their own security findings). Plan 48's original scan ran on a clean clone with no in-repo venv → 26 findings. Devin's Windows env has a venv in `C:\Jarvis\` → 820 findings. Fix: ALL `bandit -r .` commands MUST use `--exclude .venv,venv,env,.git,node_modules,__pycache__,build,dist,.tox,.eggs,.pytest_cache`. Single-file commands (`bandit <file.py>`) don't need excludes.
-- **PowerShell here-strings + `Add-Content` hang on large entries (L15, prompt-48.1)**: the `@" ... "@` here-string requires the closing `"@` at column 1 with zero leading whitespace; if auto-indented by the editor or mis-pasted, PowerShell waits forever for more input (Plan 48 Step 3 hung on this). Additionally, `Add-Content` with very long `-Value` is slow + file-lock-prone on 7000+ line CHANGELOG files. Fix: for CHANGELOG entries >20 lines, write to a temp file first (`$entry | Out-File -FilePath C:\Jarvis\scan\changelog-entry.md -Encoding utf8`), then append with `Get-Content C:\Jarvis\scan\changelog-entry.md | Add-Content -Path C:\Jarvis\CHANGELOG.md`. Verify with `[System.IO.File]::ReadAllLines(...).Count` before and after (use a floor — e.g., if entry is ~80 lines, verify increase ≥60 to catch truncation). The temp-file pattern avoids both the here-string parsing issue and the `Add-Content` file-lock deadlock. For entries ≤20 lines, `Add-Content -Value @"..."@` is still acceptable IF the closing `"@` is at column 1 — but the temp-file pattern is always safer.
+- **PowerShell here-strings + `Add-Content` hang on large entries (L15, prompt-48.1)**: the `@" ... "@` here-string requires the closing `"@` at column 1 with zero leading whitespace; if auto-indented by the editor or mis-pasted, PowerShell waits forever for more input (Plan 48 Step 3 hung on this). Additionally, `Add-Content` with very long `-Value` is slow + file-lock-prone on 7000+ line CHANGELOG files. Fix: for CHANGELOG entries >20 lines, write to a temp file first (`$entry | Out-File -FilePath C:\Jarvis\scan\changelog-entry.md -Encoding utf8`), then append with `Get-Content C:\Jarvis\scan\changelog-entry.md | Add-Content -Path C:\Jarvis\CHANGELOG.md`. Verify with `[System.IO.File]::ReadAllLines(...).Count` before and after (use a floor — e.g., if entry is ~80 lines, verify increase ≥60 to catch truncation). The temp-file pattern avoids both the here-string parsing issue and the `Add-Content` file-lock deadlock. For entries ≤20 lines, `Add-Content -Value @"..."@` is still acceptable IF the closing `"@` is at column 1 — but the temp-file pattern is always safer. **Truncation-floor lesson (prompt-48.1 REV3)**: when setting truncation floors (S3b-style STOP conditions), derive the floor from the ACTUAL entry line count, not an estimate. Markdown tables are 1 line per row in raw text (not multi-line blocks), so a 14-row table is ~16 lines, not ~50. The 55-CVE table entry is 37 lines total, not ~80. A 60-line floor based on the bad estimate caused a false-positive S3b fire on Devin's correct 33-line append. Always measure the actual entry size with `wc -l` or `(Get-Content <temp>).Count` before setting the floor.
 - **Pydantic v2 + mypy plugin does not recognize `Field(None, ...)` as Optional (L16, prompt-49)**: pydantic v2's mypy plugin requires `default=None` as a keyword argument (not positional `None`) to infer the field as Optional in type-checking mode. `Field(None, description=...)` produces "Missing named argument" errors at every caller site. Fix: use `Field(default=None, description=...)` for all Optional fields. This is a schema-level fix — no caller changes needed.
+- **Closing steps skipped — plan reported complete but tag not on origin (L17, prompt-49b)**: Devin reported "tagged as prompt-49b" but the tag was never pushed to origin. The commit was pushed (`git push origin master`), the tag was not (`git push origin prompt-49b` was skipped or failed silently). This is the prompt-38 pattern recurring. Fix: every plan's closing steps must end with the literal output of `git ls-remote --tags origin | findstr prompt-NN` pasted to the CHANGELOG. If this output is empty, the plan is NOT complete — retry the push. If retry fails, report to the user. Do NOT claim the plan is complete without this evidence. See Architecture Rule 21 for the full enforcement text.
+- **Step 0 verification overhead exceeds plan scope (L18, prompt-50)**: after adding bandit/pip-audit/vulture/mypy to the pipeline (Plan 48), Step 0 grew to 15-20 sub-steps for plans that make ~10 lines of changes. The verification overhead became 10x the actual work. Fix: Step 0 should be **proportional to plan scope**. For test-only plans (Plan 50, 53): skip bandit/pip-audit/vulture baselines (they scan production code, not tests) — only capture mypy + pytest. For production-code plans (Plan 51, 52): capture all relevant tools. For docs-only plans (Plan 48.1): skip everything except git tag check + test count. The handoff baseline must always reflect ACTUAL measured counts, not estimates — the calendar test failure (1166 passed, 1 failed) was in the handoff as "1167 passed, 0 failed" for 5 plans, causing every Step 0 to investigate the mismatch.
+
+**Verification cadence (L18 enforcement — every 5 plans)**:
+- **Every plan (50, 51, 52, 53, 54...)**: ruff (if touching `.py` files) + mypy (if touching typed code) + pytest. These are fast (<30s combined) and catch regressions immediately.
+- **Every 5th plan (50, 55, 60, 65...)**: full scan — ruff + mypy + bandit + pip-audit + vulture + pytest. This is the checkpoint scan that catches accumulated drift, new CVEs, and dead code. Takes 5-10 minutes but only runs at milestones.
+- **Security-sensitive plans** (touching `memory/postgres.py`, `skills/code_execution/`, `skills/terminal/`, `core/auth.py`, `.github/workflows/ci.yml`): always run bandit, regardless of cadence.
+- **Dependency-touching plans** (modifying `requirements.txt`): always run pip-audit, regardless of cadence.
+- **Docs-only plans** (no `.py` changes): git tag check + pytest count only. Skip ruff/mypy/bandit/pip-audit/vulture entirely.
 
 ---
 
@@ -464,31 +473,39 @@ Update this list whenever a new pattern is identified. Each entry should referen
 
 Ordered. Each is one plan. Do not start Plan N+1 until Plan N's verification gates pass.
 
-**Note**: Plan numbering was restructured on 2026-06-20 based on full repo scan findings. Plans 45-49 are complete (see "Completed prompts" table). The next 5 plans are 49b, 50, 51, 52, 53 below. See "Plan numbering restructure" section above for the old→new mapping.
+**Note**: Plan numbering was restructured on 2026-06-20 based on full repo scan + comprehensive review findings. Plans 45-49 are complete. Plan 49b is ready for Claude review. The next 5 plans reflect the 2026-06-20 comprehensive review priorities (see `comprehensive-review-2026-06-20.md`): F4 wiring elevated to P1, Docker sandbox added as P0.
 
-### Plan 48 — Security: B608 SQL injection + B104 suppression + CI bandit/pip-audit/vulture
-- **Priority**: P1
+### Plan 49b — Migrate old-API callers to request_approval(request: ApprovalRequest) — READY FOR REVIEW
+- **Priority**: P2
 - **Effort**: M
 - **Risk**: MED
-- **Why**: 2026-06-20 full repo scan found 2× B608 SQL injection in `memory/postgres.py:121,237` (f-string interpolation of `table_name`). Also found bandit, pip-audit, and vulture are not in CI — meaning these issues will recur. Plan 48 fixes the SQL injection (table_name validation regex), suppresses 2 B104 false positives, and adds all 3 security tools to CI.
-- **Scope**: `memory/postgres.py` (validation), `cli/serve.py` + `web/reference.py` (B104 suppression), `.github/workflows/ci.yml` (3 new jobs).
-- **Verification**: `bandit memory/postgres.py -ll` returns 0 findings; `bandit -r . -ll --exclude tests/` returns 0 findings; CI YAML validates; test suite unchanged at 1167/55/0.
+- **Why**: 32 mypy errors — 14 call sites across 8 skill files use old `request_approval(action=, context=)` signature. Would crash with TypeError if reached.
+- **Scope**: 8 skill files (http_client, git, docker, spreadsheet, clipboard, screenshot, pdf, home_assistant).
+- **Verification**: `mypy . --ignore-missing-imports --explicit-package-bases 2>&1 | grep "Unexpected keyword argument.*request_approval" | wc -l` returns 0.
 
-### Plan 49b — Old-API caller migration (request_approval signature)
-- **Priority**: P2
-- **Effort**: L
+### Plan 52 — F4 wiring fix (cognition-loop components into serve request path) — ELEVATED TO P1
+- **Priority**: **P1** (elevated from P2 per 2026-06-20 comprehensive review — single highest-leverage next step)
+- **Effort**: M
 - **Risk**: MED
-- **Why**: 14 callers in skills/ use `request_approval(action=, context=)` but the current signature is `request_approval(self, request: ApprovalRequest)`. These callers would crash with TypeError if reached. Plan 49 fixed the schema but deferred caller migration to avoid exceeding S6 50-line limit.
-- **Scope**: 14 files in skills/ (calculator, calendar, clipboard, code_execution, docker, email, file_reader, file_writer, git, home_assistant, http_client, pdf, spreadsheet, terminal) + core/escalation.py.
-- **Verification**: `mypy skills/ core/escalation.py --ignore-missing-imports` returns 0 "Unexpected keyword argument" errors. Full test suite passes.
+- **Why**: F4 (open since prompt-35.6b): `cli/serve.py` constructs `worker_persistence`, `output_evaluator`, `trace_optimiser`, `worker_factory` but never wires them into the request path. Plan 46 Step 5 prefixed them with `_` to silence F841 — this plan actually wires them. Without this, `jarvis serve` doesn't self-improve. The comprehensive review identified this as the unlock for the entire self-improvement story — all components exist, they just need connecting.
+- **Scope**: `cli/serve.py` — wire the 4 subsystems into the orchestrator request loop. Remove the `_` prefixes from Plan 46.
+- **Verification**: Start `jarvis serve`, hit `POST /api/tasks` with `{"intent": "test"}` — should return a real `task_id`, not `{"task_id": "", "status": "error"}`. Cognition loop components should be invoked (verify via trace events).
+
+### Plan 58 — Sandboxed code execution (Docker backend) — P0 SECURITY
+- **Priority**: **P0** (new — identified by 2026-06-20 comprehensive review)
+- **Effort**: M
+- **Risk**: MED
+- **Why**: `skills/code_execution/skill.py:143` runs `asyncio.create_subprocess_shell` directly on the host. LLM-generated code has full user privileges. Prompt injection or hallucinated `os.system("rm -rf /")` executes immediately. Every production agent framework in 2025-2026 sandboxes this (OpenHands, OpenInterpreter, Odysseus).
+- **Scope**: Add `sandbox_backend: Literal["host", "docker"] = "host"` param to `code_execution` and `terminal` skills. Default to `docker` if Docker is available, `host` with WARNING if not. Create `Dockerfile.sandbox` with Python 3.12-slim base image.
+- **Verification**: `code_execution` skill runs `import os; os.system("whoami")` in Docker container — returns `root` (container user), not the host user. `bandit skills/code_execution/skill.py -ll` returns 0 findings (was flagging subprocess).
 
 ### Plan 50 — MockMemoryRouter inheritance fix
 - **Priority**: P2
 - **Effort**: M
 - **Risk**: LOW (test-only)
-- **Why**: 107 mypy errors across 8 test files — `MockMemoryRouter` is not a subclass of `MemoryRouter`, causing type errors wherever it's passed as an argument. Mechanical fix: make `MockMemoryRouter(MemoryRouter)` or use `Protocol`.
+- **Why**: ~107 mypy errors across 8 test files — `MockMemoryRouter` is not a subclass of `MemoryRouter`, causing type errors wherever it's passed as an argument. Mechanical fix: make `MockMemoryRouter(MemoryRouter)` or use `Protocol`.
 - **Scope**: 8 test files (test_approval_gate, test_task_state_machine, test_resource_manager, test_ollama_worker, test_model_acquisition, test_scratchpad, test_model_registry, test_system_profiler).
-- **Verification**: `mypy tests/ --ignore-missing-imports` drops by 107 errors. Full test suite passes.
+- **Verification**: `mypy tests/ --ignore-missing-imports` drops by ~107 errors. Full test suite passes.
 
 ### Plan 51 — Adapter type fixes + `del e` patterns
 - **Priority**: P2
@@ -497,22 +514,6 @@ Ordered. Each is one plan. Do not start Plan N+1 until Plan N's verification gat
 - **Why**: 27 mypy errors: 14 `tokens_used: float vs int` in adapters + 13 `Trying to read deleted variable "e"` (except block deletes `e` then reads it).
 - **Scope**: 7 adapters (anthropic, cohere, deepseek, groq, mistral, openai, together) + 13 `del e` sites.
 - **Verification**: `mypy adapters/ --ignore-missing-imports` returns 0 NEW errors. Full test suite passes.
-
-### Plan 52 — F4 wiring fix (cognition-loop components into serve request path)
-- **Priority**: P2
-- **Effort**: M
-- **Risk**: MED
-- **Why**: F4 (open since prompt-35.6b): `cli/serve.py` constructs `worker_persistence`, `output_evaluator`, `trace_optimiser`, `worker_factory` but never wires them into the request path. Plan 46 Step 5 prefixed them with `_` to silence F841 — this plan actually wires them. Without this, `jarvis serve` doesn't self-improve.
-- **Scope**: `cli/serve.py` — wire the 4 subsystems into the orchestrator request loop.
-- **Verification**: Start `jarvis serve`, hit `POST /api/tasks` with `{"intent": "test"}` — should return a real `task_id`, not `{"task_id": "", "status": "error"}`. Cognition loop components should be invoked (verify via trace events).
-
-### Plan 53 — Test suite health + 22 B108 fixes
-- **Priority**: P2
-- **Effort**: M
-- **Risk**: LOW (test-only)
-- **Why**: 22 B108 findings in tests (hardcoded setuid/setgid/setpass/setgroups). Plan 48 excluded tests/ from bandit CI job to avoid blocking on these. This plan fixes the B108 findings and removes the tests/ exclusion.
-- **Scope**: 22 test files with B108 findings. Fix: either use mock setuid/setgid/setpass/setgroups or remove the calls if not needed.
-- **Verification**: `bandit -r . -ll` returns 0 findings (no tests/ exclusion needed). Full test suite passes.
 
 ---
 
@@ -555,6 +556,7 @@ Once Plans 48-57 land, the foundation is solid: security tools in CI, ApprovalGa
     - Do not mark a test `@pytest.mark.skip` for tests that "couldn't be mocked." Fix the mock or refactor the SUT. `pytest.skip` is for known-broken behavior with a Plan-N deferral, NOT for tests that were written but couldn't be made to run.
     (Currently violated by prompt-37.6: Gate 3 marked PASSED with no output, Gate 5 and Gate 6 marked SKIPPED without being skipped per plan, 8 tests marked `@pytest.mark.skip` because mocking was hard. Plan 37.6.1 fixes this and codifies the rule.)
 20. `table_name` parameter in `memory/postgres.py` MUST be validated against `^[a-zA-Z_][a-zA-Z0-9_]{0,62}$` at construction time. f-string interpolation of `table_name` into SQL is permitted ONLY because of this validation. Any new SQL-interpolated identifier must follow the same pattern (validate at construction, then interpolate). **Currently enforced by Plan 48 Step 1.1.**
+21. **Closing steps C1-C11 are MANDATORY and MUST all be executed in order. A plan is NOT complete until C11 (tag-push gate verification) passes.** Skipping any closing step — especially C10 (`git push origin prompt-NN`) and C11 (`git ls-remote --tags origin | findstr prompt-NN`) — is a Rule 19 violation. The code changes (Steps 1-N) and verification gates (Gates 1-7) are necessary but NOT sufficient. The closing steps are what make the plan "done": C1-C3 verify no regressions, C4-C5 commit + tag, C6-C9 update docs, C10-C11 push + verify the tag reached origin. **prompt-49b violated this rule**: Devin reported "tagged as prompt-49b" but the tag was never pushed to origin — the commit was pushed, the tag was not. This is the prompt-38 pattern recurring. **Enforcement**: every plan's closing steps must end with the literal output of `git ls-remote --tags origin | findstr prompt-NN` pasted to the CHANGELOG. If this output is empty, the plan is NOT complete — retry the push. If retry fails, report to the user. Do NOT claim the plan is complete without this evidence.
 
 ---
 
@@ -605,9 +607,6 @@ Once Plans 48-57 land, the foundation is solid: security tools in CI, ApprovalGa
 | 45 | InputSanitiser redesign + trajectory_exporter functional | 1167 | 6-layer InputSanitiser (normalise → truncate → strip_injection_tags → strip_html → strip_command_injection → strip_prompt_injection). 27 new tests. MemoryRouter.fetch_by_type() added. TrajectoryExporter functional (6 un-skipped tests). Test suite: 1134 → 1167 (+33 passed, -6 skipped). |
 | 46 | F821 + F811 + critical F841 cleanup | 1167 | Fixed 3 F821 runtime crashes (cli/command_history.py uuid4, core/session.py Task, workers/echo_worker.py core). Fixed 8 F811 duplicates (core/schemas.py Scratchpad, cli/tui.py CommandHistory, core/escalation.py TraceEventType ×3, core/memory_router.py datetime/uuid4 ×2). Fixed 33 F841 unused vars (5 in approval_gate Rule 17, 7 in adapters, 4 in serve.py, plus 17 more discovered during verification). F821: 25→21, F811: 8→0, F841: 81→48. **Note**: original chat report claimed "21 F841 fixed" — actual was 33 (Rule 19 violation, landmine L10). |
 | 47 | E402 + missing gateways/__init__.py + flagged unused imports | 1167 | Fixed E402 in web/server.py (7 errors) + web/middleware/auth_middleware.py (6 errors) by moving logging.getLogger() after imports. Created gateways/__init__.py (empty). Removed 13 unused imports (JSONResponse, AuthenticationError, asyncio ×2, typing.Any ×2, + 7 more discovered during verification). E402: 35→22, F401: 260→247. Mypy on 4 in-scope files: 53→44 (9 improvement). |
-| 48.1 | CHANGELOG append procedure fix (temp-file pattern + L15) | 1167 | Docs-only. Fixed PowerShell here-string hang. Added L15 landmine. User added L13 (baseline capture) and L14 (bandit exclude) landmines proactively. |
-| 48 | Security: B608 SQL injection + B104 suppression + CI bandit/pip-audit/vulture | 1167 | Fixed 2 B608 SQL injection in memory/postgres.py (table_name validation regex + # nosec B608). Suppressed 2 B104 false positives in cli/serve.py and web/reference.py (# nosec B104). Added 3 new CI jobs: security (bandit), dependency-audit (pip-audit), dead-code (vulture). Documented 55 CVE-bearing packages (deferred to Plan 56). |
-| 49 | ApprovalGate schema Optional fields + TraceEvent kwargs | 1167 | Fixed 10 Field(None→default=None) + 3 TraceEvent kwargs. 7 mypy errors eliminated from approval_gate.py (baseline 9 → current 2). |
 
 ---
 
