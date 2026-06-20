@@ -329,16 +329,38 @@ The template enforces the same discipline structurally — verification gates ar
    ```
    Do NOT include: commands run, errors encountered, Devin's thinking, attempted solutions, literal output, or time taken. That goes in the execution log (below).
 
-7. **Execution log (temporary, verbose, archived after review)**: at the START of each prompt, create `C:\Jarvis\scan\execution-log-prompt-{N}.md`. Write EVERYTHING to this file during execution:
-   - Every command run and its output (literal paste)
-   - Every error, failure, or unexpected result
-   - Every STOP condition that fired and how it was resolved
-   - Devin's thinking: why an approach was chosen, what alternatives were considered
-   - Attempted solutions: "I tried X but it failed because Y, so I switched to Z"
-   - Time taken per step (rough estimates — identifies bottlenecks)
-   - **Issues to flag for next prompt**: anything that should be addressed in the next plan (e.g. "mypy . took 3 minutes — use file-scoped", "calendar test still failing — needs Plan 53", "found DI violation in gemini.py — add to Plan 51")
+7. **Execution log (automatic via wrapper function, archived after review)**: at the START of each prompt (before Step 0), define a PowerShell function that wraps every command and logs it automatically:
+   ```powershell
+   # Start of prompt — BEFORE any Step 0 commands:
+   $logFile = "C:\Jarvis\scan\execution-log-prompt-{N}.md"
+   Set-Content -Path $logFile -Value "# Execution Log - Prompt {N}`n`n" -Encoding utf8
    
-   At the END of the prompt (during closing steps), this file is reviewed by the user/GLM, issues are extracted for the next plan, and the file is **archived** (not deleted): `Move-Item C:\Jarvis\scan\execution-log-prompt-{N}.md C:\Jarvis\scan\logs\prompt-{N}.md`. The `scan/logs/` directory is local-only (not tracked by git). This preserves the longitudinal execution history for troubleshooting ("what STOP conditions has S4 fired on across prompts?") without bloating the repo. The next prompt starts with a fresh execution log.
+   function Invoke-Logged {
+       param([Parameter(Mandatory)][scriptblock]$Command, [string]$Label = "")
+       $timestamp = Get-Date -Format "HH:mm:ss"
+       if ($Label) { Add-Content -Path $logFile -Value "`n## [$timestamp] $Label`n" -Encoding utf8 }
+       Add-Content -Path $logFile -Value "``````powershell`n$Command`n``````" -Encoding utf8
+       $output = & $Command 2>&1
+       $output | Out-String | Add-Content -Path $logFile -Value ( "`n```````n" + ($output | Out-String) + "```````n" ) -Encoding utf8
+       return $output
+   }
+   
+   # Example usage — replace every bare command with Invoke-Logged:
+   # Instead of:  git rev-parse HEAD
+   # Use:         Invoke-Logged { git rev-parse HEAD } -Label "Step 0.1: git HEAD"
+   #
+   # Instead of:  mypy adapters/ollama.py --ignore-missing-imports
+   # Use:         Invoke-Logged { mypy adapters/ollama.py --ignore-missing-imports } -Label "Step 1.2: mypy del e check"
+   #
+   # Instead of:  python -m pytest tests/ -q --tb=no
+   # Use:         Invoke-Logged { python -m pytest tests/ -q --tb=no } -Label "Gate 6: full test suite"
+   ```
+   
+   Every `Invoke-Logged` call writes the timestamp, label, command, and full output to the log file automatically. Devin doesn't need to manually write anything — just wrap each command. The log works across multiple terminals because it appends to the same file (use `-Encoding utf8` on all `Add-Content` calls).
+   
+   At the END of the prompt (C7), archive: `Move-Item $logFile C:\Jarvis\scan\logs\prompt-{N}.md`
+   
+   Devin's "thinking" (AI reasoning between commands) is NOT in the log — that comes from the user pasting Devin's chat to GLM for review.
 8. Update this handoff: move the completed plan from "Next 5 prompts" to "Completed prompts" table. Update "What's broken" section (remove fixed items). Update "Built but not reachable" table (remove newly-wired subsystems). **Refill the "Next 5 prompts" queue**: when a plan completes, add the next plan from the deferred list so the queue always has 5 entries.
 9. **Update `global_rules.md`** when a new recurring mistake pattern or landmine is identified in this prompt. Rules are behavioral guardrails (not memories) and should be kept current. Add a new step to the plan if needed. Do not cite global_rules.md as authority — it is Devin-local and unreachable for verification — but keeping it current improves Devin's behavior.
 10. `git add CHANGELOG.md SOVEREIGN_AI_HANDOFF.md && git commit -m "docs: prompt-{N} changelog and handoff update"`
