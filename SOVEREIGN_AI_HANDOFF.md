@@ -1,12 +1,12 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: post prompt-50
+**Last updated**: post prompt-51
 
 **Test baseline**: 1166 passed, 55 skipped, 1 pre-existing failure (calendar_skill — hardcoded test date, fix in Plan 53), 0 warnings
 
-**Static analysis baseline (post-prompt-50)**:
+**Static analysis baseline (post-prompt-51)**:
 - Ruff: 358 errors
-- Mypy: 309 errors
+- Mypy: 282 errors (309 - 27 fixed in prompt-51)
 - Bandit: 22 medium+ (B108 in tests, deferred to Plan 53)
 - pip-audit: 55 CVEs across 14 packages (deferred to Plan 56)
 - Vulture: 47 high-confidence findings (deferred to Plan 57)
@@ -192,6 +192,7 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 | 49 | ApprovalGate schema + TraceEvent kwargs | 1167 | 10 Field(default=None) + 3 TraceEvent kwargs. ~108 mypy eliminated. |
 | 49b | Migrate old-API callers | 1166 | 17 call sites across 8 skills. 32 mypy eliminated. |
 | 50 | MockMemoryRouter/MockStateMachine inheritance | 1166 | 122 mypy eliminated across 8 test files. |
+| 51 | Exception shadowing + float→int + DI violations | 1166 | 13 shadowing + 14 float→int + 3 DI fixes. 27 mypy eliminated. |
 
 ---
 
@@ -245,10 +246,6 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ## Next 5 prompts
 
-### Plan 51 — Adapter type fixes + DI violations
-- **Priority**: P2 | **Effort**: S | **Risk**: LOW
-- Fix 13 exception shadowing + 14 float→int + gemini.py emit_trace→self._emitter.emit + handlers.py dead import + ConsoleTraceEmitter→MemoryTraceEmitter.
-
 ### Plan 52 — F4 wiring fix (P1)
 - Wire cognition-loop subsystems into serve request path. Remove `_` prefixes from Plan 46. Unlock self-improvement.
 
@@ -260,3 +257,6 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ### Plan 55 — Full checkpoint scan + Marine stack start (P2)
 - 5-plan milestone: full scan (ruff+mypy.+bandit+pip-audit+vulture). Then start marine stack as SKILL.md files.
+
+### Plan 56 — Dependency CVE remediation (P2)
+- Fix 55 CVEs across 14 packages via pip-audit.
