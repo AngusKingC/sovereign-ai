@@ -329,7 +329,7 @@ The template enforces the same discipline structurally — verification gates ar
    ```
    Do NOT include: commands run, errors encountered, Devin's thinking, attempted solutions, literal output, or time taken. That goes in the execution log (below).
 
-7. **Execution log (temporary, verbose, reviewed between prompts)**: at the START of each prompt, create `C:\Jarvis\scan\execution-log-prompt-{N}.md`. Write EVERYTHING to this file during execution:
+7. **Execution log (temporary, verbose, archived after review)**: at the START of each prompt, create `C:\Jarvis\scan\execution-log-prompt-{N}.md`. Write EVERYTHING to this file during execution:
    - Every command run and its output (literal paste)
    - Every error, failure, or unexpected result
    - Every STOP condition that fired and how it was resolved
@@ -338,7 +338,7 @@ The template enforces the same discipline structurally — verification gates ar
    - Time taken per step (rough estimates — identifies bottlenecks)
    - **Issues to flag for next prompt**: anything that should be addressed in the next plan (e.g. "mypy . took 3 minutes — use file-scoped", "calendar test still failing — needs Plan 53", "found DI violation in gemini.py — add to Plan 51")
    
-   At the END of the prompt (during closing steps), this file is reviewed by the user/GLM, issues are extracted for the next plan, and the file is **deleted**. The next prompt starts with a fresh execution log. This keeps the CHANGELOG clean while preserving the verbose audit trail for review.
+   At the END of the prompt (during closing steps), this file is reviewed by the user/GLM, issues are extracted for the next plan, and the file is **archived** (not deleted): `Move-Item C:\Jarvis\scan\execution-log-prompt-{N}.md C:\Jarvis\scan\logs\prompt-{N}.md`. The `scan/logs/` directory is local-only (not tracked by git). This preserves the longitudinal execution history for troubleshooting ("what STOP conditions has S4 fired on across prompts?") without bloating the repo. The next prompt starts with a fresh execution log.
 8. Update this handoff: move the completed plan from "Next 5 prompts" to "Completed prompts" table. Update "What's broken" section (remove fixed items). Update "Built but not reachable" table (remove newly-wired subsystems). **Refill the "Next 5 prompts" queue**: when a plan completes, add the next plan from the deferred list so the queue always has 5 entries.
 9. **Update `global_rules.md`** when a new recurring mistake pattern or landmine is identified in this prompt. Rules are behavioral guardrails (not memories) and should be kept current. Add a new step to the plan if needed. Do not cite global_rules.md as authority — it is Devin-local and unreachable for verification — but keeping it current improves Devin's behavior.
 10. `git add CHANGELOG.md SOVEREIGN_AI_HANDOFF.md && git commit -m "docs: prompt-{N} changelog and handoff update"`
@@ -367,13 +367,15 @@ Plans go through Claude review before Devin execution. To keep Claude's context 
 
 1. **`plan-NN.md`** — GLM-authored, clean for Devin. Steps 1-N are execution-only, no inline reviewer notes. Final section is `## For Claude review (Devin: do not execute)` containing 3-5 specific review questions and any areas of uncertainty. **Devin must skip this section** — it is review input, not execution instructions.
 
-2. **`plan-NN-context-brief.md`** — GLM-authored, ~80-120 lines. Contains:
-   - **Reviewer instructions**: 7-point check (factual accuracy, numbering collisions, grep strings, internal consistency, STOP conditions, builds on prior findings, known landmines), output format, what not to do. Folded in from the deprecated `CLAUDE_REVIEWER_ROLE.md`.
-   - **Known landmines**: updated whenever a new pattern is identified (see list below)
-   - **Prior prompt state**: test counts, code/docs commit SHAs, tag status
-   - **Prior findings this plan must build on**: CHANGELOG line references with quoted text — prevents re-guessing disproved hypotheses
-   - **Files in scope**: list, so Claude knows what's out of scope
-   - **Specific questions for Claude**: 3-5 focused questions, not "review this"
+2. **`plan-NN-context-brief.md`** — GLM-authored, ~30-50 lines (post-prompt-51 optimization). Contains ONLY the delta from the handoff template — no copied stable sections:
+   - **Reviewer instructions**: reference by pointer ("see handoff lines 380-396 for the 7-point check"), do NOT copy the full 7-point check into every brief.
+   - **Known landmines**: reference by pointer ("see handoff L1-L19"), do NOT copy the full list. Only list landmines newly relevant to this specific plan (e.g., "L16 is relevant because this plan touches pydantic schemas").
+   - **Prior prompt state**: 3-5 lines — test baseline, mypy count, tag SHA, any relevant prior-plan findings. Sourced from the execution log (L19 — not from GLM's clone).
+   - **Prior findings this plan must build on**: 3-5 bullet points with quoted text from handoff/execution log.
+   - **Files in scope**: list, so Claude knows what's out of scope.
+   - **Specific questions for Claude**: 3-5 focused questions. **Resolved questions are marked `[CLOSED]`** with a one-line resolution — prevents re-surfacing in later rounds.
+   - **Review focus for current REV**: only what changed in this revision. Stable sections are NOT repeated.
+   - **Point 8 (queue consistency check)**: Claude should verify that the plan's "Out of scope" deferrals (e.g., "deferred to Plan 53") match the handoff's "Next 5 prompts" queue. If the plan defers to "Plan 56" but the handoff queue shows Plan 56 as "marine stack" (not "dependency updates"), flag the inconsistency.
 
 #### What NOT to upload to Claude
 
@@ -420,6 +422,8 @@ Update this list whenever a new pattern is identified. Each entry should referen
 - **Docs-only plans** (no `.py` changes): git tag check + pytest count only. Skip ruff/mypy/bandit/pip-audit/vulture entirely.
 
 **GLM clone vs Devin environment (L19, prompt-51)**: GLM's Linux clone has different package versions, missing adapter SDKs, and different Python paths than Devin's Windows env. Running mypy/bandit/pytest on the GLM clone produces DIFFERENT counts than Devin's env — which causes baseline mismatches in every plan. **Rule: GLM must NOT run mypy, bandit, pip-audit, vulture, or pytest on the clone for plan drafting purposes.** The clone is for READING CODE only (checking file contents, verifying function signatures, understanding architecture). All tool counts in plans must come from the **execution log** that Devin produces — the execution log has the actual counts from Devin's Windows env. Plans say "capture actual count" (L13) — Devin captures it, not GLM.
+
+**Line numbers in plans must be verified against clone SHA (L20, prompt-51)**: when scoping a plan, GLM reads the clone to find exact line numbers for code patterns (e.g., "del e at line 153"). These line numbers must be **captured from the actual grep result**, not estimated from memory. The plan should note the SHA the line numbers were verified against (e.g., "verified at HEAD `915926a`"). This eliminates the "line numbers are approximate" caveat that was a recurring Claude finding on Plans 49, 50, and 51. If the plan says "line 153" and Devin's grep shows line 155, the drift is visible and Devin uses the field name as the primary locator (not the line number).
 
 ---
 
