@@ -2,8 +2,10 @@
 
 import asyncio
 from typing import Any
+from datetime import datetime, timedelta
+from uuid import uuid4
 
-from core.approval_gate import ApprovalGate
+from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType
 from core.observability import (
     TraceEventType,
     TraceComponent,
@@ -165,10 +167,19 @@ class GitSkill:
             Dict with success, hash, and message.
         """
         if self._approval_gate:
-            approved = await self._approval_gate.request_approval(
-                action="git commit",
-                context={"message": message},
+            request = ApprovalRequest(
+                request_id=str(uuid4()),
+                task_id=str(uuid4()),
+                session_id="default",
+                action_type=ApprovalActionType.SHELL_COMMAND,
+                action_description="git commit",
+                action_parameters={"message": message},
+                risk_level="medium",
+                reason_for_approval="Git commit requires approval per policy",
+                expires_at=datetime.utcnow() + timedelta(seconds=300),
             )
+            response = await self._approval_gate.request_approval(request)
+            approved = response.approved
             if not approved:
                 return {
                     "success": False,
@@ -235,10 +246,19 @@ class GitSkill:
             Dict with success and output.
         """
         if self._approval_gate:
-            approved = await self._approval_gate.request_approval(
-                action="git push",
-                context={"remote": remote, "branch": branch},
+            request = ApprovalRequest(
+                request_id=str(uuid4()),
+                task_id=str(uuid4()),
+                session_id="default",
+                action_type=ApprovalActionType.SHELL_COMMAND,
+                action_description="git push",
+                action_parameters={"remote": remote, "branch": branch},
+                risk_level="medium",
+                reason_for_approval="Git push requires approval per policy",
+                expires_at=datetime.utcnow() + timedelta(seconds=300),
             )
+            response = await self._approval_gate.request_approval(request)
+            approved = response.approved
             if not approved:
                 return {
                     "success": False,
@@ -295,10 +315,19 @@ class GitSkill:
             Dict with success and output.
         """
         if self._approval_gate:
-            approved = await self._approval_gate.request_approval(
-                action="git pull",
-                context={"remote": remote, "branch": branch},
+            request = ApprovalRequest(
+                request_id=str(uuid4()),
+                task_id=str(uuid4()),
+                session_id="default",
+                action_type=ApprovalActionType.SHELL_COMMAND,
+                action_description="git pull",
+                action_parameters={"remote": remote, "branch": branch},
+                risk_level="medium",
+                reason_for_approval="Git pull requires approval per policy",
+                expires_at=datetime.utcnow() + timedelta(seconds=300),
             )
+            response = await self._approval_gate.request_approval(request)
+            approved = response.approved
             if not approved:
                 return {
                     "success": False,

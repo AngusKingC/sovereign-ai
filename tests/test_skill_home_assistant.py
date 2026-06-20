@@ -6,6 +6,7 @@ import os
 import httpx
 
 from skills.home_assistant.skill import HomeAssistantSkill
+from core.approval_gate import ApprovalResponse
 from core.observability import MemoryTraceEmitter
 from core.exceptions import SkillExecutionError, ApprovalDeniedError
 
@@ -123,7 +124,13 @@ class TestHomeAssistantSkill:
 
             with patch("core.approval_gate.ApprovalGate") as mock_gate_class:
                 mock_gate = AsyncMock()
-                mock_gate.request_approval = AsyncMock()
+                mock_response = ApprovalResponse(
+                    request_id="test-request-id",
+                    task_id="test-task-id",
+                    approved=True,
+                    approved_by="test-user",
+                )
+                mock_gate.request_approval = AsyncMock(return_value=mock_response)
                 mock_gate_class.return_value = mock_gate
 
                 result = await skill.call_service("light", "turn_on", "light.living_room")
@@ -159,14 +166,21 @@ class TestHomeAssistantSkill:
 
             with patch("core.approval_gate.ApprovalGate") as mock_gate_class:
                 mock_gate = AsyncMock()
-                mock_gate.request_approval = AsyncMock()
+                mock_response = ApprovalResponse(
+                    request_id="test-request-id",
+                    task_id="test-task-id",
+                    approved=True,
+                    approved_by="test-user",
+                )
+                mock_gate.request_approval = AsyncMock(return_value=mock_response)
                 mock_gate_class.return_value = mock_gate
 
                 await skill.call_service("light", "turn_on", "light.living_room")
 
                 mock_gate.request_approval.assert_called_once()
                 call_args = mock_gate.request_approval.call_args
-                assert "light.turn_on" in call_args[1]["action_description"]
+                request = call_args[0][0]
+                assert "light.turn_on" in request.action_description
 
         # Clean up
         del os.environ["HA_BASE_URL"]
@@ -183,7 +197,14 @@ class TestHomeAssistantSkill:
 
         with patch("core.approval_gate.ApprovalGate") as mock_gate_class:
             mock_gate = AsyncMock()
-            mock_gate.request_approval = AsyncMock(side_effect=ApprovalDeniedError("test action", "denied"))
+            mock_response = ApprovalResponse(
+                request_id="test-request-id",
+                task_id="test-task-id",
+                approved=False,
+                approved_by="test-user",
+                decision_reason="Test denial",
+            )
+            mock_gate.request_approval = AsyncMock(return_value=mock_response)
             mock_gate_class.return_value = mock_gate
 
             with pytest.raises(ApprovalDeniedError):

@@ -5,6 +5,7 @@ from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from io import BytesIO
 
 from skills.screenshot.skill import ScreenshotSkill
+from core.approval_gate import ApprovalResponse
 from core.observability import MemoryTraceEmitter
 from core.exceptions import SkillExecutionError, ApprovalDeniedError
 
@@ -51,14 +52,21 @@ class TestScreenshotSkill:
 
             with patch("core.approval_gate.ApprovalGate") as mock_gate_class:
                 mock_gate = AsyncMock()
-                mock_gate.request_approval = AsyncMock()
+                mock_response = ApprovalResponse(
+                    request_id="test-request-id",
+                    task_id="test-task-id",
+                    approved=True,
+                    approved_by="test-user",
+                )
+                mock_gate.request_approval = AsyncMock(return_value=mock_response)
                 mock_gate_class.return_value = mock_gate
 
                 await skill.capture()
 
                 mock_gate.request_approval.assert_called_once()
                 call_args = mock_gate.request_approval.call_args
-                assert "Capture screenshot" in call_args[1]["action_description"]
+                request = call_args[0][0]
+                assert "Capture screenshot" in request.action_description
 
     async def test_capture_raises_approval_denied_error_when_approval_denied(self) -> None:
         """Test that capture raises ApprovalDeniedError when approval denied."""
@@ -67,7 +75,14 @@ class TestScreenshotSkill:
 
         with patch("core.approval_gate.ApprovalGate") as mock_gate_class:
             mock_gate = AsyncMock()
-            mock_gate.request_approval = AsyncMock(side_effect=ApprovalDeniedError("test action", "denied"))
+            mock_response = ApprovalResponse(
+                request_id="test-request-id",
+                task_id="test-task-id",
+                approved=False,
+                approved_by="test-user",
+                decision_reason="Test denial",
+            )
+            mock_gate.request_approval = AsyncMock(return_value=mock_response)
             mock_gate_class.return_value = mock_gate
 
             with pytest.raises(ApprovalDeniedError):

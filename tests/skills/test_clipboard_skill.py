@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch
 
 from skills.clipboard.skill import ClipboardSkill
-from core.approval_gate import ApprovalGate
+from core.approval_gate import ApprovalGate, ApprovalResponse
 from core.observability import MemoryTraceEmitter, TraceEventType, TraceComponent
 
 
@@ -32,7 +32,13 @@ class TestClipboardSkill:
     async def test_write_requires_approval_calls_pyperclip_copy_with_correct_content(self):
         """Test write() requires approval, calls pyperclip.copy with correct content."""
         mock_approval_gate = Mock(spec=ApprovalGate)
-        mock_approval_gate.request_approval = AsyncMock(return_value=True)
+        mock_response = ApprovalResponse(
+            request_id="test-request-id",
+            task_id="test-task-id",
+            approved=True,
+            approved_by="test-user",
+        )
+        mock_approval_gate.request_approval = AsyncMock(return_value=mock_response)
 
         clipboard_skill = ClipboardSkill(
             emitter=MemoryTraceEmitter(),
@@ -49,7 +55,14 @@ class TestClipboardSkill:
     async def test_write_denied_by_approval_gate_pyperclip_copy_not_called(self):
         """Test write() denied by approval gate — pyperclip.copy not called."""
         mock_approval_gate = Mock(spec=ApprovalGate)
-        mock_approval_gate.request_approval = AsyncMock(return_value=False)
+        mock_response = ApprovalResponse(
+            request_id="test-request-id",
+            task_id="test-task-id",
+            approved=False,
+            approved_by="test-user",
+            decision_reason="Test denial",
+        )
+        mock_approval_gate.request_approval = AsyncMock(return_value=mock_response)
 
         clipboard_skill = ClipboardSkill(
             emitter=MemoryTraceEmitter(),
@@ -65,7 +78,13 @@ class TestClipboardSkill:
     async def test_clear_requires_approval_clears_clipboard(self):
         """Test clear() requires approval, clears clipboard."""
         mock_approval_gate = Mock(spec=ApprovalGate)
-        mock_approval_gate.request_approval = AsyncMock(return_value=True)
+        mock_response = ApprovalResponse(
+            request_id="test-request-id",
+            task_id="test-task-id",
+            approved=True,
+            approved_by="test-user",
+        )
+        mock_approval_gate.request_approval = AsyncMock(return_value=mock_response)
 
         clipboard_skill = ClipboardSkill(
             emitter=MemoryTraceEmitter(),

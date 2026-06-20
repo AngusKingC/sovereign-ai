@@ -3,8 +3,10 @@
 import asyncio
 import json
 from typing import Any
+from datetime import datetime, timedelta
+from uuid import uuid4
 
-from core.approval_gate import ApprovalGate
+from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType
 from core.observability import (
     TraceEventType,
     TraceComponent,
@@ -100,10 +102,19 @@ class DockerSkill:
             Dict with success and output.
         """
         if self._approval_gate:
-            approved = await self._approval_gate.request_approval(
-                action="docker start",
-                context={"container_id": container_id},
+            request = ApprovalRequest(
+                request_id=str(uuid4()),
+                task_id=str(uuid4()),
+                session_id="default",
+                action_type=ApprovalActionType.SHELL_COMMAND,
+                action_description="docker start",
+                action_parameters={"container_id": container_id},
+                risk_level="medium",
+                reason_for_approval="Docker start requires approval per policy",
+                expires_at=datetime.utcnow() + timedelta(seconds=300),
             )
+            response = await self._approval_gate.request_approval(request)
+            approved = response.approved
             if not approved:
                 return {
                     "success": False,
@@ -159,10 +170,19 @@ class DockerSkill:
             Dict with success and output.
         """
         if self._approval_gate:
-            approved = await self._approval_gate.request_approval(
-                action="docker stop",
-                context={"container_id": container_id},
+            request = ApprovalRequest(
+                request_id=str(uuid4()),
+                task_id=str(uuid4()),
+                session_id="default",
+                action_type=ApprovalActionType.SHELL_COMMAND,
+                action_description="docker stop",
+                action_parameters={"container_id": container_id},
+                risk_level="medium",
+                reason_for_approval="Docker stop requires approval per policy",
+                expires_at=datetime.utcnow() + timedelta(seconds=300),
             )
+            response = await self._approval_gate.request_approval(request)
+            approved = response.approved
             if not approved:
                 return {
                     "success": False,
@@ -265,10 +285,19 @@ class DockerSkill:
             Dict with success, stdout, and stderr.
         """
         if self._approval_gate:
-            approved = await self._approval_gate.request_approval(
-                action="docker exec",
-                context={"container_id": container_id, "command": command},
+            request = ApprovalRequest(
+                request_id=str(uuid4()),
+                task_id=str(uuid4()),
+                session_id="default",
+                action_type=ApprovalActionType.SHELL_COMMAND,
+                action_description="docker exec",
+                action_parameters={"container_id": container_id, "command": command},
+                risk_level="high",
+                reason_for_approval="Docker exec requires approval per policy",
+                expires_at=datetime.utcnow() + timedelta(seconds=300),
             )
+            response = await self._approval_gate.request_approval(request)
+            approved = response.approved
             if not approved:
                 return {
                     "success": False,

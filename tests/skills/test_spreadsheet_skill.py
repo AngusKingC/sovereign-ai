@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 
 from skills.spreadsheet.skill import SpreadsheetSkill
-from core.approval_gate import ApprovalGate
+from core.approval_gate import ApprovalGate, ApprovalResponse
 from core.observability import MemoryTraceEmitter, TraceEventType, TraceComponent
 
 
@@ -46,7 +46,13 @@ class TestSpreadsheetSkill:
     async def test_write_csv_requires_approval_returns_correct_row_count(self):
         """Test write_csv() requires approval, returns correct row count."""
         mock_approval_gate = Mock(spec=ApprovalGate)
-        mock_approval_gate.request_approval = AsyncMock(return_value=True)
+        mock_response = ApprovalResponse(
+            request_id="test-request-id",
+            task_id="test-task-id",
+            approved=True,
+            approved_by="test-user",
+        )
+        mock_approval_gate.request_approval = AsyncMock(return_value=mock_response)
 
         spreadsheet_skill = SpreadsheetSkill(
             emitter=MemoryTraceEmitter(),
@@ -68,7 +74,14 @@ class TestSpreadsheetSkill:
     async def test_write_csv_denied_by_approval_gate(self):
         """Test write_csv() denied by approval gate — no file written."""
         mock_approval_gate = Mock(spec=ApprovalGate)
-        mock_approval_gate.request_approval = AsyncMock(return_value=False)
+        mock_response = ApprovalResponse(
+            request_id="test-request-id",
+            task_id="test-task-id",
+            approved=False,
+            approved_by="test-user",
+            decision_reason="Test denial",
+        )
+        mock_approval_gate.request_approval = AsyncMock(return_value=mock_response)
 
         spreadsheet_skill = SpreadsheetSkill(
             emitter=MemoryTraceEmitter(),
@@ -104,7 +117,13 @@ class TestSpreadsheetSkill:
     async def test_write_excel_requires_approval_returns_correct_row_count(self):
         """Test write_excel() requires approval, returns correct row count."""
         mock_approval_gate = Mock(spec=ApprovalGate)
-        mock_approval_gate.request_approval = AsyncMock(return_value=True)
+        mock_response = ApprovalResponse(
+            request_id="test-request-id",
+            task_id="test-task-id",
+            approved=True,
+            approved_by="test-user",
+        )
+        mock_approval_gate.request_approval = AsyncMock(return_value=mock_response)
 
         spreadsheet_skill = SpreadsheetSkill(
             emitter=MemoryTraceEmitter(),

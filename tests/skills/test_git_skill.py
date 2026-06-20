@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch
 
 from skills.git.skill import GitSkill
-from core.approval_gate import ApprovalGate
+from core.approval_gate import ApprovalGate, ApprovalResponse
 from core.observability import MemoryTraceEmitter, TraceEventType, TraceComponent
 
 
@@ -67,7 +67,13 @@ class TestGitSkill:
     async def test_commit_requires_approval_gate_and_returns_success(self):
         """Test commit() requires and passes approval gate, returns success dict."""
         mock_approval_gate = Mock(spec=ApprovalGate)
-        mock_approval_gate.request_approval = AsyncMock(return_value=True)
+        mock_response = ApprovalResponse(
+            request_id="test-request-id",
+            task_id="test-task-id",
+            approved=True,
+            approved_by="test-user",
+        )
+        mock_approval_gate.request_approval = AsyncMock(return_value=mock_response)
 
         git_skill = GitSkill(
             emitter=MemoryTraceEmitter(),
@@ -91,7 +97,14 @@ class TestGitSkill:
     async def test_commit_denied_by_approval_gate_returns_failure(self):
         """Test commit() denied by approval gate returns failure dict without executing subprocess."""
         mock_approval_gate = Mock(spec=ApprovalGate)
-        mock_approval_gate.request_approval = AsyncMock(return_value=False)
+        mock_response = ApprovalResponse(
+            request_id="test-request-id",
+            task_id="test-task-id",
+            approved=False,
+            approved_by="test-user",
+            decision_reason="Test denial",
+        )
+        mock_approval_gate.request_approval = AsyncMock(return_value=mock_response)
 
         git_skill = GitSkill(
             emitter=MemoryTraceEmitter(),
@@ -109,7 +122,13 @@ class TestGitSkill:
     async def test_push_requires_approval_gate(self):
         """Test push() requires approval gate."""
         mock_approval_gate = Mock(spec=ApprovalGate)
-        mock_approval_gate.request_approval = AsyncMock(return_value=True)
+        mock_response = ApprovalResponse(
+            request_id="test-request-id",
+            task_id="test-task-id",
+            approved=True,
+            approved_by="test-user",
+        )
+        mock_approval_gate.request_approval = AsyncMock(return_value=mock_response)
 
         git_skill = GitSkill(
             emitter=MemoryTraceEmitter(),
@@ -131,7 +150,13 @@ class TestGitSkill:
     async def test_pull_requires_approval_gate(self):
         """Test pull() requires approval gate."""
         mock_approval_gate = Mock(spec=ApprovalGate)
-        mock_approval_gate.request_approval = AsyncMock(return_value=True)
+        mock_response = ApprovalResponse(
+            request_id="test-request-id",
+            task_id="test-task-id",
+            approved=True,
+            approved_by="test-user",
+        )
+        mock_approval_gate.request_approval = AsyncMock(return_value=mock_response)
 
         git_skill = GitSkill(
             emitter=MemoryTraceEmitter(),

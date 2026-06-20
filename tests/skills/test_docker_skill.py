@@ -6,7 +6,7 @@ import gc
 from unittest.mock import Mock, AsyncMock, patch
 
 from skills.docker.skill import DockerSkill
-from core.approval_gate import ApprovalGate
+from core.approval_gate import ApprovalGate, ApprovalResponse
 from core.observability import MemoryTraceEmitter, TraceEventType, TraceComponent
 
 
@@ -82,7 +82,13 @@ class TestDockerSkill:
     async def test_start_requires_approval_returns_success(self):
         """Test start() requires approval, returns success."""
         mock_approval_gate = Mock(spec=ApprovalGate)
-        mock_approval_gate.request_approval = AsyncMock(return_value=True)
+        mock_response = ApprovalResponse(
+            request_id="test-request-id",
+            task_id="test-task-id",
+            approved=True,
+            approved_by="test-user",
+        )
+        mock_approval_gate.request_approval = AsyncMock(return_value=mock_response)
 
         docker_skill = DockerSkill(
             emitter=MemoryTraceEmitter(),
@@ -104,7 +110,14 @@ class TestDockerSkill:
     async def test_start_denied_by_approval_gate_no_subprocess(self):
         """Test start() denied by approval gate — no subprocess call made."""
         mock_approval_gate = Mock(spec=ApprovalGate)
-        mock_approval_gate.request_approval = AsyncMock(return_value=False)
+        mock_response = ApprovalResponse(
+            request_id="test-request-id",
+            task_id="test-task-id",
+            approved=False,
+            approved_by="test-user",
+            decision_reason="Test denial",
+        )
+        mock_approval_gate.request_approval = AsyncMock(return_value=mock_response)
 
         docker_skill = DockerSkill(
             emitter=MemoryTraceEmitter(),
@@ -121,7 +134,13 @@ class TestDockerSkill:
     async def test_stop_requires_approval(self):
         """Test stop() requires approval."""
         mock_approval_gate = Mock(spec=ApprovalGate)
-        mock_approval_gate.request_approval = AsyncMock(return_value=True)
+        mock_response = ApprovalResponse(
+            request_id="test-request-id",
+            task_id="test-task-id",
+            approved=True,
+            approved_by="test-user",
+        )
+        mock_approval_gate.request_approval = AsyncMock(return_value=mock_response)
 
         docker_skill = DockerSkill(
             emitter=MemoryTraceEmitter(),
@@ -155,7 +174,13 @@ class TestDockerSkill:
     async def test_exec_command_requires_approval(self):
         """Test exec_command() requires approval."""
         mock_approval_gate = Mock(spec=ApprovalGate)
-        mock_approval_gate.request_approval = AsyncMock(return_value=True)
+        mock_response = ApprovalResponse(
+            request_id="test-request-id",
+            task_id="test-task-id",
+            approved=True,
+            approved_by="test-user",
+        )
+        mock_approval_gate.request_approval = AsyncMock(return_value=mock_response)
 
         docker_skill = DockerSkill(
             emitter=MemoryTraceEmitter(),

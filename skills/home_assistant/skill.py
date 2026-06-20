@@ -6,9 +6,12 @@ Single responsibility: Control Home Assistant entities and fetch states.
 
 import os
 from typing import Any
+from datetime import datetime, timedelta
+from uuid import uuid4
 
 import httpx
 
+from core.approval_gate import ApprovalRequest, ApprovalActionType
 from core.observability import (
     TraceComponent,
     TraceEventType,
@@ -207,10 +210,20 @@ class HomeAssistantSkill:
         approval_gate = ApprovalGate(emitter=self._emitter)
         action_description = f"Call Home Assistant service {domain}.{service} on {entity_id}"
         try:
-            await approval_gate.request_approval(
+            request = ApprovalRequest(
+                request_id=str(uuid4()),
+                task_id=str(uuid4()),
+                session_id="default",
+                action_type=ApprovalActionType.NETWORK_REQUEST,
                 action_description=action_description,
                 action_parameters={"domain": domain, "service": service, "entity_id": entity_id, **kwargs},
+                risk_level="medium",
+                reason_for_approval="Home Assistant service call requires approval per policy",
+                expires_at=datetime.utcnow() + timedelta(seconds=300),
             )
+            response = await approval_gate.request_approval(request)
+            if not response.approved:
+                raise ApprovalDeniedError(action_description)
         except ApprovalDeniedError:
             raise
 

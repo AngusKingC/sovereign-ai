@@ -2,8 +2,10 @@
 
 import asyncio
 from typing import Any
+from datetime import datetime, timedelta
+from uuid import uuid4
 
-from core.approval_gate import ApprovalGate
+from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType
 from core.observability import (
     TraceEventType,
     TraceComponent,
@@ -216,10 +218,19 @@ class PdfSkill:
             Dict with success and path
         """
         if self._approval_gate:
-            approved = await self._approval_gate.request_approval(
-                action="pdf generate",
-                context={"output_path": output_path},
+            request = ApprovalRequest(
+                request_id=str(uuid4()),
+                task_id=str(uuid4()),
+                session_id="default",
+                action_type=ApprovalActionType.FILE_WRITE,
+                action_description="pdf generate",
+                action_parameters={"output_path": output_path},
+                risk_level="low",
+                reason_for_approval="PDF generate requires approval per policy",
+                expires_at=datetime.utcnow() + timedelta(seconds=300),
             )
+            response = await self._approval_gate.request_approval(request)
+            approved = response.approved
             if not approved:
                 return {
                     "success": False,

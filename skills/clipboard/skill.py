@@ -2,8 +2,10 @@
 
 import asyncio
 from typing import Any
+from datetime import datetime, timedelta
+from uuid import uuid4
 
-from core.approval_gate import ApprovalGate
+from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType
 from core.observability import (
     TraceEventType,
     TraceComponent,
@@ -88,10 +90,19 @@ class ClipboardSkill:
             Dict with success status
         """
         if self._approval_gate:
-            approved = await self._approval_gate.request_approval(
-                action="clipboard write",
-                context={"content_length": len(content)},
+            request = ApprovalRequest(
+                request_id=str(uuid4()),
+                task_id=str(uuid4()),
+                session_id="default",
+                action_type=ApprovalActionType.FILE_WRITE,
+                action_description="clipboard write",
+                action_parameters={"content_length": len(content)},
+                risk_level="low",
+                reason_for_approval="Clipboard write requires approval per policy",
+                expires_at=datetime.utcnow() + timedelta(seconds=300),
             )
+            response = await self._approval_gate.request_approval(request)
+            approved = response.approved
             if not approved:
                 return {
                     "success": False,
@@ -148,10 +159,19 @@ class ClipboardSkill:
             Dict with success status
         """
         if self._approval_gate:
-            approved = await self._approval_gate.request_approval(
-                action="clipboard clear",
-                context={},
+            request = ApprovalRequest(
+                request_id=str(uuid4()),
+                task_id=str(uuid4()),
+                session_id="default",
+                action_type=ApprovalActionType.FILE_WRITE,
+                action_description="clipboard clear",
+                action_parameters={},
+                risk_level="low",
+                reason_for_approval="Clipboard clear requires approval per policy",
+                expires_at=datetime.utcnow() + timedelta(seconds=300),
             )
+            response = await self._approval_gate.request_approval(request)
+            approved = response.approved
             if not approved:
                 return {
                     "success": False,

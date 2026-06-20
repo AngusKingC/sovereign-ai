@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 
 from skills.pdf.skill import PdfSkill
-from core.approval_gate import ApprovalGate
+from core.approval_gate import ApprovalGate, ApprovalResponse
 from core.observability import MemoryTraceEmitter, TraceEventType, TraceComponent
 
 
@@ -69,7 +69,13 @@ class TestPdfSkill:
     async def test_generate_requires_approval_gate(self):
         """Test generate() requires ApprovalGate approval, returns success dict."""
         mock_approval_gate = Mock(spec=ApprovalGate)
-        mock_approval_gate.request_approval = AsyncMock(return_value=True)
+        mock_response = ApprovalResponse(
+            request_id="test-request-id",
+            task_id="test-task-id",
+            approved=True,
+            approved_by="test-user",
+        )
+        mock_approval_gate.request_approval = AsyncMock(return_value=mock_response)
 
         pdf_skill = PdfSkill(
             emitter=MemoryTraceEmitter(),
@@ -88,7 +94,14 @@ class TestPdfSkill:
     async def test_generate_denied_by_approval_gate(self):
         """Test generate() denied by approval gate — no file written."""
         mock_approval_gate = Mock(spec=ApprovalGate)
-        mock_approval_gate.request_approval = AsyncMock(return_value=False)
+        mock_response = ApprovalResponse(
+            request_id="test-request-id",
+            task_id="test-task-id",
+            approved=False,
+            approved_by="test-user",
+            decision_reason="Test denial",
+        )
+        mock_approval_gate.request_approval = AsyncMock(return_value=mock_response)
 
         pdf_skill = PdfSkill(
             emitter=MemoryTraceEmitter(),

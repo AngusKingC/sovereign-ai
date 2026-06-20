@@ -3,8 +3,10 @@
 import asyncio
 import csv
 from typing import Any
+from datetime import datetime, timedelta
+from uuid import uuid4
 
-from core.approval_gate import ApprovalGate
+from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType
 from core.observability import (
     TraceEventType,
     TraceComponent,
@@ -103,10 +105,19 @@ class SpreadsheetSkill:
             FileNotFoundError: If file does not exist
         """
         if self._approval_gate:
-            approved = await self._approval_gate.request_approval(
-                action="spreadsheet write_csv",
-                context={"path": path},
+            request = ApprovalRequest(
+                request_id=str(uuid4()),
+                task_id=str(uuid4()),
+                session_id="default",
+                action_type=ApprovalActionType.FILE_WRITE,
+                action_description="spreadsheet write_csv",
+                action_parameters={"path": path},
+                risk_level="low",
+                reason_for_approval="Spreadsheet write requires approval per policy",
+                expires_at=datetime.utcnow() + timedelta(seconds=300),
             )
+            response = await self._approval_gate.request_approval(request)
+            approved = response.approved
             if not approved:
                 return {
                     "success": False,
@@ -246,10 +257,19 @@ class SpreadsheetSkill:
             Dict with success and rows_written
         """
         if self._approval_gate:
-            approved = await self._approval_gate.request_approval(
-                action="spreadsheet write_excel",
-                context={"path": path},
+            request = ApprovalRequest(
+                request_id=str(uuid4()),
+                task_id=str(uuid4()),
+                session_id="default",
+                action_type=ApprovalActionType.FILE_WRITE,
+                action_description="spreadsheet write_excel",
+                action_parameters={"path": path},
+                risk_level="low",
+                reason_for_approval="Spreadsheet write requires approval per policy",
+                expires_at=datetime.utcnow() + timedelta(seconds=300),
             )
+            response = await self._approval_gate.request_approval(request)
+            approved = response.approved
             if not approved:
                 return {
                     "success": False,

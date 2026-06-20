@@ -4,11 +4,13 @@ Screenshot Skill - captures screen content using Pillow ImageGrab.
 Single responsibility: Capture screen content as PNG bytes or save to file.
 """
 
-from typing import Any
 from io import BytesIO
+from datetime import datetime, timedelta
+from uuid import uuid4
 
 from PIL import ImageGrab
 
+from core.approval_gate import ApprovalRequest, ApprovalActionType
 from core.observability import (
     TraceComponent,
     TraceEventType,
@@ -47,10 +49,20 @@ class ScreenshotSkill:
         approval_gate = ApprovalGate(emitter=self._emitter)
         action_description = "Capture screenshot"
         try:
-            await approval_gate.request_approval(
+            request = ApprovalRequest(
+                request_id=str(uuid4()),
+                task_id=str(uuid4()),
+                session_id="default",
+                action_type=ApprovalActionType.FILE_WRITE,
                 action_description=action_description,
                 action_parameters={"region": region},
+                risk_level="low",
+                reason_for_approval="Screenshot capture requires approval per policy",
+                expires_at=datetime.utcnow() + timedelta(seconds=300),
             )
+            response = await approval_gate.request_approval(request)
+            if not response.approved:
+                raise ApprovalDeniedError(action_description)
         except ApprovalDeniedError:
             raise
 
