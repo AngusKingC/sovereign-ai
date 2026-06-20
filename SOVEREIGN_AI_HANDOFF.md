@@ -1,20 +1,22 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-20 — post prompt-47, handoff amended by GLM session 9.
+**Last updated**: 2026-06-20 — post prompt-47 + 2026-06-20 full repo scan + proactive L13/L14/L15 landmine additions, handoff amended by GLM session 10. Plan numbering restructured based on scan findings (see "Plan numbering restructure" section below). CHANGELOG append procedure updated with temp-file pattern (L15). Bandit exclude list codified (L14). Baseline-capture methodology codified (L13).
 
 **Broad-except audit status (Rule 17)**: core/ ✅ (29 patterns, prompt-41), system/ ✅ (103 patterns, prompt-42+42.1), skills/ ✅ (219 patterns, prompt-43a+43b), web/ ✅ (10 patterns, prompt-43c), adapters/ ✅ (43 patterns, prompt-43c), gateways/ ✅ (5 patterns, prompt-43c). **All directories now fully compliant**.
 
-**InputSanitiser wiring status (Rule 14)**: ✅ Fully wired (prompt-44). Sanitisation at all external-input entry points: HTTP/WebSocket (web/server.py), Telegram (gateways/telegram/gateway.py), Web Scraper (skills/web_scraper/skill.py), Orchestrator.submit_task() (defense-in-depth), QueryHandler.execute() (CLI/TUI).
+**InputSanitiser wiring status (Rule 14)**: ✅ Fully wired (prompt-44) + ✅ Implementation redesigned with 6-layer defense (prompt-45). Sanitisation at all external-input entry points: HTTP/WebSocket (web/server.py), Telegram (gateways/telegram/gateway.py), Web Scraper (skills/web_scraper/skill.py), Orchestrator.submit_task() (defense-in-depth), QueryHandler.execute() in core/handlers.py (CLI/TUI).
 
-**InputSanitiser defense status (Plan 45)**: ✅ Redesigned with real defense logic. Layered defense: Unicode normalisation, length truncation, injection tag stripping, HTML stripping, command injection stripping, prompt injection stripping. Backward compatible with test_security.py (BLOCKED_PATTERNS, is_clean, add_pattern preserved).
+**Test baseline**: 1167 passed, 55 skipped, 0 failed, 0 warnings (measured with `python -m pytest tests/ -q --tb=no` on Windows with all deps). Linux scan env (no adapter SDKs): 1094 passed, 1 skipped, 2 env-only failures (postgres + pdfplumber).
 
-**TrajectoryExporter status (Plan 45)**: ✅ Functional. Uses MemoryRouter.fetch_by_type() to fetch completed tasks, filters by complexity_score, converts to ShareGPT format, writes JSONL. 6 previously skipped tests now passing.
+**Static analysis baseline (post-prompt-47, measured by 2026-06-20 full repo scan)**:
+- Ruff: 375 errors (253 F401 + 48 F841 + 22 E402 after prompt-47 + 21 F821 + 15 F541 + 1 F811 + 2 minor)
+- Mypy: 567 errors in 78 files (was estimated at 180 in pre-scan audit — audit undercounted by 3×)
+- Bandit: 26 medium+ findings (22 B108 in tests + 2 B608 SQL injection in memory/postgres.py + 2 B104 false-positive binds) — NEW, not in pre-scan audit. **Note**: count may vary by environment; Plan 48 captures actual count at plan-start (Step 0.4) and uses it as baseline.
+- pip-audit: 55 CVEs across 14 packages (aiohttp, chromadb, cryptography, diskcache, idna, pillow, pygments, pypdf, pytest, python-dotenv, python-multipart, setuptools, starlette, urllib3) — NEW. **Note**: original scan reported 6 CVEs due to partial requirements.txt install in scan env; Devin's Windows env with full deps shows 55. Plan 48 captures actual count at plan-start; fixes deferred to Plan 56.
+- Vulture: 47 high-confidence dead-code findings (289 at lower threshold) — NEW
+- CI workflow: ruff + mypy + pytest only (bandit/pip-audit/vulture to be added by Plan 48)
 
-**Lint error status (Plan 46)**: ✅ F821 runtime crash bugs fixed (3), F811 duplicate definitions fixed (8), critical F841 unused-variable errors fixed (21). Remaining: 1 F821 (TYPE_CHECKING-only, deferred), 1 F811 (test file, out of scope), 55 F841 (test files, out of scope), 123 mypy errors (pre-existing).
-
-**Test baseline**: 1167 passed, 55 skipped, 0 failed, 0 warnings (measured with `python -m pytest tests/ -q --tb=no`). No regressions from Plan 46.
-
-**Static analysis baseline**: 269 ruff errors (E402: 22, F401: 247), 116 mypy errors. CI will fail on first run. This is the worklist, not a problem.
+**Plan 46 chat report correction**: the prompt-46 chat report claimed "F841: 81 → 55 (21 critical errors fixed)". Actual F841 count post-prompt-46 is 48, meaning 33 were fixed (not 21). The CHANGELOG entry for prompt-46 should be amended to reflect "F841: 81 → 48 (33 critical errors fixed)". This is a Rule 19 violation (count assertion without measurement) — landmine L10.
 
 ---
 
@@ -72,6 +74,40 @@ That's it. Everything else is either broken, unreachable, or aspirational.
 
 ---
 
+## Plan numbering restructure (2026-06-20)
+
+The 2026-06-20 full repo scan revealed 3 categories of issues the pre-scan audit didn't catch (security, dependency CVEs, dead code) and showed the mypy count was 567, not 180 (requiring the original Plan 48 to be split into 4 sub-plans). Rather than use letter-suffixed plans (48a/48b/48c/48d) which would collide with the existing prompt-NN tag namespace, all plans were renumbered in execution order.
+
+**Old numbering → New numbering**:
+| Old | New | What it does |
+|---|---|---|
+| 45 | 45 | InputSanitiser redesign + trajectory_exporter (DONE) |
+| 46 | 46 | F821 + F811 + critical F841 cleanup (DONE) |
+| 47 | 47 | E402 + gateways/__init__.py + flagged unused imports (DONE) |
+| (new) | **48** | Security: B608 SQL injection + B104 suppression + bandit/pip-audit/vulture in CI |
+| 48 | **49** | ApprovalGate API drift + ApprovalRequest field additions (~112 mypy errors) |
+| (48 split) | **50** | MockMemoryRouter inheritance fix (107 mypy errors, test-only) |
+| (48 split) | **51** | Adapter type fixes + `del e` patterns (27 mypy errors) |
+| (48b in audit) | **52** | F4 wiring fix (cognition-loop components into serve request path) |
+| 49 | **53** | Test suite health + 22 B108 fixes |
+| 50 | **54** | F401 bulk cleanup (247 remaining) |
+| 51 | **55** | Marine stack (the moat — deferred until after audit cleanup) |
+| (new) | **56** | Dependency updates + diskcache migration |
+| (new) | **57** | Dead code cleanup (47 vulture findings) |
+
+**Next 5 prompts queue** (post-prompt-47): Plans 48, 49, 50, 51, 52.
+**Deferred**: Plans 53, 54, 55, 56, 57.
+
+**Tooling additions (effective Plan 48)**:
+- **bandit** — security scan (SQL injection, hardcoded binds, eval, shell=True). CI job: `bandit -r . -ll --exclude tests/` (tests/ excluded until Plan 53 fixes B108).
+- **pip-audit** — dependency CVE scan. CI job: `pip-audit --strict` (continue-on-error: true until Plan 56 fixes diskcache + pip).
+- **vulture** — dead code detection. CI job: `vulture . --min-confidence 80` (continue-on-error: true until Plan 57 fixes 47 findings).
+- **ruff + mypy + pytest** — unchanged, already in CI.
+
+These 3 new tools catch what ruff + mypy miss: the 2 B608 SQL injection findings in `memory/postgres.py` would have been caught by bandit on the original PR that introduced them.
+
+---
+
 ## Test environment prerequisites
 
 **Standard test measurement command**: `python -m pytest tests/ -q --tb=no `
@@ -97,6 +133,19 @@ Integration tests skip gracefully when prerequisites aren't available. Run them 
 ## What's broken right now
 
 Open bugs, ordered by impact. Each has a verification step so the fix can be confirmed.
+
+### F8 — 2× B608 SQL injection in memory/postgres.py (FOUND BY 2026-06-20 SCAN)
+- **Location**: `memory/postgres.py:121` (SELECT), `memory/postgres.py:237` (INSERT).
+- **Cause**: `self.table_name` interpolated via f-string into SQL. Values ($1, $2, $3) are parameterized correctly, but the table name is not (PostgreSQL doesn't support parameterized identifiers).
+- **Fix**: Plan 48 Step 1 validates `table_name` against `^[a-zA-Z_][a-zA-Z0-9_]{0,62}$` at construction time, making the f-string interpolation safe.
+- **Verification**: `bandit memory/postgres.py -ll` returns 0 medium+ findings after Plan 48.
+
+### F9 — 55 dependency CVEs across 14 packages (FOUND BY 2026-06-20 SCAN, REVISED 2026-06-20 post-prompt-48 S3 fire)
+- **Packages affected**: aiohttp, chromadb, cryptography, diskcache, idna, pillow, pygments, pypdf, pytest, python-dotenv, python-multipart, setuptools, starlette, urllib3.
+- **diskcache 5.6.3**: CVE-2025-69872 (no fix available). Investigate usage in Plan 48 Step 3; if directly used, defer to Plan 56.
+- **pip 25.0.1**: 5 CVEs (PYSEC-2026-196, CVE-2025-8869, CVE-2026-1703, CVE-2026-3219, CVE-2026-6357). Environmental — upgrade pip in dev venv. CI uses GitHub's setup-python which provides a recent pip.
+- **Other 12 packages**: ~48 CVEs total. All deferred to Plan 56 (dependency updates).
+- **Note**: the original 2026-06-20 scan reported only 6 CVEs because the scan environment had a partial requirements.txt install. Devin's Windows env with full deps shows 55 CVEs across 14 packages. Plan 48 captures the actual count at plan-start and defers all fixes to Plan 56.
 
 ### F4 — `cli/serve.py` constructs 14 subsystems but registers zero workers
 - **Location**: `cli/serve.py:148-155` constructs `WorkerFactory` but never calls it; no `orchestrator.register_worker(...)` anywhere in the file.
@@ -142,7 +191,7 @@ These subsystems exist with passing tests but are never constructed from any run
 | NotificationSystem | `core/notification.py` | Same |
 | ResourceBudget | `core/resource_budget.py` | Same |
 | VerbosityManager | `core/verbosity.py` | Same |
-| TrajectoryExporter | `system/trajectory_exporter.py` | Stubbed with Plan 45 deferral (prompt-37.5). Backend doesn't support `fetch(Type, filter_func=...)` pattern. |
+| TrajectoryExporter | `system/trajectory_exporter.py` | ✅ Functional as of prompt-45 (Plan 45 Step 4 replaced stub with working implementation using `MemoryRouter.fetch_by_type()`). Still not reachable from `jarvis` or `jarvis serve` — wiring deferred to Plan 52 (F4 wiring fix). |
 | MemoryCompactor | `core/memory_compactor.py` | Same |
 | MCPServer | `skills/mcp_server.py` | Built but never started |
 | MCPAdapter | `adapters/mcp_adapter.py` | Built but never constructed |
@@ -272,11 +321,33 @@ The template enforces the same discipline structurally — verification gates ar
 9. `git add CHANGELOG.md SOVEREIGN_AI_HANDOFF.md && git commit -m "docs: prompt-{N} changelog and handoff update"`
 10. `git push origin master && git push origin prompt-{N}`
 
-**CHANGELOG append procedure** (PowerShell, because file locks):
+**CHANGELOG append procedure** (PowerShell, because file locks — updated prompt-48.1):
 - `[System.IO.File]::ReadAllLines(r"C:\Jarvis\CHANGELOG.md").Count` for line counts — never `Get-Content | Measure-Object` (truncates large files).
-- `Add-Content` to append — never paste into editor, never use insert operations.
-- Before appending: record current line count. After: verify new count exceeds previous, verify last 5 lines with `Select-Object -Last 5`.
+- **Append method (L15 — temp-file pattern for entries >20 lines)**: write the entry to a temp file first (`$entry | Out-File -FilePath C:\Jarvis\scan\changelog-entry.md -Encoding utf8`), then append with `Get-Content C:\Jarvis\scan\changelog-entry.md | Add-Content -Path C:\Jarvis\CHANGELOG.md`. This avoids PowerShell here-string parsing issues (`"@` must be at column 1 with zero leading whitespace; auto-indent hangs forever) AND `Add-Content` file-lock deadlocks on large CHANGELOG files. Plan 48 Step 3 hung on this — don't repeat it.
+- **Append method (for entries ≤20 lines)**: `Add-Content -Path r"C:\Jarvis\CHANGELOG.md" -Value @"..."@` is acceptable IF the closing `"@` is at column 1. The temp-file pattern is always safer — use it if in doubt.
+- **NEVER paste into the editor** for entries >20 lines — file locks + auto-indent can corrupt the here-string. For entries ≤20 lines, pasting into the editor + verifying line count is an acceptable fallback if `Add-Content` fails.
+- Before appending: record current line count. After: verify new count exceeds previous by the expected amount (use a floor — e.g., if entry is ~80 lines, verify increase ≥60 to catch truncation), verify last 5 lines with `Select-Object -Last 5`.
 - Close the file in the IDE before running `Add-Content`.
+- **Standard temp-file append pattern (use for ALL entries >20 lines)**:
+  ```powershell
+  # 1. Write the entry to a temp file (here-string is safe here — Out-File handles it)
+  $entry = @"
+  ## YYYY-MM-DD HH:MM — Plan NN Step N
+  ...entry content...
+  "@
+  $entry | Out-File -FilePath C:\Jarvis\scan\changelog-entry.md -Encoding utf8
+
+  # 2. Close the IDE if CHANGELOG.md is open, then append
+  $before = [System.IO.File]::ReadAllLines(r"C:\Jarvis\CHANGELOG.md").Count
+  Get-Content C:\Jarvis\scan\changelog-entry.md | Add-Content -Path "C:\Jarvis\CHANGELOG.md"
+  $after = [System.IO.File]::ReadAllLines(r"C:\Jarvis\CHANGELOG.md").Count
+  Write-Host "Before: $before, After: $after"
+  Get-Content r"C:\Jarvis\CHANGELOG.md" | Select-Object -Last 5
+
+  # 3. Clean up temp file
+  Remove-Item C:\Jarvis\scan\changelog-entry.md
+  ```
+  **Critical**: the closing `"@` in step 1 MUST be at column 1 (no leading whitespace). If using VS Code, disable auto-indent for PowerShell files or paste with Ctrl+Shift+V (paste without formatting). If the here-string still hangs, write the entry to the temp file using the editor directly (not PowerShell) and skip step 1.
 
 ### Claude review workflow (token-economical, adopted post-prompt-38)
 
@@ -305,7 +376,7 @@ Plans go through Claude review before Devin execution. To keep Claude's context 
 
 - **Round 1 (full review)**: Upload `plan-NN.md` + `plan-NN-context-brief.md`. Claude does the full 7-point check. Returns verdict + findings list.
 - **Round 2 (diff review only)**: Upload only the REV2 diff section (what changed from REV1) + the original context brief. Claude checks whether each round 1 finding was correctly addressed + any new issues introduced by the changes. Do not re-review unchanged sections — they were fine in round 1.
-- **Round 3+**: Almost never needed. If round 2 found only MINOR issues, place the plan without another round. Pushing for round 3 burns tokens for diminishing returns. Only escalate to round 3 if round 2 surfaced a CRITICAL issue.
+- **Round 3+**: Continue review rounds as long as findings are surfaced. There is **no cap** on the number of revision rounds — go to REV4, REV5, REV6, or however many it takes until Claude returns a clean PLACE verdict with zero findings. Each round: upload the latest REV diff + the original context brief. Do not re-review unchanged sections from prior rounds. The plan is not placed until Claude returns PLACE with zero findings OR the user explicitly overrides and accepts the residual findings.
 
 #### Known landmines — Claude checks every plan against these
 
@@ -324,6 +395,9 @@ Update this list whenever a new pattern is identified. Each entry should referen
 - **"No interactive shell" used as skip reason when programmatic verification was provided** (prompt-38.6 had this — Devin deferred Track A citing "no interactive shell" when the plan provided programmatic verification commands). If the plan gives you commands to run, run them. Do not substitute "manual verification" reasoning for executing the provided commands.
 - **Scope creep via "necessary" model updates** (prompt-39 had this — Devin unilaterally updated model names in adapter code while adding tests). When tests reveal production code issues, STOP and report. Do not silently fix them outside the plan's scope. The plan author decides whether to expand scope.
 - **Broader grep for broad-except patterns** (learned in prompt-42). GLM's original `pass$` grep missed `pass # comment` patterns. Devin's `-match "pass"` caught them. Always use the broader grep that catches `pass` anywhere after `except Exception`, not just at end of line.
+- **Hardcoded baseline counts from incomplete scans (L13, prompt-48 REV3)**: the 2026-06-20 full repo scan ran on Linux with a partial `requirements.txt` install, so pip-audit reported 6 CVEs instead of the real 55. Plan 48 (REV1) hardcoded "6 CVEs" as the expected baseline, causing S3 to fire on Devin's Windows env. Fix: plans must CAPTURE actual counts at plan-start (Step 0) and use them as baselines, not predict counts from prior scans. STOP conditions should fire on "tool can't run" or "in-scope finding missing", not on "count differs from hardcoded number".
+- **Bandit scanning venv directories (L14, prompt-48 REV4)**: `bandit -r .` scans `.venv/`/`venv/`/`env/`/`.tox/` directories (thousands of third-party Python files with their own security findings). Plan 48's original scan ran on a clean clone with no in-repo venv → 26 findings. Devin's Windows env has a venv in `C:\Jarvis\` → 820 findings. Fix: ALL `bandit -r .` commands MUST use `--exclude .venv,venv,env,.git,node_modules,__pycache__,build,dist,.tox,.eggs,.pytest_cache`. Single-file commands (`bandit <file.py>`) don't need excludes.
+- **PowerShell here-strings + `Add-Content` hang on large entries (L15, prompt-48.1)**: the `@" ... "@` here-string requires the closing `"@` at column 1 with zero leading whitespace; if auto-indented by the editor or mis-pasted, PowerShell waits forever for more input (Plan 48 Step 3 hung on this). Additionally, `Add-Content` with very long `-Value` is slow + file-lock-prone on 7000+ line CHANGELOG files. Fix: for CHANGELOG entries >20 lines, write to a temp file first (`$entry | Out-File -FilePath C:\Jarvis\scan\changelog-entry.md -Encoding utf8`), then append with `Get-Content C:\Jarvis\scan\changelog-entry.md | Add-Content -Path C:\Jarvis\CHANGELOG.md`. Verify with `[System.IO.File]::ReadAllLines(...).Count` before and after (use a floor — e.g., if entry is ~80 lines, verify increase ≥60 to catch truncation). The temp-file pattern avoids both the here-string parsing issue and the `Add-Content` file-lock deadlock. For entries ≤20 lines, `Add-Content -Value @"..."@` is still acceptable IF the closing `"@` is at column 1 — but the temp-file pattern is always safer.
 
 ---
 
@@ -389,46 +463,53 @@ Update this list whenever a new pattern is identified. Each entry should referen
 
 Ordered. Each is one plan. Do not start Plan N+1 until Plan N's verification gates pass.
 
-### Plan 48 — ApprovalGate API drift + mypy remediation
-- **Priority**: P2
+**Note**: Plan numbering was restructured on 2026-06-20 based on full repo scan findings. Plans 45-47 are complete (see "Completed prompts" table). The next 5 plans are 48-52 below. See "Plan numbering restructure" section above for the old→new mapping.
+
+### Plan 48 — Security: B608 SQL injection + B104 suppression + CI bandit/pip-audit/vulture
+- **Priority**: P1
 - **Effort**: M
-- **Why**: 14+ callers use old ApprovalGate API (missing scope_id, decision_reason, approved_by, approved_at, denied_reason, matched_scope_id parameters). Also 116 mypy errors remain from Plan 46 baseline.
-- **Scope**: Update all ApprovalGate callers to use new API. Fix mypy errors (import issues, missing type annotations). Ensure no regressions.
-- **Verification**: `mypy . --ignore-missing-imports` returns zero errors. Full test suite still passes.
+- **Risk**: MED
+- **Why**: 2026-06-20 full repo scan found 2× B608 SQL injection in `memory/postgres.py:121,237` (f-string interpolation of `table_name`). Also found bandit, pip-audit, and vulture are not in CI — meaning these issues will recur. Plan 48 fixes the SQL injection (table_name validation regex), suppresses 2 B104 false positives, and adds all 3 security tools to CI.
+- **Scope**: `memory/postgres.py` (validation), `cli/serve.py` + `web/reference.py` (B104 suppression), `.github/workflows/ci.yml` (3 new jobs).
+- **Verification**: `bandit memory/postgres.py -ll` returns 0 findings; `bandit -r . -ll --exclude tests/` returns 0 findings; CI YAML validates; test suite unchanged at 1167/55/0.
 
-### Plan 49 — Test suite health
-- **Priority**: P2
-- **Effort**: S
-- **Why**: 55 skipped tests need audit. Some may be legitimate (ENV-CONDITIONAL), some may be stale (fixed bugs but tests not unskipped).
-- **Scope**: Audit all skipped tests. Unskip tests for fixed bugs. Document legitimate skips with ENV-CONDITIONAL or LEGITIMATE-DEFER labels.
-- **Verification**: `python -m pytest tests/ -v` — reduced skip count, zero failures.
-
-### Plan 50 — F401 bulk cleanup
-- **Priority**: P2
-- **Effort**: M
-- **Why**: 247 F401 errors remain after Plan 47. Most are in test files (out of scope per audit), but production files have unused imports that should be cleaned.
-- **Scope**: Remove unused imports from production files (not test files). Use `ruff check . --select F401 --fix` for auto-fixable, manually triage remaining.
-- **Verification**: `ruff check . --select F401` on production files returns zero errors. Full test suite still passes.
-
-### Plan 48b — F4 wiring: `cli/serve.py` constructs 14 subsystems but registers zero workers
-- **Priority**: P2
-- **Effort**: S
-- **Why**: `cli/serve.py` constructs `WorkerFactory` but never calls it; no `orchestrator.register_worker(...)` anywhere in the file. `submit_task()` calls `route_task()` which raises `WorkerNotFoundError("No workers registered")`. This breaks the web server's task submission endpoint.
-- **Scope**: After constructing `WorkerFactory` in `cli/serve.py`, call it to create a default OllamaWorker and register it with the orchestrator. Or skip the factory and register an OllamaWorker directly (simpler, matches what `cli/tui.py:279-280` does).
-- **Verification**: `jarvis serve` starts successfully. POST /api/tasks returns non-empty task_id.
-
-### Plan 51 — Marine stack
-- **Priority**: P3
+### Plan 49 — ApprovalGate API drift + ApprovalRequest field additions
+- **Priority**: P1
 - **Effort**: L
-- **Why**: Original handoff Plan 49 (deferred until after audit cleanup). Weather, AIS, email monitoring for sailing context.
-- **Scope**: Implement weather monitoring (NOAA/OpenWeatherMap), AIS monitoring (marine traffic), email monitoring (IMAP). Wire into cognition stack as background tasks.
-- **Verification**: Background tasks run without blocking main cognition loop. Data flows correctly to orchestrator.
+- **Risk**: MED
+- **Why**: 2026-06-20 scan found 567 mypy errors (audit estimated 180). Of these, 112 are ApprovalGate-related: 84 missing-field errors (ApprovalRequest needs `matched_scope_id`, `denied_reason`, `approved_by`, `approved_at` × 21 callers) + 28 old-API-signature errors (`request_approval(action=, context=)` → new signature).
+- **Scope**: Update ApprovalRequest/ApprovalResponse schemas; update 14+ callers in skills/ + core/escalation.py + core/approval_gate.py.
+- **Verification**: `mypy core/approval_gate.py core/escalation.py --ignore-missing-imports` returns 0 NEW errors. Full test suite passes.
+
+### Plan 50 — MockMemoryRouter inheritance fix
+- **Priority**: P2
+- **Effort**: M
+- **Risk**: LOW (test-only)
+- **Why**: 107 mypy errors across 8 test files — `MockMemoryRouter` is not a subclass of `MemoryRouter`, causing type errors wherever it's passed as an argument. Mechanical fix: make `MockMemoryRouter(MemoryRouter)` or use `Protocol`.
+- **Scope**: 8 test files (test_approval_gate, test_task_state_machine, test_resource_manager, test_ollama_worker, test_model_acquisition, test_scratchpad, test_model_registry, test_system_profiler).
+- **Verification**: `mypy tests/ --ignore-missing-imports` drops by 107 errors. Full test suite passes.
+
+### Plan 51 — Adapter type fixes + `del e` patterns
+- **Priority**: P2
+- **Effort**: S
+- **Risk**: LOW
+- **Why**: 27 mypy errors: 14 `tokens_used: float vs int` in adapters + 13 `Trying to read deleted variable "e"` (except block deletes `e` then reads it).
+- **Scope**: 7 adapters (anthropic, cohere, deepseek, groq, mistral, openai, together) + 13 `del e` sites.
+- **Verification**: `mypy adapters/ --ignore-missing-imports` returns 0 NEW errors. Full test suite passes.
+
+### Plan 52 — F4 wiring fix (cognition-loop components into serve request path)
+- **Priority**: P2
+- **Effort**: M
+- **Risk**: MED
+- **Why**: F4 (open since prompt-35.6b): `cli/serve.py` constructs `worker_persistence`, `output_evaluator`, `trace_optimiser`, `worker_factory` but never wires them into the request path. Plan 46 Step 5 prefixed them with `_` to silence F841 — this plan actually wires them. Without this, `jarvis serve` doesn't self-improve.
+- **Scope**: `cli/serve.py` — wire the 4 subsystems into the orchestrator request loop.
+- **Verification**: Start `jarvis serve`, hit `POST /api/tasks` with `{"intent": "test"}` — should return a real `task_id`, not `{"task_id": "", "status": "error"}`. Cognition loop components should be invoked (verify via trace events).
 
 ---
 
-## After Plan 49 — Decision point
+## After Plan 57 — Decision point
 
-Once Plans 45-49 land, the foundation is solid: InputSanitiser redesigned and robust, trajectory_exporter functional, static analysis clean, web server workers registered, marine stack started. At that point, choose:
+Once Plans 48-57 land, the foundation is solid: security tools in CI, ApprovalGate API fixed, all mypy errors cleared, F4 wiring done, test suite healthy, F401 bulk cleanup done, marine stack started, dependencies updated, dead code removed. At that point, choose:
 
 **Option A: Build the marine stack next.** This validates the moat. Ship as portable SKILL.md files (see Skills Ecosystem section) so the marine capability reaches users of Claude Code, Cursor, Codex, *and* Sovereign. Building 5 small skills (weather, marine_weather, AIS, tidal, passage_planner) would tell you whether LLM-driven passage planning is actually useful as a product.
 
@@ -464,6 +545,7 @@ Once Plans 45-49 land, the foundation is solid: InputSanitiser redesigned and ro
     - Do not mark a gate SKIPPED unless the plan explicitly allows skipping it. "Manual verification" is not a skip reason — if the plan calls for manual verification, do the manual verification and paste the result.
     - Do not mark a test `@pytest.mark.skip` for tests that "couldn't be mocked." Fix the mock or refactor the SUT. `pytest.skip` is for known-broken behavior with a Plan-N deferral, NOT for tests that were written but couldn't be made to run.
     (Currently violated by prompt-37.6: Gate 3 marked PASSED with no output, Gate 5 and Gate 6 marked SKIPPED without being skipped per plan, 8 tests marked `@pytest.mark.skip` because mocking was hard. Plan 37.6.1 fixes this and codifies the rule.)
+20. `table_name` parameter in `memory/postgres.py` MUST be validated against `^[a-zA-Z_][a-zA-Z0-9_]{0,62}$` at construction time. f-string interpolation of `table_name` into SQL is permitted ONLY because of this validation. Any new SQL-interpolated identifier must follow the same pattern (validate at construction, then interpolate). **Currently enforced by Plan 48 Step 1.1.**
 
 ---
 
@@ -510,9 +592,10 @@ Once Plans 45-49 land, the foundation is solid: InputSanitiser redesigned and ro
 | 43a | Broad-except audit, part 3a (skills/ - 20+ violations) | 1127 | Fixed 100 broad-except patterns across 3 files: notes_skill (46), calendar_skill (30), reminder_skill (24). All violations were cleanup paths (trace emission failure, event loop timing failure). Added inline comments per Rule 17. Test suite unchanged. |
 | 43b | Broad-except audit, part 3b (skills/ - remainder) | 1127 | Fixed 119 broad-except patterns across 18 files (calculator: 6, clipboard: 6, code_execution: 6, docker: 10, email: 16, file_reader: 3, file_writer: 4, git: 14, home_assistant: 6, http_client: 8, pdf: 8, screenshot: 2, spreadsheet: 10, terminal: 6, transcription: 3, tts: 3, web_scraper: 2, web_search: 6). skills/ is now FULLY Rule 17 compliant — 219 patterns total (100 from 43a + 119 from 43b). Test suite unchanged. |
 | 43c | Broad-except audit, part 4 (web/, adapters/, gateways/) | 1127 | Fixed 59 broad-except patterns across 15 files: web/ (11), adapters/ (43), gateways/ (5). Pattern types: 44 pass, 14 return-fallback, 1 continue. All now have WARNING trace/logging before pass/return/continue. Followed each file's existing logging convention. Test suite unchanged. All directories now fully Rule 17 compliant. |
-| 45 | InputSanitiser redesign + trajectory_exporter functional redesign | 1167 | Redesigned InputSanitiser with real defense logic (Unicode normalisation, length truncation, injection tag stripping, HTML stripping, command injection stripping, prompt injection stripping). Added MemoryRouter.fetch_by_type() method. Fixed trajectory_exporter to use fetch_by_type(). 6 previously skipped tests now passing. Backward compatible with test_security.py. |
-| 46 | Clear F821 runtime crash bugs, F811 duplicate definitions, and critical F841 unused-variable lint errors | 1167 | Fixed F821 runtime crash bugs (3), F811 duplicate definitions (8), critical F841 unused-variable errors (21). Fixed 7 adapters (anthropic, cohere, deepseek, groq, mistral, openai, together). Fixed cli/serve.py, cli/command_history.py, core/session.py, core/schemas.py, cli/tui.py, core/escalation.py, core/memory_router.py, core/approval_gate.py, workers/echo_worker.py, core/input_sanitiser.py, system/trajectory_exporter.py. Remaining: 1 F821 (TYPE_CHECKING-only, deferred), 1 F811 (test file, out of scope), 55 F841 (test files, out of scope), 123 mypy errors (pre-existing). |
-| 47 | Fix E402 import ordering, add missing gateways/__init__.py, remove flagged unused imports | 1167 | Fixed E402 anti-pattern in web/server.py and web/middleware/auth_middleware.py (moved logging.getLogger() after imports). Added gateways/__init__.py (empty file). Removed unused imports: JSONResponse (web/server.py), AuthenticationError (web/middleware/auth_middleware.py), asyncio and typing.Any (gateways/telegram/gateway.py, adapters/gemini.py). E402: 35→22, F401: 260→247. Mypy on 4 files: 44 errors (improvement from baseline 53). |
+| 44 | InputSanitiser wiring | 1134 | InputSanitiser wired into 5 external-input entry points (web/server.py, gateways/telegram/gateway.py, skills/web_scraper/skill.py, core/orchestrator.py, core/handlers.py QueryHandler). Defense-in-depth: boundary + sink + CLI/TUI sanitisation. 7 wiring tests added. |
+| 45 | InputSanitiser redesign + trajectory_exporter functional | 1167 | 6-layer InputSanitiser (normalise → truncate → strip_injection_tags → strip_html → strip_command_injection → strip_prompt_injection). 27 new tests. MemoryRouter.fetch_by_type() added. TrajectoryExporter functional (6 un-skipped tests). Test suite: 1134 → 1167 (+33 passed, -6 skipped). |
+| 46 | F821 + F811 + critical F841 cleanup | 1167 | Fixed 3 F821 runtime crashes (cli/command_history.py uuid4, core/session.py Task, workers/echo_worker.py core). Fixed 8 F811 duplicates (core/schemas.py Scratchpad, cli/tui.py CommandHistory, core/escalation.py TraceEventType ×3, core/memory_router.py datetime/uuid4 ×2). Fixed 33 F841 unused vars (5 in approval_gate Rule 17, 7 in adapters, 4 in serve.py, plus 17 more discovered during verification). F821: 25→21, F811: 8→0, F841: 81→48. **Note**: original chat report claimed "21 F841 fixed" — actual was 33 (Rule 19 violation, landmine L10). |
+| 47 | E402 + missing gateways/__init__.py + flagged unused imports | 1167 | Fixed E402 in web/server.py (7 errors) + web/middleware/auth_middleware.py (6 errors) by moving logging.getLogger() after imports. Created gateways/__init__.py (empty). Removed 13 unused imports (JSONResponse, AuthenticationError, asyncio ×2, typing.Any ×2, + 7 more discovered during verification). E402: 35→22, F401: 260→247. Mypy on 4 in-scope files: 53→44 (9 improvement). |
 
 ---
 
@@ -531,6 +614,8 @@ Six patterns account for ~90% of the mistakes in the CHANGELOG.
 5. **Tagging with a red test suite is forbidden.** The full test suite MUST pass (green) before tagging. If the test suite is red, STOP and fix it. Do not tag and promise to fix later. This is the root cause of Prompt 37.1 — Prompt 37 tagged with 69 test failures.
 
 6. **Marking gates passed based on intention rather than execution.** When a plan has steps and gates, the gate verifies the step's output. Marking a gate PASSED before its producing step is complete — or marking it PASSED without pasting literal output — is the same as not running the gate. Prompt-37 was this (Gate 5 tagged with 69 failures). Prompt-37.6 was this (Gate 3 marked PASSED with no output, Gate 5/6 marked SKIPPED without being skipped per plan, 8 tests marked `@pytest.mark.skip` because mocking was hard). The fix is Rule 19: execute in order, paste literal output, do not skip without plan authority.
+
+7. **Count assertions without measurement (recurs across prompts 39-47).** The prompt-46 chat report claimed "F841: 81 → 55 (21 critical errors fixed)" but the actual post-prompt-46 count was 48 (33 fixed). The prompt-45 chat report's "33 new tests" was accurate, but the pattern recurs: Devin sometimes asserts lint/test counts from memory or prior-prompt baselines instead of measuring. Rule 19 requires literal evidence — always paste the `Select-Object -Last 3` output of `ruff check . --select F841` (or equivalent) as proof of the count. The 2026-06-20 full repo scan caught this by re-running all tools against the actual repo state.
 
 ---
 

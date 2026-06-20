@@ -8580,3 +8580,62 @@ Output: (pending â€” tag not yet pushed)
 - Gate 5: E402/F401 counts - E402 22, F401 247
 - Gate 6: Mypy on 4 files - 44 errors (improvement from 53)
 - Gate 7: Plan 44 wiring intact - input_sanitiser present in both files
+
+## 2026-06-20 11:30 � Plan 48 Step 3
+
+**What was done**: Documented all CVE-bearing packages from Step 0.5 pip-audit baseline. Plan 48 does not fix any CVEs - all fixes are deferred to Plan 56 (dependency updates + diskcache migration).
+
+**CVE-bearing packages (55 CVEs across 14 packages)**:
+- aiohttp 3.13.3: 21 CVEs, fix 3.13.4/3.14.0/3.14.1 (transitive)
+- chromadb 1.5.0: 1 CVE, no fix listed (transitive)
+- cryptography 48.0.0: 1 CVE, fix 48.0.1 (transitive)
+- diskcache 5.6.3: 1 CVE (CVE-2025-69872), no fix available (transitive via llama-cpp-python)
+- idna 3.11: 1 CVE, fix 3.15 (transitive)
+- pillow 11.3.0: 6 CVEs, fix 12.1.1/12.2.0 (transitive)
+- pygments 2.19.2: 1 CVE, fix 2.20.0 (transitive)
+- pypdf 6.13.0: 1 CVE, fix 6.13.3 (transitive)
+- pytest 9.0.2: 1 CVE, fix 9.0.3 (direct - in requirements.txt)
+- python-dotenv 1.2.1: 1 CVE, fix 1.2.2 (transitive)
+- python-multipart 0.0.22: 5 CVEs, fix 0.0.26/0.0.27/0.0.30/0.0.31 (transitive)
+- setuptools 65.5.0: 4 CVEs, fix 65.5.1/78.1.1/70.0.0 (transitive)
+- starlette 0.52.1: 5 CVEs, fix 1.0.1/1.1.0/1.3.0/1.3.1 (transitive)
+- urllib3 2.6.3: 3 CVEs, fix 2.7.0 (transitive)
+**diskcache note**: diskcache 5.6.3 has CVE-2025-69872 with no fix available. It is a transitive dependency via llama-cpp-python. Not directly used in Sovereign codebase. Plan 56 will evaluate migration.
+
+**Files Modified**: None (documentation only)
+
+**Testing Results**: pip-audit count unchanged at 55 CVEs in 14 packages (as expected - Plan 48 does not fix CVEs)
+## 2026-06-20 11:30 — Plan 48 Step 3
+
+**What was done**: Documented all CVE-bearing packages from Step 0.5 pip-audit baseline. Plan 48 does not fix any CVEs - all fixes are deferred to Plan 56 (dependency updates + diskcache migration).
+
+**CVE-bearing packages (55 CVEs across 14 packages)**:
+- aiohttp 3.13.3: 21 CVEs, fix 3.13.4/3.14.0/3.14.1 (transitive)
+- chromadb 1.5.0: 1 CVE, no fix listed (transitive)
+- cryptography 48.0.0: 1 CVE, fix 48.0.1 (transitive)
+- diskcache 5.6.3: 1 CVE (CVE-2025-69872), no fix available (transitive via llama-cpp-python)
+- idna 3.11: 1 CVE, fix 3.15 (transitive)
+- pillow 11.3.0: 6 CVEs, fix 12.1.1/12.2.0 (transitive)
+- pygments 2.19.2: 1 CVE, fix 2.20.0 (transitive)
+- pypdf 6.13.0: 1 CVE, fix 6.13.3 (transitive)
+- pytest 9.0.2: 1 CVE, fix 9.0.3 (direct - in requirements.txt)
+- python-dotenv 1.2.1: 1 CVE, fix 1.2.2 (transitive)
+- python-multipart 0.0.22: 5 CVEs, fix 0.0.26/0.0.27/0.0.30/0.0.31 (transitive)
+- setuptools 65.5.0: 4 CVEs, fix 65.5.1/78.1.1/70.0.0 (transitive)
+- starlette 0.52.1: 5 CVEs, fix 1.0.1/1.1.0/1.3.0/1.3.1 (transitive)
+- urllib3 2.6.3: 3 CVEs, fix 2.7.0 (transitive)
+
+**diskcache note**: diskcache 5.6.3 has CVE-2025-69872 with no fix available. It is a transitive dependency via llama-cpp-python. Not directly used in Sovereign codebase. Plan 56 will evaluate migration.
+
+**Files Modified**: None (documentation only)
+
+**What failed**: None
+
+**Testing Results**: pip-audit count unchanged at 55 CVEs in 14 packages (as expected - Plan 48 does not fix CVEs)
+
+**Verification Gate Output**:
+```
+pip-audit
+Found 55 known vulnerabilities in 14 packages
+[full output matches Step 0.5 baseline]
+```
