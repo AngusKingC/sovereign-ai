@@ -5,7 +5,7 @@ Single responsibility: Manage approval requests, scopes, and state transitions
 for actions requiring human authorization.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Literal, Optional
 from uuid import UUID, uuid4
@@ -62,12 +62,12 @@ class ApprovalRequest(BaseModel):
     
     # Status
     status: Literal["pending", "approved", "denied", "expired"] = Field(default="pending", description="Request status")
-    approved_by: Optional[str] = Field(None, description="Who approved (user ID)")
-    approved_at: Optional[datetime] = Field(None, description="When approval was granted")
-    denied_reason: Optional[str] = Field(None, description="Reason for denial")
+    approved_by: Optional[str] = Field(default=None, description="Who approved (user ID)")
+    approved_at: Optional[datetime] = Field(default=None, description="When approval was granted")
+    denied_reason: Optional[str] = Field(default=None, description="Reason for denial")
     
     # Scope matching
-    matched_scope_id: Optional[str] = Field(None, description="If auto-approved by scope")
+    matched_scope_id: Optional[str] = Field(default=None, description="If auto-approved by scope")
 
 
 class ApprovalResponse(BaseModel):
@@ -79,14 +79,14 @@ class ApprovalResponse(BaseModel):
     
     # Decision
     approved: bool = Field(..., description="Whether the request was approved")
-    decision_reason: Optional[str] = Field(None, description="Reason for decision")
+    decision_reason: Optional[str] = Field(default=None, description="Reason for decision")
     
     # Metadata
     approved_by: str = Field(..., description="User ID who made the decision")
     approved_at: datetime = Field(default_factory=datetime.utcnow, description="When decision was made")
     
     # Scope reference
-    scope_id: Optional[str] = Field(None, description="If approved by scope, scope ID")
+    scope_id: Optional[str] = Field(default=None, description="If approved by scope, scope ID")
 
 
 class ApprovalScope(BaseModel):
@@ -101,8 +101,8 @@ class ApprovalScope(BaseModel):
     scope_pattern: str = Field(..., description="Pattern matching rule")
     
     # Limits
-    size_limit_mb: Optional[int] = Field(None, ge=0, description="Max size in MB")
-    time_limit_seconds: Optional[int] = Field(None, ge=0, description="Max duration in seconds")
+    size_limit_mb: Optional[int] = Field(default=None, ge=0, description="Max size in MB")
+    time_limit_seconds: Optional[int] = Field(default=None, ge=0, description="Max duration in seconds")
     
     # Timing
     granted_at: datetime = Field(default_factory=datetime.utcnow, description="When scope was granted")
@@ -111,8 +111,8 @@ class ApprovalScope(BaseModel):
     # Metadata
     granted_by: str = Field(..., description="User who granted the scope")
     is_active: bool = Field(default=True, description="Whether scope is currently active")
-    revoked_at: Optional[datetime] = Field(None, description="When scope was revoked")
-    revoked_by: Optional[str] = Field(None, description="User who revoked the scope")
+    revoked_at: Optional[datetime] = Field(default=None, description="When scope was revoked")
+    revoked_by: Optional[str] = Field(default=None, description="User who revoked the scope")
 
 
 class ApprovalGate:
@@ -226,12 +226,12 @@ class ApprovalGate:
                 await self.emitter.emit(TraceEvent(
                     event_id=uuid4(),
                     timestamp=datetime.utcnow(),
-                    layer="L1",
+                    level=TraceLevel.WARNING,
                     component=TraceComponent.ORCHESTRATOR,
                     event_type=TraceEventType.OPERATION_ERROR,
-                    payload={"error": str(e)},
+                    message=f"Failed to initialize approval tables: {str(e)}",
+                    data={"error": str(e)},
                     duration_ms=0,
-                    success=False,
                 ))
             except Exception as emit_error:
                 # Cleanup path — trace emit failure should not crash table initialization
