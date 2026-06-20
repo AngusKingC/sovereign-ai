@@ -6,6 +6,7 @@ using asyncpg, following the Layer 0 memory substrate pattern.
 """
 
 import json
+import re
 import time
 from typing import Any
 
@@ -22,6 +23,8 @@ from core.observability import (
     MemoryTraceEmitter,
 )
 
+_TABLE_NAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]{0,62}$")
+
 
 class PostgresBackend(MemoryBackend):
     """PostgreSQL backend for structured data storage."""
@@ -35,6 +38,11 @@ class PostgresBackend(MemoryBackend):
         """Initialize the PostgreSQL backend with connection details."""
         self.dsn = dsn
         self.table_name = table_name
+        if not _TABLE_NAME_PATTERN.match(self.table_name):
+            raise ValueError(
+                f"Invalid table_name: {self.table_name!r}. "
+                "Must match ^[a-zA-Z_][a-zA-Z0-9_]{0,62}$ (SQL identifier rules)."
+            )
         self.pool: asyncpg.Pool | None = None
         self._emitter = emitter or MemoryTraceEmitter()
 
@@ -124,7 +132,7 @@ class PostgresBackend(MemoryBackend):
                     WHERE task_id = $1
                     ORDER BY created_at DESC
                     LIMIT 100
-                    """,
+                    """,  # nosec B608
                     str(task.task_id),
                 )
 
@@ -237,7 +245,7 @@ class PostgresBackend(MemoryBackend):
                     f"""
                     INSERT INTO {self.table_name} (task_id, content, metadata)
                     VALUES ($1, $2, $3)
-                    """,
+                    """,  # nosec B608
                     str(task_id) if task_id else None,
                     json.dumps(content),
                     json.dumps(metadata),

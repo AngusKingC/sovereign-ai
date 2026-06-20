@@ -206,5 +206,5 @@ if __name__ == "__main__":
     import uvicorn
     
     web_gui = get_web_gui()
-    uvicorn.run(web_gui.get_app(), host="0.0.0.0", port=8000)
+    uvicorn.run(web_gui.get_app(), host="0.0.0.0", port=8000)  # nosec B104 — reference/demo file, not production code
 

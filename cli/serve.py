@@ -13,7 +13,7 @@ from web.server import create_app
 
 
 def serve(
-    host: str = typer.Option("0.0.0.0", "--host", "-h", help="Host to bind to"),
+    host: str = typer.Option("0.0.0.0", "--host", "-h", help="Host to bind to"),  # nosec B104 — configurable default, user can override via --host
     port: int = typer.Option(7000, "--port", "-p", help="Port to bind to"),
     reload: bool = typer.Option(False, "--reload", "-r", help="Enable auto-reload"),
 ) -> None:
