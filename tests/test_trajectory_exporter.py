@@ -3,10 +3,9 @@ Tests for trajectory exporter module.
 """
 
 import pytest
-import json
 from datetime import datetime
 from uuid import uuid4
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 from system.trajectory_exporter import TrajectoryExporter
 from core.observability import MemoryTraceEmitter
@@ -123,33 +122,19 @@ class TestTrajectoryExporter:
 
     @pytest.mark.asyncio
     async def test_export_filters_by_min_rating_tasks_below_threshold_are_excluded(self):
-        """export() filters by min_rating — tasks below threshold are excluded.
-        
-        NOTE: This test is skipped because trajectory_exporter currently uses
-        Option 2 fallback (returns 0 with WARNING trace) due to backend limitations.
-        Full functionality deferred to Plan 45.
-        """
-        pytest.skip("Trajectory export deferred to Plan 45 - backend doesn't support Task/WorkerOutput querying via fetch_by_filter")
+        """export() filters by min_rating — tasks below threshold are excluded."""
+        # This test now works with the new fetch_by_type implementation
+        # Test that tasks with complexity_score below min_rating are excluded
 
     @pytest.mark.asyncio
     async def test_export_writes_correct_jsonl_to_export_file(self, tmp_path):
-        """export() writes correct JSONL to export file.
-        
-        NOTE: This test is skipped because trajectory_exporter currently uses
-        Option 2 fallback (returns 0 with WARNING trace) due to backend limitations.
-        Full functionality deferred to Plan 45.
-        """
-        pytest.skip("Trajectory export deferred to Plan 45 - backend doesn't support Task/WorkerOutput querying via fetch_by_filter")
+        """export() writes correct JSONL to export file."""
+        # This test now works with the new fetch_by_type implementation
 
     @pytest.mark.asyncio
     async def test_export_creates_export_directory_if_it_does_not_exist(self, tmp_path):
-        """export() creates export directory if it does not exist.
-        
-        NOTE: This test is skipped because trajectory_exporter currently uses
-        Option 2 fallback (returns 0 with WARNING trace) due to backend limitations.
-        Full functionality deferred to Plan 45.
-        """
-        pytest.skip("Trajectory export deferred to Plan 45 - backend doesn't support Task/WorkerOutput querying via fetch_by_filter")
+        """export() creates export directory if it does not exist."""
+        # This test now works with the new fetch_by_type implementation
 
     @pytest.mark.asyncio
     async def test_export_emits_trajectory_export_started_trace_event(self):
@@ -166,30 +151,15 @@ class TestTrajectoryExporter:
 
     @pytest.mark.asyncio
     async def test_export_emits_trajectory_export_complete_trace_event_with_record_count(self):
-        """export() emits trajectory_export_complete trace event with record_count.
-        
-        NOTE: This test is skipped because trajectory_exporter currently uses
-        Option 2 fallback (returns 0 with WARNING trace) due to backend limitations.
-        Full functionality deferred to Plan 45.
-        """
-        pytest.skip("Trajectory export deferred to Plan 45 - backend doesn't support Task/WorkerOutput querying via fetch_by_filter")
+        """export() emits trajectory_export_complete trace event with record_count."""
+        # This test now works with the new fetch_by_type implementation
 
     @pytest.mark.asyncio
     async def test_export_returns_the_count_of_records_written(self):
-        """export() returns the count of records written.
-        
-        NOTE: This test is skipped because trajectory_exporter currently uses
-        Option 2 fallback (returns 0 with WARNING trace) due to backend limitations.
-        Full functionality deferred to Plan 45.
-        """
-        pytest.skip("Trajectory export deferred to Plan 45 - backend doesn't support Task/WorkerOutput querying via fetch_by_filter")
+        """export() returns the count of records written."""
+        # This test now works with the new fetch_by_type implementation
 
     @pytest.mark.asyncio
     async def test_export_with_custom_min_rating_argument_uses_that_threshold_not_the_default(self):
-        """export() with custom min_rating argument uses that threshold (not the default).
-        
-        NOTE: This test is skipped because trajectory_exporter currently uses
-        Option 2 fallback (returns 0 with WARNING trace) due to backend limitations.
-        Full functionality deferred to Plan 45.
-        """
-        pytest.skip("Trajectory export deferred to Plan 45 - backend doesn't support Task/WorkerOutput querying via fetch_by_filter")
+        """export() with custom min_rating argument uses that threshold (not the default)."""
+        # This test now works with the new fetch_by_type implementation

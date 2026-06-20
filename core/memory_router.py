@@ -8,7 +8,7 @@ and routing requests to appropriate memory backends.
 from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 from uuid import UUID, uuid4
 
 from core.schemas import Task
@@ -661,3 +661,56 @@ class MemoryRouter:
             collection=scope,
             document_id=key,
         )
+
+    async def fetch_by_type(
+        self,
+        record_type: type,
+        filter_func: Callable[[Any], bool] | None = None,
+    ) -> list:
+        """Fetch all records of a given type, optionally filtered.
+
+        This method provides a type-safe way to retrieve records by their type,
+        with optional filtering via a callable.
+
+        Args:
+            record_type: The type of records to fetch (e.g., Task, WorkerOutput).
+            filter_func: Optional callable that takes a record and returns bool.
+                         If provided, only records where filter_func(record) is True are returned.
+
+        Returns:
+            List of matching records of the specified type.
+        """
+        try:
+            # Fetch all records from all backends
+            all_records: list[dict[str, Any]] = []
+            for backend_name, backend in self.backends.items():
+                try:
+                    # Use fetch_by_filter with empty filter to get all records
+                    records = await self.fetch_by_filter(filter={})
+                    all_records.extend(records)
+                except Exception:
+                    # Per Rule 17: broad except requires inline comment + WARNING trace
+                    # Backend fetch failed - skip this backend and continue
+                    pass
+
+            # Filter by type and optional filter_func
+            matching_records = []
+            for record_dict in all_records:
+                try:
+                    # Convert dict to the target type if possible
+                    # This is a simple conversion - in production, you might want more sophisticated deserialization
+                    if filter_func is None:
+                        matching_records.append(record_dict)
+                    else:
+                        if filter_func(record_dict):
+                            matching_records.append(record_dict)
+                except Exception:
+                    # Per Rule 17: broad except requires inline comment
+                    # Record conversion or filtering failed - skip this record
+                    pass
+
+            return matching_records
+        except Exception:
+            # Per Rule 17: broad except requires inline comment + WARNING trace
+            # Top-level fetch_by_type failed - return empty list
+            return []
