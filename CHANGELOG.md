@@ -8688,3 +8688,86 @@ Gate 5: pytest - 1167 passed, 55 skipped
 Gate 6: YAML OK
 Gate 7: Plan 44 wiring - True
 Gate 8: Plan 46 F841 fix + Plan 47 E402 fix - True
+## 2026-06-20 21:53 — Plan 49: Fix ApprovalGate schema Optional fields + TraceEvent kwargs
+
+**Implementation**: Fixed pydantic Field(None, ...) to Field(default=None, ...) in ApprovalGate schemas and corrected TraceEvent kwargs
+
+**Step 0 - Baseline Verification**:
+- HEAD commit: 09706c1a9f51c9091bbc9cc70af2cb70b0b7a314 (descendant of prompt-48.1)
+- prompt-48.1 tag exists on origin: d15e2e86e6bc8c7b4eec38e346dbd671558e0e56
+- Drift check: core/approval_gate.py unchanged since prompt-48.1 (no diff output)
+- mypy core/approval_gate.py baseline: 9 errors (7 in approval_gate.py + 2 in task_state_machine.py)
+  - Error breakdown: 3 Missing named argument for scope_id, 1 for decision_reason, 3 Unexpected keyword for TraceEvent, 2 unrelated task_state_machine errors
+- Test baseline: 1167 passed, 55 skipped, 0 failed, 0 warnings (matches expected)
+- Code inspection confirmed Field(None, ...) pattern present in all 3 schema classes
+- TraceEvent at line 226 uses deprecated kwargs (layer, payload, success)
+
+**Note**: Expected ~119 errors per plan, but actual baseline was 9 because mypy core/approval_gate.py only checks that file and direct imports, not callers in skills/. Per plan instruction L13, used actual count as baseline.
+
+**Step 1 - Fix ApprovalRequest Optional fields (4 edits)**:
+- Line 65: approved_by: Field(None, ...) ? Field(default=None, ...)
+- Line 66: approved_at: Field(None, ...) ? Field(default=None, ...)
+- Line 67: denied_reason: Field(None, ...) ? Field(default=None, ...)
+- Line 70: matched_scope_id: Field(None, ...) ? Field(default=None, ...)
+- Verification: mypy shows 0 Missing named argument errors for ApprovalRequest
+
+**Step 2 - Fix ApprovalResponse Optional fields (2 edits)**:
+- Line 82: decision_reason: Field(None, ...) ? Field(default=None, ...)
+- Line 89: scope_id: Field(None, ...) ? Field(default=None, ...)
+- Verification: mypy shows 0 Missing named argument errors for ApprovalResponse
+
+**Step 3 - Fix ApprovalScope Optional fields (4 edits)**:
+- Line 104: size_limit_mb: Field(None, ...) ? Field(default=None, ...)
+- Line 105: time_limit_seconds: Field(None, ...) ? Field(default=None, ...)
+- Line 114: revoked_at: Field(None, ...) ? Field(default=None, ...)
+- Line 115: revoked_by: Field(None, ...) ? Field(default=None, ...)
+- Verification: mypy shows 0 Missing named argument errors for ApprovalScope
+
+**Step 4 - Fix TraceEvent kwargs at line 226**:
+- Changed layer="L1" ? level=TraceLevel.WARNING (error path in except block)
+- Changed payload={"error": str(e)} ? data={"error": str(e)}
+- Removed success=False (no equivalent field)
+- Added required message field: message=f"Failed to initialize approval tables: {str(e)}"
+- Verification: mypy shows 0 Unexpected keyword argument errors for TraceEvent
+- Verification: ruff check core/approval_gate.py shows 0 errors
+- Verification: pytest tests/test_approval_gate.py -v: 21 passed in 0.29s
+
+**Step 5 - Verify total mypy error reduction**:
+- mypy core/approval_gate.py --ignore-missing-imports: 2 errors (both in task_state_machine.py, unrelated to approval_gate)
+- Baseline was 9 errors, current is 2 errors: reduction of 7 errors from approval_gate.py
+- Remaining 2 errors are in task_state_machine.py (deferred to later plans per plan scope)
+- Full test suite: python -m pytest tests/ -q --tb=no: 1167 passed, 55 skipped (unchanged from baseline)
+
+**Verification Gates**:
+1. mypy Missing named argument count: 0 (PASSED)
+2. mypy TraceEvent Unexpected keyword count: 0 (PASSED)
+3. mypy total error count: 2 (baseline 9, reduction 7) (PASSED)
+4. ruff check core/approval_gate.py: 0 errors (PASSED)
+5. pytest tests/test_approval_gate.py -v: 21 passed (PASSED)
+6. pytest tests/ -q --tb=no: 1167 passed, 55 skipped (PASSED)
+7. Manual smoke test: ApprovalRequest OK: True (PASSED)
+
+**Additional Fix**:
+- Removed unused datetime.timedelta import (ruff F401)
+
+**Files Modified**:
+- core/approval_gate.py: 10 Field(None?default=None) edits + 1 TraceEvent kwargs fix + 1 import cleanup = 12 changes total (14 insertions, 14 deletions)
+
+**Testing Results**:
+- Before: 1167 passed, 55 skipped
+- After: 1167 passed, 55 skipped (no regressions)
+- Command: python -m pytest tests/ -v
+- Test Duration: ~91 seconds
+
+**Rationale**:
+- pydantic v2's mypy plugin requires default=None as a keyword argument (not positional None) to infer Optional fields in type-checking mode
+- Field(None, description=...) produces "Missing named argument" errors at caller sites
+- TraceEvent schema requires level, data, message fields (not layer, payload, success)
+- These are schema-level fixes that eliminate mypy errors without requiring caller changes
+
+**Out of Scope (deferred to later plans)**:
+- Old-API caller migration (14 files in skills/ using request_approval(action=, context=)) ? Plan 49b
+- MockMemoryRouter/MockStateMachine inheritance errors (32 errors, test-only) ? Plan 50
+- Adapter type fixes ? Plan 51
+- F4 wiring ? Plan 52
+- B108 in tests ? Plan 53
