@@ -1,12 +1,12 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: post prompt-51
+**Last updated**: post prompt-50
 
 **Test baseline**: 1166 passed, 55 skipped, 1 pre-existing failure (calendar_skill — hardcoded test date, fix in Plan 53), 0 warnings
 
-**Static analysis baseline (post-prompt-51)**:
+**Static analysis baseline (post-prompt-50)**:
 - Ruff: 358 errors
-- Mypy: 282 errors (309 - 27 fixed in prompt-51)
+- Mypy: 309 errors
 - Bandit: 22 medium+ (B108 in tests, deferred to Plan 53)
 - pip-audit: 55 CVEs across 14 packages (deferred to Plan 56)
 - Vulture: 47 high-confidence findings (deferred to Plan 57)
@@ -82,7 +82,31 @@ When a subsystem is wired into a runtime entry point, remove it from this table.
 
 ---
 
-## Closing steps (mandatory, every prompt)
+## Opening + Closing steps (mandatory — GLM copies these into every plan)
+
+These are the template steps GLM includes in every plan file. Devin executes them from the plan, not from this handoff.
+
+### Opening steps (GLM puts these at the start of every plan's Step 0)
+
+1. **Start transcript** (captures all terminal I/O for the execution log):
+   ```powershell
+   $logPath = "logs\execution-log-prompt-{N}.md"
+   Start-Transcript -Path $logPath -Force
+   ```
+   If you open additional terminals, run `Start-Transcript -Path logs\execution-log-prompt-{N}-terminal{M}.md -Force` in each.
+
+2. **Verify previous prompt completed** (prevents starting on stale state):
+   ```powershell
+   git ls-remote --tags origin | findstr prompt-{N-1}
+   ```
+   If empty, STOP — previous prompt's tag wasn't pushed. Fix that first.
+
+3. **Pull latest**:
+   ```powershell
+   git pull origin master
+   ```
+
+### Closing steps (GLM puts these at the end of every plan)
 
 1. Run full test suite: `python -m pytest tests/ -q --tb=short`. Confirm zero new failures.
 2. `ruff check <files_touched>` — zero errors.
@@ -122,7 +146,7 @@ When a subsystem is wired into a runtime entry point, remove it from this table.
 10. `git add CHANGELOG.md SOVEREIGN_AI_HANDOFF.md && git commit -m "docs: prompt-{N} changelog and handoff update"`
 11. `git push origin master && git push origin prompt-{N}`
 
-### Plan completion checklist (mandatory — paste ALL before reporting done)
+### Plan completion checklist (GLM puts this at the end of every plan — Devin must paste ALL before reporting done)
 
 ```
 1. C1 test suite: <paste last 3 lines of pytest>
@@ -192,7 +216,6 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 | 49 | ApprovalGate schema + TraceEvent kwargs | 1167 | 10 Field(default=None) + 3 TraceEvent kwargs. ~108 mypy eliminated. |
 | 49b | Migrate old-API callers | 1166 | 17 call sites across 8 skills. 32 mypy eliminated. |
 | 50 | MockMemoryRouter/MockStateMachine inheritance | 1166 | 122 mypy eliminated across 8 test files. |
-| 51 | Exception shadowing + float→int + DI violations | 1166 | 13 shadowing + 14 float→int + 3 DI fixes. 27 mypy eliminated. |
 
 ---
 
@@ -217,6 +240,7 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 - **L19**: GLM must NOT run mypy/bandit/pytest/pip-audit/vulture on clone. Counts come from execution log.
 - **L20**: Line numbers in plans verified against clone SHA. Note the SHA in the plan.
 - **L21**: Plans must use PowerShell commands (`Select-String`, `Measure-Object`), not `grep`/`sed`/`awk`/`cut`/`wc`.
+- **L22 (recurring mistakes)**: If GLM notices Devin repeating the same mistake or inefficient workflow pattern across multiple prompts (e.g. running `mypy .` instead of file-scoped, skipping tag-push, using Unix commands on Windows), GLM should add a step to the next plan instructing Devin to add the lesson to its `global_rules.md` file. Example plan step: "Add to `global_rules.md`: 'Always use file-scoped mypy (e.g. `mypy file.py`), never `mypy .` — it takes 2-5 minutes and stalls the terminal.' If `global_rules.md` doesn't exist or can't be edited, skip and document the skip in CHANGELOG." This ensures Devin's behavioral guardrails stay current with recurring issues GLM observes from the execution logs.
 
 **Verification cadence (L18)**:
 - Every plan: ruff (file-scoped) + mypy (file-scoped) + pytest.
@@ -246,6 +270,10 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ## Next 5 prompts
 
+### Plan 51 — Adapter type fixes + DI violations
+- **Priority**: P2 | **Effort**: S | **Risk**: LOW
+- Fix 13 exception shadowing + 14 float→int + gemini.py emit_trace→self._emitter.emit + handlers.py dead import + ConsoleTraceEmitter→MemoryTraceEmitter.
+
 ### Plan 52 — F4 wiring fix (P1)
 - Wire cognition-loop subsystems into serve request path. Remove `_` prefixes from Plan 46. Unlock self-improvement.
 
@@ -257,6 +285,3 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ### Plan 55 — Full checkpoint scan + Marine stack start (P2)
 - 5-plan milestone: full scan (ruff+mypy.+bandit+pip-audit+vulture). Then start marine stack as SKILL.md files.
-
-### Plan 56 — Dependency CVE remediation (P2)
-- Fix 55 CVEs across 14 packages via pip-audit.
