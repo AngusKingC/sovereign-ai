@@ -419,6 +419,8 @@ Update this list whenever a new pattern is identified. Each entry should referen
 - **Dependency-touching plans** (modifying `requirements.txt`): always run pip-audit, regardless of cadence.
 - **Docs-only plans** (no `.py` changes): git tag check + pytest count only. Skip ruff/mypy/bandit/pip-audit/vulture entirely.
 
+**GLM clone vs Devin environment (L19, prompt-51)**: GLM's Linux clone has different package versions, missing adapter SDKs, and different Python paths than Devin's Windows env. Running mypy/bandit/pytest on the GLM clone produces DIFFERENT counts than Devin's env — which causes baseline mismatches in every plan. **Rule: GLM must NOT run mypy, bandit, pip-audit, vulture, or pytest on the clone for plan drafting purposes.** The clone is for READING CODE only (checking file contents, verifying function signatures, understanding architecture). All tool counts in plans must come from the **execution log** that Devin produces — the execution log has the actual counts from Devin's Windows env. Plans say "capture actual count" (L13) — Devin captures it, not GLM.
+
 ---
 
 ## Completed prompts (detail)
