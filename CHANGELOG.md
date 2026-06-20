@@ -8371,3 +8371,50 @@ Output: (pending â€” tag not yet pushed)
 - Pre-execution count: 59 fixable blocks verified
 - Zero except Exception: pass without comment violations
 - Zero except Exception: return/continue without logging violations
+
+---
+
+## Prompt 44: Wire InputSanitiser into all external-input entry points
+
+**Implementation:** Architecture Rule 14 - InputSanitiser MUST be called on all externally-sourced content before it enters LLM context
+
+**Files Modified:**
+- core/orchestrator.py: Added InputSanitiser as constructor parameter, sanitise intent in submit_task()
+- core/handlers.py: Added InputSanitiser to QueryHandler constructor, sanitise query in execute()
+- web/server.py: Construct InputSanitiser in create_app(), sanitise intent in POST /api/tasks and WebSocket handlers
+- gateways/telegram/gateway.py: Added InputSanitiser to constructor, made extract_commands() async, sanitise inbound messages
+- skills/web_scraper/skill.py: Added InputSanitiser import, sanitise scraped content before return
+- cli/serve.py: Construct InputSanitiser and pass to Orchestrator
+- cli/tui.py: Construct InputSanitiser and pass to Orchestrator and register_default_handlers()
+- cli/rich_cli.py: Construct InputSanitiser and pass to Orchestrator and register_default_handlers()
+- tests/gateways/test_telegram_gateway.py: Updated test calls to extract_commands() to use await
+- tests/test_security.py: Added TestInputSanitiserWiring class with 7 integration tests
+
+**Defense-in-depth Strategy:**
+- Boundary sanitisation: HTTP/WebSocket (web/server.py), Telegram (gateways/telegram/gateway.py), Web Scraper (skills/web_scraper/skill.py)
+- Sink sanitisation: Orchestrator.submit_task() (core/orchestrator.py)
+- CLI/TUI sanitisation: QueryHandler.execute() (core/handlers.py)
+- Dependency injection: InputSanitiser passed through constructors to enable testing
+
+**Testing Results:**
+- Per-file tests: 66 passed (orchestrator, handlers, security, web_scraper)
+- Full test suite: 1134 passed, 61 skipped
+- Verification gates:
+  - Rule 14 audit: sanitise() calls found in all required files (5 locations)
+  - BLOCKED_PATTERNS verification: 10 entries, all strings
+  - Sanitiser wiring tests: 7 passed
+
+**Integration Tests Added (TestInputSanitiserWiring):**
+- test_orchestrator_submit_task_sanitises_intent
+- test_orchestrator_submit_task_emits_trace_on_sanitisation
+- test_query_handler_sanitises_query
+- test_telegram_extract_commands_sanitises_injection
+- test_telegram_extract_commands_emits_trace_on_sanitisation
+- test_clean_text_passes_through_unmodified
+- test_blocked_patterns_is_list_of_strings
+
+**Pre-existing Issues (Not Fixed in This Plan):**
+- Ruff: 66 pre-existing errors (unused imports, import ordering, undefined A2ARouter types)
+- These existed before Plan 44 and are logged for future housekeeping
+
+

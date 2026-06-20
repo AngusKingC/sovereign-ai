@@ -1,10 +1,12 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-20 — post prompt-43c, handoff amended by GLM session 5.
+**Last updated**: 2026-06-20 — post prompt-44, handoff amended by GLM session 6.
 
 **Broad-except audit status (Rule 17)**: core/ ✅ (29 patterns, prompt-41), system/ ✅ (103 patterns, prompt-42+42.1), skills/ ✅ (219 patterns, prompt-43a+43b), web/ ✅ (10 patterns, prompt-43c), adapters/ ✅ (43 patterns, prompt-43c), gateways/ ✅ (5 patterns, prompt-43c). **All directories now fully compliant**.
 
-**Test baseline**: 1127 passed, 61 skipped, 0 failed, 0 warnings (measured with `python -m pytest tests/ -q --tb=no`).
+**InputSanitiser wiring status (Rule 14)**: ✅ Fully wired (prompt-44). Sanitisation at all external-input entry points: HTTP/WebSocket (web/server.py), Telegram (gateways/telegram/gateway.py), Web Scraper (skills/web_scraper/skill.py), Orchestrator.submit_task() (defense-in-depth), QueryHandler.execute() (CLI/TUI).
+
+**Test baseline**: 1134 passed, 61 skipped, 0 failed, 0 warnings (measured with `python -m pytest tests/ -q --tb=no`).
 
 **Static analysis baseline**: 365 ruff errors, 116 mypy errors. CI will fail on first run. This is the worklist, not a problem.
 
@@ -136,7 +138,6 @@ These subsystems exist with passing tests but are never constructed from any run
 | VerbosityManager | `core/verbosity.py` | Same |
 | TrajectoryExporter | `system/trajectory_exporter.py` | Stubbed with Plan 45 deferral (prompt-37.5). Backend doesn't support `fetch(Type, filter_func=...)` pattern. |
 | MemoryCompactor | `core/memory_compactor.py` | Same |
-| InputSanitiser | `core/input_sanitiser.py` | Built but never invoked from any external-input code path. Clean Architecture Rule 13 violation. |
 | MCPServer | `skills/mcp_server.py` | Built but never started |
 | MCPAdapter | `adapters/mcp_adapter.py` | Built but never constructed |
 
@@ -368,18 +369,19 @@ Update this list whenever a new pattern is identified. Each entry should referen
 - **Verification**: `Select-String -Path web\,adapters\,gateways\ -Pattern "except Exception" -Recurse` returns zero hits (or only hits with inline comments and trace events).
 - **Result**: Fixed 59 broad-except patterns across 15 files: 44 pass, 14 return-fallback, 1 continue. All now have WARNING trace/logging before pass/return/continue. Followed each file's existing logging convention (logging.warning() for sync contexts, await self._emitter.emit(TraceEvent(...)) for async contexts, print() for sync method). Fixed one missed return-fallback in adapters/ollama.py health_check during verification. Test suite unchanged: 1127 passed, 61 skipped, 0 failed, 0 warnings.
 
+### Plan 44 — InputSanitiser wiring — COMPLETED
+- **Priority**: P1
+- **Effort**: M
+- **Why**: Architecture Rule 14 violation: InputSanitiser is built but never invoked from any external-input code path (web scraper, Telegram inbound, user task input). This is a security vulnerability.
+- **Scope**: Wire InputSanitiser into all external-input entry points: HTTP/WebSocket (web/server.py), Telegram (gateways/telegram/gateway.py), Web Scraper (skills/web_scraper/skill.py), Orchestrator.submit_task() (defense-in-depth), QueryHandler.execute() (CLI/TUI). Also updated CLI entry points (cli/serve.py, cli/tui.py, cli/rich_cli.py) to construct and pass InputSanitiser.
+- **Verification**: All entry points call InputSanitiser before content enters LLM context. Integration tests added to verify wiring (7 tests in TestInputSanitiserWiring).
+- **Result**: InputSanitiser wired into 5 external-input entry points. Defense-in-depth strategy: boundary sanitisation (HTTP/WebSocket, Telegram, Web Scraper) + sink sanitisation (Orchestrator.submit_task()) + CLI/TUI sanitisation (QueryHandler.execute()). Dependency injection pattern used throughout. Test suite: 1134 passed, 61 skipped, 0 failed, 0 warnings.
+
 ---
 
 ## Next 5 prompts
 
 Ordered. Each is one plan. Do not start Plan N+1 until Plan N's verification gates pass.
-
-### Plan 44 — InputSanitiser wiring
-- **Priority**: P1
-- **Effort**: M
-- **Why**: Architecture Rule 14 violation: InputSanitiser is built but never invoked from any external-input code path (web scraper, Telegram inbound, user task input). This is a security vulnerability.
-- **Scope**: Wire InputSanitiser into all external-input entry points: `api/main.py` (POST /api/tasks), `gateways/telegram/gateway.py` (inbound messages), `cli/main.py` (user task input).
-- **Verification**: All three entry points call InputSanitiser before content enters LLM context.
 
 ### Plan 45 — InputSanitiser redesign + trajectory_exporter functional redesign
 - **Priority**: P2
@@ -402,11 +404,25 @@ Ordered. Each is one plan. Do not start Plan N+1 until Plan N's verification gat
 - **Scope**: Run `mypy . --ignore-missing-imports` and fix all errors. Add return type annotations where missing (Rule 9). Ensure no fix breaks tests.
 - **Verification**: `mypy . --ignore-missing-imports` returns zero errors. Full test suite still passes.
 
+### Plan 48 — Fix F4: `cli/serve.py` constructs 14 subsystems but registers zero workers
+- **Priority**: P1
+- **Effort**: S
+- **Why**: `cli/serve.py` constructs `WorkerFactory` but never calls it; no `orchestrator.register_worker(...)` anywhere in the file. `submit_task()` calls `route_task()` which raises `WorkerNotFoundError("No workers registered")`. This breaks the web server's task submission endpoint.
+- **Scope**: After constructing `WorkerFactory` in `cli/serve.py`, call it to create a default OllamaWorker and register it with the orchestrator. Or skip the factory and register an OllamaWorker directly (simpler, matches what `cli/tui.py:279-280` does).
+- **Verification**: Start `jarvis serve`, hit `POST /api/tasks` with `{"intent": "test"}` — should return a real `task_id`, not `{"task_id": "", "status": "error"}`.
+
+### Plan 49 — Marine stack (weather, AIS, tidal, passage_planner, vhf_monitor, satellite_comms)
+- **Priority**: P2
+- **Effort**: L
+- **Why**: This is the moat — the domain-specific capability that differentiates Sovereign from generic AI assistants. Zero lines of code exist for marine features.
+- **Scope**: Implement marine stack as portable SKILL.md files installable into Claude Code, Cursor, Codex, and Sovereign. Start with weather and AIS as highest-value features.
+- **Verification**: SKILL.md files load and execute correctly in Sovereign. Integration tests pass for each marine skill.
+
 ---
 
-## After Plan 47 — Decision point
+## After Plan 49 — Decision point
 
-Once Plans 43c-47 land, the foundation is solid: all layers Rule 17 compliant, InputSanitiser wired and real, static analysis clean, CI passing. At that point, choose:
+Once Plans 45-49 land, the foundation is solid: InputSanitiser redesigned and robust, trajectory_exporter functional, static analysis clean, web server workers registered, marine stack started. At that point, choose:
 
 **Option A: Build the marine stack next.** This validates the moat. Ship as portable SKILL.md files (see Skills Ecosystem section) so the marine capability reaches users of Claude Code, Cursor, Codex, *and* Sovereign. Building 5 small skills (weather, marine_weather, AIS, tidal, passage_planner) would tell you whether LLM-driven passage planning is actually useful as a product.
 
