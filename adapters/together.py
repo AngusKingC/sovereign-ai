@@ -173,13 +173,13 @@ class TogetherAdapter(LLMAdapter):
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception as e:
+            except Exception as inner_e:
                 await self._emitter.emit(TraceEvent(
                     event_type=TraceEventType.ADAPTER_ERROR,
                     component=TraceComponent.ADAPTER,
                     message="Trace emission failed in Together adapter error handler",
                     level=TraceLevel.WARNING,
-                    data={"error": str(e)},
+                    data={"error": str(inner_e)},
                     duration_ms=0,
                 ))
                 pass  # Trace failure should not crash main path

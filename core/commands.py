@@ -70,8 +70,8 @@ class CommandHandler(ABC):
 
     def __init__(self) -> None:
         """Initialize the command handler with a default trace emitter."""
-        from core.observability import ConsoleTraceEmitter, TraceEmitter
-        self.emitter: TraceEmitter = ConsoleTraceEmitter()
+        from core.observability import MemoryTraceEmitter, TraceEmitter
+        self.emitter: TraceEmitter = MemoryTraceEmitter()
 
     @abstractmethod
     async def execute(self, command: Command) -> CommandResult:

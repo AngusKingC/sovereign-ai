@@ -18,7 +18,7 @@ from core.observability import (
     TraceEventType,
     TraceComponent,
     TraceLevel,
-    TraceEmitter, emit_trace,
+    TraceEmitter,
     TraceEvent,
 )
 from core.schemas import Message, MessageRole, Task, TaskPriority, TaskStatus

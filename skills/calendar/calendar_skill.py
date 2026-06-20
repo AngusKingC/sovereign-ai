@@ -54,7 +54,7 @@ class CalendarSkill:
         Raises:
             SkillExecutionError: If file not found or parse fails
         """
-        start_time = 0
+        start_time = 0.0
         try:
             import asyncio
             start_time = asyncio.get_event_loop().time()
@@ -211,7 +211,7 @@ class CalendarSkill:
         Raises:
             SkillExecutionError: On write failure or approval denial
         """
-        start_time = 0
+        start_time = 0.0
         try:
             import asyncio
             start_time = asyncio.get_event_loop().time()
@@ -401,7 +401,7 @@ class CalendarSkill:
         Raises:
             SkillExecutionError: On write failure or approval denial
         """
-        start_time = 0
+        start_time = 0.0
         try:
             import asyncio
             start_time = asyncio.get_event_loop().time()

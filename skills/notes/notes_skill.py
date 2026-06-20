@@ -56,7 +56,7 @@ class NotesSkill:
         Raises:
             SkillExecutionError: On storage failure or approval denial
         """
-        start_time = 0
+        start_time = 0.0
         try:
             import asyncio
             start_time = asyncio.get_event_loop().time()
@@ -207,7 +207,7 @@ class NotesSkill:
         Raises:
             SkillExecutionError: On storage failure
         """
-        start_time = 0
+        start_time = 0.0
         try:
             import asyncio
             start_time = asyncio.get_event_loop().time()
@@ -292,7 +292,7 @@ class NotesSkill:
         Raises:
             SkillExecutionError: On storage failure
         """
-        start_time = 0
+        start_time = 0.0
         try:
             import asyncio
             start_time = asyncio.get_event_loop().time()
@@ -377,7 +377,7 @@ class NotesSkill:
         Raises:
             SkillExecutionError: On storage failure or approval denial
         """
-        start_time = 0
+        start_time = 0.0
         try:
             import asyncio
             start_time = asyncio.get_event_loop().time()
@@ -554,7 +554,7 @@ class NotesSkill:
         Raises:
             SkillExecutionError: On storage failure or approval denial
         """
-        start_time = 0
+        start_time = 0.0
         try:
             import asyncio
             start_time = asyncio.get_event_loop().time()

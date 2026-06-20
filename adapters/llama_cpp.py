@@ -153,13 +153,13 @@ class LlamaCppAdapter(LLMAdapter):
                     error_type=type(e).__name__,
                     error_message=str(e),
                 ))
-            except Exception as e:
+            except Exception as inner_e:
                 await self.emitter.emit(TraceEvent(
                     event_type=TraceEventType.ADAPTER_ERROR,
                     component=TraceComponent.ADAPTER,
                     message="Trace emission failed in Llama.cpp adapter error handler",
                     level=TraceLevel.WARNING,
-                    data={"error": str(e)},
+                    data={"error": str(inner_e)},
                     duration_ms=0,
                 ))
                 pass  # Trace failure should not crash main path

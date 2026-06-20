@@ -17,7 +17,9 @@ from core.observability import (
     TraceEventType,
     TraceComponent,
     TraceLevel,
-    emit_trace,
+    TraceEvent,
+    TraceEmitter,
+    MemoryTraceEmitter,
 )
 
 if TYPE_CHECKING:
@@ -34,12 +36,14 @@ class GeminiAdapter(LLMAdapter):
         api_key: str,
         model_name: str = "gemini-3.5-flash",
         temperature: float = 0.1,
+        emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the Gemini adapter with API configuration."""
         self.api_key = api_key
         self._model_name = model_name
         self.temperature = temperature
         self._client: genai.Client | None = None
+        self._emitter = emitter or MemoryTraceEmitter()
 
     def _ensure_client(self) -> None:
         """Ensure Gemini client is initialized."""
@@ -75,7 +79,7 @@ class GeminiAdapter(LLMAdapter):
 
         try:
             # Emit adapter call start event
-            await emit_trace(
+            await self._emitter.emit(TraceEvent(
                 event_type=TraceEventType.ADAPTER_CALL,
                 component=TraceComponent.ADAPTER,
                 message="Gemini adapter generation started",
@@ -86,7 +90,7 @@ class GeminiAdapter(LLMAdapter):
                     "prompt_length": prompt_length,
                     "temperature": temperature or self.temperature,
                 },
-            )
+            ))
 
             self._ensure_client()
 
@@ -109,7 +113,7 @@ class GeminiAdapter(LLMAdapter):
             response_length = len(response.text)
 
             # Emit adapter response event
-            await emit_trace(
+            await self._emitter.emit(TraceEvent(
                 event_type=TraceEventType.ADAPTER_RESPONSE,
                 component=TraceComponent.ADAPTER,
                 message="Gemini adapter generation completed",
@@ -122,7 +126,7 @@ class GeminiAdapter(LLMAdapter):
                     "tokens_used": response.usage_metadata.total_token_count if response.usage_metadata else 0,
                 },
                 duration_ms=duration_ms,
-            )
+            ))
 
             return LLMResponse(
                 content=response.text,
@@ -135,7 +139,7 @@ class GeminiAdapter(LLMAdapter):
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             # Emit error event (wrapped to avoid crashing main path)
             try:
-                await emit_trace(
+                await self._emitter.emit(TraceEvent(
                     event_type=TraceEventType.ADAPTER_ERROR,
                     component=TraceComponent.ADAPTER,
                     message="Gemini adapter generation failed",
@@ -148,15 +152,15 @@ class GeminiAdapter(LLMAdapter):
                     duration_ms=duration_ms,
                     error_type=type(e).__name__,
                     error_message=str(e),
-                )
-            except Exception as e:
-                await emit_trace(
+                ))
+            except Exception as inner_e:
+                await self._emitter.emit(TraceEvent(
                     event_type=TraceEventType.ADAPTER_ERROR,
                     component=TraceComponent.ADAPTER,
                     message="Trace emission failed in Gemini adapter error handler",
                     level=TraceLevel.WARNING,
-                    data={"error": str(e)},
-                )
+                    data={"error": str(inner_e)},
+                ))
                 pass  # Trace failure should not crash main path
             raise RuntimeError(f"Gemini generation failed: {e}")
 

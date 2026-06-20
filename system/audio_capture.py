@@ -138,15 +138,15 @@ class AudioCapture:
                     duration_ms=duration_ms,
                 )
                 await self._emitter.emit(event)
-            except Exception as e:
+            except Exception as inner_e:
                 # Cleanup path: trace event emission failed, don't crash the application
                 # Per Rule 17: broad except requires inline comment + WARNING trace
                 await self._emitter.emit(TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.SYSTEM,
                     level=TraceLevel.WARNING,
-                    message=f"Trace emission failed: {type(e).__name__}: {e}",
-                    data={"exception_type": type(e).__name__, "exception_message": str(e)},
+                    message=f"Trace emission failed: {type(inner_e).__name__}: {inner_e}",
+                    data={"exception_type": type(inner_e).__name__, "exception_message": str(inner_e)},
                     duration_ms=0,
                 ))
 

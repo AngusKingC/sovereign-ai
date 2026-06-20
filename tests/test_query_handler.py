@@ -56,9 +56,7 @@ class TestQueryHandler:
         )
         
         # Mock emit_trace to avoid actual trace emission during test
-        with patch('core.handlers.emit_trace', new_callable=AsyncMock) as mock_trace, \
-             patch('core.observability.emit_trace', new_callable=AsyncMock):
-            mock_trace.return_value = None
+        with patch('core.observability.emit_trace', new_callable=AsyncMock):
             result = await handler.execute(command)
         
         assert result.success is True
@@ -178,8 +176,7 @@ class TestQueryHandler:
             )
         )
         
-        with patch('core.handlers.emit_trace', new_callable=AsyncMock), \
-             patch('core.observability.emit_trace', new_callable=AsyncMock):
+        with patch('core.observability.emit_trace', new_callable=AsyncMock):
             result = await handler.execute(command)
         
         assert result.success is True
@@ -209,8 +206,7 @@ class TestQueryHandler:
             )
         )
         
-        with patch('core.handlers.emit_trace', new_callable=AsyncMock), \
-             patch('core.observability.emit_trace', new_callable=AsyncMock):
+        with patch('core.observability.emit_trace', new_callable=AsyncMock):
             result = await handler.execute(command)
         
         assert result.success is True

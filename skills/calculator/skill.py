@@ -173,7 +173,7 @@ class CalculatorSkill:
 
         return self._eval_node(node.body)
 
-    def _eval_node(self, node: ast.AST) -> float | int:
+    def _eval_node(self, node: ast.AST) -> Any:
         """Recursively evaluate an AST node.
 
         Args:

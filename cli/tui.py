@@ -43,9 +43,8 @@ from core.observability import (
     TraceComponent,
     TraceLevel,
     TraceEmitter,
-    NullTraceEmitter,
     TraceEvent,
-    ConsoleTraceEmitter,
+    MemoryTraceEmitter,
 )
 from core.input_sanitiser import InputSanitiser
 from cli.adapter_factory import create_worker
@@ -226,7 +225,7 @@ class JarvisTUI(App):
     def __init__(self, emitter: TraceEmitter | None = None) -> None:
         """Initialize the TUI."""
         super().__init__()
-        self.emitter = emitter or ConsoleTraceEmitter()
+        self.emitter = emitter or MemoryTraceEmitter()
         self.session_id: Optional[str] = None
         self.working_directory = Path.cwd()
         
