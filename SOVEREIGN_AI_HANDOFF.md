@@ -366,6 +366,20 @@ The template enforces the same discipline structurally — verification gates ar
 10. `git add CHANGELOG.md SOVEREIGN_AI_HANDOFF.md && git commit -m "docs: prompt-{N} changelog and handoff update"`
 11. `git push origin master && git push origin prompt-{N}`
 
+### Plan completion checklist (mandatory — Devin must paste ALL before reporting done)
+
+Before reporting a plan as complete, Devin must paste the output of ALL 5 checks below. If any check fails or output is missing, the plan is NOT complete (Rule 21, L17). Do not report "done" until all 5 are pasted:
+
+```
+1. C1 test suite: <paste last 3 lines of python -m pytest tests/ -q --tb=no>
+2. C4 tag created: <paste output of git tag --list prompt-{N}>
+3. C5 file list: <paste output of git show prompt-{N} --stat>
+4. C10 pushed: <paste output of git push origin prompt-{N}>
+5. C11 tag on origin: <paste output of git ls-remote --tags origin | findstr prompt-{N}>
+```
+
+This checklist is the structural guarantee that closing steps were executed. It goes at the END of every plan file (after "For Claude review"), starting from Plan 52.
+
 **CHANGELOG append procedure** (PowerShell — simplified format, post-prompt-50):
 - CHANGELOG entries are now **SIMPLIFIED** (~10 lines per plan). See closing step 6 for the format. Do NOT write verbose narratives to the CHANGELOG — that goes in the execution log (step 7).
 - For the simplified entries (~10 lines), `Add-Content` with a here-string is acceptable since entries are short. Use `-Encoding utf8` on BOTH `Get-Content` and `Add-Content` to prevent mojibake (L15).
@@ -446,6 +460,15 @@ Update this list whenever a new pattern is identified. Each entry should referen
 **GLM clone vs Devin environment (L19, prompt-51)**: GLM's Linux clone has different package versions, missing adapter SDKs, and different Python paths than Devin's Windows env. Running mypy/bandit/pytest on the GLM clone produces DIFFERENT counts than Devin's env — which causes baseline mismatches in every plan. **Rule: GLM must NOT run mypy, bandit, pip-audit, vulture, or pytest on the clone for plan drafting purposes.** The clone is for READING CODE only (checking file contents, verifying function signatures, understanding architecture). All tool counts in plans must come from the **execution log** that Devin produces — the execution log has the actual counts from Devin's Windows env. Plans say "capture actual count" (L13) — Devin captures it, not GLM.
 
 **Line numbers in plans must be verified against clone SHA (L20, prompt-51)**: when scoping a plan, GLM reads the clone to find exact line numbers for code patterns (e.g., "del e at line 153"). These line numbers must be **captured from the actual grep result**, not estimated from memory. The plan should note the SHA the line numbers were verified against (e.g., "verified at HEAD `915926a`"). This eliminates the "line numbers are approximate" caveat that was a recurring Claude finding on Plans 49, 50, and 51. If the plan says "line 153" and Devin's grep shows line 155, the drift is visible and Devin uses the field name as the primary locator (not the line number).
+
+**Plans must use PowerShell/terminal-friendly commands, not grep (L21, prompt-51)**: Devin runs on Windows with PowerShell. Plans must NOT use `grep`, `sed`, `awk`, `cut`, `wc`, or other Unix-only commands in verification steps. Use PowerShell equivalents:
+- Instead of `grep -c "pattern" file.py` → `Select-String -Path file.py -Pattern "pattern" | Measure-Object -Line`
+- Instead of `grep -n "pattern" file.py` → `Select-String -Path file.py -Pattern "pattern"`
+- Instead of `sed -n '10,20p' file.py` → `Get-Content file.py | Select-Object -Skip 9 -First 11`
+- Instead of `cut -d: -f1` → `ForEach-Object { ($_ -split ':')[0] }`
+- Instead of `wc -l file.py` → `(Get-Content file.py).Count` or `[System.IO.File]::ReadAllLines("file.py").Count`
+- Instead of `sort | uniq -c | sort -rn` → `Group-Object | Sort-Object Count -Descending | Format-Table Count, Name`
+GLM may use `grep`/`sed`/`awk` on the Linux clone for READING code (scoping plans), but all commands WRITTEN IN PLANS for Devin to execute must be PowerShell-compatible.
 
 ---
 
