@@ -19,20 +19,22 @@ from core.schemas import (
 )
 from system.resource_manager import ResourceManager
 from core.observability import MemoryTraceEmitter
+from core.memory_router import MemoryRouter
 
 
-class MockMemoryRouter:
+class MockMemoryRouter(MemoryRouter):
     """Mock MemoryRouter for testing."""
     
     def __init__(self) -> None:
-        self.writes = []
+        super().__init__()
+        self.writes: list[dict] = []
         self.fetch_data = None
     
-    async def write(self, data: dict) -> None:
+    async def write(self, data: dict) -> None:  # type: ignore[override]
         """Mock write."""
         self.writes.append(data)
     
-    async def fetch(self, task_id: str, query: str) -> Mock:
+    async def fetch(self, task_id: str, query: str) -> Mock:  # type: ignore[override]
         """Mock fetch."""
         mock_result = Mock()
         mock_result.data = self.fetch_data

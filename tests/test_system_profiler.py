@@ -5,19 +5,21 @@ from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from datetime import datetime
 from core.schemas import SystemProfile, GPUInfo, CPUInfo, RAMInfo, StorageInfo, OSInfo, NetworkInfo, OllamaInfo, OllamaModelInfo
 from system.profiler import SystemProfiler
+from core.memory_router import MemoryRouter
 
 
-class MockMemoryRouter:
+class MockMemoryRouter(MemoryRouter):
     """Mock MemoryRouter for testing."""
     
     def __init__(self) -> None:
-        self.writes = []
+        super().__init__()
+        self.writes: list[dict] = []
     
-    async def write(self, data: dict) -> None:
+    async def write(self, data: dict) -> None:  # type: ignore[override]
         """Mock write."""
         self.writes.append(data)
     
-    async def fetch(self, task_id: str, query: str) -> Mock:
+    async def fetch(self, task_id: str, query: str) -> Mock:  # type: ignore[override]
         """Mock fetch."""
         mock_result = Mock()
         mock_result.data = None

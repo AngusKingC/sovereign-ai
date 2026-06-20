@@ -7,6 +7,7 @@ from uuid import uuid4
 from core.schemas import Message, MessageRole, Task, WorkerOutput, WorkerProfile
 from core.worker_base import LLMResponse
 from workers.ollama_worker import OllamaWorker
+from core.memory_router import MemoryRouter
 
 
 class MockAdapter:
@@ -33,10 +34,13 @@ class MockAdapter:
         )
 
 
-class MockMemoryRouter:
+class MockMemoryRouter(MemoryRouter):
     """Mock memory router for testing."""
     
-    async def fetch(self, task: Task) -> list:
+    def __init__(self) -> None:
+        super().__init__()
+    
+    async def fetch(self, task: Task) -> list:  # type: ignore[override]
         """Mock fetch - returns empty list."""
         return []
 

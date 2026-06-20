@@ -9,13 +9,14 @@ from core.scratchpad import ScratchpadManager
 from core.memory_router import MemoryRouter
 
 
-class MockMemoryRouter:
+class MockMemoryRouter(MemoryRouter):
     """Mock MemoryRouter for testing."""
     
     def __init__(self) -> None:
+        super().__init__()
         self.writes = []
     
-    async def write(self, task_id: str, content: str, metadata: dict | None = None) -> None:
+    async def write(self, task_id: str, content: str, metadata: dict | None = None) -> None:  # type: ignore[override]
         """Mock write."""
         self.writes.append({
             "task_id": task_id,
@@ -23,7 +24,7 @@ class MockMemoryRouter:
             "metadata": metadata or {},
         })
     
-    async def fetch(self, task) -> list:
+    async def fetch(self, task) -> list:  # type: ignore[override]
         """Mock fetch."""
         return []
     

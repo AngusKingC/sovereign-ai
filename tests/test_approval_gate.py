@@ -14,26 +14,30 @@ from core.approval_gate import (
 from core.observability import MemoryTraceEmitter
 from core.exceptions import ApprovalDeniedError, WorkerNotFoundError
 from core.approval_trust import ApprovalTrustRegistry, TrustLevel
+from core.memory_router import MemoryRouter
+from core.task_state_machine import TaskStateMachine
 
 
-class MockMemoryRouter:
+class MockMemoryRouter(MemoryRouter):
     """Mock MemoryRouter for testing."""
     
     def __init__(self) -> None:
-        self.writes = []
+        super().__init__()
+        self.writes: list[dict] = []
     
-    async def write(self, data: dict) -> None:
+    async def write(self, data: dict) -> None:  # type: ignore[override]
         """Mock write."""
         self.writes.append(data)
 
 
-class MockStateMachine:
+class MockStateMachine(TaskStateMachine):
     """Mock TaskStateMachine for testing."""
     
     def __init__(self) -> None:
-        self.transitions = []
+        super().__init__(memory_router=MockMemoryRouter())
+        self.transitions: list[dict] = []
     
-    async def transition(self, task, to_state, reason=None, actor="system"):
+    async def transition(self, task, to_state, reason=None, actor="system"):  # type: ignore[override]
         """Mock transition."""
         self.transitions.append({
             "task_id": str(task.task_id),
