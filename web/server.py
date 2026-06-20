@@ -6,11 +6,8 @@ import logging
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
-logger = logging.getLogger(__name__)
-
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
 
 from web.middleware.auth_middleware import AuthMiddleware, SecretsAudit
 from core.auth import AuthManager
@@ -27,6 +24,8 @@ from core.input_sanitiser import InputSanitiser
 if TYPE_CHECKING:
     from core.observability import TraceEmitter
     from core.orchestrator import Orchestrator
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager

@@ -5,14 +5,11 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-logger = logging.getLogger(__name__)
-
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response, JSONResponse
 
 from core.auth import AuthManager
-from core.exceptions import AuthenticationError
 from core.observability import (
     TraceComponent,
     TraceEventType,
@@ -24,6 +21,8 @@ from core.observability import (
 
 if TYPE_CHECKING:
     from core.observability import TraceEmitter
+
+logger = logging.getLogger(__name__)
 
 
 class AuthMiddleware(BaseHTTPMiddleware):

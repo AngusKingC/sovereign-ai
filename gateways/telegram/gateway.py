@@ -4,9 +4,6 @@ Telegram Gateway - pushes notifications to Telegram and receives commands.
 Single responsibility: Send notifications to Telegram via bot API, poll for incoming commands.
 """
 
-import asyncio
-from typing import Any
-
 import httpx
 
 from core.observability import (

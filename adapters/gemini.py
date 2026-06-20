@@ -5,9 +5,8 @@ Single responsibility: Handle interactions with Google's Gemini API,
 providing free API tier access for cost-effective inference.
 """
 
-import asyncio
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from google import genai
 from google.genai import types
