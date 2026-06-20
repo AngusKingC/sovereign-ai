@@ -346,7 +346,7 @@ class JarvisTUI(App):
         )
         
         # Create OutputEvaluator
-        _output_evaluator = OutputEvaluator(  # F4 wiring deferred to Plan 48b
+        output_evaluator = OutputEvaluator(
             llm_adapter=ollama_adapter,
             memory_router=self.memory_router,
             evaluator_model="default",
@@ -354,7 +354,7 @@ class JarvisTUI(App):
         )
         
         # Create TraceOptimiser
-        _trace_optimiser = TraceOptimiser(  # F4 wiring deferred to Plan 48b
+        trace_optimiser = TraceOptimiser(
             memory_router=self.memory_router,
             instruction_version_manager=instruction_versioning,
             emitter=self.emitter
@@ -373,11 +373,12 @@ class JarvisTUI(App):
             fallback_chain=fallback_chain,
             a2a_router=None,
             input_sanitiser=input_sanitiser,
+            output_evaluator=output_evaluator,
             emitter=self.emitter
         )
         
         # Create WorkerFactory (requires orchestrator)
-        _worker_factory = WorkerFactory(  # F4 wiring deferred to Plan 48b
+        worker_factory = WorkerFactory(  # noqa: F841 - available for future API endpoints
             skill_registry=skill_registry,
             orchestrator=self.orchestrator,
             memory_router=self.memory_router,
@@ -396,6 +397,9 @@ class JarvisTUI(App):
         
         # Set improvement_loop on orchestrator
         self.orchestrator.improvement_loop = improvement_loop
+        
+        # Wire trace optimiser (analyses trace events for instruction updates)
+        self.orchestrator.trace_optimiser = trace_optimiser
         
         # Create default worker with REAL memory_router (not None)
         self.worker = create_worker("ollama", "llama3", memory_router=self.memory_router)

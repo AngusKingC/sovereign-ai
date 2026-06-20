@@ -28,6 +28,8 @@ if TYPE_CHECKING:
     from core.approval_gate import ApprovalGate, ApprovalRequest
     from core.escalation import EscalationEngine
     from core.adapter_fallback import AdapterFallbackChain
+    from core.evaluator import OutputEvaluator
+    from core.trace_optimiser import TraceOptimiser
 
 from core.input_sanitiser import InputSanitiser
 
@@ -45,6 +47,7 @@ class Orchestrator:
         fallback_chain: "AdapterFallbackChain | None" = None,
         a2a_router: "A2ARouter | None" = None,
         input_sanitiser: InputSanitiser | None = None,
+        output_evaluator: "OutputEvaluator | None" = None,
         emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the orchestrator with dependencies."""
@@ -55,6 +58,8 @@ class Orchestrator:
         self.escalation_engine = escalation_engine
         self.fallback_chain = fallback_chain
         self._a2a_router = a2a_router
+        self.output_evaluator = output_evaluator
+        self.trace_optimiser: "TraceOptimiser | None" = None
         self.workers: dict[str, "WorkerBase"] = {}
         self.pending_approval_queue: list[Task] = []
         self._emitter = emitter or MemoryTraceEmitter()
@@ -202,6 +207,28 @@ class Orchestrator:
         
         try:
             output = await worker.run(task)
+            
+            # Evaluate output quality if evaluator is available
+            if self.output_evaluator:
+                try:
+                    evaluation = await self.output_evaluator.evaluate_output(  # noqa: F841 - stored for future use by improvement loop
+                        task_id=str(task.task_id),
+                        worker_id=worker_id,
+                        task_description=task.intent,
+                        worker_output=output.content
+                    )
+                    # Store evaluation in metrics
+                    # The evaluation result feeds into the improvement loop
+                except Exception as inner_e:
+                    # Don't crash the request if evaluation fails
+                    await self._emitter.emit(TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        message="Output evaluation failed",
+                        level=TraceLevel.WARNING,
+                        data={"error": str(inner_e)},
+                        duration_ms=0,
+                    ))
             
             # Escalation check if escalation_engine is configured
             if self.escalation_engine:

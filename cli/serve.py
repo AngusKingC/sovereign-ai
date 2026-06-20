@@ -89,7 +89,7 @@ def serve(
     )
     
     # Create WorkerPersistence
-    _worker_persistence = WorkerPersistence(  # F4 wiring deferred to Plan 48b
+    worker_persistence = WorkerPersistence(
         memory_router=memory_router,
         emitter=emitter,
         obsidian_vault_path=None
@@ -120,7 +120,7 @@ def serve(
     )
     
     # Create OutputEvaluator
-    _output_evaluator = OutputEvaluator(  # F4 wiring deferred to Plan 48b
+    output_evaluator = OutputEvaluator(
         llm_adapter=ollama_adapter,
         memory_router=memory_router,
         evaluator_model="default",
@@ -128,7 +128,7 @@ def serve(
     )
     
     # Create TraceOptimiser
-    _trace_optimiser = TraceOptimiser(  # F4 wiring deferred to Plan 48b
+    trace_optimiser = TraceOptimiser(
         memory_router=memory_router,
         instruction_version_manager=instruction_versioning,
         emitter=emitter
@@ -144,12 +144,13 @@ def serve(
         fallback_chain=fallback_chain,
         a2a_router=None,
         input_sanitiser=input_sanitiser,
+        output_evaluator=output_evaluator,
         emitter=emitter
     )
     
     # Create WorkerFactory (requires orchestrator)
     # Pass None for persistence to avoid asyncio.create_task in __init__ (no event loop in serve)
-    _worker_factory = WorkerFactory(  # F4 wiring deferred to Plan 48b
+    worker_factory = WorkerFactory(
         skill_registry=skill_registry,
         orchestrator=orchestrator,
         memory_router=memory_router,
@@ -168,6 +169,9 @@ def serve(
     
     # Set improvement_loop on orchestrator
     orchestrator.improvement_loop = improvement_loop
+    
+    # Wire trace optimiser (analyses trace events for instruction updates)
+    orchestrator.trace_optimiser = trace_optimiser
     
     # Construct and register OllamaWorker with Orchestrator
     ollama_worker = OllamaWorker(
