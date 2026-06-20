@@ -8,15 +8,12 @@
 
 **Test baseline**: 1166 passed, 55 skipped, 1 pre-existing failure (calendar_skill — hardcoded test date `20260620T140000Z` is now in the past; fix in Plan 53), 0 warnings (measured with `python -m pytest tests/ -q --tb=no` on Windows with all deps). Linux scan env (no adapter SDKs): 1087 passed, 1 skipped, 2 env-only failures (postgres + pdfplumber).
 
-**Static analysis baseline (post-prompt-47, measured by 2026-06-20 full repo scan)**:
-- Ruff: 375 errors (253 F401 + 48 F841 + 22 E402 after prompt-47 + 21 F821 + 15 F541 + 1 F811 + 2 minor)
-- Mypy: 567 errors in 78 files (was estimated at 180 in pre-scan audit — audit undercounted by 3×)
-- Bandit: 26 medium+ findings (22 B108 in tests + 2 B608 SQL injection in memory/postgres.py + 2 B104 false-positive binds) — NEW, not in pre-scan audit. **Note**: count may vary by environment; Plan 48 captures actual count at plan-start (Step 0.4) and uses it as baseline.
-- pip-audit: 55 CVEs across 14 packages (aiohttp, chromadb, cryptography, diskcache, idna, pillow, pygments, pypdf, pytest, python-dotenv, python-multipart, setuptools, starlette, urllib3) — NEW. **Note**: original scan reported 6 CVEs due to partial requirements.txt install in scan env; Devin's Windows env with full deps shows 55. Plan 48 captures actual count at plan-start; fixes deferred to Plan 56.
-- Vulture: 47 high-confidence dead-code findings (289 at lower threshold) — NEW
-- CI workflow: ruff + mypy + pytest only (bandit/pip-audit/vulture to be added by Plan 48)
-
-**Plan 46 chat report correction**: the prompt-46 chat report claimed "F841: 81 → 55 (21 critical errors fixed)". Actual F841 count post-prompt-46 is 48, meaning 33 were fixed (not 21). The CHANGELOG entry for prompt-46 should be amended to reflect "F841: 81 → 48 (33 critical errors fixed)". This is a Rule 19 violation (count assertion without measurement) — landmine L10.
+**Static analysis baseline (post-prompt-50)**:
+- Ruff: 358 errors (unchanged — Plan 50 was test-only)
+- Mypy: 309 errors (was 435 — Plan 49 fixed ~108, Plan 49b fixed ~32, Plan 50 fixed ~127)
+- Bandit: 22 medium+ (unchanged — B108 in tests, deferred to Plan 53)
+- pip-audit: 55 CVEs across 14 packages (deferred to Plan 56)
+- Vulture: 47 high-confidence findings (deferred to Plan 57)
 
 ---
 
@@ -315,41 +312,52 @@ The template enforces the same discipline structurally — verification gates ar
 3. `mypy <files_touched> --ignore-missing-imports` — zero errors.
 4. `git add . && git commit -m "checkpoint: prompt-{N}" && git tag prompt-{N}`
 5. `git show prompt-{N} --stat` — verify file list contains only files in this plan. If unexpected file appears, `git tag -d prompt-{N}`, clean, re-tag.
-6. Update `CHANGELOG.md` (append-only) with: Files Modified (per-file detail), Implementation Notes (mid-prompt failures and how resolved), Testing Results (baseline → final, with command), Verification Gate Output (literal output of each gate). **Per-step CHANGELOG entries required**: after each step, append a CHANGELOG entry documenting what was done, what failed (if anything), and how it was resolved. Do not batch all entries into a single summary at the end. Earlier prompts had per-step entries and were more verbose — that was better.
-7. Update this handoff: move the completed plan from "Next 5 prompts" to "Completed prompts" table. Update "What's broken" section (remove fixed items). Update "Built but not reachable" table (remove newly-wired subsystems). **Refill the "Next 5 prompts" queue**: when a plan completes, add the next plan from the deferred list so the queue always has 5 entries.
-8. **Update `global_rules.md`** when a new recurring mistake pattern or landmine is identified in this prompt. Rules are behavioral guardrails (not memories) and should be kept current. Add a new step to the plan if needed. Do not cite global_rules.md as authority — it is Devin-local and unreachable for verification — but keeping it current improves Devin's behavior.
-9. `git add CHANGELOG.md SOVEREIGN_AI_HANDOFF.md && git commit -m "docs: prompt-{N} changelog and handoff update"`
-10. `git push origin master && git push origin prompt-{N}`
+6. Update `CHANGELOG.md` (append-only) with a **SIMPLIFIED** entry. The CHANGELOG is a permanent, scannable record — not a narrative. Keep it short:
+   ```
+   ## YYYY-MM-DD HH:MM — prompt-{N}
+   
+   **Plan**: <one-line plan title>
+   
+   **Changed**:
+   - <file>: <what changed (1 line)>
+   - <file>: <what changed>
+   
+   **Results**:
+   - Mypy: <before> → <after>
+   - Tests: <count> passed, <count> skipped, <count> failed
+   - Tag: prompt-{N} verified on origin
+   ```
+   Do NOT include: commands run, errors encountered, Devin's thinking, attempted solutions, literal output, or time taken. That goes in the execution log (below).
 
-**CHANGELOG append procedure** (PowerShell, because file locks — updated prompt-48.1):
-- `[System.IO.File]::ReadAllLines(r"C:\Jarvis\CHANGELOG.md").Count` for line counts — never `Get-Content | Measure-Object` (truncates large files).
-- **Append method (L15 — temp-file pattern for entries >20 lines)**: write the entry to a temp file first (`$entry | Out-File -FilePath C:\Jarvis\scan\changelog-entry.md -Encoding utf8`), then append with `Get-Content C:\Jarvis\scan\changelog-entry.md | Add-Content -Path C:\Jarvis\CHANGELOG.md`. This avoids PowerShell here-string parsing issues (`"@` must be at column 1 with zero leading whitespace; auto-indent hangs forever) AND `Add-Content` file-lock deadlocks on large CHANGELOG files. Plan 48 Step 3 hung on this — don't repeat it.
-- **Append method (for entries ≤20 lines)**: `Add-Content -Path r"C:\Jarvis\CHANGELOG.md" -Value @"..."@` is acceptable IF the closing `"@` is at column 1. The temp-file pattern is always safer — use it if in doubt.
-- **NEVER paste into the editor** for entries >20 lines — file locks + auto-indent can corrupt the here-string. For entries ≤20 lines, pasting into the editor + verifying line count is an acceptable fallback if `Add-Content` fails.
-- Before appending: record current line count. After: verify new count exceeds previous by the expected amount (use a floor — e.g., if entry is ~80 lines, verify increase ≥60 to catch truncation), verify last 5 lines with `Select-Object -Last 5`.
-- Close the file in the IDE before running `Add-Content`.
-- **Standard temp-file append pattern (use for ALL entries >20 lines)**:
+7. **Execution log (temporary, verbose, reviewed between prompts)**: at the START of each prompt, create `C:\Jarvis\scan\execution-log-prompt-{N}.md`. Write EVERYTHING to this file during execution:
+   - Every command run and its output (literal paste)
+   - Every error, failure, or unexpected result
+   - Every STOP condition that fired and how it was resolved
+   - Devin's thinking: why an approach was chosen, what alternatives were considered
+   - Attempted solutions: "I tried X but it failed because Y, so I switched to Z"
+   - Time taken per step (rough estimates — identifies bottlenecks)
+   - **Issues to flag for next prompt**: anything that should be addressed in the next plan (e.g. "mypy . took 3 minutes — use file-scoped", "calendar test still failing — needs Plan 53", "found DI violation in gemini.py — add to Plan 51")
+   
+   At the END of the prompt (during closing steps), this file is reviewed by the user/GLM, issues are extracted for the next plan, and the file is **deleted**. The next prompt starts with a fresh execution log. This keeps the CHANGELOG clean while preserving the verbose audit trail for review.
+8. Update this handoff: move the completed plan from "Next 5 prompts" to "Completed prompts" table. Update "What's broken" section (remove fixed items). Update "Built but not reachable" table (remove newly-wired subsystems). **Refill the "Next 5 prompts" queue**: when a plan completes, add the next plan from the deferred list so the queue always has 5 entries.
+9. **Update `global_rules.md`** when a new recurring mistake pattern or landmine is identified in this prompt. Rules are behavioral guardrails (not memories) and should be kept current. Add a new step to the plan if needed. Do not cite global_rules.md as authority — it is Devin-local and unreachable for verification — but keeping it current improves Devin's behavior.
+10. `git add CHANGELOG.md SOVEREIGN_AI_HANDOFF.md && git commit -m "docs: prompt-{N} changelog and handoff update"`
+11. `git push origin master && git push origin prompt-{N}`
+
+**CHANGELOG append procedure** (PowerShell — simplified format, post-prompt-50):
+- CHANGELOG entries are now **SIMPLIFIED** (~10 lines per plan). See closing step 6 for the format. Do NOT write verbose narratives to the CHANGELOG — that goes in the execution log (step 7).
+- For the simplified entries (~10 lines), `Add-Content` with a here-string is acceptable since entries are short. Use `-Encoding utf8` on BOTH `Get-Content` and `Add-Content` to prevent mojibake (L15).
+- For entries >20 lines (rare with the simplified format), use the temp-file pattern:
   ```powershell
-  # 1. Write the entry to a temp file (here-string is safe here — Out-File handles it)
-  $entry = @"
-  ## YYYY-MM-DD HH:MM — Plan NN Step N
-  ...entry content...
-  "@
   $entry | Out-File -FilePath C:\Jarvis\scan\changelog-entry.md -Encoding utf8
-
-  # 2. Close the IDE if CHANGELOG.md is open, then append
   $before = [System.IO.File]::ReadAllLines(r"C:\Jarvis\CHANGELOG.md").Count
   Get-Content C:\Jarvis\scan\changelog-entry.md -Encoding utf8 | Add-Content -Path "C:\Jarvis\CHANGELOG.md" -Encoding utf8
   $after = [System.IO.File]::ReadAllLines(r"C:\Jarvis\CHANGELOG.md").Count
   Write-Host "Before: $before, After: $after"
-  Get-Content r"C:\Jarvis\CHANGELOG.md" -Encoding utf8 | Select-Object -Last 5
-
-  # 3. Clean up temp file
   Remove-Item C:\Jarvis\scan\changelog-entry.md
   ```
-  **Critical**: the closing `"@` in step 1 MUST be at column 1 (no leading whitespace). If using VS Code, disable auto-indent for PowerShell files or paste with Ctrl+Shift+V (paste without formatting). If the here-string still hangs, write the entry to the temp file using the editor directly (not PowerShell) and skip step 1.
-  
-  **Encoding (L15 amendment, prompt-50)**: BOTH `Get-Content` AND `Add-Content` MUST use `-Encoding utf8`. Without it, PowerShell defaults to Windows-1252 (Latin-1) on Windows, which corrupts em-dashes (`—` becomes `Ã¢â‚¬â€` mojibake) and can produce control characters that eat the first letter of words (e.g. `Adapters` → `^Gdapters`). This is exactly what corrupted the prompt-38.7.1 and prompt-40 CHANGELOG entries — `Add-Content` without `-Encoding utf8` double-encoded the UTF-8 content. The `-Encoding utf8` flag on BOTH commands is mandatory.
+- **`-Encoding utf8` is MANDATORY** on both `Get-Content` and `Add-Content`. Without it, PowerShell defaults to Windows-1252, which corrupts em-dashes and produces control characters (L15, prompt-38.7.1/prompt-40 corruption root cause).
+- Line count verification: `[System.IO.File]::ReadAllLines(r"C:\Jarvis\CHANGELOG.md").Count` before and after. NEVER use `Get-Content | Measure-Object` (truncates large files).
 
 ### Claude review workflow (token-economical, adopted post-prompt-38)
 
@@ -475,47 +483,47 @@ Update this list whenever a new pattern is identified. Each entry should referen
 
 Ordered. Each is one plan. Do not start Plan N+1 until Plan N's verification gates pass.
 
-**Note**: Plan numbering was restructured on 2026-06-20 based on full repo scan + comprehensive review findings. Plans 45-49 are complete. Plan 49b is ready for Claude review. The next 5 plans reflect the 2026-06-20 comprehensive review priorities (see `comprehensive-review-2026-06-20.md`): F4 wiring elevated to P1, Docker sandbox added as P0.
+**Note**: Plans 45-50 complete. Plan 51 is next. Verification cadence: every plan runs ruff+mypy(file-scoped)+pytest; every 5th plan (55, 60...) runs full scan (ruff+mypy.+bandit+pip-audit+vulture). See L18.
 
-### Plan 49b — Migrate old-API callers to request_approval(request: ApprovalRequest) — READY FOR REVIEW
-- **Priority**: P2
-- **Effort**: M
-- **Risk**: MED
-- **Why**: 32 mypy errors — 14 call sites across 8 skill files use old `request_approval(action=, context=)` signature. Would crash with TypeError if reached.
-- **Scope**: 8 skill files (http_client, git, docker, spreadsheet, clipboard, screenshot, pdf, home_assistant).
-- **Verification**: `mypy . --ignore-missing-imports --explicit-package-bases 2>&1 | grep "Unexpected keyword argument.*request_approval" | wc -l` returns 0.
-
-### Plan 52 — F4 wiring fix (cognition-loop components into serve request path) — ELEVATED TO P1
-- **Priority**: **P1** (elevated from P2 per 2026-06-20 comprehensive review — single highest-leverage next step)
-- **Effort**: M
-- **Risk**: MED
-- **Why**: F4 (open since prompt-35.6b): `cli/serve.py` constructs `worker_persistence`, `output_evaluator`, `trace_optimiser`, `worker_factory` but never wires them into the request path. Plan 46 Step 5 prefixed them with `_` to silence F841 — this plan actually wires them. Without this, `jarvis serve` doesn't self-improve. The comprehensive review identified this as the unlock for the entire self-improvement story — all components exist, they just need connecting.
-- **Scope**: `cli/serve.py` — wire the 4 subsystems into the orchestrator request loop. Remove the `_` prefixes from Plan 46.
-- **Verification**: Start `jarvis serve`, hit `POST /api/tasks` with `{"intent": "test"}` — should return a real `task_id`, not `{"task_id": "", "status": "error"}`. Cognition loop components should be invoked (verify via trace events).
-
-### Plan 58 — Sandboxed code execution (Docker backend) — P0 SECURITY
-- **Priority**: **P0** (new — identified by 2026-06-20 comprehensive review)
-- **Effort**: M
-- **Risk**: MED
-- **Why**: `skills/code_execution/skill.py:143` runs `asyncio.create_subprocess_shell` directly on the host. LLM-generated code has full user privileges. Prompt injection or hallucinated `os.system("rm -rf /")` executes immediately. Every production agent framework in 2025-2026 sandboxes this (OpenHands, OpenInterpreter, Odysseus).
-- **Scope**: Add `sandbox_backend: Literal["host", "docker"] = "host"` param to `code_execution` and `terminal` skills. Default to `docker` if Docker is available, `host` with WARNING if not. Create `Dockerfile.sandbox` with Python 3.12-slim base image.
-- **Verification**: `code_execution` skill runs `import os; os.system("whoami")` in Docker container — returns `root` (container user), not the host user. `bandit skills/code_execution/skill.py -ll` returns 0 findings (was flagging subprocess).
-
-### Plan 50 — MockMemoryRouter inheritance fix
-- **Priority**: P2
-- **Effort**: M
-- **Risk**: LOW (test-only)
-- **Why**: ~107 mypy errors across 8 test files — `MockMemoryRouter` is not a subclass of `MemoryRouter`, causing type errors wherever it's passed as an argument. Mechanical fix: make `MockMemoryRouter(MemoryRouter)` or use `Protocol`.
-- **Scope**: 8 test files (test_approval_gate, test_task_state_machine, test_resource_manager, test_ollama_worker, test_model_acquisition, test_scratchpad, test_model_registry, test_system_profiler).
-- **Verification**: `mypy tests/ --ignore-missing-imports` drops by ~107 errors. Full test suite passes.
-
-### Plan 51 — Adapter type fixes + `del e` patterns
+### Plan 51 — Adapter type fixes + `del e` patterns + DI fixes (gemini.py emit_trace)
 - **Priority**: P2
 - **Effort**: S
 - **Risk**: LOW
-- **Why**: 27 mypy errors: 14 `tokens_used: float vs int` in adapters + 13 `Trying to read deleted variable "e"` (except block deletes `e` then reads it).
-- **Scope**: 7 adapters (anthropic, cohere, deepseek, groq, mistral, openai, together) + 13 `del e` sites.
-- **Verification**: `mypy adapters/ --ignore-missing-imports` returns 0 NEW errors. Full test suite passes.
+- **Why**: 27 mypy errors (14 `tokens_used: float vs int` in adapters + 13 `del e` read-deleted-variable). Plus 3 DI violations: `adapters/gemini.py` uses global `emit_trace()` instead of `self._emitter.emit()` (5 call sites), `core/handlers.py:21` has dead `emit_trace` import, `cli/tui.py:229` + `core/commands.py:74` use `ConsoleTraceEmitter` default instead of `MemoryTraceEmitter`.
+- **Scope**: 7 adapters (anthropic, cohere, deepseek, groq, mistral, openai, together) for `tokens_used` fix; 13 `del e` sites across core/+adapters/; `adapters/gemini.py` for emit_trace→self._emitter.emit; `core/handlers.py` for dead import; `cli/tui.py` + `core/commands.py` for ConsoleTraceEmitter→MemoryTraceEmitter.
+- **Verification**: `mypy adapters/ --ignore-missing-imports` (file-scoped) returns 0 NEW errors. `mypy adapters/gemini.py --ignore-missing-imports` shows no emit_trace references. Full test suite passes.
+
+### Plan 52 — F4 wiring fix (cognition-loop components into serve request path)
+- **Priority**: **P1** (elevated from P2 per 2026-06-20 comprehensive review — single highest-leverage next step)
+- **Effort**: M
+- **Risk**: MED
+- **Why**: F4 (open since prompt-35.6b): `cli/serve.py` constructs `worker_persistence`, `output_evaluator`, `trace_optimiser`, `worker_factory` but never wires them into the request path. Plan 46 Step 5 prefixed them with `_` to silence F841 — this plan actually wires them. Without this, `jarvis serve` doesn't self-improve. The comprehensive review identified this as the unlock for the entire self-improvement story.
+- **Scope**: `cli/serve.py` — wire the 4 subsystems into the orchestrator request loop. Remove the `_` prefixes from Plan 46.
+- **Verification**: Start `jarvis serve`, hit `POST /api/tasks` with `{"intent": "test"}` — should return a real `task_id`. Cognition loop components invoked (verify via trace events).
+
+### Plan 53 — Test suite health + B108 + calendar test fix + datetime.utcnow deprecation
+- **Priority**: P2
+- **Effort**: M
+- **Risk**: LOW
+- **Why**: 22 B108 bandit findings in tests (hardcoded /tmp), 1 calendar test failure (hardcoded date now in past), 908 datetime.utcnow() deprecation warnings. All test-suite hygiene.
+- **Scope**: Fix calendar test (use relative date), replace /tmp with tempfile.mkdtemp(), replace datetime.utcnow() with datetime.now(datetime.UTC) in test files.
+- **Verification**: `bandit -r . -ll --exclude .venv,venv,env,.git,node_modules,__pycache__,build,dist,.tox,.eggs,.pytest_cache -s B108` returns 0. Calendar test passes. Deprecation warnings reduced.
+
+### Plan 54 — F401 bulk cleanup (246 unused imports)
+- **Priority**: P3
+- **Effort**: M
+- **Risk**: LOW (mechanical, auto-fixable)
+- **Why**: 246 F401 unused imports. `ruff check . --select F401 --fix` auto-fixes most. Remaining need manual triage.
+- **Scope**: Run `ruff check . --select F401 --fix`, then triage remaining manually.
+- **Verification**: `ruff check . --select F401` returns 0 errors. Full test suite passes.
+
+### Plan 55 — Full checkpoint scan + Marine stack start (5-plan milestone)
+- **Priority**: P2
+- **Effort**: L
+- **Risk**: MED
+- **Why**: This is the 5-plan checkpoint (50→55). Run full scan (ruff+mypy.+bandit+pip-audit+vulture). Then start the marine stack — the moat. Ship as portable SKILL.md files.
+- **Scope**: Full scan first. Then implement weather + AIS skills as SKILL.md files.
+- **Verification**: Full scan shows accumulated improvements. Marine SKILL.md files load and execute correctly.
 
 ---
 
@@ -608,7 +616,12 @@ Once Plans 48-57 land, the foundation is solid: security tools in CI, ApprovalGa
 | 44 | InputSanitiser wiring | 1134 | InputSanitiser wired into 5 external-input entry points (web/server.py, gateways/telegram/gateway.py, skills/web_scraper/skill.py, core/orchestrator.py, core/handlers.py QueryHandler). Defense-in-depth: boundary + sink + CLI/TUI sanitisation. 7 wiring tests added. |
 | 45 | InputSanitiser redesign + trajectory_exporter functional | 1167 | 6-layer InputSanitiser (normalise → truncate → strip_injection_tags → strip_html → strip_command_injection → strip_prompt_injection). 27 new tests. MemoryRouter.fetch_by_type() added. TrajectoryExporter functional (6 un-skipped tests). Test suite: 1134 → 1167 (+33 passed, -6 skipped). |
 | 46 | F821 + F811 + critical F841 cleanup | 1167 | Fixed 3 F821 runtime crashes (cli/command_history.py uuid4, core/session.py Task, workers/echo_worker.py core). Fixed 8 F811 duplicates (core/schemas.py Scratchpad, cli/tui.py CommandHistory, core/escalation.py TraceEventType ×3, core/memory_router.py datetime/uuid4 ×2). Fixed 33 F841 unused vars (5 in approval_gate Rule 17, 7 in adapters, 4 in serve.py, plus 17 more discovered during verification). F821: 25→21, F811: 8→0, F841: 81→48. **Note**: original chat report claimed "21 F841 fixed" — actual was 33 (Rule 19 violation, landmine L10). |
-| 47 | E402 + missing gateways/__init__.py + flagged unused imports | 1167 | Fixed E402 in web/server.py (7 errors) + web/middleware/auth_middleware.py (6 errors) by moving logging.getLogger() after imports. Created gateways/__init__.py (empty). Removed 13 unused imports (JSONResponse, AuthenticationError, asyncio ×2, typing.Any ×2, + 7 more discovered during verification). E402: 35→22, F401: 260→247. Mypy on 4 in-scope files: 53→44 (9 improvement). |
+| 47 | E402 + missing gateways/__init__.py + flagged unused imports | 1167 | Fixed E402 in web/server.py (7 errors) + web/middleware/auth_middleware.py (6 errors) by moving logging.getLogger() after imports. Created gateways/__init__.py (empty). Removed 13 unused imports. E402: 35→22, F401: 260→247. Mypy on 4 in-scope files: 53→44. |
+| 48 | Security: B608 SQL injection + B104 suppression + CI bandit/pip-audit/vulture | 1167 | Fixed 2× B608 SQL injection in memory/postgres.py (table_name validation). Suppressed 2× B104 false positives. Added bandit+pip-audit+vulture to CI. |
+| 48.1 | CHANGELOG append procedure fix (temp-file pattern + L15) | 1167 | Docs-only. Fixed PowerShell here-string hang. Added L15 landmine. |
+| 49 | ApprovalGate schema Optional fields + TraceEvent kwargs | 1167 | Fixed 10 Field(None→default=None) + 3 TraceEvent kwargs. ~108 mypy errors eliminated. Added L16 landmine. |
+| 49b | Migrate old-API callers to request_approval(request: ApprovalRequest) | 1166 | 17 call sites across 8 skill files migrated. 32 mypy errors eliminated. 1 pre-existing calendar test failure. |
+| 50 | MockMemoryRouter/MockStateMachine inheritance fix | 1166 | 122 mypy errors eliminated across 8 test files. Mock classes now inherit from real classes. Test-only, no production code changes. |
 
 ---
 
