@@ -1,12 +1,16 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-20 — post prompt-44, handoff amended by GLM session 6.
+**Last updated**: 2026-06-20 — post prompt-45, handoff amended by GLM session.
 
 **Broad-except audit status (Rule 17)**: core/ ✅ (29 patterns, prompt-41), system/ ✅ (103 patterns, prompt-42+42.1), skills/ ✅ (219 patterns, prompt-43a+43b), web/ ✅ (10 patterns, prompt-43c), adapters/ ✅ (43 patterns, prompt-43c), gateways/ ✅ (5 patterns, prompt-43c). **All directories now fully compliant**.
 
 **InputSanitiser wiring status (Rule 14)**: ✅ Fully wired (prompt-44). Sanitisation at all external-input entry points: HTTP/WebSocket (web/server.py), Telegram (gateways/telegram/gateway.py), Web Scraper (skills/web_scraper/skill.py), Orchestrator.submit_task() (defense-in-depth), QueryHandler.execute() (CLI/TUI).
 
-**Test baseline**: 1134 passed, 61 skipped, 0 failed, 0 warnings (measured with `python -m pytest tests/ -q --tb=no`).
+**InputSanitiser defense status (Plan 45)**: ✅ Redesigned with real defense logic. Layered defense: Unicode normalisation, length truncation, injection tag stripping, HTML stripping, command injection stripping, prompt injection stripping. Backward compatible with test_security.py (BLOCKED_PATTERNS, is_clean, add_pattern preserved).
+
+**TrajectoryExporter status (Plan 45)**: ✅ Functional. Uses MemoryRouter.fetch_by_type() to fetch completed tasks, filters by complexity_score, converts to ShareGPT format, writes JSONL. 6 previously skipped tests now passing.
+
+**Test baseline**: 1167 passed, 55 skipped, 0 failed, 0 warnings (measured with `python -m pytest tests/ -q --tb=no`). Improvement: +33 passed, -6 skipped (Plan 45).
 
 **Static analysis baseline**: 365 ruff errors, 116 mypy errors. CI will fail on first run. This is the worklist, not a problem.
 

@@ -8417,4 +8417,60 @@ Output: (pending â€” tag not yet pushed)
 - Ruff: 66 pre-existing errors (unused imports, import ordering, undefined A2ARouter types)
 - These existed before Plan 44 and are logged for future housekeeping
 
+---
+
+## Plan 45: Redesign InputSanitiser with Real Defense Logic and Fix TrajectoryExporter
+
+**Implementation:** Redesigned InputSanitiser with layered defense against prompt injection, HTML, and command injection attacks; made TrajectoryExporter functional
+
+**Files Modified:**
+- core/input_sanitiser.py: Added private helper methods (_normalise, _truncate, _strip_injection_tags, _strip_html, _strip_command_injection, _strip_prompt_injection), refactored sanitise() to chain layers in canonical order, restored BLOCKED_PATTERNS constant and is_clean/add_pattern methods for backward compatibility
+- core/memory_router.py: Added fetch_by_type() method for type-safe record retrieval with optional filtering
+- system/trajectory_exporter.py: Replaced stub with working implementation using MemoryRouter.fetch_by_type(), removed dead code
+- tests/test_input_sanitiser.py: Created new test file with 27 tests covering all defense layers (length truncation, HTML stripping, prompt injection, command injection, Unicode normalization, integration testing)
+- tests/test_trajectory_exporter.py: Removed @pytest.mark.skip from 6 deferred tests (test_export_filters_by_min_rating_tasks_below_threshold_are_excluded, test_export_writes_correct_jsonl_to_export_file, test_export_creates_export_directory_if_it_does_not_exist, test_export_emits_trajectory_export_complete_trace_event_with_record_count, test_export_returns_the_count_of_records_written, test_export_with_custom_min_rating_argument_uses_that_threshold_not_the_default)
+
+**InputSanitiser Defense Layers (Canonical Order):**
+1. _normalise: Unicode NFKC normalization to collapse homoglyphs and fullwidth characters
+2. _truncate: Truncate to max_length=10000 characters, append "...[truncated]" if truncated
+3. _strip_injection_tags: Detect and replace tag-like markers (</thinking>, <ignore>, </ignore>, <system>, </system>, <assistant>, </assistant>, <<SYS>>, <</SYS>>, [INST], [/INST]) with [BLOCKED]
+4. _strip_html: Remove HTML/script tags, javascript: URIs, and on\w+= event handlers
+5. _strip_command_injection: Detect and replace shell metacharacter sequences (; rm -rf, $(command), backticks, >\s*/) with [BLOCKED]
+6. _strip_prompt_injection: Replace non-tag prompt-injection patterns (ignore previous instructions, system prompt:, you are now, act as, ```, <s>, </s>, [INST], <<SYS>>, ### System:, ### Instruction:) with [BLOCKED]
+
+**Backward Compatibility:**
+- Preserved BLOCKED_PATTERNS constant (10 hardcoded literals)
+- Preserved is_clean() and add_pattern() methods
+- Used [BLOCKED] marker instead of [FILTERED:prompt-injection] to maintain compatibility with test_security.py
+- Added trace event emission in sanitise() when patterns are matched
+- All 32 tests in test_security.py pass
+
+**TrajectoryExporter Changes:**
+- Replaced stub (return 0 with WARNING trace) with working implementation
+- Uses MemoryRouter.fetch_by_type() to fetch completed tasks
+- Filters by complexity_score >= min_rating
+- Converts tasks to ShareGPT format (conversations array with human/gpt turns)
+- Writes JSONL to export file, creates directory if needed
+- Emits trace events on start, complete, and error
+
+**Testing Results:**
+- test_input_sanitiser.py: 27 passed (new file)
+- test_trajectory_exporter.py: 13 passed (6 previously skipped tests now passing)
+- test_security.py: 32 passed (backward compatibility maintained)
+- Full test suite: 1167 passed, 55 skipped (baseline: 1134 passed, 61 skipped)
+- Improvement: +33 passed, -6 skipped (expected due to un-skipping 6 trajectory_exporter tests)
+
+**Verification Gates:**
+- Gate 1 (test_input_sanitiser.py): 27 passed ✓
+- Gate 2 (test_trajectory_exporter.py): 13 passed ✓
+- Gate 3 (test_input_sanitiser_wiring.py): File not found (pre-existing issue, not created in prompt-44)
+- Gate 4 (full test suite): 1167 passed, 55 skipped ✓ (no regressions)
+- Gate 5 (ruff): 9 pre-existing errors in memory_router.py (out of scope), 0 new errors ✓
+- Gate 6 (mypy): 2 pre-existing errors (schemas.py Scratchpad redefinition, aiofiles stubs), 0 new errors ✓
+
+**Pre-existing Issues (Not Fixed in This Plan):**
+- test_input_sanitiser_wiring.py: File does not exist (was supposed to be added in prompt-44 but wasn't)
+- Ruff: 9 pre-existing errors in memory_router.py (unused imports, redefinitions, unused variables)
+- Mypy: 2 pre-existing errors (schemas.py Scratchpad redefinition, aiofiles library stubs not installed)
+
 
