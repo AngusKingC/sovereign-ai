@@ -11,6 +11,28 @@ This changelog documents all implementations, changes, and decisions made during
 
 ---
 
+## 2026-06-21 03:30 — prompt-52
+
+**Plan**: Wire cognition-loop subsystems into serve.py + TUI request path (F4 fix)
+
+**Changed**:
+- cli/serve.py: removed _ prefix from 4 subsystems, wired output_evaluator to Orchestrator, set trace_optimiser as attribute
+- core/orchestrator.py: added output_evaluator and trace_optimiser params to __init__, call evaluate_output() in process_task()
+- cli/tui.py: same wiring as serve.py
+
+**Implementation Notes**:
+- OutputEvaluator method is evaluate_output(), not evaluate() - adapted to actual API signature
+- evaluation variable stored for future use by improvement loop (currently unused, suppressed F841)
+- worker_factory available for future API endpoints (currently unused, suppressed F841)
+- trace_optimiser added as Orchestrator attribute for future use
+
+**Results**:
+- Mypy: 104 lines (baseline maintained)
+- Tests: 1166 passed, 55 skipped, 1 failed (pre-existing calendar)
+- Tag: prompt-52 verified on origin
+
+---
+
 ## 2026-06-21 02:36 — prompt-51
 
 **Plan**: Fix exception shadowing + float→int + DI violations
