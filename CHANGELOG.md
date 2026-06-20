@@ -8535,3 +8535,48 @@ Output: (pending Ã¢â‚¬â€ tag not yet pushed)
 - Mypy: 2 pre-existing errors (schemas.py Scratchpad redefinition, aiofiles library stubs not installed)
 
 
+
+
+## 2026-06-20 16:54 — Plan 47
+
+**What was done**: Fixed E402 import ordering (moved logging.getLogger() after imports in web/server.py and web/middleware/auth_middleware.py), added missing gateways/__init__.py, and removed flagged unused imports (JSONResponse, AuthenticationError, asyncio ×2, typing.Any ×2).
+
+**Files Modified**:
+- web/server.py: moved logger assignment after imports, removed JSONResponse import
+- web/middleware/auth_middleware.py: moved logger assignment after imports, removed AuthenticationError import
+- gateways/telegram/gateway.py: removed asyncio and typing.Any imports
+- adapters/gemini.py: removed asyncio and typing.Any imports
+- gateways/__init__.py: new empty file (0 bytes)
+
+**What failed**: Baseline drift detected during Step 0 - E402 count was 35 (expected 33), F401 count on target files was 6 (expected 4). Extra errors: typing.Any in adapters/gemini.py and gateways/telegram/gateway.py. Proceeded with plan as target files still had the anti-pattern and target unused imports were present.
+
+**Testing Results**:
+
+
+## 2026-06-20 16:54 - Plan 47
+
+**What was done**: Fixed E402 import ordering (moved logging.getLogger() after imports in web/server.py and web/middleware/auth_middleware.py), added missing gateways/__init__.py, and removed flagged unused imports (JSONResponse, AuthenticationError, asyncio x2, typing.Any x2).
+
+**Files Modified**:
+- web/server.py: moved logger assignment after imports, removed JSONResponse import
+- web/middleware/auth_middleware.py: moved logger assignment after imports, removed AuthenticationError import
+- gateways/telegram/gateway.py: removed asyncio and typing.Any imports
+- adapters/gemini.py: removed asyncio and typing.Any imports
+- gateways/__init__.py: new empty file (0 bytes)
+
+**What failed**: Baseline drift detected during Step 0 - E402 count was 35 (expected 33), F401 count on target files was 6 (expected 4). Extra errors: typing.Any in adapters/gemini.py and gateways/telegram/gateway.py. Proceeded with plan as target files still had the anti-pattern and target unused imports were present.
+
+**Testing Results**:
+- E402: 35 -> 22 errors (reduced by 13 - cascading effect of moving logger)
+- F401: 260 -> 247 errors (reduced by 13 - 6 removed + 7 baseline drift correction)
+- Test suite: 1167 passed, 55 skipped, 0 failed (unchanged)
+- Mypy on 4 files: 44 errors (improvement from baseline 53)
+
+**Verification Gates**: All 7 gates passed
+- Gate 1: ruff check on 4 files (E402,F401) - 0 errors
+- Gate 2: gateways/__init__.py exists - True
+- Gate 3: All imports work - OK
+- Gate 4: Test suite - 1167 passed, 55 skipped
+- Gate 5: E402/F401 counts - E402 22, F401 247
+- Gate 6: Mypy on 4 files - 44 errors (improvement from 53)
+- Gate 7: Plan 44 wiring intact - input_sanitiser present in both files
