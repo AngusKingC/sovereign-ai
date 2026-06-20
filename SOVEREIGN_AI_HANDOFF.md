@@ -1,6 +1,6 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-21 — post prompt-50 (mock class inheritance fix, mypy 436→310, reduction of 126).
+**Last updated**: 2026-06-20 — post prompt-49b + comprehensive review + L16/L17 landmines + Rule 21 (mandatory closing steps), handoff amended by GLM session 11. Plan numbering restructured based on scan findings. CHANGELOG append procedure updated with temp-file pattern (L15). Bandit exclude list codified (L14). Baseline-capture methodology codified (L13). Pydantic Field(default=None) pattern codified (L16). Mandatory closing steps + tag-push gate enforcement codified (L17, Rule 21).
 
 **Broad-except audit status (Rule 17)**: core/ ✅ (29 patterns, prompt-41), system/ ✅ (103 patterns, prompt-42+42.1), skills/ ✅ (219 patterns, prompt-43a+43b), web/ ✅ (10 patterns, prompt-43c), adapters/ ✅ (43 patterns, prompt-43c), gateways/ ✅ (5 patterns, prompt-43c). **All directories now fully compliant**.
 
@@ -8,9 +8,9 @@
 
 **Test baseline**: 1166 passed, 55 skipped, 1 pre-existing failure (calendar_skill — hardcoded test date `20260620T140000Z` is now in the past; fix in Plan 53), 0 warnings (measured with `python -m pytest tests/ -q --tb=no` on Windows with all deps). Linux scan env (no adapter SDKs): 1087 passed, 1 skipped, 2 env-only failures (postgres + pdfplumber).
 
-**Static analysis baseline (post-prompt-50)**:
+**Static analysis baseline (post-prompt-47, measured by 2026-06-20 full repo scan)**:
 - Ruff: 375 errors (253 F401 + 48 F841 + 22 E402 after prompt-47 + 21 F821 + 15 F541 + 1 F811 + 2 minor)
-- Mypy: 310 errors (was 567 in pre-prompt-48 scan; reduced by 126 in prompt-50 mock inheritance fix)
+- Mypy: 567 errors in 78 files (was estimated at 180 in pre-scan audit — audit undercounted by 3×)
 - Bandit: 26 medium+ findings (22 B108 in tests + 2 B608 SQL injection in memory/postgres.py + 2 B104 false-positive binds) — NEW, not in pre-scan audit. **Note**: count may vary by environment; Plan 48 captures actual count at plan-start (Step 0.4) and uses it as baseline.
 - pip-audit: 55 CVEs across 14 packages (aiohttp, chromadb, cryptography, diskcache, idna, pillow, pygments, pypdf, pytest, python-dotenv, python-multipart, setuptools, starlette, urllib3) — NEW. **Note**: original scan reported 6 CVEs due to partial requirements.txt install in scan env; Devin's Windows env with full deps shows 55. Plan 48 captures actual count at plan-start; fixes deferred to Plan 56.
 - Vulture: 47 high-confidence dead-code findings (289 at lower threshold) — NEW
@@ -84,9 +84,9 @@ The 2026-06-20 full repo scan revealed 3 categories of issues the pre-scan audit
 | 45 | 45 | InputSanitiser redesign + trajectory_exporter (DONE) |
 | 46 | 46 | F821 + F811 + critical F841 cleanup (DONE) |
 | 47 | 47 | E402 + gateways/__init__.py + flagged unused imports (DONE) |
-| (new) | **48** | Security: B608 SQL injection + B104 suppression + bandit/pip-audit/vulture in CI (DONE) |
-| 48 | **49** | ApprovalGate API drift + ApprovalRequest field additions (~112 mypy errors) (DONE) |
-| (48 split) | **50** | MockMemoryRouter inheritance fix (126 mypy errors, test-only) (DONE) |
+| (new) | **48** | Security: B608 SQL injection + B104 suppression + bandit/pip-audit/vulture in CI |
+| 48 | **49** | ApprovalGate API drift + ApprovalRequest field additions (~112 mypy errors) |
+| (48 split) | **50** | MockMemoryRouter inheritance fix (107 mypy errors, test-only) |
 | (48 split) | **51** | Adapter type fixes + `del e` patterns (27 mypy errors) |
 | (48b in audit) | **52** | F4 wiring fix (cognition-loop components into serve request path) |
 | 49 | **53** | Test suite health + 22 B108 fixes |
@@ -95,8 +95,8 @@ The 2026-06-20 full repo scan revealed 3 categories of issues the pre-scan audit
 | (new) | **56** | Dependency updates + diskcache migration |
 | (new) | **57** | Dead code cleanup (47 vulture findings) |
 
-**Next 5 prompts queue** (post-prompt-50): Plans 51, 52, 53, 54, 55.
-**Deferred**: Plans 56, 57.
+**Next 5 prompts queue** (post-prompt-47): Plans 48, 49, 50, 51, 52.
+**Deferred**: Plans 53, 54, 55, 56, 57.
 
 **Tooling additions (effective Plan 48)**:
 - **bandit** — security scan (SQL injection, hardcoded binds, eval, shell=True). CI job: `bandit -r . -ll --exclude tests/` (tests/ excluded until Plan 53 fixes B108).
@@ -339,15 +339,17 @@ The template enforces the same discipline structurally — verification gates ar
 
   # 2. Close the IDE if CHANGELOG.md is open, then append
   $before = [System.IO.File]::ReadAllLines(r"C:\Jarvis\CHANGELOG.md").Count
-  Get-Content C:\Jarvis\scan\changelog-entry.md | Add-Content -Path "C:\Jarvis\CHANGELOG.md"
+  Get-Content C:\Jarvis\scan\changelog-entry.md -Encoding utf8 | Add-Content -Path "C:\Jarvis\CHANGELOG.md" -Encoding utf8
   $after = [System.IO.File]::ReadAllLines(r"C:\Jarvis\CHANGELOG.md").Count
   Write-Host "Before: $before, After: $after"
-  Get-Content r"C:\Jarvis\CHANGELOG.md" | Select-Object -Last 5
+  Get-Content r"C:\Jarvis\CHANGELOG.md" -Encoding utf8 | Select-Object -Last 5
 
   # 3. Clean up temp file
   Remove-Item C:\Jarvis\scan\changelog-entry.md
   ```
   **Critical**: the closing `"@` in step 1 MUST be at column 1 (no leading whitespace). If using VS Code, disable auto-indent for PowerShell files or paste with Ctrl+Shift+V (paste without formatting). If the here-string still hangs, write the entry to the temp file using the editor directly (not PowerShell) and skip step 1.
+  
+  **Encoding (L15 amendment, prompt-50)**: BOTH `Get-Content` AND `Add-Content` MUST use `-Encoding utf8`. Without it, PowerShell defaults to Windows-1252 (Latin-1) on Windows, which corrupts em-dashes (`—` becomes `Ã¢â‚¬â€` mojibake) and can produce control characters that eat the first letter of words (e.g. `Adapters` → `^Gdapters`). This is exactly what corrupted the prompt-38.7.1 and prompt-40 CHANGELOG entries — `Add-Content` without `-Encoding utf8` double-encoded the UTF-8 content. The `-Encoding utf8` flag on BOTH commands is mandatory.
 
 ### Claude review workflow (token-economical, adopted post-prompt-38)
 
@@ -403,8 +405,8 @@ Update this list whenever a new pattern is identified. Each entry should referen
 - **Step 0 verification overhead exceeds plan scope (L18, prompt-50)**: after adding bandit/pip-audit/vulture/mypy to the pipeline (Plan 48), Step 0 grew to 15-20 sub-steps for plans that make ~10 lines of changes. The verification overhead became 10x the actual work. Fix: Step 0 should be **proportional to plan scope**. For test-only plans (Plan 50, 53): skip bandit/pip-audit/vulture baselines (they scan production code, not tests) — only capture mypy + pytest. For production-code plans (Plan 51, 52): capture all relevant tools. For docs-only plans (Plan 48.1): skip everything except git tag check + test count. The handoff baseline must always reflect ACTUAL measured counts, not estimates — the calendar test failure (1166 passed, 1 failed) was in the handoff as "1167 passed, 0 failed" for 5 plans, causing every Step 0 to investigate the mismatch.
 
 **Verification cadence (L18 enforcement — every 5 plans)**:
-- **Every plan (50, 51, 52, 53, 54...)**: ruff (if touching `.py` files) + mypy (if touching typed code) + pytest. These are fast (<30s combined) and catch regressions immediately.
-- **Every 5th plan (50, 55, 60, 65...)**: full scan — ruff + mypy + bandit + pip-audit + vulture + pytest. This is the checkpoint scan that catches accumulated drift, new CVEs, and dead code. Takes 5-10 minutes but only runs at milestones.
+- **Every plan (50, 51, 52, 53, 54...)**: ruff (if touching `.py` files — file-scoped, <5s) + mypy (if touching typed code — **file-scoped only**, e.g. `mypy tests/test_approval_gate.py --ignore-missing-imports`, NOT `mypy .`) + pytest. These are fast (<30s combined) and catch regressions immediately. **NEVER run `mypy .` (full repo) per-plan — it takes 2-5 minutes and stalls Devin's terminal. Full-repo mypy is a checkpoint scan only.**
+- **Every 5th plan (50, 55, 60, 65...)**: full scan — ruff + mypy `.` (full repo, 2-5 min) + bandit + pip-audit + vulture + pytest. This is the checkpoint scan that catches accumulated drift, new CVEs, and dead code. Takes 5-10 minutes but only runs at milestones.
 - **Security-sensitive plans** (touching `memory/postgres.py`, `skills/code_execution/`, `skills/terminal/`, `core/auth.py`, `.github/workflows/ci.yml`): always run bandit, regardless of cadence.
 - **Dependency-touching plans** (modifying `requirements.txt`): always run pip-audit, regardless of cadence.
 - **Docs-only plans** (no `.py` changes): git tag check + pytest count only. Skip ruff/mypy/bandit/pip-audit/vulture entirely.
