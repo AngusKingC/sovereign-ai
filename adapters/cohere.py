@@ -195,7 +195,7 @@ class CohereAdapter(LLMAdapter):
             if self._client is None:
                 return False
 
-            response = await self._client.chat(message="test", model=self._model_name, max_tokens=1)
+            await self._client.chat(message="test", model=self._model_name, max_tokens=1)
             return True
         except Exception as e:
             await self._emitter.emit(TraceEvent(

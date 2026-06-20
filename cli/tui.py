@@ -51,7 +51,6 @@ from core.input_sanitiser import InputSanitiser
 from cli.adapter_factory import create_worker
 from cli.command_history import CommandHistory
 from system.worker_persistence import WorkerPersistence
-from cli.command_history import CommandHistory
 
 
 class SelectionScreen(ModalScreen):
@@ -348,7 +347,7 @@ class JarvisTUI(App):
         )
         
         # Create OutputEvaluator
-        output_evaluator = OutputEvaluator(
+        _output_evaluator = OutputEvaluator(  # F4 wiring deferred to Plan 48b
             llm_adapter=ollama_adapter,
             memory_router=self.memory_router,
             evaluator_model="default",
@@ -356,7 +355,7 @@ class JarvisTUI(App):
         )
         
         # Create TraceOptimiser
-        trace_optimiser = TraceOptimiser(
+        _trace_optimiser = TraceOptimiser(  # F4 wiring deferred to Plan 48b
             memory_router=self.memory_router,
             instruction_version_manager=instruction_versioning,
             emitter=self.emitter
@@ -379,7 +378,7 @@ class JarvisTUI(App):
         )
         
         # Create WorkerFactory (requires orchestrator)
-        worker_factory = WorkerFactory(
+        _worker_factory = WorkerFactory(  # F4 wiring deferred to Plan 48b
             skill_registry=skill_registry,
             orchestrator=self.orchestrator,
             memory_router=self.memory_router,

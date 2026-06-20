@@ -12,7 +12,7 @@ from typing import Any
 from uuid import uuid4, UUID
 
 from core.memory_router import MemoryBackend
-from core.schemas import Message, SessionSummary
+from core.schemas import Message, SessionSummary, Task
 
 
 class SessionManager:

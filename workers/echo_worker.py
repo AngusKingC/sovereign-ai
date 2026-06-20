@@ -7,6 +7,10 @@ input back for integration testing purposes.
 
 import time
 from datetime import datetime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from core.memory_router import MemoryRouter
 
 from core.schemas import Message, MessageRole, Task, WorkerOutput, WorkerProfile
 from core.worker_base import LLMAdapter, LLMResponse, WorkerBase
@@ -66,7 +70,7 @@ class EchoWorker(WorkerBase):
         self,
         profile: WorkerProfile,
         llm: LLMAdapter,
-        memory_router: "core.memory_router.MemoryRouter",
+        memory_router: "MemoryRouter",
         emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the echo worker."""

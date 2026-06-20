@@ -89,7 +89,7 @@ def serve(
     )
     
     # Create WorkerPersistence
-    worker_persistence = WorkerPersistence(
+    _worker_persistence = WorkerPersistence(  # F4 wiring deferred to Plan 48b
         memory_router=memory_router,
         emitter=emitter,
         obsidian_vault_path=None
@@ -120,7 +120,7 @@ def serve(
     )
     
     # Create OutputEvaluator
-    output_evaluator = OutputEvaluator(
+    _output_evaluator = OutputEvaluator(  # F4 wiring deferred to Plan 48b
         llm_adapter=ollama_adapter,
         memory_router=memory_router,
         evaluator_model="default",
@@ -128,7 +128,7 @@ def serve(
     )
     
     # Create TraceOptimiser
-    trace_optimiser = TraceOptimiser(
+    _trace_optimiser = TraceOptimiser(  # F4 wiring deferred to Plan 48b
         memory_router=memory_router,
         instruction_version_manager=instruction_versioning,
         emitter=emitter
@@ -149,7 +149,7 @@ def serve(
     
     # Create WorkerFactory (requires orchestrator)
     # Pass None for persistence to avoid asyncio.create_task in __init__ (no event loop in serve)
-    worker_factory = WorkerFactory(
+    _worker_factory = WorkerFactory(  # F4 wiring deferred to Plan 48b
         skill_registry=skill_registry,
         orchestrator=orchestrator,
         memory_router=memory_router,

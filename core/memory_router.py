@@ -388,8 +388,6 @@ class MemoryRouter:
             List of matching memory entries (dicts).
         """
         import time
-        from datetime import datetime
-        from uuid import uuid4
 
         start_time = time.perf_counter()
         all_results: list[dict[str, Any]] = []
@@ -433,8 +431,19 @@ class MemoryRouter:
                     await self.emitter.emit(event)
                 except Exception as emit_error:
                     # Cleanup path — trace emit failure should not crash fetch_by_filter
-                    # Per Rule 17: broad except requires inline comment + WARNING trace
-                    pass
+                    # Per Rule 17: emit WARNING trace on exception
+                    try:
+                        await self.emitter.emit(TraceEvent(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.MEMORY_ROUTER,
+                            level=TraceLevel.WARNING,
+                            message=f"Trace emit failed during fetch_by_filter: {str(emit_error)}",
+                            data={"error": str(emit_error)},
+                            duration_ms=0,
+                        ))
+                    except Exception:
+                        # Nested trace emit failure - don't crash
+                        pass
 
         # Apply limit
         if limit is not None:
@@ -453,8 +462,19 @@ class MemoryRouter:
             await self.emitter.emit(event)
         except Exception as emit_error:
             # Cleanup path — trace emit failure should not crash fetch_by_filter
-            # Per Rule 17: broad except requires inline comment + WARNING trace
-            pass
+            # Per Rule 17: emit WARNING trace on exception
+            try:
+                await self.emitter.emit(TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.MEMORY_ROUTER,
+                    level=TraceLevel.WARNING,
+                    message=f"Trace emit failed during fetch_by_filter completion: {str(emit_error)}",
+                    data={"error": str(emit_error)},
+                    duration_ms=0,
+                ))
+            except Exception:
+                # Nested trace emit failure - don't crash
+                pass
 
         return all_results
 
@@ -503,8 +523,19 @@ class MemoryRouter:
                     await self.emitter.emit(event)
                 except Exception as emit_error:
                     # Cleanup path — trace emit failure should not crash write_to_collection
-                    # Per Rule 17: broad except requires inline comment + WARNING trace
-                    pass
+                    # Per Rule 17: emit WARNING trace on exception
+                    try:
+                        await self.emitter.emit(TraceEvent(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.MEMORY_ROUTER,
+                            level=TraceLevel.WARNING,
+                            message=f"Trace emit failed during write_to_collection: {str(emit_error)}",
+                            data={"error": str(emit_error)},
+                            duration_ms=0,
+                        ))
+                    except Exception:
+                        # Nested trace emit failure - don't crash
+                        pass
 
         duration_ms = int((time.perf_counter() - start_time) * 1000)
         try:
@@ -519,8 +550,19 @@ class MemoryRouter:
             await self.emitter.emit(event)
         except Exception as emit_error:
             # Cleanup path — trace emit failure should not crash write_to_collection
-            # Per Rule 17: broad except requires inline comment + WARNING trace
-            pass
+            # Per Rule 17: emit WARNING trace on exception
+            try:
+                await self.emitter.emit(TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.MEMORY_ROUTER,
+                    level=TraceLevel.WARNING,
+                    message=f"Trace emit failed during write_to_collection completion: {str(emit_error)}",
+                    data={"error": str(emit_error)},
+                    duration_ms=0,
+                ))
+            except Exception:
+                # Nested trace emit failure - don't crash
+                pass
 
     async def get_global_context(self, caller_id: str = "orchestrator") -> "StrategicContext | None":
         """Get the shared global StrategicContext.

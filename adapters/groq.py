@@ -190,7 +190,7 @@ class GroqAdapter(LLMAdapter):
             if self._client is None:
                 return False
 
-            response = await self._client.chat.completions.create(
+            await self._client.chat.completions.create(
                 model=self._model_name,
                 messages=[{"role": "user", "content": "test"}],
                 max_tokens=1,

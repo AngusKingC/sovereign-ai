@@ -193,7 +193,7 @@ class AnthropicAdapter(LLMAdapter):
             if self._client is None:
                 return False
 
-            response = await self._client.messages.create(
+            await self._client.messages.create(
                 model=self._model_name,
                 messages=[{"role": "user", "content": "test"}],
                 max_tokens=1,

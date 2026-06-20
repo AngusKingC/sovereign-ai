@@ -501,16 +501,6 @@ class ScratchpadEntry(BaseModel):
         return value.isoformat()
 
 
-class Scratchpad(BaseModel):
-    """A per-task working memory scratchpad for worker reasoning."""
-    scratchpad_id: UUID = Field(default_factory=uuid4, description="Unique scratchpad identifier")
-    task_id: UUID = Field(description="Task identifier")
-    entries: list[ScratchpadEntry] = Field(default_factory=list, description="All entries in the scratchpad")
-    created_at: datetime = Field(default_factory=datetime.now, description="When scratchpad was created")
-    completed_at: datetime | None = Field(default=None, description="When scratchpad was compacted")
-    summary: str | None = Field(default=None, description="Compacted summary of scratchpad")
-
-
 class WorkerRating(BaseModel):
     """A performance rating for a worker on a specific task."""
     rating_id: str = Field(description="Unique rating identifier (UUID)")

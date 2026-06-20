@@ -57,7 +57,7 @@ class EscalationEngine:
         Returns:
             EscalationDecision with should_escalate set appropriately
         """
-        from core.observability import TraceEvent, TraceEventType
+        from core.observability import TraceEvent
 
         reasons = []
         should_escalate = False
@@ -127,7 +127,7 @@ class EscalationEngine:
         Returns:
             True if approved, False if denied
         """
-        from core.observability import TraceEvent, TraceEventType
+        from core.observability import TraceEvent
         from core.approval_gate import ApprovalRequest
         from datetime import datetime, timedelta
 
@@ -182,7 +182,7 @@ class EscalationEngine:
         Returns:
             WorkerOutput signalling escalation approval pending actual dispatch
         """
-        from core.observability import TraceEvent, TraceEventType
+        from core.observability import TraceEvent
         from core.memory_router import ScopedMemoryRouter
 
         # Create scoped router for global scope

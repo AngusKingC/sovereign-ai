@@ -1,6 +1,6 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-20 — post prompt-45, handoff amended by GLM session.
+**Last updated**: 2026-06-20 — post prompt-46, handoff amended by GLM session.
 
 **Broad-except audit status (Rule 17)**: core/ ✅ (29 patterns, prompt-41), system/ ✅ (103 patterns, prompt-42+42.1), skills/ ✅ (219 patterns, prompt-43a+43b), web/ ✅ (10 patterns, prompt-43c), adapters/ ✅ (43 patterns, prompt-43c), gateways/ ✅ (5 patterns, prompt-43c). **All directories now fully compliant**.
 
@@ -10,7 +10,9 @@
 
 **TrajectoryExporter status (Plan 45)**: ✅ Functional. Uses MemoryRouter.fetch_by_type() to fetch completed tasks, filters by complexity_score, converts to ShareGPT format, writes JSONL. 6 previously skipped tests now passing.
 
-**Test baseline**: 1167 passed, 55 skipped, 0 failed, 0 warnings (measured with `python -m pytest tests/ -q --tb=no`). Improvement: +33 passed, -6 skipped (Plan 45).
+**Lint error status (Plan 46)**: ✅ F821 runtime crash bugs fixed (3), F811 duplicate definitions fixed (8), critical F841 unused-variable errors fixed (21). Remaining: 1 F821 (TYPE_CHECKING-only, deferred), 1 F811 (test file, out of scope), 55 F841 (test files, out of scope), 123 mypy errors (pre-existing).
+
+**Test baseline**: 1167 passed, 55 skipped, 0 failed, 0 warnings (measured with `python -m pytest tests/ -q --tb=no`). No regressions from Plan 46.
 
 **Static analysis baseline**: 365 ruff errors, 116 mypy errors. CI will fail on first run. This is the worklist, not a problem.
 

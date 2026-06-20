@@ -235,10 +235,21 @@ class ApprovalGate:
                 ))
             except Exception as emit_error:
                 # Cleanup path — trace emit failure should not crash table initialization
-                # Per Rule 17: broad except requires inline comment + WARNING trace
-                # Note: Using old TraceEvent schema (event_id, layer, payload, success) per existing code
-                # TODO: Migrate to new schema (event_type, component, level, message, data, duration_ms)
-                pass
+                # Per Rule 17: emit WARNING trace on exception
+                try:
+                    await self.emitter.emit(TraceEvent(
+                        event_id=uuid4(),
+                        timestamp=datetime.utcnow(),
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.WARNING,
+                        message=f"Trace emit failed during table initialization: {str(emit_error)}",
+                        data={"error": str(emit_error)},
+                        duration_ms=0,
+                    ))
+                except Exception:
+                    # Nested trace emit failure - don't crash
+                    pass
     
     async def request_approval(self, request: ApprovalRequest) -> ApprovalResponse:
         """Request approval for an action.
@@ -278,9 +289,22 @@ class ApprovalGate:
                 raise
             except Exception as trust_error:
                 # Cleanup path — trust check failure should not crash approval request
-                # Per Rule 17: broad except requires inline comment + WARNING trace
+                # Per Rule 17: emit WARNING trace on exception
+                try:
+                    await self.emitter.emit(TraceEvent(
+                        event_id=uuid4(),
+                        timestamp=datetime.utcnow(),
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.WARNING,
+                        message=f"Trust check failed: {str(trust_error)}",
+                        data={"error": str(trust_error)},
+                        duration_ms=0,
+                    ))
+                except Exception:
+                    # Nested trace emit failure - don't crash
+                    pass
                 # Proceed with normal gate logic if trust check fails
-                pass
         
         # Add to pending queue
         self._pending_requests[request.request_id] = request
@@ -310,8 +334,21 @@ class ApprovalGate:
                 ))
             except Exception as emit_error:
                 # Cleanup path — trace emit failure should not crash approval request
-                # Per Rule 17: broad except requires inline comment + WARNING trace
-                pass
+                # Per Rule 17: emit WARNING trace on exception
+                try:
+                    await self.emitter.emit(TraceEvent(
+                        event_id=uuid4(),
+                        timestamp=datetime.utcnow(),
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.WARNING,
+                        message=f"Trace emit failed during approval request persistence: {str(emit_error)}",
+                        data={"error": str(emit_error)},
+                        duration_ms=0,
+                    ))
+                except Exception:
+                    # Nested trace emit failure - don't crash
+                    pass
         
         # Transition task to AWAITING_APPROVAL
         try:
@@ -347,8 +384,21 @@ class ApprovalGate:
                 ))
             except Exception as emit_error:
                 # Cleanup path — trace emit failure should not crash approval request
-                # Per Rule 17: broad except requires inline comment + WARNING trace
-                pass
+                # Per Rule 17: emit WARNING trace on exception
+                try:
+                    await self.emitter.emit(TraceEvent(
+                        event_id=uuid4(),
+                        timestamp=datetime.utcnow(),
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.WARNING,
+                        message=f"Trace emit failed during task transition: {str(emit_error)}",
+                        data={"error": str(emit_error)},
+                        duration_ms=0,
+                    ))
+                except Exception:
+                    # Nested trace emit failure - don't crash
+                    pass
         
         # Emit trace event
         try:
@@ -369,8 +419,21 @@ class ApprovalGate:
             ))
         except Exception as emit_error:
             # Cleanup path — trace emit failure should not crash approval request
-            # Per Rule 17: broad except requires inline comment + WARNING trace
-            pass
+            # Per Rule 17: emit WARNING trace on exception
+            try:
+                await self.emitter.emit(TraceEvent(
+                    event_id=uuid4(),
+                    timestamp=datetime.utcnow(),
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.ORCHESTRATOR,
+                    level=TraceLevel.WARNING,
+                    message=f"Trace emit failed during approval request completion: {str(emit_error)}",
+                    data={"error": str(emit_error)},
+                    duration_ms=0,
+                ))
+            except Exception:
+                # Nested trace emit failure - don't crash
+                pass
 
         # Return pending response (will be resolved later via respond() or timeout)
         return ApprovalResponse(
@@ -423,9 +486,22 @@ class ApprovalGate:
                     await self.trust_registry.set_trust(command, TrustLevel.PERMANENT_TRUST, scope="permanent")
                 except Exception as trust_error:
                     # Cleanup path — trust setting failure should not crash approval response
-                    # Per Rule 17: broad except requires inline comment + WARNING trace
+                    # Per Rule 17: emit WARNING trace on exception
+                    try:
+                        await self.emitter.emit(TraceEvent(
+                            event_id=uuid4(),
+                            timestamp=datetime.utcnow(),
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.ORCHESTRATOR,
+                            level=TraceLevel.WARNING,
+                            message=f"Trust setting failed: {str(trust_error)}",
+                            data={"error": str(trust_error)},
+                            duration_ms=0,
+                        ))
+                    except Exception:
+                        # Nested trace emit failure - don't crash
+                        pass
                     # Trust setting failed, but approval still succeeds
-                    pass
         else:
             request.status = "denied"
             request.approved_by = responder
@@ -457,8 +533,21 @@ class ApprovalGate:
                 ))
             except Exception as emit_error:
                 # Cleanup path — trace emit failure should not crash approval response
-                # Per Rule 17: broad except requires inline comment + WARNING trace
-                pass
+                # Per Rule 17: emit WARNING trace on exception
+                try:
+                    await self.emitter.emit(TraceEvent(
+                        event_id=uuid4(),
+                        timestamp=datetime.utcnow(),
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.WARNING,
+                        message=f"Trace emit failed during approval response persistence: {str(emit_error)}",
+                        data={"error": str(emit_error)},
+                        duration_ms=0,
+                    ))
+                except Exception:
+                    # Nested trace emit failure - don't crash
+                    pass
         
         # Create response
         response = ApprovalResponse(
@@ -506,8 +595,21 @@ class ApprovalGate:
                     ))
                 except Exception as emit_error:
                     # Cleanup path — trace emit failure should not crash approval response
-                    # Per Rule 17: broad except requires inline comment + WARNING trace
-                    pass
+                    # Per Rule 17: emit WARNING trace on exception
+                    try:
+                        await self.emitter.emit(TraceEvent(
+                            event_id=uuid4(),
+                            timestamp=datetime.utcnow(),
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.ORCHESTRATOR,
+                            level=TraceLevel.WARNING,
+                            message=f"Trace emit failed during approval granted trace: {str(emit_error)}",
+                            data={"error": str(emit_error)},
+                            duration_ms=0,
+                        ))
+                    except Exception:
+                        # Nested trace emit failure - don't crash
+                        pass
             else:
                 await self.state_machine.transition(
                     task,
@@ -534,8 +636,21 @@ class ApprovalGate:
                     ))
                 except Exception as emit_error:
                     # Cleanup path — trace emit failure should not crash approval response
-                    # Per Rule 17: broad except requires inline comment + WARNING trace
-                    pass
+                    # Per Rule 17: emit WARNING trace on exception
+                    try:
+                        await self.emitter.emit(TraceEvent(
+                            event_id=uuid4(),
+                            timestamp=datetime.utcnow(),
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.ORCHESTRATOR,
+                            level=TraceLevel.WARNING,
+                            message=f"Trace emit failed during approval denied trace: {str(emit_error)}",
+                            data={"error": str(emit_error)},
+                            duration_ms=0,
+                        ))
+                    except Exception:
+                        # Nested trace emit failure - don't crash
+                        pass
         except InvalidStateTransitionError:
             # Task may already be in a terminal state
             pass
@@ -556,8 +671,21 @@ class ApprovalGate:
                 ))
             except Exception as emit_error:
                 # Cleanup path — trace emit failure should not crash approval response
-                # Per Rule 17: broad except requires inline comment + WARNING trace
-                pass
+                # Per Rule 17: emit WARNING trace on exception
+                try:
+                    await self.emitter.emit(TraceEvent(
+                        event_id=uuid4(),
+                        timestamp=datetime.utcnow(),
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.WARNING,
+                        message=f"Trace emit failed during task transition error: {str(emit_error)}",
+                        data={"error": str(emit_error)},
+                        duration_ms=0,
+                    ))
+                except Exception:
+                    # Nested trace emit failure - don't crash
+                    pass
         
         # Raise error if denied
         if not approved:
@@ -641,8 +769,21 @@ class ApprovalGate:
                 ))
             except Exception as emit_error:
                 # Cleanup path — trace emit failure should not crash scope addition
-                # Per Rule 17: broad except requires inline comment + WARNING trace
-                pass
+                # Per Rule 17: emit WARNING trace on exception
+                try:
+                    await self.emitter.emit(TraceEvent(
+                        event_id=uuid4(),
+                        timestamp=datetime.utcnow(),
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.WARNING,
+                        message=f"Trace emit failed during scope addition: {str(emit_error)}",
+                        data={"error": str(emit_error)},
+                        duration_ms=0,
+                    ))
+                except Exception:
+                    # Nested trace emit failure - don't crash
+                    pass
         
         # Emit trace event
         try:
@@ -663,8 +804,21 @@ class ApprovalGate:
             ))
         except Exception as emit_error:
             # Cleanup path — trace emit failure should not crash scope addition
-            # Per Rule 17: broad except requires inline comment + WARNING trace
-            pass
+            # Per Rule 17: emit WARNING trace on exception
+            try:
+                await self.emitter.emit(TraceEvent(
+                    event_id=uuid4(),
+                    timestamp=datetime.utcnow(),
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.ORCHESTRATOR,
+                    level=TraceLevel.WARNING,
+                    message=f"Trace emit failed during scope addition completion: {str(emit_error)}",
+                    data={"error": str(emit_error)},
+                    duration_ms=0,
+                ))
+            except Exception:
+                # Nested trace emit failure - don't crash
+                pass
 
     async def load_scopes(self, session_id: str) -> None:
         """Load active scopes for a session from Postgres into cache.
@@ -729,8 +883,21 @@ class ApprovalGate:
                     ))
                 except Exception as emit_error:
                     # Cleanup path — trace emit failure should not crash expiration processing
-                    # Per Rule 17: broad except requires inline comment + WARNING trace
-                    pass
+                    # Per Rule 17: emit WARNING trace on exception
+                    try:
+                        await self.emitter.emit(TraceEvent(
+                            event_id=uuid4(),
+                            timestamp=datetime.utcnow(),
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.ORCHESTRATOR,
+                            level=TraceLevel.WARNING,
+                            message=f"Trace emit failed during expired request persistence: {str(emit_error)}",
+                            data={"error": str(emit_error)},
+                            duration_ms=0,
+                        ))
+                    except Exception:
+                        # Nested trace emit failure - don't crash
+                        pass
             
             # Transition task to DENIED
             try:
@@ -762,8 +929,21 @@ class ApprovalGate:
                     ))
                 except Exception as emit_error:
                     # Cleanup path — trace emit failure should not crash expiration processing
-                    # Per Rule 17: broad except requires inline comment + WARNING trace
-                    pass
+                    # Per Rule 17: emit WARNING trace on exception
+                    try:
+                        await self.emitter.emit(TraceEvent(
+                            event_id=uuid4(),
+                            timestamp=datetime.utcnow(),
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.ORCHESTRATOR,
+                            level=TraceLevel.WARNING,
+                            message=f"Trace emit failed during expired task transition: {str(emit_error)}",
+                            data={"error": str(emit_error)},
+                            duration_ms=0,
+                        ))
+                    except Exception:
+                        # Nested trace emit failure - don't crash
+                        pass
             
             # Remove from pending queue
             del self._pending_requests[request_id]
@@ -786,5 +966,18 @@ class ApprovalGate:
                 ))
             except Exception as emit_error:
                 # Cleanup path — trace emit failure should not crash expiration processing
-                # Per Rule 17: broad except requires inline comment + WARNING trace
-                pass
+                # Per Rule 17: emit WARNING trace on exception
+                try:
+                    await self.emitter.emit(TraceEvent(
+                        event_id=uuid4(),
+                        timestamp=datetime.utcnow(),
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.WARNING,
+                        message=f"Trace emit failed during expired request completion: {str(emit_error)}",
+                        data={"error": str(emit_error)},
+                        duration_ms=0,
+                    ))
+                except Exception:
+                    # Nested trace emit failure - don't crash
+                    pass

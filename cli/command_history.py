@@ -9,7 +9,7 @@ with in-memory fallback when no DB is available.
 import os
 from datetime import datetime
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from core.memory_router import MemoryBackend
 from core.commands import CommandType
