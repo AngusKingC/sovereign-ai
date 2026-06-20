@@ -329,38 +329,27 @@ The template enforces the same discipline structurally — verification gates ar
    ```
    Do NOT include: commands run, errors encountered, Devin's thinking, attempted solutions, literal output, or time taken. That goes in the execution log (below).
 
-7. **Execution log (automatic via wrapper function, archived after review)**: at the START of each prompt (before Step 0), define a PowerShell function that wraps every command and logs it automatically:
+7. **Execution log (via transcript, committed to git)**: the plan's Step 0 must start with:
    ```powershell
-   # Start of prompt — BEFORE any Step 0 commands:
-   $logFile = "C:\Jarvis\scan\execution-log-prompt-{N}.md"
-   Set-Content -Path $logFile -Value "# Execution Log - Prompt {N}`n`n" -Encoding utf8
+   $logPath = "logs\execution-log-prompt-{N}.md"
+   Start-Transcript -Path $logPath -Force
+   ```
+   This captures ALL terminal I/O — every command, output, error. Zero overhead for Devin.
    
-   function Invoke-Logged {
-       param([Parameter(Mandatory)][scriptblock]$Command, [string]$Label = "")
-       $timestamp = Get-Date -Format "HH:mm:ss"
-       if ($Label) { Add-Content -Path $logFile -Value "`n## [$timestamp] $Label`n" -Encoding utf8 }
-       Add-Content -Path $logFile -Value "``````powershell`n$Command`n``````" -Encoding utf8
-       $output = & $Command 2>&1
-       $output | Out-String | Add-Content -Path $logFile -Value ( "`n```````n" + ($output | Out-String) + "```````n" ) -Encoding utf8
-       return $output
-   }
-   
-   # Example usage — replace every bare command with Invoke-Logged:
-   # Instead of:  git rev-parse HEAD
-   # Use:         Invoke-Logged { git rev-parse HEAD } -Label "Step 0.1: git HEAD"
-   #
-   # Instead of:  mypy adapters/ollama.py --ignore-missing-imports
-   # Use:         Invoke-Logged { mypy adapters/ollama.py --ignore-missing-imports } -Label "Step 1.2: mypy del e check"
-   #
-   # Instead of:  python -m pytest tests/ -q --tb=no
-   # Use:         Invoke-Logged { python -m pytest tests/ -q --tb=no } -Label "Gate 6: full test suite"
+   The plan's closing step C7 (after git push, before reporting done) must stop and commit the transcript:
+   ```powershell
+   Stop-Transcript
+   git add logs\execution-log-prompt-{N}.md
+   git commit -m "logs: prompt-{N} execution transcript"
+   git push origin master
    ```
    
-   Every `Invoke-Logged` call writes the timestamp, label, command, and full output to the log file automatically. Devin doesn't need to manually write anything — just wrap each command. The log works across multiple terminals because it appends to the same file (use `-Encoding utf8` on all `Add-Content` calls).
+   GLM reads the transcript from the clone (`logs/execution-log-prompt-{N}.md`) — no pasting needed. The `logs/` directory is tracked by git so GLM has direct access.
    
-   At the END of the prompt (C7), archive: `Move-Item $logFile C:\Jarvis\scan\logs\prompt-{N}.md`
+   **If Devin opens additional terminals**: run `Start-Transcript -Path logs\execution-log-prompt-{N}-terminal{M}.md -Force` in each. Commit all at C7.
    
-   Devin's "thinking" (AI reasoning between commands) is NOT in the log — that comes from the user pasting Devin's chat to GLM for review.
+   **What this captures**: every command + output + error from the terminal.
+   **What this doesn't capture**: Devin's AI thinking (that comes from the chat paste if needed).
 8. Update this handoff: move the completed plan from "Next 5 prompts" to "Completed prompts" table. Update "What's broken" section (remove fixed items). Update "Built but not reachable" table (remove newly-wired subsystems). **Refill the "Next 5 prompts" queue**: when a plan completes, add the next plan from the deferred list so the queue always has 5 entries.
 9. **Update `global_rules.md`** when a new recurring mistake pattern or landmine is identified in this prompt. Rules are behavioral guardrails (not memories) and should be kept current. Add a new step to the plan if needed. Do not cite global_rules.md as authority — it is Devin-local and unreachable for verification — but keeping it current improves Devin's behavior.
 10. `git add CHANGELOG.md SOVEREIGN_AI_HANDOFF.md && git commit -m "docs: prompt-{N} changelog and handoff update"`
