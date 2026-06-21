@@ -1,6 +1,6 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-21 — post-prompt-58 (datetime.utcnow() cleanup)
+**Last updated**: 2026-06-21 — post-prompt-58.5 (bare datetime.now() cleanup)
 
 **Test baseline**: 1167 passed, 55 skipped, 0 failures, 0 warnings
 
@@ -222,6 +222,7 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 | 56 | Dependency updates | 1167 | 11 packages upgraded (aiohttp, cryptography, idna, pygments, pypdf, pytest, python-dotenv, python-multipart, urllib3, pillow, setuptools). pip-audit: 55→19 CVEs. Starlette deferred (FastAPI incompatibility), chromadb/diskcache deferred (no confirmed fixes). |
 | 57 | Vulture cleanup | 1167 | 16 dead-code findings removed (12 adapters + 3 core + 1 worker). 16 deferred as Category C (5 core + 11 tests). Vulture: 32→20. |
 | 58 | Datetime UTCNow Cleanup | 1167 | 107 datetime.utcnow() calls replaced with datetime.now(timezone.utc) (28 test + 78 production + 1 scope expansion). Zero utcnow remain. 46+ bare datetime.now() calls deferred to Plan 58.5 (pre-existing L19 violations outside scope). |
+| 58.5 | Bare datetime.now() cleanup | 1167 | 231 bare datetime.now() calls replaced with datetime.now(timezone.utc) (205 test + 26 production). Zero bare datetime.now() remain. 0 Category C deferrals (all calls were Category A/B - safe to convert). L19 compliance achieved for all datetime calls. |
 
 ---
 
@@ -278,11 +279,6 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ## Next 5 prompts
 
-### Plan 58.5 — bare datetime.now() cleanup (P3)
-- Fix 46+ bare datetime.now() calls (without timezone) across 9 files. Per L19.
-- Files: tests/test_trajectory_exporter.py, test_trace_optimiser.py, test_together_adapter.py, test_task_state_machine.py, core/task_state_machine.py, session.py, scratchpad.py, rating_system.py, instruction_versioning.py, instruction_generator.py, handlers.py
-- Some calls may be intentional (local time display) — each needs individual review before converting to datetime.now(timezone.utc).
-
 ### Plan 59 — Marine stack Python implementation (P2)
 - Implement the 4 Marine SKILL.md files as Python skills (weather first, then tidal, AIS, passage_planner).
 
@@ -291,3 +287,4 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ### Plan 61 — (open slot for next GLM scoping)
 ### Plan 62 — (open slot)
+### Plan 63 — (open slot)

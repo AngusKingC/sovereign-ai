@@ -354,3 +354,23 @@ This changelog documents all implementations, changes, and decisions made during
 - 46+ bare datetime.now() calls (without timezone) across 9 files � pre-existing L19 violations outside Plan 58 scope. Queued for Plan 58.5 (or next housekeeping plan).
   - tests/: test_trajectory_exporter.py (3), test_trace_optimiser.py (2), test_together_adapter.py (7), test_task_state_machine.py (27+)
   - core/: task_state_machine.py (1), session.py (10), scratchpad.py (1), rating_system.py (2), instruction_versioning.py (5), instruction_generator.py (6), handlers.py (1)
+
+## 2026-06-21 22:53 — prompt-58.5
+
+**Plan**: Bare datetime.now() cleanup — L19 compliance completion
+
+**Changed**:
+- 231 bare datetime.now() calls replaced with datetime.now(timezone.utc)
+- 0 Category C deferrals (all calls were Category A/B - safe to convert)
+
+**Results**:
+- Tests: 1167 passed, 55 skipped (unchanged)
+- bare datetime.now() count: 231 → 0
+- L19 compliance: achieved for all datetime calls (utcnow + bare now)
+- Tag: prompt-58.5 verified on origin
+
+**Notes**:
+- Production files: 7 files, 26 calls (all Category B - internal timestamps)
+- Test files: 28 files, 205 calls (all Category A - test fixtures)
+- No Category C deferrals - no user-facing local time display found
+- Pre-existing ruff errors (113) and mypy errors (43) remain - out of scope per L5
