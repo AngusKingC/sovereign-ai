@@ -28,7 +28,8 @@ from core.observability import (
 
 if TYPE_CHECKING:
     from core.memory_router import MemoryRouter
-    from core.scratchpad import ScratchpadManager
+    from core.observability import TraceEmitter
+    from core.scratchpad_manager import ScratchpadManager
 
 
 class LLMResponse(BaseModel):
@@ -50,7 +51,6 @@ class LLMAdapter(Protocol):
         messages: list[Message],
         temperature: float = 0.1,
         max_tokens: int = 2048,
-        structured_output: type[BaseModel] | None = None,
     ) -> LLMResponse:
         """Generate a response from the LLM."""
         ...
@@ -123,7 +123,7 @@ class WorkerBase(ABC):
                     content=content,
                     metadata=metadata,
                 )
-            except Exception as e:
+            except Exception:
                 # Cleanup path — scratchpad writing failure should not crash worker
                 # Per Rule 17: broad except requires inline comment + WARNING trace
                 # Silently no-op if scratchpad writing fails

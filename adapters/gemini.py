@@ -23,9 +23,9 @@ from core.observability import (
 )
 
 if TYPE_CHECKING:
-    from pydantic import BaseModel
+    pass
 else:
-    from pydantic import BaseModel
+    pass
 
 
 class GeminiAdapter(LLMAdapter):
@@ -67,7 +67,6 @@ class GeminiAdapter(LLMAdapter):
         messages: list[Message],
         temperature: float = 0.1,
         max_tokens: int = 2048,
-        structured_output: type[BaseModel] | None = None,
     ) -> LLMResponse:
         """
         Generate a response from Gemini API.

@@ -6,7 +6,6 @@ with maximum hardware control for VRAM/RAM balancing.
 """
 
 import time
-from pydantic import BaseModel
 
 import llama_cpp
 
@@ -74,7 +73,6 @@ class LlamaCppAdapter(LLMAdapter):
         messages: list[Message],
         temperature: float = 0.1,
         max_tokens: int = 2048,
-        structured_output: type[BaseModel] | None = None,
     ) -> LLMResponse:
         """Generate a response from the local LLM."""
         start_time = time.perf_counter()

@@ -22,7 +22,6 @@ class MockAdapter:
         messages: list[Message],
         temperature: float = 0.1,
         max_tokens: int = 2048,
-        structured_output = None,
     ) -> LLMResponse:
         """Mock generate."""
         return LLMResponse(
@@ -225,7 +224,7 @@ class TestOllamaWorker:
             created_at=datetime.now(),
         )
         
-        with patch('core.observability.emit_trace') as mock_emit:
+        with patch('core.observability.emit_trace'):
             prompt = await worker.build_prompt(task, [])
             
             # build_prompt itself doesn't emit traces, but run() does
@@ -247,7 +246,7 @@ class TestOllamaWorker:
             duration_ms=100,
         )
         
-        with patch('core.observability.emit_trace') as mock_emit:
+        with patch('core.observability.emit_trace'):
             output = await worker.parse_output(raw_response, str(uuid4()))
             
             # parse_output itself doesn't emit traces, but run() does

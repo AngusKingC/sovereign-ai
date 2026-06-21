@@ -35,7 +35,6 @@ class MockLLMAdapter(LLMAdapter):
         messages: list[Message],
         temperature: float = 0.1,
         max_tokens: int = 2048,
-        structured_output: type | None = None,
     ) -> LLMResponse:
         """Generate a mock response."""
         # Echo the last user message

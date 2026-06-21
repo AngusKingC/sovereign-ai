@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from core.skill_registry import SkillRegistry
     from core.orchestrator import Orchestrator
     from core.memory_router import MemoryRouter
+    from core.schemas import LLMResponse, WorkerOutput
     from system.worker_persistence import WorkerPersistence
     from core.instruction_generator import InstructionGenerator
 
@@ -534,7 +535,6 @@ class PlaceholderWorker(WorkerBase):
                 messages: list[Message],
                 temperature: float = 0.1,
                 max_tokens: int = 2048,
-                structured_output: type[BaseModel] | None = None,
             ) -> LLMResponse:
                 return LLMResponse(
                     content="Placeholder response",

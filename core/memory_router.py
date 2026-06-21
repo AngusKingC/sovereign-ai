@@ -706,7 +706,6 @@ class MemoryRouter:
 
     async def fetch_by_type(
         self,
-        record_type: type,
         filter_func: Callable[[Any], bool] | None = None,
     ) -> list:
         """Fetch all records of a given type, optionally filtered.
@@ -715,7 +714,6 @@ class MemoryRouter:
         with optional filtering via a callable.
 
         Args:
-            record_type: The type of records to fetch (e.g., Task, WorkerOutput).
             filter_func: Optional callable that takes a record and returns bool.
                          If provided, only records where filter_func(record) is True are returned.
 
