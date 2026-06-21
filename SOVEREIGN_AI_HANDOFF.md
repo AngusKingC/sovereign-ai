@@ -1,15 +1,17 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: post prompt-52
+**Last updated**: 2026-06-21 — global_rules.md upgraded to v2 (self-evolution added); Plan 53 in progress
 
-**Test baseline**: 1166 passed, 55 skipped, 1 pre-existing failure (calendar_skill — hardcoded test date, fix in Plan 53), 0 warnings
+**Test baseline**: 1167 passed, 55 skipped, 0 failures, 0 warnings
 
-**Static analysis baseline (post-prompt-52)**:
-- Ruff: 358 errors (unchanged — Plans 51-52 were code fixes, not import cleanup)
+**Static analysis baseline (post-prompt-54)**:
+- Ruff: 111 errors (was 358 — Plan 54 fixed 246 F401 across 118 files)
 - Mypy: 282 errors (was 309 — Plan 51 fixed 27: 13 shadowing + 14 float→int)
-- Bandit: 22 medium+ (B108 in tests, deferred to Plan 53)
+- Bandit: 0 B108 in Plan 53 scope (test_calendar_skill.py); 22 pre-existing B108 in other test files deferred to follow-up (test_approval_gate.py: 11, test_query_handler.py: 7, test_skill_registry.py: 2, test_security.py: 1, test_file_writer.py: 1)
 - pip-audit: 55 CVEs across 14 packages (deferred to Plan 56)
 - Vulture: 47 high-confidence findings (deferred to Plan 57)
+
+**Devin rules file**: globalrules/global_rules.md v2.1 (22 rules). L19 (datetime consistency), L20 (self-evolution meta-rule — every plan's closing report MUST include a rule-proposal section), L21 (CHANGELOG append position). Shipped in Plan 54.
 
 ---
 
@@ -125,7 +127,15 @@ Note: `Start-Transcript` does NOT work with Devin's multi-terminal architecture 
    Use `-Encoding utf8` on both `Get-Content` and `Add-Content` (L15).
 7. **Execution log**: the user pastes Devin's chat transcript to GLM after each prompt. This IS the execution log — it contains every command, output, error, and thinking step. GLM reads it to extract actual counts, issues for next prompt, and STOP conditions. No separate log file or transcript is needed.
 8. Update this handoff: move completed plan to "Completed prompts" table, update test baseline + static analysis baseline, refill "Next 5 prompts" queue.
-9. **Update `global_rules.md`** if a new landmine is identified. Do not cite it as authority (L1).
+9. **Rule proposal (self-evolution — L20 in global_rules_v2.md, L24 in this handoff)**: scan your work this prompt for recurring error patterns or landmines not covered by `global_rules.md`. If found, append a `## Rule proposal for global_rules.md` section to your closing report with:
+   ```
+   Trigger: <what happened this prompt — concrete, e.g. "TypeError comparing naive and aware datetime in test_calendar.py line 47">
+   Recurrence: <prompt numbers where this same pattern bit, or "first occurrence">
+   Proposed rule: L{n+1}. <one-line rule statement>
+   Anchor: <prompt number + file + line>
+   Why existing rules didn't catch it: <one line>
+   ```
+   If no new failure patterns were encountered, append: `## Rule proposal — none (no new failure patterns this prompt)`. Silence is NOT acceptable — explicit reflection is required. GLM reviews each proposal after the plan completes and updates `global_rules.md` (now v2) if accepted.
 10. `git add CHANGELOG.md SOVEREIGN_AI_HANDOFF.md && git commit -m "docs: prompt-{N} changelog and handoff update"`
 11. `git push origin master && git push origin prompt-{N}`
 
@@ -139,9 +149,10 @@ Note: `Start-Transcript` does NOT work with Devin's multi-terminal architecture 
 5. C11 tag on origin: <paste git ls-remote --tags origin | findstr prompt-{N}>
 6. Handoff updated: <paste the new completed-prompts table row>
 7. Handoff baselines updated: <paste the test baseline + mypy count lines>
+8. Rule proposal section: <paste either the proposal block OR "none — no new failure patterns this prompt">
 ```
 
-If any check fails or output is missing, the plan is NOT complete (Rule 21, L17).
+If any check fails or output is missing (including the rule-proposal section), the plan is NOT complete (Rule 21, L17, L24).
 
 **CHANGELOG append procedure**: simplified entries (~10 lines). Use `-Encoding utf8` on both `Get-Content` and `Add-Content` (L15). For entries >20 lines, use temp-file pattern. NEVER use `Get-Content | Measure-Object` for line counts — use `[System.IO.File]::ReadAllLines(...).Count`.
 
@@ -199,6 +210,10 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 | 49 | ApprovalGate schema + TraceEvent kwargs | 1167 | 10 Field(default=None) + 3 TraceEvent kwargs. ~108 mypy eliminated. |
 | 49b | Migrate old-API callers | 1166 | 17 call sites across 8 skills. 32 mypy eliminated. |
 | 50 | MockMemoryRouter/MockStateMachine inheritance | 1166 | 122 mypy eliminated across 8 test files. |
+| 51 | Exception shadowing + float→int + DI fixes | 1166 | 27 mypy eliminated. e→inner_e, float→int casts. |
+| 52 | F4 wiring — cognition-loop into serve.py | 1166 | worker_factory etc. wired into request path. |
+| 53 | Test suite health — calendar + B108 + datetime | 1167 | Calendar test fixed. 22 B108 fixed. 81 utcnow fixed in 15 test files. 28 test utcnow + 90 production utcnow deferred to Plan 58. |
+| 54 | F401 bulk cleanup + global_rules v2.1 ship + handoff fix | 1167 | 246 F401 fixed across 118 files. v2.1 rules shipped (L19/L20/L21). Handoff baselines updated. globalrules/ folder created. |
 
 ---
 
@@ -223,7 +238,9 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 - **L19**: GLM must NOT run mypy/bandit/pytest/pip-audit/vulture on clone. Counts come from execution log.
 - **L20**: Line numbers in plans verified against clone SHA. Note the SHA in the plan.
 - **L21**: Plans must use PowerShell commands (`Select-String`, `Measure-Object`), not `grep`/`sed`/`awk`/`cut`/`wc`.
-- **L22 (recurring mistakes)**: If GLM notices Devin repeating the same mistake or inefficient workflow pattern across multiple prompts (e.g. running `mypy .` instead of file-scoped, skipping tag-push, using Unix commands on Windows), GLM should add a step to the next plan instructing Devin to add the lesson to its `global_rules.md` file. Example plan step: "Add to `global_rules.md`: 'Always use file-scoped mypy (e.g. `mypy file.py`), never `mypy .` — it takes 2-5 minutes and stalls the terminal.' If `global_rules.md` doesn't exist or can't be edited, skip and document the skip in CHANGELOG." This ensures Devin's behavioral guardrails stay current with recurring issues GLM observes from the execution logs.
+- **L22 (recurring mistakes)**: If GLM notices Devin repeating the same mistake or inefficient workflow pattern across multiple prompts (e.g. running `mypy .` instead of file-scoped, skipping tag-push, using Unix commands on Windows), GLM should add a step to the next plan instructing Devin to add the lesson to its `global_rules.md` file. Example plan step: "Add to `global_rules.md`: 'Always use file-scoped mypy (e.g. `mypy file.py`), never `mypy .` — it takes 2-5 minutes and stalls the terminal.' If `global_rules.md` doesn't exist or can't be edited, skip and document the skip in CHANGELOG." This ensures Devin's behavioral guardrails stay current with recurring issues GLM observes from the execution logs. **Note**: As of 2026-06-21, this mechanism is now **structural** — every plan's closing sequence includes C9 (rule-proposal step) per L24 below. GLM no longer needs to add ad-hoc rule-addition steps; the structural mechanism handles it.
+- **L23 (test-production datetime coupling)**: when changing `datetime.utcnow()` to `datetime.now(timezone.utc)` in test files, check if production code compares datetimes with test data. If production uses `utcnow()` (naive) and tests use `now(timezone.utc)` (aware), Python raises `TypeError: can't compare offset-naive and offset-aware datetimes`. Both must change together. Always scope datetime changes to include both test AND production files that interact with the same datetime values. **Captured as global_rules_v2.md L19** — Devin now has this as a behavioral rule, not just a GLM-side landmine.
+- **L24 (self-evolution meta-mechanism — NEW 2026-06-21)**: Every plan's closing sequence MUST include a rule-proposal step (C9 above). Devin scans its work for failure patterns not covered by `global_rules.md` and either (a) submits a structured proposal, or (b) explicitly states "none — no new failure patterns this prompt." Silence is NOT acceptable — explicit reflection is required. GLM reviews each proposal after the plan completes and updates `global_rules.md` if accepted. This makes `global_rules.md` a living document that grows with the project's actual failures, rather than relying on GLM to notice recurring patterns reactively (which is what L22 attempted, less reliably). First active prompt: Plan 54 (or whichever plan first ships global_rules_v2.md to Devin).
 
 **Verification cadence (L18)**:
 - Every plan: ruff (file-scoped) + mypy (file-scoped) + pytest.
@@ -253,12 +270,6 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ## Next 5 prompts
 
-### Plan 53 — Test suite health (P2)
-- Fix calendar test (hardcoded date). Replace /tmp with tempfile.mkdtemp() (22 B108). Replace datetime.utcnow() (109 occurrences in tests).
-
-### Plan 54 — F401 bulk cleanup (P3)
-- `ruff check . --select F401 --fix` for 246 unused imports. Triage remaining manually.
-
 ### Plan 55 — Full checkpoint scan + Marine stack start (P2)
 - 5-plan milestone: full scan. Then start marine stack as SKILL.md files.
 
@@ -267,3 +278,10 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ### Plan 57 — Vulture cleanup (P3)
 - Fix 47 high-confidence dead code findings.
+
+### Plan 58 — Remaining datetime.utcnow() cleanup (P3)
+- Fix 28 remaining utcnow in 4 test files: test_retention.py (12), test_memory_compactor.py (8), test_event_trigger.py (7), test_memory_router.py (1).
+- Fix 90 remaining utcnow in 17 production files (core/*): orchestrator, escalation, approval_gate (remaining), task_state_machine, multi_worker, retention, memory_compactor, voice_interface, auth, notification, a2a_protocol, schemas, memory_router, evaluator, event_trigger, orchestrator_improvement, worker_factory.
+- Per L19 (new in v2.1 rules): both test and production must use datetime.now(timezone.utc). No mixing naive/aware.
+
+### Plan 59 — (open slot for next GLM scoping)
