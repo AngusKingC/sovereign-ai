@@ -6,7 +6,7 @@ Tests the full escalation path: decision created â†’ submitted to ApprovalGate â
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from core.schemas import Task, WorkerOutput, TaskStatus, EscalationDecision, EscalationTier
@@ -78,7 +78,7 @@ class TestEscalationFlow:
             complexity_score=0.9,
             priority="normal",
             current_state=TaskStatus.RECEIVED,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
     
     @pytest.mark.asyncio
@@ -191,7 +191,7 @@ class TestEscalationFlow:
             approved=True,
             decision_reason="Approved for testing",
             approved_by="test_user",
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
         ))
         
         # Process task

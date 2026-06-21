@@ -11,6 +11,45 @@ This changelog documents all implementations, changes, and decisions made during
 
 ---
 
+## 2026-06-21 12:08 — prompt-53
+
+**Plan**: Fix datetime.utcnow() deprecation warnings + calendar test hardcoded date + B108 bandit findings
+
+**Changed**:
+- tests/skills/test_calendar_skill.py: replaced hardcoded date "20260620T140000Z" with dynamic future date (current date + 30 days)
+- tests/skills/test_calendar_skill.py: replaced hardcoded "test.ics" paths with tempfile.mkdtemp() and shutil.rmtree() for cleanup (22 occurrences)
+- 15 test files: replaced datetime.utcnow() with datetime.now(timezone.utc) and added timezone import
+  - tests/test_approval_gate.py (16 occurrences)
+  - tests/test_adapter_fallback.py (15 occurrences)
+  - tests/skills/test_calendar_skill.py (11 occurrences)
+  - tests/skills/test_reminder_skill.py (9 occurrences)
+  - tests/skills/test_notes_skill.py (7 occurrences)
+  - tests/skills/test_email_skill.py (5 occurrences)
+  - tests/test_model_evaluator.py (4 occurrences)
+  - tests/test_worker_persistence.py (3 occurrences)
+  - tests/test_memory_scoping.py (3 occurrences)
+  - tests/test_worker_factory.py (2 occurrences)
+  - tests/test_escalation.py (2 occurrences)
+  - tests/test_integration.py (1 occurrence)
+  - tests/test_monitor_daemon.py (1 occurrence)
+  - tests/test_web_server.py (1 occurrence)
+  - tests/test_evaluator.py (1 occurrence)
+- core/approval_gate.py: replaced datetime.utcnow() with datetime.now(timezone.utc) (2 occurrences) and added timezone import
+  - Line 713 in check_scope() method
+  - Line 846 in expire_pending() method
+
+**Implementation Notes**:
+- Production code fix was necessary because tests use timezone-aware datetimes (datetime.now(timezone.utc)) while production code used naive datetimes (datetime.utcnow()), causing TypeError when comparing
+- Scope expanded from test-only to include core/approval_gate.py due to datetime comparison failures
+- 4 test files still have utcnow (test_retention.py, test_memory_compactor.py, test_event_trigger.py, test_memory_router.py) but were outside the plan's scope
+
+**Results**:
+- Tests: 1167 passed, 55 skipped, 0 failed
+- Bandit B108 findings: 0
+- utcnow warnings in test output: 0
+
+---
+
 ## 2026-06-21 03:30 — prompt-52
 
 **Plan**: Wire cognition-loop subsystems into serve.py + TUI request path (F4 fix)

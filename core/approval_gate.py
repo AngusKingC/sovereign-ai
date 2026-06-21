@@ -5,7 +5,7 @@ Single responsibility: Manage approval requests, scopes, and state transitions
 for actions requiring human authorization.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Literal, Optional
 from uuid import UUID, uuid4
@@ -710,7 +710,7 @@ class ApprovalGate:
             return False
         
         scopes = self._scope_cache[session_id]
-        current_time = datetime.utcnow()
+        current_time = datetime.now(timezone.utc)
         
         for scope in scopes:
             # Check if scope is active and not expired
@@ -843,7 +843,7 @@ class ApprovalGate:
         """
         from core.schemas import Task, TaskStatus
         
-        current_time = datetime.utcnow()
+        current_time = datetime.now(timezone.utc)
         expired_requests = []
         
         # Find expired requests

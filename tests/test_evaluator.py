@@ -1,7 +1,7 @@
 """Tests for OutputEvaluator."""
 
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import Mock, AsyncMock
 
 from core.evaluator import OutputEvaluator
@@ -326,7 +326,7 @@ class TestOutputEvaluator:
                     "evaluator_score": None,
                     "manual_rating": 8.0,
                     "final_score": 0.8,
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.now(timezone.utc).isoformat()
                 }
             }
         ]

@@ -3,7 +3,7 @@ Tests for Worker Factory.
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from core.worker_factory import WorkerFactory, DynamicWorkerProfile, PlaceholderWorker
@@ -117,7 +117,7 @@ class TestWorkerFactory:
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.RECEIVED,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
     
     @pytest.mark.asyncio
@@ -363,7 +363,7 @@ class TestPlaceholderWorker:
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.RECEIVED,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
     
     @pytest.mark.asyncio

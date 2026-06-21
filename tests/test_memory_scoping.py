@@ -1,7 +1,7 @@
 """Tests for memory scoping functionality."""
 
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 from core.memory_router import MemoryRouter, MemoryScope, ScopedMemoryRouter
@@ -39,7 +39,7 @@ def task():
         complexity_score=0.5,
         priority="normal",
         current_state="received",
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
 
 
@@ -161,7 +161,7 @@ class TestStrategicContext:
             worker_performance={"worker1": 0.9},
             cloud_spend_today=0.0,
             open_questions=["question1"],
-            last_updated=datetime.utcnow(),
+            last_updated=datetime.now(timezone.utc),
             escalation_history=[],
         )
         assert context.context_id is not None
@@ -181,7 +181,7 @@ class TestStrategicContext:
                 worker_performance={},
                 cloud_spend_today=-1.0,  # Invalid
                 open_questions=[],
-                last_updated=datetime.utcnow(),
+                last_updated=datetime.now(timezone.utc),
                 escalation_history=[],
             )
 

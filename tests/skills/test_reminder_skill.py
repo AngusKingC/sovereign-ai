@@ -1,7 +1,7 @@
 """Tests for ReminderSkill."""
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 from unittest.mock import AsyncMock
 
@@ -44,10 +44,10 @@ class TestReminderSkill:
             approved=True,
             decision_reason="Approved",
             approved_by="test_user",
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
         )
 
-        due_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+        due_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
         reminder_id = await self.skill.create("Test reminder", due_at, "console")
         
         # Verify scoped_write was called with correct schema
@@ -72,10 +72,10 @@ class TestReminderSkill:
             approved=True,
             decision_reason="Approved",
             approved_by="test_user",
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
         )
 
-        due_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+        due_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
         reminder_id = await self.skill.create("Test reminder", due_at)
         
         assert reminder_id is not None
@@ -90,10 +90,10 @@ class TestReminderSkill:
             approved=True,
             decision_reason="Approved",
             approved_by="test_user",
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
         )
 
-        due_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+        due_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
         await self.skill.create("Test reminder", due_at, "telegram")
         
         events = self.emitter.get_events()
@@ -113,7 +113,7 @@ class TestReminderSkill:
             approval_gate=None,
         )
 
-        due_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+        due_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
         reminder_id = await self.skill.create("Test reminder", due_at)
         
         # Verify scoped_write was called
@@ -194,7 +194,7 @@ class TestReminderSkill:
     @pytest.mark.asyncio
     async def test_get_due_returns_only_reminders_whose_due_at_is_in_the_past(self):
         """get_due returns only reminders whose due_at is in the past."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         past = now - timedelta(hours=1)
         future = now + timedelta(hours=1)
         
@@ -211,7 +211,7 @@ class TestReminderSkill:
     @pytest.mark.asyncio
     async def test_get_due_does_not_return_already_delivered_reminders(self):
         """get_due does not return already-delivered reminders."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         past = now - timedelta(hours=1)
         
         self.memory_router.scoped_read.return_value = [

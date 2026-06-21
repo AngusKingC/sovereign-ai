@@ -3,7 +3,7 @@ Tests for Model Evaluator.
 """
 
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 from unittest.mock import AsyncMock, patch
 
@@ -49,7 +49,7 @@ class MockResourceManager:
         """Return the configured snapshot."""
         from core.schemas import ResourceSnapshot
         return ResourceSnapshot(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             vram_total_gb=self._snapshot["vram_total_gb"],
             vram_used_gb=self._snapshot["vram_total_gb"] - self._snapshot["vram_available_gb"],
             vram_available_gb=self._snapshot["vram_available_gb"],
@@ -114,7 +114,7 @@ class TestEvaluationResult:
             worker_id="test_worker",
             task_type="code",
             recommendations=[],
-            evaluated_at=datetime.utcnow(),
+            evaluated_at=datetime.now(timezone.utc),
             hardware_snapshot={"vram_available_gb": 8.0},
         )
         
@@ -360,7 +360,7 @@ class TestModelEvaluator:
                 evaluator_score=None,
                 manual_rating=8.0,
                 final_score=0.8,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
             for i in range(11)
         ]
@@ -386,7 +386,7 @@ class TestModelEvaluator:
                 evaluator_score=None,
                 manual_rating=8.0,
                 final_score=0.8,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
             for i in range(10)
         ]

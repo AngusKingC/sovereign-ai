@@ -4,7 +4,7 @@ import pytest
 import asyncio
 import time
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.adapter_fallback import AdapterFallbackChain
 from core.observability import MemoryTraceEmitter, TraceEventType, TraceComponent
@@ -81,7 +81,7 @@ class TestAdapterFallbackChain:
     @pytest.mark.asyncio
     async def test_execute_calls_primary_adapter_and_returns_result_on_success(self, fallback_chain):
         """Test execute() calls primary adapter and returns result on success."""
-        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.utcnow())]
+        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.now(timezone.utc))]
         result = await fallback_chain.execute(messages)
 
         assert result == "Response from primary: test prompt"
@@ -98,7 +98,7 @@ class TestAdapterFallbackChain:
             emitter=MemoryTraceEmitter(),
         )
 
-        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.utcnow())]
+        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.now(timezone.utc))]
         result = await chain.execute(messages)
 
         assert result == "Response from fallback: test prompt"
@@ -115,7 +115,7 @@ class TestAdapterFallbackChain:
             emitter=MemoryTraceEmitter(),
         )
 
-        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.utcnow())]
+        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.now(timezone.utc))]
         with pytest.raises(RuntimeError, match="All adapters in fallback chain exhausted"):
             await chain.execute(messages)
 
@@ -134,17 +134,17 @@ class TestAdapterFallbackChain:
         )
 
         # First failure - primary fails, fallback succeeds
-        messages1 = [Message(role=MessageRole.USER, content="test prompt 1", timestamp=datetime.utcnow())]
+        messages1 = [Message(role=MessageRole.USER, content="test prompt 1", timestamp=datetime.now(timezone.utc))]
         result1 = await chain.execute(messages1)
         assert result1 == "Response from fallback: test prompt 1"
 
         # Second failure - primary fails, fallback succeeds
-        messages2 = [Message(role=MessageRole.USER, content="test prompt 2", timestamp=datetime.utcnow())]
+        messages2 = [Message(role=MessageRole.USER, content="test prompt 2", timestamp=datetime.now(timezone.utc))]
         result2 = await chain.execute(messages2)
         assert result2 == "Response from fallback: test prompt 2"
 
         # Third attempt - primary should be skipped due to circuit breaker, fallback succeeds
-        messages3 = [Message(role=MessageRole.USER, content="test prompt 3", timestamp=datetime.utcnow())]
+        messages3 = [Message(role=MessageRole.USER, content="test prompt 3", timestamp=datetime.now(timezone.utc))]
         result3 = await chain.execute(messages3)
         assert result3 == "Response from fallback: test prompt 3"
 
@@ -163,12 +163,12 @@ class TestAdapterFallbackChain:
         )
 
         # First failure - opens circuit breaker
-        messages1 = [Message(role=MessageRole.USER, content="test prompt 1", timestamp=datetime.utcnow())]
+        messages1 = [Message(role=MessageRole.USER, content="test prompt 1", timestamp=datetime.now(timezone.utc))]
         result1 = await chain.execute(messages1)
         assert result1 == "Response from fallback: test prompt 1"
 
         # Second attempt - primary should be skipped
-        messages2 = [Message(role=MessageRole.USER, content="test prompt 2", timestamp=datetime.utcnow())]
+        messages2 = [Message(role=MessageRole.USER, content="test prompt 2", timestamp=datetime.now(timezone.utc))]
         result2 = await chain.execute(messages2)
         assert result2 == "Response from fallback: test prompt 2"
 
@@ -188,7 +188,7 @@ class TestAdapterFallbackChain:
         )
 
         # First failure - opens circuit breaker
-        messages1 = [Message(role=MessageRole.USER, content="test prompt 1", timestamp=datetime.utcnow())]
+        messages1 = [Message(role=MessageRole.USER, content="test prompt 1", timestamp=datetime.now(timezone.utc))]
         result1 = await chain.execute(messages1)
         assert result1 == "Response from fallback: test prompt 1"
 
@@ -196,7 +196,7 @@ class TestAdapterFallbackChain:
         await asyncio.sleep(1.1)
 
         # Circuit breaker should be reset, primary should be tried again
-        messages2 = [Message(role=MessageRole.USER, content="test prompt 2", timestamp=datetime.utcnow())]
+        messages2 = [Message(role=MessageRole.USER, content="test prompt 2", timestamp=datetime.now(timezone.utc))]
         result2 = await chain.execute(messages2)
         assert result2 == "Response from fallback: test prompt 2"
 
@@ -215,7 +215,7 @@ class TestAdapterFallbackChain:
             emitter=MemoryTraceEmitter(),
         )
 
-        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.utcnow())]
+        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.now(timezone.utc))]
         result = await chain.execute(messages)
 
         assert result == "Response from fallback: test prompt"
@@ -234,7 +234,7 @@ class TestAdapterFallbackChain:
             emitter=MemoryTraceEmitter(),
         )
 
-        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.utcnow())]
+        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.now(timezone.utc))]
         result = await chain.execute(messages)
 
         assert result == "Response from primary: test prompt"
@@ -253,7 +253,7 @@ class TestAdapterFallbackChain:
             emitter=MemoryTraceEmitter(),
         )
 
-        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.utcnow())]
+        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.now(timezone.utc))]
         result = await chain.execute(messages)
 
         assert result == "Response from cloud: test prompt"
@@ -273,7 +273,7 @@ class TestAdapterFallbackChain:
             emitter=MemoryTraceEmitter(),
         )
 
-        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.utcnow())]
+        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.now(timezone.utc))]
         result = await chain.execute(messages)
 
         assert result == "Response from fallback: test prompt"
@@ -370,7 +370,7 @@ class TestAdapterFallbackChain:
             emitter=MemoryTraceEmitter(),
         )
 
-        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.utcnow())]
+        messages = [Message(role=MessageRole.USER, content="test prompt", timestamp=datetime.now(timezone.utc))]
         await chain.execute(messages)
 
         events = chain._emitter.get_events()

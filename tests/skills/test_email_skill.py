@@ -3,7 +3,7 @@
 import os
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from skills.email.email_skill import EmailSkill
@@ -201,7 +201,7 @@ class TestEmailSkill:
             approved=True,
             decision_reason="Approved",
             approved_by="test_user",
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
         )
 
         mock_smtp = MagicMock()
@@ -228,7 +228,7 @@ class TestEmailSkill:
             approved=False,
             decision_reason="Denied",
             approved_by="test_user",
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
         )
 
         with pytest.raises(SkillExecutionError) as exc_info:
@@ -245,7 +245,7 @@ class TestEmailSkill:
             approved=True,
             decision_reason="Approved",
             approved_by="test_user",
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
         )
 
         with patch("smtplib.SMTP", side_effect=Exception("SMTP failed")):
@@ -263,7 +263,7 @@ class TestEmailSkill:
             approved=True,
             decision_reason="Approved",
             approved_by="test_user",
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
         )
 
         mock_smtp = MagicMock()
@@ -297,7 +297,7 @@ class TestEmailSkill:
             approved=True,
             decision_reason="Approved",
             approved_by="test_user",
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
         )
 
         with pytest.raises(SkillExecutionError) as exc_info:

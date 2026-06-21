@@ -1,7 +1,7 @@
 """Tests for WorkerPersistence."""
 
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import Mock, AsyncMock, patch
 from tempfile import TemporaryDirectory
@@ -56,7 +56,7 @@ class TestWorkerPersistence:
             active_tasks=0,
             version=1,
             status=WorkerStatus.ACTIVE,
-            creation_date=datetime.utcnow(),
+            creation_date=datetime.now(timezone.utc),
             instruction_file_ref=None,
         )
     
@@ -115,7 +115,7 @@ class TestWorkerPersistence:
                     "type": "worker_profile",
                     "worker_id": "worker-1",
                     "is_current": True,
-                    "profile": {"worker_id": "worker-1", "name": "Worker 1", "status": WorkerStatus.ACTIVE, "version": 1, "creation_date": datetime.utcnow(), "capabilities": [], "preferred_models": [], "performance_score": 0.0, "active_tasks": 0, "worker_type": "placeholder", "description": "", "purpose": "", "escalation_threshold": 0.8, "tasks_completed": 0, "avg_confidence": 0.0, "complexity_min": 0.0, "complexity_max": 1.0, "preferred_complexity": 0.5, "depth_preference": 0.5, "speculation_tolerance": 0.5, "source_skepticism": 0.5, "verbosity": 0.5, "standing_instructions": [], "preferred_model": "default"},
+                    "profile": {"worker_id": "worker-1", "name": "Worker 1", "status": WorkerStatus.ACTIVE, "version": 1, "creation_date": datetime.now(timezone.utc), "capabilities": [], "preferred_models": [], "performance_score": 0.0, "active_tasks": 0, "worker_type": "placeholder", "description": "", "purpose": "", "escalation_threshold": 0.8, "tasks_completed": 0, "avg_confidence": 0.0, "complexity_min": 0.0, "complexity_max": 1.0, "preferred_complexity": 0.5, "depth_preference": 0.5, "speculation_tolerance": 0.5, "source_skepticism": 0.5, "verbosity": 0.5, "standing_instructions": [], "preferred_model": "default"},
                 }
             },
         ]
@@ -144,7 +144,7 @@ class TestWorkerPersistence:
                     "type": "worker_profile",
                     "worker_id": "worker-1",
                     "is_current": True,
-                    "profile": {"worker_id": "worker-1", "name": "Worker 1", "status": WorkerStatus.DEPRECATED, "version": 1, "creation_date": datetime.utcnow(), "capabilities": [], "preferred_models": [], "performance_score": 0.0, "active_tasks": 0, "worker_type": "placeholder", "description": "", "purpose": "", "escalation_threshold": 0.8, "tasks_completed": 0, "avg_confidence": 0.0, "complexity_min": 0.0, "complexity_max": 1.0, "preferred_complexity": 0.5, "depth_preference": 0.5, "speculation_tolerance": 0.5, "source_skepticism": 0.5, "verbosity": 0.5, "standing_instructions": [], "preferred_model": "default"},
+                    "profile": {"worker_id": "worker-1", "name": "Worker 1", "status": WorkerStatus.DEPRECATED, "version": 1, "creation_date": datetime.now(timezone.utc), "capabilities": [], "preferred_models": [], "performance_score": 0.0, "active_tasks": 0, "worker_type": "placeholder", "description": "", "purpose": "", "escalation_threshold": 0.8, "tasks_completed": 0, "avg_confidence": 0.0, "complexity_min": 0.0, "complexity_max": 1.0, "preferred_complexity": 0.5, "depth_preference": 0.5, "speculation_tolerance": 0.5, "source_skepticism": 0.5, "verbosity": 0.5, "standing_instructions": [], "preferred_model": "default"},
                 }
             },
         ]

@@ -1,7 +1,7 @@
 """Tests for Approval Gate."""
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from core.approval_gate import (
@@ -65,7 +65,7 @@ class TestApprovalGateSchemas:
             action_parameters={"path": "/etc/config.yaml"},
             risk_level="medium",
             reason_for_approval="System directory write",
-            expires_at=datetime.utcnow() + timedelta(seconds=300),
+            expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
         )
         
         assert request.request_id == "apr_123"
@@ -85,7 +85,7 @@ class TestApprovalGateSchemas:
             action_description="Write config file",
             risk_level="medium",
             reason_for_approval="System directory write",
-            expires_at=datetime.utcnow() + timedelta(seconds=300),
+            expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
             timeout_seconds=60,
         )
         assert request.timeout_seconds == 60
@@ -113,7 +113,7 @@ class TestApprovalGateSchemas:
             scope_pattern="/tmp/*",
             size_limit_mb=1024,
             time_limit_seconds=3600,
-            expires_at=datetime.utcnow() + timedelta(hours=1),
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
             granted_by="user_123",
         )
         
@@ -153,7 +153,7 @@ class TestApprovalGate:
             action_description="Write config file",
             risk_level="medium",
             reason_for_approval="System directory write",
-            expires_at=datetime.utcnow() + timedelta(seconds=300),
+            expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
         )
         
         response = await gate.request_approval(request)
@@ -178,7 +178,7 @@ class TestApprovalGate:
             action_description="Write config file",
             risk_level="medium",
             reason_for_approval="System directory write",
-            expires_at=datetime.utcnow() + timedelta(seconds=300),
+            expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
         )
         
         await gate.request_approval(request)
@@ -206,7 +206,7 @@ class TestApprovalGate:
             action_description="Write config file",
             risk_level="medium",
             reason_for_approval="System directory write",
-            expires_at=datetime.utcnow() + timedelta(seconds=300),
+            expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
         )
         gate._pending_requests["apr_123"] = request
         
@@ -234,7 +234,7 @@ class TestApprovalGate:
             action_description="Write config file",
             risk_level="medium",
             reason_for_approval="System directory write",
-            expires_at=datetime.utcnow() + timedelta(seconds=300),
+            expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
         )
         gate._pending_requests["apr_123"] = request
         
@@ -272,7 +272,7 @@ class TestApprovalGate:
             action_description="Write config file",
             risk_level="medium",
             reason_for_approval="System directory write",
-            expires_at=datetime.utcnow() - timedelta(seconds=10),  # Expired
+            expires_at=datetime.now(timezone.utc) - timedelta(seconds=10),  # Expired
         )
         gate._pending_requests["apr_123"] = request
         
@@ -295,7 +295,7 @@ class TestApprovalGate:
             session_id="sess_xyz",
             scope_type="file_write",
             scope_pattern="/tmp/",
-            expires_at=datetime.utcnow() + timedelta(hours=1),
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
             granted_by="user_123",
         )
         gate._scope_cache["sess_xyz"] = [scope]
@@ -330,7 +330,7 @@ class TestApprovalGate:
             session_id="sess_xyz",
             scope_type="download",
             scope_pattern="*",
-            expires_at=datetime.utcnow() + timedelta(hours=1),
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
             granted_by="user_123",
         )
         gate._scope_cache["sess_xyz"] = [scope]
@@ -352,7 +352,7 @@ class TestApprovalGate:
             session_id="sess_xyz",
             scope_type="file_write",
             scope_pattern="/tmp/*",
-            expires_at=datetime.utcnow() + timedelta(hours=1),
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
             granted_by="user_123",
         )
         
@@ -390,7 +390,7 @@ class TestApprovalGate:
             session_id="sess_xyz",
             scope_type="file_write",
             scope_pattern="/tmp/*",
-            expires_at=datetime.utcnow() - timedelta(hours=1),  # Expired
+            expires_at=datetime.now(timezone.utc) - timedelta(hours=1),  # Expired
             granted_by="user_123",
         )
         gate._scope_cache["sess_xyz"] = [scope]
@@ -413,7 +413,7 @@ class TestApprovalGate:
             session_id="sess_xyz",
             scope_type="file_write",
             scope_pattern="/tmp/*",
-            expires_at=datetime.utcnow() + timedelta(hours=1),
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
             granted_by="user_123",
             is_active=False,
         )
@@ -436,7 +436,7 @@ class TestApprovalGate:
             session_id="sess_xyz",
             scope_type="file_write",
             scope_pattern="/tmp/",
-            expires_at=datetime.utcnow() + timedelta(hours=1),
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
             granted_by="user_123",
         )
         
@@ -469,7 +469,7 @@ class TestApprovalGate:
             action_parameters={"command": "git status"},
             risk_level="low",
             reason_for_approval="Git command",
-            expires_at=datetime.utcnow() + timedelta(seconds=300),
+            expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
         )
         
         response = await gate.request_approval(request)
@@ -501,7 +501,7 @@ class TestApprovalGate:
             action_parameters={"command": "rm -rf /"},
             risk_level="critical",
             reason_for_approval="Dangerous command",
-            expires_at=datetime.utcnow() + timedelta(seconds=300),
+            expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
         )
         
         # Should raise ApprovalDeniedError immediately

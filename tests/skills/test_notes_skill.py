@@ -1,7 +1,7 @@
 """Tests for NotesSkill."""
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 from unittest.mock import AsyncMock
 
@@ -44,7 +44,7 @@ class TestNotesSkill:
             approved=True,
             decision_reason="Approved",
             approved_by="test_user",
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
         )
 
         note_id = await self.skill.create("Test Note", "Test content", ["tag1", "tag2"])
@@ -72,7 +72,7 @@ class TestNotesSkill:
             approved=True,
             decision_reason="Approved",
             approved_by="test_user",
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
         )
 
         note_id = await self.skill.create("Test Note", "Test content")
@@ -89,7 +89,7 @@ class TestNotesSkill:
             approved=True,
             decision_reason="Approved",
             approved_by="test_user",
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
         )
 
         await self.skill.create("Test Note", "Test content", ["tag1"])
@@ -194,7 +194,7 @@ class TestNotesSkill:
             approved=True,
             decision_reason="Approved",
             approved_by="test_user",
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
         )
 
         note = {"id": "1", "title": "Old Title", "content": "Old Content", "tags": ["old"], "created_at": "2026-06-20T10:00:00", "updated_at": "2026-06-20T12:00:00"}
@@ -221,7 +221,7 @@ class TestNotesSkill:
             approved=True,
             decision_reason="Approved",
             approved_by="test_user",
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
         )
 
         self.memory_router.scoped_read.return_value = None
@@ -239,7 +239,7 @@ class TestNotesSkill:
             approved=True,
             decision_reason="Approved",
             approved_by="test_user",
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
         )
 
         note = {"id": "1", "title": "Note 1", "content": "Content 1", "tags": [], "created_at": "2026-06-20T10:00:00", "updated_at": "2026-06-20T12:00:00"}
@@ -263,7 +263,7 @@ class TestNotesSkill:
             approved=True,
             decision_reason="Approved",
             approved_by="test_user",
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
         )
 
         self.memory_router.scoped_read.return_value = None

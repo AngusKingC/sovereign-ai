@@ -114,7 +114,7 @@ class TestWebServer:
         """Test that GET /api/trace returns {"events": [...]} with at most 100 events."""
         # Add 150 events to emitter
         from core.observability import TraceEvent, TraceComponent, TraceLevel, TraceEventType
-        from datetime import datetime
+        from datetime import datetime, timezone
         from uuid import uuid4
         
         for i in range(150):
@@ -126,7 +126,7 @@ class TestWebServer:
                 message=f"Test event {i}",
                 data={},
                 duration_ms=0,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
             )
             self.emitter._events.append(event)
         

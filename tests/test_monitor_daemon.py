@@ -7,7 +7,7 @@ run loop, dispatch, and checkpoint/resume functionality.
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from system.monitor_daemon import MonitorDaemon, ScheduledTask, TaskScheduleType
@@ -96,7 +96,7 @@ class TestScheduledTask:
             task_id=str(uuid4()),
             schedule_type=TaskScheduleType.DEFERRED,
             enabled=False,
-            run_at=datetime.utcnow() + timedelta(hours=1),
+            run_at=datetime.now(timezone.utc) + timedelta(hours=1),
             interval_seconds=3600,
             condition="test_condition",
             metadata={"key": "value"},
