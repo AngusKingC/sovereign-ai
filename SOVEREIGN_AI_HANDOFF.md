@@ -277,9 +277,6 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ## Next 5 prompts
 
-### Plan 57 — Vulture cleanup (P3)
-- Fix 32 high-confidence dead code findings.
-
 ### Plan 58 — Remaining datetime.utcnow() cleanup (P3)
 - Fix 28 remaining utcnow in 4 test files + 90 in 17 production files. Per L19.
 
@@ -290,3 +287,4 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 - 5-plan milestone: full scan. Verify Plans 57-59 progress.
 
 ### Plan 61 — (open slot for next GLM scoping)
+### Plan 62 — (open slot)
