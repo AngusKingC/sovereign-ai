@@ -9,7 +9,7 @@
 - Mypy (full-repo): 283 errors (was 282 — delta +1)
 - Bandit: 3179 low, 22 medium (22 B108 pre-existing in tests/, deferred)
 - pip-audit: 19 CVEs across 4 packages (was 55 — Plan 56 fixed 36 CVEs)
-- Vulture: 32 high-confidence findings (deferred to Plan 57)
+- Vulture: 20 high-confidence findings (was 32 — Plan 57 removed 16, deferred 16 as Category C)
 
 **Devin rules**: **Inline approach (2026-06-21)** — rules travel with each plan as `## Section 0: Rules` at the top. GLM maintains the canonical content in `/home/z/my-project/download/global_rules_v2.md` (currently v2.2, 23 rules: L1-L23). Each plan's Section 0 is a copy of this file's rules body. The `/globalrules/` folder in the repo is **reference-only** (a snapshot from Plan 54, not authoritative). Devin reads rules from Section 0 of the current plan, NOT from `/globalrules/global_rules.md`. L20 self-evolution is active: every plan's C9 step requires a rule-proposal section.
 
@@ -220,6 +220,7 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 | 54 | F401 bulk cleanup + global_rules v2.1 ship + handoff fix | 1167 | 246 F401 fixed across 118 files. v2.1 rules shipped (L19/L20/L21). Handoff baselines updated. globalrules/ folder created. |
 | 55 | 5-plan milestone: full scan + Marine stack start | 1167 | 4 SKILL.md files created (weather, AIS, tidal, passage_planner). Full-repo scan: ruff=111, mypy=283, bandit=22B108+3179low, pip-audit=37CVEs, vulture=32. Fresh baselines for Plans 56-60. |
 | 56 | Dependency updates | 1167 | 11 packages upgraded (aiohttp, cryptography, idna, pygments, pypdf, pytest, python-dotenv, python-multipart, urllib3, pillow, setuptools). pip-audit: 55→19 CVEs. Starlette deferred (FastAPI incompatibility), chromadb/diskcache deferred (no confirmed fixes). |
+| 57 | Vulture cleanup | 1167 | 16 dead-code findings removed (12 adapters + 3 core + 1 worker). 16 deferred as Category C (5 core + 11 tests). Vulture: 32→20. |
 
 ---
 

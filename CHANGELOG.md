@@ -245,3 +245,75 @@ This changelog documents all implementations, changes, and decisions made during
 - Packages deferred: Starlette 1.3.1 (FastAPI requires starlette<1.0.0), chromadb 1.5.9 (release notes don't mention CVE-2026-45829), diskcache 5.6.3 (already latest)
 - Tag: prompt-56 skipped (no file changes to commit)
 
+
+## 2026-06-21 19:12 — prompt-57
+
+**Plan**: Vulture cleanup — 32 high-confidence dead-code findings
+
+**Changed**:
+- adapters/anthropic.py, cohere.py, deepseek.py, gemini.py, groq.py, huggingface.py, llama_cpp.py, lm_studio.py, mistral.py, ollama.py, openai.py, together.py (12 files) - removed structured_output parameter
+- core/memory_router.py - removed record_type parameter
+- core/worker_base.py - removed structured_output parameter, added TraceEmitter to TYPE_CHECKING
+- core/worker_factory.py - removed structured_output parameter, added LLMResponse/WorkerOutput to TYPE_CHECKING
+- workers/echo_worker.py - removed structured_output parameter
+- tests/test_ollama_worker.py - removed structured_output parameter, fixed unused mock_emit variables
+
+**Results**:
+- Tests: 1167 passed, 55 skipped (unchanged)
+- Vulture: 32 → 20 findings (16 removed, 16 deferred as Category C)
+- Category C deferrals:
+  - core/event_trigger.py:85 (last_check_time) - used by callers
+  - core/schemas.py:135,174,197,517 (cls x4) - pydantic @field_validator protocol requires it
+  - tests/test_anthropic_adapter.py:36, test_cohere_adapter.py:42, test_deepseek_adapter.py:40, test_gemini_adapter.py:37, test_groq_adapter.py:37, test_huggingface_adapter.py:40, test_mistral_adapter.py:40, test_openai_adapter.py:37, test_together_adapter.py:40 (mock_client x9) - needed for fixture dependencies
+  - tests/test_security.py:285,313,344,380 (req x4) - middleware calls call_next(request)
+  - tests/test_serve.py:70 (auth) - caller passes 3 arguments
+  - tests/test_task_state_machine.py:355,425,499 (raw_output x3) - method signature required
+- Tag: prompt-57 verified on origin
+
+## 2026-06-21 19:12 — prompt-57
+
+**Plan**: Vulture cleanup — 32 high-confidence dead-code findings
+
+**Changed**:
+- adapters/anthropic.py, cohere.py, deepseek.py, gemini.py, groq.py, huggingface.py, llama_cpp.py, lm_studio.py, mistral.py, ollama.py, openai.py, together.py (12 files) - removed structured_output parameter
+- core/memory_router.py - removed record_type parameter
+- core/worker_base.py - removed structured_output parameter, added TraceEmitter to TYPE_CHECKING
+- core/worker_factory.py - removed structured_output parameter, added LLMResponse/WorkerOutput to TYPE_CHECKING
+- workers/echo_worker.py - removed structured_output parameter
+- tests/test_ollama_worker.py - removed structured_output parameter, fixed unused mock_emit variables
+
+**Results**:
+- Tests: 1167 passed, 55 skipped (unchanged)
+- Vulture: 32 → 20 findings (16 removed, 16 deferred as Category C)
+- Category C deferrals:
+  - core/event_trigger.py:85 (last_check_time) - used by callers
+  - core/schemas.py:135,174,197,517 (cls x4) - pydantic @field_validator protocol requires it
+  - tests/test_anthropic_adapter.py:36, test_cohere_adapter.py:42, test_deepseek_adapter.py:40, test_gemini_adapter.py:37, test_groq_adapter.py:37, test_huggingface_adapter.py:40, test_mistral_adapter.py:40, test_openai_adapter.py:37, test_together_adapter.py:40 (mock_client x9) - needed for fixture dependencies
+  - tests/test_security.py:285,313,344,380 (req x4) - middleware calls call_next(request)
+  - tests/test_serve.py:70 (auth) - caller passes 3 arguments
+  - tests/test_task_state_machine.py:355,425,499 (raw_output x3) - method signature required
+- Tag: prompt-57 verified on origin
+
+## 2026-06-21 19:12 — prompt-57
+
+**Plan**: Vulture cleanup — 32 high-confidence dead-code findings
+
+**Changed**:
+- adapters/anthropic.py, cohere.py, deepseek.py, gemini.py, groq.py, huggingface.py, llama_cpp.py, lm_studio.py, mistral.py, ollama.py, openai.py, together.py (12 files) - removed structured_output parameter
+- core/memory_router.py - removed record_type parameter
+- core/worker_base.py - removed structured_output parameter, added TraceEmitter to TYPE_CHECKING
+- core/worker_factory.py - removed structured_output parameter, added LLMResponse/WorkerOutput to TYPE_CHECKING
+- workers/echo_worker.py - removed structured_output parameter
+- tests/test_ollama_worker.py - removed structured_output parameter, fixed unused mock_emit variables
+
+**Results**:
+- Tests: 1167 passed, 55 skipped (unchanged)
+- Vulture: 32 → 20 findings (16 removed, 16 deferred as Category C)
+- Category C deferrals:
+  - core/event_trigger.py:85 (last_check_time) - used by callers
+  - core/schemas.py:135,174,197,517 (cls x4) - pydantic @field_validator protocol requires it
+  - tests/test_anthropic_adapter.py:36, test_cohere_adapter.py:42, test_deepseek_adapter.py:40, test_gemini_adapter.py:37, test_groq_adapter.py:37, test_huggingface_adapter.py:40, test_mistral_adapter.py:40, test_openai_adapter.py:37, test_together_adapter.py:40 (mock_client x9) - needed for fixture dependencies
+  - tests/test_security.py:285,313,344,380 (req x4) - middleware calls call_next(request)
+  - tests/test_serve.py:70 (auth) - caller passes 3 arguments
+  - tests/test_task_state_machine.py:355,425,499 (raw_output x3) - method signature required
+- Tag: prompt-57 verified on origin
