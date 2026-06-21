@@ -317,3 +317,40 @@ This changelog documents all implementations, changes, and decisions made during
   - tests/test_serve.py:70 (auth) - caller passes 3 arguments
   - tests/test_task_state_machine.py:355,425,499 (raw_output x3) - method signature required
 - Tag: prompt-57 verified on origin
+
+
+## 2026-06-21 21:41 — prompt-58
+
+**Plan**: Datetime UTCNow Cleanup — Replace all datetime.utcnow() with datetime.now(timezone.utc) for L19 compliance
+
+**Changed**:
+- tests/test_retention.py: replaced 13 datetime.utcnow() calls, added timezone import
+- tests/test_memory_compactor.py: replaced 8 datetime.utcnow() calls + 1 bare datetime.now() (line 265, scope expansion authorized per S4.3 for intra-file L19 consistency), added timezone import
+- tests/test_event_trigger.py: replaced 7 datetime.utcnow() calls, added timezone import
+- tests/test_memory_router.py: replaced 2 datetime.utcnow() calls + 1 bare datetime.now() (line 82), added timezone import, removed duplicate import
+- core/retention.py: replaced 4 datetime.utcnow() calls, added timezone import
+- core/memory_compactor.py: replaced 5 datetime.utcnow() calls, added timezone import
+- core/memory_router.py: replaced 1 datetime.utcnow() call, added timezone import
+- core/event_trigger.py: replaced 6 datetime.utcnow() calls, added timezone import
+- core/approval_gate.py: replaced 31 datetime.utcnow() calls, added timezone import
+- core/worker_factory.py: replaced 10 datetime.utcnow() calls, added timezone import
+- core/multi_worker.py: replaced 8 datetime.utcnow() calls, added timezone import
+- core/orchestrator.py: replaced 6 datetime.utcnow() calls, added timezone import to inline imports
+- core/evaluator.py: replaced 3 datetime.utcnow() calls, added timezone import
+- core/task_state_machine.py: replaced 2 datetime.utcnow() calls, added timezone import
+- core/a2a_protocol.py: replaced 1 datetime.utcnow() call, added datetime and timezone import
+- core/orchestrator_improvement.py: replaced 1 datetime.utcnow() call, added timezone import
+- core/escalation.py: replaced 1 datetime.utcnow() call, added datetime and timezone import
+- core/notification.py: replaced 1 datetime.utcnow() call, added timezone import
+
+**Results**:
+- Tests: 1167 passed, 55 skipped (unchanged from baseline)
+- datetime.utcnow() count: 106 replaced (28 test + 78 production) + 1 scope expansion (test_memory_compactor.py:265) = 107 total
+- Baseline was 118 expected, 106 actual due to Plan 53/57 prior fixes
+- Zero datetime.utcnow() calls remain in test/ and core/ directories
+- Tag: prompt-58 created and verified locally
+
+**Deferred items**:
+- 46+ bare datetime.now() calls (without timezone) across 9 files — pre-existing L19 violations outside Plan 58 scope. Queued for Plan 58.5 (or next housekeeping plan).
+  - tests/: test_trajectory_exporter.py (3), test_trace_optimiser.py (2), test_together_adapter.py (7), test_task_state_machine.py (27+)
+  - core/: task_state_machine.py (1), session.py (10), scratchpad.py (1), rating_system.py (2), instruction_versioning.py (5), instruction_generator.py (6), handlers.py (1)
