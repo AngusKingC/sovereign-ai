@@ -4,9 +4,9 @@
 
 **Test baseline**: 1166 passed, 55 skipped, 1 pre-existing failure (calendar_skill — hardcoded test date, fix in Plan 53), 0 warnings
 
-**Static analysis baseline (post-prompt-50)**:
-- Ruff: 358 errors
-- Mypy: 309 errors
+**Static analysis baseline (post-prompt-52)**:
+- Ruff: 358 errors (unchanged — Plans 51-52 were code fixes, not import cleanup)
+- Mypy: 282 errors (was 309 — Plan 51 fixed 27: 13 shadowing + 14 float→int)
 - Bandit: 22 medium+ (B108 in tests, deferred to Plan 53)
 - pip-audit: 55 CVEs across 14 packages (deferred to Plan 56)
 - Vulture: 47 high-confidence findings (deferred to Plan 57)
@@ -35,6 +35,11 @@ A local-first, self-improving AI assistant for one user's specific context: medi
 ---
 
 ## What's broken right now
+
+### F4 — `cli/serve.py` constructs cognition-loop subsystems but never wires them
+- **Cause**: Subsystems constructed with `_` prefix (Plan 46) to silence F841. Never wired into request path.
+- **Fix**: Plan 52 — wire `worker_factory`, `output_evaluator`, `trace_optimiser`, `worker_persistence` into orchestrator loop.
+- **Verification**: Start `jarvis serve`, hit `POST /api/tasks` — should return a real `task_id`.
 
 ### F9 — 55 dependency CVEs across 14 packages
 - Deferred to Plan 56. Run `pip-audit` for current list.
@@ -83,23 +88,18 @@ These are the template steps GLM includes in every plan file. Devin executes the
 
 ### Opening steps (GLM puts these at the start of every plan's Step 0)
 
-1. **Start transcript** (captures all terminal I/O for the execution log):
-   ```powershell
-   $logPath = "logs\execution-log-prompt-{N}.md"
-   Start-Transcript -Path $logPath -Force
-   ```
-   If you open additional terminals, run `Start-Transcript -Path logs\execution-log-prompt-{N}-terminal{M}.md -Force` in each.
-
-2. **Verify previous prompt completed** (prevents starting on stale state):
+1. **Verify previous prompt completed** (prevents starting on stale state):
    ```powershell
    git ls-remote --tags origin | findstr prompt-{N-1}
    ```
    If empty, STOP — previous prompt's tag wasn't pushed. Fix that first.
 
-3. **Pull latest**:
+2. **Pull latest**:
    ```powershell
    git pull origin master
    ```
+
+Note: `Start-Transcript` does NOT work with Devin's multi-terminal architecture — Devin runs commands in separate terminal instances. The execution log is the user's chat paste (which shows every command + output). Do not use `Start-Transcript`.
 
 ### Closing steps (GLM puts these at the end of every plan)
 
@@ -123,19 +123,7 @@ These are the template steps GLM includes in every plan file. Devin executes the
    - Tag: prompt-{N} verified on origin
    ```
    Use `-Encoding utf8` on both `Get-Content` and `Add-Content` (L15).
-7. **Execution log (via transcript, committed to git)**: Step 0 must start with:
-   ```powershell
-   $logPath = "logs\execution-log-prompt-{N}.md"
-   Start-Transcript -Path $logPath -Force
-   ```
-   C7 must stop and commit:
-   ```powershell
-   Stop-Transcript
-   git add logs\execution-log-prompt-{N}.md
-   git commit -m "logs: prompt-{N} execution transcript"
-   git push origin master
-   ```
-   If Devin opens additional terminals, run `Start-Transcript` with `-terminal{M}.md` suffix in each.
+7. **Execution log**: the user pastes Devin's chat transcript to GLM after each prompt. This IS the execution log — it contains every command, output, error, and thinking step. GLM reads it to extract actual counts, issues for next prompt, and STOP conditions. No separate log file or transcript is needed.
 8. Update this handoff: move completed plan to "Completed prompts" table, update test baseline + static analysis baseline, refill "Next 5 prompts" queue.
 9. **Update `global_rules.md`** if a new landmine is identified. Do not cite it as authority (L1).
 10. `git add CHANGELOG.md SOVEREIGN_AI_HANDOFF.md && git commit -m "docs: prompt-{N} changelog and handoff update"`
@@ -211,8 +199,6 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 | 49 | ApprovalGate schema + TraceEvent kwargs | 1167 | 10 Field(default=None) + 3 TraceEvent kwargs. ~108 mypy eliminated. |
 | 49b | Migrate old-API callers | 1166 | 17 call sites across 8 skills. 32 mypy eliminated. |
 | 50 | MockMemoryRouter/MockStateMachine inheritance | 1166 | 122 mypy eliminated across 8 test files. |
-| 51 | Exception shadowing + float→int + DI violations | 1166 | 13 adapters + 5 skills fixed. gemini.py DI fix. |
-| 52 | F4 wiring fix | 1166 | Wired output_evaluator, trace_optimiser, worker_factory, worker_persistence. |
 
 ---
 
@@ -268,15 +254,15 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 ## Next 5 prompts
 
 ### Plan 53 — Test suite health (P2)
-- Fix calendar test (hardcoded date). Replace /tmp with tempfile.mkdtemp() (22 B108). Replace datetime.utcnow() (908 warnings).
+- Fix calendar test (hardcoded date). Replace /tmp with tempfile.mkdtemp() (22 B108). Replace datetime.utcnow() (109 occurrences in tests).
 
 ### Plan 54 — F401 bulk cleanup (P3)
 - `ruff check . --select F401 --fix` for 246 unused imports. Triage remaining manually.
 
 ### Plan 55 — Full checkpoint scan + Marine stack start (P2)
-- 5-plan milestone: full scan (ruff+mypy.+bandit+pip-audit+vulture). Then start marine stack as SKILL.md files.
+- 5-plan milestone: full scan. Then start marine stack as SKILL.md files.
 
-### Plan 56 — Dependency CVE fixes (P1)
+### Plan 56 — Dependency updates (P2)
 - Fix 55 CVEs across 14 packages. Upgrade or pin vulnerable dependencies.
 
 ### Plan 57 — Vulture cleanup (P3)
