@@ -1,6 +1,6 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-21 — post-prompt-55 (5-plan milestone: full scan + Marine stack start)
+**Last updated**: 2026-06-21 — post-prompt-56 (dependency updates)
 
 **Test baseline**: 1167 passed, 55 skipped, 0 failures, 0 warnings
 
@@ -8,7 +8,7 @@
 - Ruff: 111 errors (F401=0 since Plan 54)
 - Mypy (full-repo): 283 errors (was 282 — delta +1)
 - Bandit: 3179 low, 22 medium (22 B108 pre-existing in tests/, deferred)
-- pip-audit: 37 CVEs across 14 packages (deferred to Plan 56)
+- pip-audit: 19 CVEs across 4 packages (was 55 — Plan 56 fixed 36 CVEs)
 - Vulture: 32 high-confidence findings (deferred to Plan 57)
 
 **Devin rules**: **Inline approach (2026-06-21)** — rules travel with each plan as `## Section 0: Rules` at the top. GLM maintains the canonical content in `/home/z/my-project/download/global_rules_v2.md` (currently v2.2, 23 rules: L1-L23). Each plan's Section 0 is a copy of this file's rules body. The `/globalrules/` folder in the repo is **reference-only** (a snapshot from Plan 54, not authoritative). Devin reads rules from Section 0 of the current plan, NOT from `/globalrules/global_rules.md`. L20 self-evolution is active: every plan's C9 step requires a rule-proposal section.
@@ -219,6 +219,7 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 | 53 | Test suite health — calendar + B108 + datetime | 1167 | Calendar test fixed. 22 B108 fixed. 81 utcnow fixed in 15 test files. 28 test utcnow + 90 production utcnow deferred to Plan 58. |
 | 54 | F401 bulk cleanup + global_rules v2.1 ship + handoff fix | 1167 | 246 F401 fixed across 118 files. v2.1 rules shipped (L19/L20/L21). Handoff baselines updated. globalrules/ folder created. |
 | 55 | 5-plan milestone: full scan + Marine stack start | 1167 | 4 SKILL.md files created (weather, AIS, tidal, passage_planner). Full-repo scan: ruff=111, mypy=283, bandit=22B108+3179low, pip-audit=37CVEs, vulture=32. Fresh baselines for Plans 56-60. |
+| 56 | Dependency updates | 1167 | 11 packages upgraded (aiohttp, cryptography, idna, pygments, pypdf, pytest, python-dotenv, python-multipart, urllib3, pillow, setuptools). pip-audit: 55→19 CVEs. Starlette deferred (FastAPI incompatibility), chromadb/diskcache deferred (no confirmed fixes). |
 
 ---
 
@@ -275,9 +276,6 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ## Next 5 prompts
 
-### Plan 56 — Dependency updates (P2)
-- Fix 37 CVEs across 14 packages. Upgrade or pin vulnerable dependencies.
-
 ### Plan 57 — Vulture cleanup (P3)
 - Fix 32 high-confidence dead code findings.
 
@@ -288,4 +286,6 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 - Implement the 4 Marine SKILL.md files as Python skills (weather first, then tidal, AIS, passage_planner).
 
 ### Plan 60 — Full checkpoint scan (P1)
-- 5-plan milestone: full scan. Verify Plans 56-59 progress.
+- 5-plan milestone: full scan. Verify Plans 57-59 progress.
+
+### Plan 61 — (open slot for next GLM scoping)

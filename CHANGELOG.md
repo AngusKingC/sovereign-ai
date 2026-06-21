@@ -230,3 +230,18 @@ This changelog documents all implementations, changes, and decisions made during
 - pip-audit: 37 CVEs across 14 packages
 - Vulture: 32 high-confidence findings
 - Tag: prompt-55 verified
+
+## 2026-06-21 HH:MM — prompt-56
+
+**Plan**: Dependency updates — 55 CVEs across 14 packages (plan expected 37)
+
+**Changed**:
+- requirements.txt: no changes needed (uses >= constraints, upgraded versions already satisfied)
+
+**Results**:
+- Tests: 1167 passed, 55 skipped (unchanged)
+- pip-audit: 55 → 19 CVEs (36 CVEs fixed)
+- Packages upgraded: aiohttp 3.13.3→3.13.4, cryptography 48.0.0→48.0.1, idna 3.11→3.15, pygments 2.19.2→2.20.0, pypdf 6.13.0→6.13.3, pytest 9.0.2→9.0.3, python-dotenv 1.2.1→1.2.2, python-multipart 0.0.22→0.0.31, urllib3 2.6.3→2.7.0, pillow 11.3.0→12.2.0, setuptools 65.5.0→78.1.1
+- Packages deferred: Starlette 1.3.1 (FastAPI requires starlette<1.0.0), chromadb 1.5.9 (release notes don't mention CVE-2026-45829), diskcache 5.6.3 (already latest)
+- Tag: prompt-56 skipped (no file changes to commit)
+
