@@ -1,17 +1,17 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-21 — global_rules.md upgraded to v2 (self-evolution added); Plan 53 in progress
+**Last updated**: 2026-06-21 — post-prompt-55 (5-plan milestone: full scan + Marine stack start)
 
 **Test baseline**: 1167 passed, 55 skipped, 0 failures, 0 warnings
 
-**Static analysis baseline (post-prompt-54)**:
-- Ruff: 111 errors (was 358 — Plan 54 fixed 246 F401 across 118 files)
-- Mypy: 282 errors (was 309 — Plan 51 fixed 27: 13 shadowing + 14 float→int)
-- Bandit: 0 B108 in Plan 53 scope (test_calendar_skill.py); 22 pre-existing B108 in other test files deferred to follow-up (test_approval_gate.py: 11, test_query_handler.py: 7, test_skill_registry.py: 2, test_security.py: 1, test_file_writer.py: 1)
-- pip-audit: 55 CVEs across 14 packages (deferred to Plan 56)
-- Vulture: 47 high-confidence findings (deferred to Plan 57)
+**Static analysis baseline (post-prompt-55 — 5-plan milestone)**:
+- Ruff: 111 errors (F401=0 since Plan 54)
+- Mypy (full-repo): 283 errors (was 282 — delta +1)
+- Bandit: 3179 low, 22 medium (22 B108 pre-existing in tests/, deferred)
+- pip-audit: 37 CVEs across 14 packages (deferred to Plan 56)
+- Vulture: 32 high-confidence findings (deferred to Plan 57)
 
-**Devin rules file**: globalrules/global_rules.md v2.1 (22 rules). L19 (datetime consistency), L20 (self-evolution meta-rule — every plan's closing report MUST include a rule-proposal section), L21 (CHANGELOG append position). Shipped in Plan 54.
+**Devin rules**: **Inline approach (2026-06-21)** — rules travel with each plan as `## Section 0: Rules` at the top. GLM maintains the canonical content in `/home/z/my-project/download/global_rules_v2.md` (currently v2.2, 23 rules: L1-L23). Each plan's Section 0 is a copy of this file's rules body. The `/globalrules/` folder in the repo is **reference-only** (a snapshot from Plan 54, not authoritative). Devin reads rules from Section 0 of the current plan, NOT from `/globalrules/global_rules.md`. L20 self-evolution is active: every plan's C9 step requires a rule-proposal section.
 
 ---
 
@@ -67,6 +67,10 @@ A local-first, self-improving AI assistant for one user's specific context: medi
 | MemoryCompactor | `core/memory_compactor.py` | Same |
 | MCPServer | `skills/mcp_server.py` | Built but never started |
 | MCPAdapter | `adapters/mcp_adapter.py` | Built but never constructed |
+| MarineWeather (SKILL.md) | `skills/marine/weather/SKILL.md` | Spec only — no Python implementation yet (Plan 59) |
+| MarineAIS (SKILL.md) | `skills/marine/ais/SKILL.md` | Same |
+| MarineTidal (SKILL.md) | `skills/marine/tidal/SKILL.md` | Same |
+| MarinePassagePlanner (SKILL.md) | `skills/marine/passage_planner/SKILL.md` | Same |
 
 When a subsystem is wired into a runtime entry point, remove it from this table.
 
@@ -214,6 +218,7 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 | 52 | F4 wiring — cognition-loop into serve.py | 1166 | worker_factory etc. wired into request path. |
 | 53 | Test suite health — calendar + B108 + datetime | 1167 | Calendar test fixed. 22 B108 fixed. 81 utcnow fixed in 15 test files. 28 test utcnow + 90 production utcnow deferred to Plan 58. |
 | 54 | F401 bulk cleanup + global_rules v2.1 ship + handoff fix | 1167 | 246 F401 fixed across 118 files. v2.1 rules shipped (L19/L20/L21). Handoff baselines updated. globalrules/ folder created. |
+| 55 | 5-plan milestone: full scan + Marine stack start | 1167 | 4 SKILL.md files created (weather, AIS, tidal, passage_planner). Full-repo scan: ruff=111, mypy=283, bandit=22B108+3179low, pip-audit=37CVEs, vulture=32. Fresh baselines for Plans 56-60. |
 
 ---
 
@@ -270,18 +275,17 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ## Next 5 prompts
 
-### Plan 55 — Full checkpoint scan + Marine stack start (P2)
-- 5-plan milestone: full scan. Then start marine stack as SKILL.md files.
-
 ### Plan 56 — Dependency updates (P2)
-- Fix 55 CVEs across 14 packages. Upgrade or pin vulnerable dependencies.
+- Fix 37 CVEs across 14 packages. Upgrade or pin vulnerable dependencies.
 
 ### Plan 57 — Vulture cleanup (P3)
-- Fix 47 high-confidence dead code findings.
+- Fix 32 high-confidence dead code findings.
 
 ### Plan 58 — Remaining datetime.utcnow() cleanup (P3)
-- Fix 28 remaining utcnow in 4 test files: test_retention.py (12), test_memory_compactor.py (8), test_event_trigger.py (7), test_memory_router.py (1).
-- Fix 90 remaining utcnow in 17 production files (core/*): orchestrator, escalation, approval_gate (remaining), task_state_machine, multi_worker, retention, memory_compactor, voice_interface, auth, notification, a2a_protocol, schemas, memory_router, evaluator, event_trigger, orchestrator_improvement, worker_factory.
-- Per L19 (new in v2.1 rules): both test and production must use datetime.now(timezone.utc). No mixing naive/aware.
+- Fix 28 remaining utcnow in 4 test files + 90 in 17 production files. Per L19.
 
-### Plan 59 — (open slot for next GLM scoping)
+### Plan 59 — Marine stack Python implementation (P2)
+- Implement the 4 Marine SKILL.md files as Python skills (weather first, then tidal, AIS, passage_planner).
+
+### Plan 60 — Full checkpoint scan (P1)
+- 5-plan milestone: full scan. Verify Plans 56-59 progress.

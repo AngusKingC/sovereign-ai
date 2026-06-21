@@ -211,3 +211,22 @@ This changelog documents all implementations, changes, and decisions made during
 
 **Deferred items**:
 - 22 pre-existing B108 findings in tests/ (test_approval_gate.py: 11, test_query_handler.py: 7, test_skill_registry.py: 2, test_security.py: 1, test_file_writer.py: 1) - not introduced by F401 cleanup, queued for follow-up plan
+
+## 2026-06-21 14:44 — prompt-55
+
+**Plan**: 5-plan milestone — full checkpoint scan + Marine stack start
+
+**Changed**:
+- skills/marine/weather/SKILL.md: created (Open-Meteo Marine API)
+- skills/marine/ais/SKILL.md: created (AISHub, requires API key)
+- skills/marine/tidal/SKILL.md: created (NOAA CO-OPS API)
+- skills/marine/passage_planner/SKILL.md: created (aggregates weather + tidal)
+
+**Results**:
+- Tests: 1167 passed, 55 skipped (unchanged)
+- Ruff: 111 errors (unchanged — no Python touched)
+- Mypy (full-repo): 283 errors (was 282, delta +1)
+- Bandit: 3179 low, 22 medium (B108 pre-existing in tests/)
+- pip-audit: 37 CVEs across 14 packages
+- Vulture: 32 high-confidence findings
+- Tag: prompt-55 verified
