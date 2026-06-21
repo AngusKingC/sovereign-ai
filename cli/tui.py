@@ -14,13 +14,11 @@ from textual.widgets import (
     ListView,
     ListItem,
     Label,
-    Select,
 )
-from textual.containers import Container, Horizontal, Vertical
+from textual.containers import Container
 from textual.reactive import reactive
-from textual import events
 from textual.screen import ModalScreen
-from typing import Optional, List, Any, Callable
+from typing import Optional, List, Callable
 import asyncio
 
 # Add project root to path

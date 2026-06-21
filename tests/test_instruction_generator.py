@@ -8,7 +8,7 @@ from unittest.mock import Mock, AsyncMock
 
 from core.instruction_generator import InstructionGenerator
 from core.worker_factory import DynamicWorkerProfile
-from core.schemas import InstructionFile, InstructionChangelogEntry
+from core.schemas import InstructionFile
 from core.observability import MemoryTraceEmitter, TraceEventType, TraceComponent
 from core.worker_base import LLMResponse
 

@@ -3,18 +3,17 @@ Tests for Code Execution Skill.
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 from skills.code_execution.skill import CodeExecutionSkill
 from core.observability import (
-    TraceEvent,
     TraceEventType,
     TraceLevel,
     TraceComponent,
     MemoryTraceEmitter,
 )
-from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalResponse, ApprovalActionType
+from core.approval_gate import ApprovalGate, ApprovalResponse
 
 
 class TestCodeExecutionSkill:

@@ -5,11 +5,8 @@ from datetime import datetime
 from unittest.mock import Mock, AsyncMock
 
 from core.orchestrator_improvement import OrchestratorImprovementLoop
-from core.orchestrator import Orchestrator
-from core.instruction_versioning import InstructionVersionManager
 from core.schemas import OrchestratorMetrics, VersionUpdateProposal
 from core.observability import MemoryTraceEmitter, TraceEventType, TraceComponent
-from core.worker_factory import DynamicWorkerProfile
 
 
 class TestOrchestratorImprovementLoop:

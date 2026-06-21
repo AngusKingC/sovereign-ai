@@ -3,8 +3,6 @@ Tests for Skill Registry.
 """
 
 import pytest
-from pathlib import Path
-from unittest.mock import AsyncMock, patch
 
 from core.skill_registry import SkillRegistry, SkillMetadata
 from core.observability import MemoryTraceEmitter

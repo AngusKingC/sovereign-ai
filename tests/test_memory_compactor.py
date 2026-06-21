@@ -6,7 +6,7 @@ Tests the hot/warm/cold memory tier system with periodic background compaction.
 
 import asyncio
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 from datetime import datetime, timedelta
 from uuid import uuid4
 

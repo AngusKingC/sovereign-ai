@@ -5,7 +5,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
-from core.observability import MemoryTraceEmitter, TraceComponent, TraceEmitter, TraceEvent, TraceEventType
+from core.observability import MemoryTraceEmitter, TraceEmitter
 from core.skill_registry import SkillRegistry
 
 

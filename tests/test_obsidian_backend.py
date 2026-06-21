@@ -6,7 +6,6 @@ file I/O operations, and markdown formatting.
 """
 
 from datetime import datetime
-from pathlib import Path
 from uuid import uuid4
 
 import pytest

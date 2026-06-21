@@ -21,7 +21,6 @@ from core.observability import (
     TraceEmitter,
     MemoryTraceEmitter,
 )
-from core.exceptions import TokenNotFoundError
 
 if TYPE_CHECKING:
     from core.observability import TraceEmitter

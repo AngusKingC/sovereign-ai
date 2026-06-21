@@ -7,7 +7,7 @@ Single responsibility: Queue and deliver notifications based on urgency, integra
 from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from pydantic import BaseModel, Field
 

@@ -5,7 +5,7 @@ Single responsibility: Test orchestrator-worker-memory integration
 to ensure components work together correctly.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime
 from uuid import uuid4
 
 import pytest

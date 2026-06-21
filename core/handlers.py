@@ -4,12 +4,10 @@ These handlers implement the actual logic for each command type.
 They are interface-agnostic and can be used by CLI, Web GUI, and Standalone GUI.
 """
 
-import asyncio
 import time
 from typing import Dict, Any
 from core.commands import (
     Command,
-    CommandContext,
     CommandHandler,
     CommandResult,
     CommandType,
@@ -18,7 +16,6 @@ from core.observability import (
     TraceEventType,
     TraceComponent,
     TraceLevel,
-    TraceEmitter,
     TraceEvent,
 )
 from core.schemas import Message, MessageRole, Task, TaskPriority, TaskStatus

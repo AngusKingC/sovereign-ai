@@ -8,7 +8,6 @@ with Web GUI and Standalone GUI interfaces.
 import sys
 import asyncio
 from pathlib import Path
-from typing import Optional
 import argparse
 
 # Add project root to path

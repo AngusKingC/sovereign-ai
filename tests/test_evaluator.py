@@ -7,8 +7,8 @@ from unittest.mock import Mock, AsyncMock
 from core.evaluator import OutputEvaluator
 from core.worker_base import LLMAdapter, LLMResponse
 from core.memory_router import MemoryRouter
-from core.observability import MemoryTraceEmitter, TraceEventType, TraceComponent
-from core.schemas import EvaluatorScore, EvaluationRecord
+from core.observability import MemoryTraceEmitter
+from core.schemas import EvaluatorScore
 
 
 class TestOutputEvaluator:

@@ -2,7 +2,6 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from datetime import datetime
 from core.schemas import SystemProfile, GPUInfo, CPUInfo, RAMInfo, StorageInfo, OSInfo, NetworkInfo, OllamaInfo, OllamaModelInfo
 from system.profiler import SystemProfiler
 from core.memory_router import MemoryRouter
@@ -291,7 +290,7 @@ class TestSystemProfiler:
     
     async def test_trace_events_emitted_during_profiling(self) -> None:
         """Test that trace events are emitted during profiling."""
-        from core.observability import MemoryTraceEmitter, TraceEventType
+        from core.observability import MemoryTraceEmitter
         
         mock_router = MockMemoryRouter()
         trace_emitter = MemoryTraceEmitter()

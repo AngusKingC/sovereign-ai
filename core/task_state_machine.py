@@ -7,7 +7,6 @@ history tracking, and observability.
 
 from datetime import datetime
 from typing import TYPE_CHECKING
-from uuid import uuid4
 
 from core.schemas import Task, TaskStatus, TaskStateTransition
 from core.observability import (

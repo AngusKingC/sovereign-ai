@@ -2,7 +2,6 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from io import BytesIO
 
 from skills.screenshot.skill import ScreenshotSkill
 from core.approval_gate import ApprovalResponse

@@ -6,8 +6,8 @@ to cloud models based on confidence, errors, or denial flags.
 """
 
 import time
-from typing import TYPE_CHECKING, Any
-from uuid import UUID, uuid4
+from typing import TYPE_CHECKING
+from uuid import uuid4
 
 from core.schemas import Task, WorkerOutput, EscalationDecision
 from core.observability import (

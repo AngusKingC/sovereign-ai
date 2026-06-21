@@ -5,7 +5,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from core.session import SessionManager
-from core.schemas import Message, MessageRole, SessionSummary
+from core.schemas import Message, MessageRole
 
 
 class TestSessionManager:

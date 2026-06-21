@@ -10,7 +10,6 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from pydantic import ValidationError
 
 from core.memory_router import MemoryBackend, MemoryRouter
 from core.schemas import Task, TaskPriority

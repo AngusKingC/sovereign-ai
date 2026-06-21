@@ -7,7 +7,6 @@ and Whisper STT in Prompt 33.5.
 """
 
 from datetime import datetime
-from typing import Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field

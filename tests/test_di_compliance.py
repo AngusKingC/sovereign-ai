@@ -4,7 +4,6 @@ directly. All trace emission must go through constructor-injected emitter.
 """
 import os
 import ast
-import pytest
 
 EXCLUDE_DIRS = {"tests", ".venv", "__pycache__", ".git"}
 EXCLUDE_FILES = {"test_di_compliance.py"}

@@ -1,7 +1,7 @@
 """Tests for data retention and memory housekeeping."""
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock
 from datetime import datetime, timedelta
 from uuid import uuid4
 

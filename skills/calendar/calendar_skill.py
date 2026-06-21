@@ -6,7 +6,6 @@ Single responsibility: Read and write ICS calendar files with approval gating.
 
 import os
 from datetime import datetime, timedelta
-from typing import Any
 from uuid import uuid4
 
 from core.observability import (

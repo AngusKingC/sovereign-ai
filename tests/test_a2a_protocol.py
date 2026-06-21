@@ -1,7 +1,7 @@
 """Tests for A2A Protocol."""
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import Mock, AsyncMock
 from uuid import uuid4, UUID
 
 from core.a2a_protocol import A2ARequest, A2AResponse, A2ARouter

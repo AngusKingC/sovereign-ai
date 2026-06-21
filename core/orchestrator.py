@@ -8,8 +8,7 @@ without holding opinions or writing beliefs. Pure analysis and dispatch.
 import time
 from typing import TYPE_CHECKING
 
-from core.schemas import Task, WorkerOutput, TaskStatus, WorkerStatus, OrchestratorMetrics, StrategicContext, EscalationDecision, EscalationTier
-from core.approval_gate import ApprovalActionType
+from core.schemas import Task, WorkerOutput, TaskStatus, WorkerStatus, StrategicContext
 from core.observability import (
     TraceComponent,
     TraceEventType,
@@ -22,10 +21,8 @@ from core.observability import (
 if TYPE_CHECKING:
     from core.memory_router import MemoryRouter
     from core.worker_base import WorkerBase
-    from core.task_state_machine import TaskStateMachine
-    from core.scratchpad import ScratchpadManager
     from core.orchestrator_improvement import OrchestratorImprovementLoop
-    from core.approval_gate import ApprovalGate, ApprovalRequest
+    from core.approval_gate import ApprovalGate
     from core.escalation import EscalationEngine
     from core.adapter_fallback import AdapterFallbackChain
     from core.evaluator import OutputEvaluator

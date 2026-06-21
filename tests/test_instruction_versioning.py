@@ -8,7 +8,6 @@ from core.instruction_versioning import InstructionVersionManager
 from core.worker_factory import DynamicWorkerProfile
 from core.schemas import InstructionFile, VersionUpdateProposal, WorkerRating
 from core.observability import MemoryTraceEmitter, TraceEventType, TraceComponent
-from core.worker_base import LLMResponse
 
 
 class TestInstructionVersionManager:

@@ -7,9 +7,8 @@ Scratchpads are separate from long-term memory and are compacted on task complet
 
 from datetime import datetime
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from pydantic import BaseModel
 
 from core.memory_router import MemoryRouter
 from core.observability import TraceComponent, TraceEventType, TraceLevel, TraceEvent, TraceEmitter, MemoryTraceEmitter

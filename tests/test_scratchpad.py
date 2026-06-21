@@ -1,7 +1,6 @@
 """Tests for Scratchpad Manager."""
 
 import pytest
-from datetime import datetime
 from uuid import uuid4
 
 from core.schemas import Scratchpad, ScratchpadEntry, ScratchpadEntryType

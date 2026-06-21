@@ -1,7 +1,7 @@
 """Tests for OllamaWorker."""
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import patch
 from datetime import datetime
 from uuid import uuid4
 from core.schemas import Message, MessageRole, Task, WorkerOutput, WorkerProfile

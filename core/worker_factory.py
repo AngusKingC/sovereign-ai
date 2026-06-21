@@ -7,7 +7,7 @@ with appropriate capabilities by matching against the SkillRegistry.
 
 import asyncio
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from uuid import uuid4
 from datetime import datetime
 
@@ -22,7 +22,6 @@ from core.observability import (
     TraceEvent,
     NullTraceEmitter,
 )
-from core.exceptions import WorkerNotFoundError
 from core.worker_base import WorkerBase
 
 if TYPE_CHECKING:
@@ -139,8 +138,6 @@ class WorkerFactory:
         # For now, we'll create a placeholder worker since actual worker creation
         # requires LLM adapter and other dependencies that are not available in this prompt
         # This will be implemented in a future prompt
-        from core.worker_base import WorkerBase
-        from core.observability import NullTraceEmitter
         
         # Create a minimal worker for testing purposes
         # In production, this would use the profile to configure a real worker

@@ -6,7 +6,7 @@ providing cost-effective access to open-source models.
 """
 
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from openai import AsyncOpenAI
 

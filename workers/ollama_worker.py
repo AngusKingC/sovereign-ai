@@ -15,8 +15,6 @@ from core.observability import (
     TraceEventType,
     TraceLevel,
     TraceEvent,
-    TraceEmitter,
-    MemoryTraceEmitter,
 )
 
 if TYPE_CHECKING:
@@ -56,7 +54,6 @@ class OllamaWorker(WorkerBase):
         # Create a mock memory router if none provided
         if memory_router is None:
             from core.memory_router import MemoryRouter, MemoryBackend
-            from uuid import uuid4
             from typing import Any
             
             class NullMemoryBackend(MemoryBackend):

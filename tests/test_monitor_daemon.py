@@ -6,7 +6,7 @@ run loop, dispatch, and checkpoint/resume functionality.
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 

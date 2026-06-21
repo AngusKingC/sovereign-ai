@@ -2,7 +2,6 @@
 
 import pytest
 from datetime import datetime, timedelta, timezone
-from uuid import uuid4
 
 from core.approval_gate import (
     ApprovalGate,
@@ -189,7 +188,6 @@ class TestApprovalGate:
     
     async def test_respond_with_approved_true_transitions_to_executing(self) -> None:
         """Test respond with approved=True transitions task to EXECUTING."""
-        from core.schemas import Task, TaskStatus
         
         mock_router = MockMemoryRouter()
         mock_state_machine = MockStateMachine()

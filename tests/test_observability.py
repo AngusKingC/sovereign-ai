@@ -1,6 +1,5 @@
 """Tests for the observability layer."""
 
-import asyncio
 import pytest
 from core.observability import (
     TraceEvent,
@@ -8,7 +7,6 @@ from core.observability import (
     TraceComponent,
     TraceLevel,
     TraceContext,
-    TraceEmitter,
     ConsoleTraceEmitter,
     MemoryTraceEmitter,
     set_trace_emitter,

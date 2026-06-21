@@ -6,7 +6,7 @@ providing alternative cloud escalation capability.
 """
 
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from anthropic import AsyncAnthropic
 

@@ -4,7 +4,7 @@ import pytest
 from datetime import datetime
 from uuid import uuid4
 
-from core.schemas import Task, TaskStatus, TaskStateTransition, TaskPriority
+from core.schemas import Task, TaskStatus, TaskPriority
 from core.task_state_machine import TaskStateMachine
 from core.exceptions import InvalidStateTransitionError
 from core.memory_router import MemoryRouter

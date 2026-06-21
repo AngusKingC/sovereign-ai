@@ -4,11 +4,10 @@ Tests for event trigger system.
 
 import pytest
 from datetime import datetime, timedelta
-from uuid import uuid4
 
 from core.event_trigger import TriggerType, TriggerOperator, EventTrigger, TriggerEngine
 from core.observability import MemoryTraceEmitter
-from core.schemas import Task, TaskPriority
+from core.schemas import Task
 
 
 class TestTriggerType:

@@ -4,15 +4,11 @@ Tests for Telegram Gateway.
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 from gateways.telegram.gateway import TelegramGateway
 from core.notification import Notification, NotificationType
 from core.observability import (
-    TraceEvent,
     TraceEventType,
-    TraceLevel,
-    TraceComponent,
     MemoryTraceEmitter,
 )
 

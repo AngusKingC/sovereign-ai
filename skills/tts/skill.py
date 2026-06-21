@@ -6,7 +6,6 @@ Single responsibility: Convert text to speech using Piper TTS subprocess.
 
 import os
 import subprocess
-from typing import Any
 
 from core.observability import (
     TraceComponent,

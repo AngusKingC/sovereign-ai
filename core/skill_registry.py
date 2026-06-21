@@ -6,7 +6,6 @@ enabling dynamic discovery and instantiation of worker capabilities.
 """
 
 import asyncio
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any

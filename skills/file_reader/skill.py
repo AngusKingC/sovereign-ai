@@ -4,7 +4,6 @@ File Reader Skill - reads local file contents with configurable encoding.
 Single responsibility: Read file contents from local filesystem.
 """
 
-from typing import Any
 
 from core.observability import (
     TraceComponent,

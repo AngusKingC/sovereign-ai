@@ -1,8 +1,7 @@
 """Tests for TUI cognition stack wiring (Plan 37.6)."""
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch, PropertyMock, MagicMock
-from cli.tui import JarvisTUI
+from unittest.mock import AsyncMock, patch, MagicMock
 
 
 class TestTUICognitionWiring:

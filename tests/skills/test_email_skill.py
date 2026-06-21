@@ -3,7 +3,7 @@
 import os
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from skills.email.email_skill import EmailSkill

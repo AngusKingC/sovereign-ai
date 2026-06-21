@@ -6,7 +6,7 @@ providing access to strong coding and general-purpose models.
 """
 
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from openai import AsyncOpenAI
 

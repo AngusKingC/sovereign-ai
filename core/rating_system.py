@@ -6,7 +6,6 @@ with trend analysis and multi-worker comparison support.
 """
 
 from datetime import datetime
-from typing import Any
 from uuid import uuid4
 
 from core.memory_router import MemoryRouter

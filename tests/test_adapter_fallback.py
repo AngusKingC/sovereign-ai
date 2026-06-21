@@ -7,7 +7,7 @@ import time
 from datetime import datetime, timezone
 
 from core.adapter_fallback import AdapterFallbackChain
-from core.observability import MemoryTraceEmitter, TraceEventType, TraceComponent
+from core.observability import MemoryTraceEmitter, TraceEventType
 from core.schemas import Message, MessageRole
 
 

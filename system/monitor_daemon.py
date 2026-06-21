@@ -9,7 +9,6 @@ import asyncio
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import TYPE_CHECKING
-from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
@@ -102,7 +101,6 @@ class MonitorDaemon:
         
         # Emit trace event
         try:
-            from datetime import datetime
             event = TraceEvent(
                 event_type=TraceEventType.OPERATION_COMPLETE,
                 component=TraceComponent.ORCHESTRATOR,
@@ -152,7 +150,6 @@ class MonitorDaemon:
         
         # Emit trace event
         try:
-            from datetime import datetime
             event = TraceEvent(
                 event_type=TraceEventType.OPERATION_COMPLETE,
                 component=TraceComponent.ORCHESTRATOR,
@@ -201,7 +198,6 @@ class MonitorDaemon:
         
         # Emit trace event
         try:
-            from datetime import datetime
             event = TraceEvent(
                 event_type=TraceEventType.OPERATION_COMPLETE,
                 component=TraceComponent.ORCHESTRATOR,
@@ -235,7 +231,6 @@ class MonitorDaemon:
         
         # Emit trace event
         try:
-            from datetime import datetime
             event = TraceEvent(
                 event_type=TraceEventType.OPERATION_COMPLETE,
                 component=TraceComponent.ORCHESTRATOR,
@@ -276,7 +271,6 @@ class MonitorDaemon:
                         # Parse the scheduled task from memory
                         for entry in memory:
                             if "content" in entry:
-                                import json
                                 scheduled_task = ScheduledTask.model_validate_json(entry["content"])
                                 # Only restore enabled tasks
                                 if scheduled_task.enabled:
@@ -287,7 +281,6 @@ class MonitorDaemon:
 
             # Emit trace event
             try:
-                from datetime import datetime
                 event = TraceEvent(
                     event_type=TraceEventType.OPERATION_COMPLETE,
                     component=TraceComponent.ORCHESTRATOR,
@@ -306,7 +299,6 @@ class MonitorDaemon:
         except Exception as e:
             # Queue restoration failure should not crash the daemon
             try:
-                from datetime import datetime
                 event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.ORCHESTRATOR,
@@ -395,7 +387,6 @@ class MonitorDaemon:
             # NOTE: This is a stub - we need to get the actual Task object from somewhere
             # For now, we'll emit a trace event indicating that dispatch is not fully implemented
             try:
-                from datetime import datetime
                 event = TraceEvent(
                     event_type=TraceEventType.OPERATION_COMPLETE,
                     component=TraceComponent.ORCHESTRATOR,
@@ -422,7 +413,6 @@ class MonitorDaemon:
             
             # Emit trace event
             try:
-                from datetime import datetime
                 event = TraceEvent(
                     event_type=TraceEventType.OPERATION_COMPLETE,
                     component=TraceComponent.ORCHESTRATOR,
@@ -442,7 +432,6 @@ class MonitorDaemon:
         except Exception as e:
             # Dispatch error should not crash the daemon
             try:
-                from datetime import datetime
                 event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.ORCHESTRATOR,

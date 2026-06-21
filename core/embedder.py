@@ -7,7 +7,6 @@ This provides the semantic search capability for memory backends.
 
 import httpx
 import time
-from typing import Any
 
 from core.observability import (
     TraceEventType,

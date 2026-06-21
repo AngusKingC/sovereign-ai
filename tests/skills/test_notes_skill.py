@@ -1,15 +1,13 @@
 """Tests for NotesSkill."""
 
 import pytest
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from uuid import uuid4
 from unittest.mock import AsyncMock
 
 from skills.notes.notes_skill import NotesSkill
 from core.observability import MemoryTraceEmitter
-from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType, ApprovalResponse
-from core.memory_router import MemoryRouter
-from core.exceptions import SkillExecutionError
+from core.approval_gate import ApprovalGate, ApprovalResponse
 
 
 class TestNotesSkill:

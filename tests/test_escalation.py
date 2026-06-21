@@ -6,13 +6,12 @@ Tests the full escalation path: decision created â†’ submitted to ApprovalGate â
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from core.schemas import Task, WorkerOutput, TaskStatus, EscalationDecision, EscalationTier
-from core.approval_gate import ApprovalActionType, ApprovalGate, ApprovalRequest, ApprovalResponse
+from core.approval_gate import ApprovalGate, ApprovalResponse
 from core.orchestrator import Orchestrator
-from core.exceptions import CrossScopeAccessError
 from core.observability import MemoryTraceEmitter
 
 

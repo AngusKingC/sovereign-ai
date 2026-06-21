@@ -6,7 +6,6 @@ with maximum hardware control for VRAM/RAM balancing.
 """
 
 import time
-from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel
 
 import llama_cpp

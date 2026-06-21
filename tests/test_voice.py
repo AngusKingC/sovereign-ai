@@ -2,16 +2,11 @@
 Tests for voice interface and voice daemon.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from core.observability import (
-    TraceComponent,
-    TraceEventType,
-    TraceLevel,
-    TraceEvent,
     MemoryTraceEmitter,
 )
 from core.voice_interface import VoiceConfig, VoiceCommand, VoiceInterface

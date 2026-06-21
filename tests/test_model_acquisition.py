@@ -2,7 +2,6 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-from datetime import datetime
 from core.schemas import (
     DownloadRequest,
     DownloadResult,
@@ -571,7 +570,7 @@ class TestModelAcquisition:
     
     async def test_trace_events_emitted_throughout_download_flow(self) -> None:
         """Test that trace events are emitted throughout download flow."""
-        from core.observability import MemoryTraceEmitter, TraceEventType
+        from core.observability import MemoryTraceEmitter
         
         mock_router = MockMemoryRouter()
         trace_emitter = MemoryTraceEmitter()

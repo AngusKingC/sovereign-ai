@@ -10,7 +10,7 @@ All interfaces share the same command registry, ensuring backwards compatibility
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, TypeVar
+from typing import Any, Dict, List, Optional, TypeVar
 from pydantic import BaseModel, Field
 from datetime import datetime
 

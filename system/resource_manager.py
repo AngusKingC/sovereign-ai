@@ -5,7 +5,6 @@ Single responsibility: Monitor loaded models, enforce resource budgets,
 and manage model loading/unloading with intelligent eviction policies.
 """
 
-import asyncio
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -15,11 +14,8 @@ from core.schemas import (
     ApprovalCallback,
     LoadDecision,
     LoadedModel,
-    ModelEntry,
-    QuantisationVariant,
     ResourceSnapshot,
     SystemProfile,
-    TaskPriority,
 )
 from core.observability import (
     TraceComponent,

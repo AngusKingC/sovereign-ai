@@ -4,7 +4,7 @@ File Writer Skill - writes content to local files with configurable mode.
 Single responsibility: Write content to local filesystem with approval gate.
 """
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from uuid import uuid4
 from datetime import datetime
 
@@ -19,8 +19,7 @@ from core.observability import (
 from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType
 
 if TYPE_CHECKING:
-    from core.task_state_machine import TaskStateMachine
-    from core.memory_router import MemoryRouter
+    pass
 
 
 class FileWriterSkill:

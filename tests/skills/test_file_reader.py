@@ -5,7 +5,6 @@ Tests for File Reader Skill.
 import pytest
 import tempfile
 import os
-from unittest.mock import AsyncMock, patch
 
 from skills.file_reader.skill import FileReaderSkill
 from core.observability import MemoryTraceEmitter

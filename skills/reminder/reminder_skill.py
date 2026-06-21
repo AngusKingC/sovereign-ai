@@ -5,7 +5,6 @@ Single responsibility: Manage reminders stored in MemoryRouter with approval gat
 """
 
 from datetime import datetime, timedelta
-from typing import Any
 from uuid import uuid4
 
 from core.observability import (

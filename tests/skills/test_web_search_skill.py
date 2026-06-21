@@ -4,11 +4,9 @@ Tests for Web Search Skill.
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 from skills.web_search.skill import WebSearchSkill
 from core.observability import (
-    TraceEvent,
     TraceEventType,
     TraceLevel,
     TraceComponent,

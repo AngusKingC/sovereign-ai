@@ -20,7 +20,6 @@ from core.observability import (
     TraceLevel,
     TraceEvent,
     TraceEmitter,
-    MemoryTraceEmitter,
 )
 
 

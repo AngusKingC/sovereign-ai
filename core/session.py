@@ -6,7 +6,6 @@ Provides PostgreSQL persistence via PostgresBackend when configured,
 with in-memory fallback when no DB is available.
 """
 
-import os
 from datetime import datetime, timedelta
 from typing import Any
 from uuid import uuid4, UUID

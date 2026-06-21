@@ -16,7 +16,7 @@ from core.observability import MemoryTraceEmitter, TraceEmitter, TraceEvent, Tra
 from core.schemas import OrchestratorMetrics, VersionUpdateProposal
 
 if TYPE_CHECKING:
-    from core.worker_factory import DynamicWorkerProfile
+    pass
 
 
 class OrchestratorImprovementLoop:

@@ -3,7 +3,7 @@
 import pytest
 
 from core.approval_trust import ApprovalTrustRegistry, TrustLevel
-from core.observability import MemoryTraceEmitter, TraceEventType, TraceComponent
+from core.observability import MemoryTraceEmitter, TraceEventType
 from core.exceptions import ApprovalDeniedError
 
 

@@ -14,7 +14,6 @@ import pytest
 pytest.importorskip("llama_cpp")
 
 from datetime import datetime
-from uuid import uuid4
 
 from adapters.llama_cpp import LlamaCppAdapter
 from core.schemas import Message, MessageRole

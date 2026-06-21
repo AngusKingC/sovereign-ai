@@ -13,7 +13,7 @@ import pytest
 from core.memory_router import MemoryBackend, MemoryRouter
 from core.orchestrator import Orchestrator
 from core.schemas import Task, TaskPriority, WorkerProfile, WorkerStatus
-from core.observability import MemoryTraceEmitter, TraceEvent
+from core.observability import MemoryTraceEmitter
 from workers.echo_worker import EchoWorker, MockLLMAdapter
 
 

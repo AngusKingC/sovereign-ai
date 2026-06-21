@@ -4,18 +4,14 @@ Tests for Notification System.
 
 import pytest
 from unittest.mock import AsyncMock
-from datetime import datetime, timedelta
 from uuid import uuid4
 
 from core.notification import NotificationSystem, Notification, NotificationType
 from core.observability import (
-    TraceEvent,
     TraceEventType,
-    TraceLevel,
-    TraceComponent,
     MemoryTraceEmitter,
 )
-from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalResponse, ApprovalActionType
+from core.approval_gate import ApprovalGate, ApprovalResponse
 
 
 @pytest.mark.asyncio

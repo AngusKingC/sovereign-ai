@@ -10,15 +10,12 @@ This file remains for backward compatibility during migration.
 """
 
 import warnings
-from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from pydantic import BaseModel
 
-from core.schemas import Message
 
 if TYPE_CHECKING:
-    from core.worker_base import LLMResponse
+    pass
 
 
 # Import from core/ for Clean Architecture compliance

@@ -6,7 +6,6 @@ instruction updates when scores fall below threshold. Complements the
 rating-trend trigger from Prompt 20 with a continuous trace-scoring path.
 """
 
-from typing import Any
 
 from core.memory_router import MemoryRouter
 from core.instruction_versioning import InstructionVersionManager

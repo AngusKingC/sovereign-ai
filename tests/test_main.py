@@ -1,7 +1,6 @@
 """Tests for cli/main.py."""
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 
 def test_serve_subcommand_is_registered():

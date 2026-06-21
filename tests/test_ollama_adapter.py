@@ -18,8 +18,7 @@ class TestThinkingExtraction:
         adapter = OllamaAdapter(emitter=emitter)
 
         # Mock the HTTP client to return response with <think> tags
-        import httpx
-        from unittest.mock import AsyncMock, Mock, patch
+        from unittest.mock import AsyncMock, Mock
 
         mock_response = Mock()
         mock_response.status_code = 200
@@ -61,8 +60,7 @@ class TestThinkingExtraction:
         adapter = OllamaAdapter(emitter=emitter)
 
         # Mock the HTTP client to return response without <think> tags
-        import httpx
-        from unittest.mock import AsyncMock, Mock, patch
+        from unittest.mock import AsyncMock, Mock
 
         mock_response = Mock()
         mock_response.status_code = 200
@@ -98,8 +96,7 @@ class TestThinkingExtraction:
         adapter = OllamaAdapter(emitter=emitter)
 
         # Mock the HTTP client to return response with multi-line thinking
-        import httpx
-        from unittest.mock import AsyncMock, Mock, patch
+        from unittest.mock import AsyncMock, Mock
 
         mock_response = Mock()
         mock_response.status_code = 200
@@ -136,8 +133,7 @@ class TestThinkingExtraction:
         adapter = OllamaAdapter(emitter=emitter)
 
         # Mock the HTTP client to return response with empty thinking block
-        import httpx
-        from unittest.mock import AsyncMock, Mock, patch
+        from unittest.mock import AsyncMock, Mock
 
         mock_response = Mock()
         mock_response.status_code = 200

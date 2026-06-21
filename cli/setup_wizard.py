@@ -6,7 +6,7 @@ Writes jarvis.config.yaml for structured settings and .env for API keys.
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from rich.console import Console
 from rich.panel import Panel
@@ -197,7 +197,6 @@ class SetupWizard:
             config: Configuration dictionary
         """
         import yaml
-        from datetime import datetime
 
         # Prepare non-secret config for YAML
         yaml_config = {

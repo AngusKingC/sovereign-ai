@@ -6,7 +6,7 @@ used for escalation when local models are insufficient.
 """
 
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from openai import AsyncOpenAI
 

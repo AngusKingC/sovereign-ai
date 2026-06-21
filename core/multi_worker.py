@@ -26,7 +26,6 @@ if TYPE_CHECKING:
     from core.resource_budget import ResourceBudget
     from core.rating_system import RatingSystem
     from core.resource_manager import ResourceManager
-    from core.worker_base import WorkerBase
 
 
 class WorkerResponse(BaseModel):

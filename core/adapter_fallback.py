@@ -5,7 +5,6 @@ the system degrades gracefully rather than failing hard when the primary adapter
 is unavailable (Ollama crashed, VRAM full, API timeout).
 """
 
-import asyncio
 import time
 from typing import Any
 

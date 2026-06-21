@@ -1,8 +1,7 @@
 """Tests for Model Registry."""
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
-from datetime import datetime
+from unittest.mock import Mock
 from core.schemas import (
     ModelEntry,
     ModelSource,

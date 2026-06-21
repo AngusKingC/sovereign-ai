@@ -1,7 +1,7 @@
 """Tests for TTS Skill."""
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock
 import os
 
 from skills.tts.skill import TTSSkill

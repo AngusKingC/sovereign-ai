@@ -7,7 +7,6 @@ Each worker gets an instruction file and changelog in Obsidian. Orchestrator get
 
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from core.worker_base import LLMAdapter
 from core.worker_factory import DynamicWorkerProfile

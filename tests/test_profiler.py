@@ -3,7 +3,7 @@
 import pytest
 
 from core.schemas import CPUInfo, GPUInfo, RAMInfo, StorageInfo, OSInfo, NetworkInfo, OllamaInfo
-from core.observability import MemoryTraceEmitter, NullTraceEmitter
+from core.observability import MemoryTraceEmitter
 from system.profiler import SystemProfiler
 from core.memory_router import MemoryRouter
 

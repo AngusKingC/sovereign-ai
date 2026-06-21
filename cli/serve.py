@@ -1,7 +1,6 @@
 """CLI command to start the Jarvis web server."""
 
 import asyncio
-from pathlib import Path
 
 import typer
 import uvicorn
@@ -52,7 +51,6 @@ def serve(
     from core.trace_optimiser import TraceOptimiser
     from core.orchestrator_improvement import OrchestratorImprovementLoop
     from core.task_state_machine import TaskStateMachine
-    from core.worker_base import LLMAdapter
     from adapters.ollama import OllamaAdapter
     from workers.ollama_worker import OllamaWorker
     

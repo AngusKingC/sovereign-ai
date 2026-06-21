@@ -4,7 +4,7 @@ Tests for setup wizard.
 
 import pytest
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 from cli.setup_wizard import SetupWizard
 from core.observability import MemoryTraceEmitter

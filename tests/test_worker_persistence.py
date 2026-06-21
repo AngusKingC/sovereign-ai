@@ -3,7 +3,7 @@
 import pytest
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock
 from tempfile import TemporaryDirectory
 
 from core.worker_factory import DynamicWorkerProfile

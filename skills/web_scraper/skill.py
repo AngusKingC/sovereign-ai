@@ -4,7 +4,6 @@ Web Scraper Skill - scrapes webpage content using httpx and BeautifulSoup.
 Single responsibility: Extract text content from web pages via HTTP requests.
 """
 
-from typing import Any
 
 import httpx
 from bs4 import BeautifulSoup

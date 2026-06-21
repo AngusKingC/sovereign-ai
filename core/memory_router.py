@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from core.schemas import Task
 from core.observability import (

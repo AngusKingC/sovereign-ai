@@ -4,10 +4,8 @@ Worker persistence for saving and loading worker profiles.
 Single responsibility: Persist worker profiles to PostgreSQL and Obsidian mirror.
 """
 
-from datetime import datetime
 from pathlib import Path
 from typing import Any
-from uuid import UUID
 
 from core.worker_factory import DynamicWorkerProfile
 from core.schemas import WorkerStatus

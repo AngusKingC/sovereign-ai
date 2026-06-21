@@ -1,7 +1,6 @@
 """Tests for web server."""
 
-import pytest
-from unittest.mock import Mock, AsyncMock, MagicMock
+from unittest.mock import Mock, AsyncMock
 from fastapi.testclient import TestClient
 
 from web.server import create_app

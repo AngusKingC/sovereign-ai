@@ -3,19 +3,17 @@ Tests for Terminal Skill.
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timedelta
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 from skills.terminal.skill import TerminalSkill
 from core.observability import (
-    TraceEvent,
     TraceEventType,
     TraceLevel,
     TraceComponent,
     MemoryTraceEmitter,
 )
-from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalResponse, ApprovalActionType
+from core.approval_gate import ApprovalGate, ApprovalResponse
 
 
 class TestTerminalSkill:

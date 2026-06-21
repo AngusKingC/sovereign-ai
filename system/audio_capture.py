@@ -7,7 +7,7 @@ This is the only file in the project that imports pyaudio.
 
 import time
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from core.observability import (
     TraceComponent,

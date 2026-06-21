@@ -9,7 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from core.schemas import Task, WorkerOutput, TaskPriority, TaskStatus
+from core.schemas import Task, TaskPriority
 from core.observability import (
     TraceComponent,
     TraceEventType,

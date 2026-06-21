@@ -15,7 +15,7 @@ from core.observability import (
     TraceEmitter,
     MemoryTraceEmitter,
 )
-from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalResponse, ApprovalActionType
+from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType
 
 
 class CodeExecutionSkill:

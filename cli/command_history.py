@@ -6,10 +6,9 @@ Provides PostgreSQL persistence via PostgresBackend when configured,
 with in-memory fallback when no DB is available.
 """
 
-import os
 from datetime import datetime
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from core.memory_router import MemoryBackend
 from core.commands import CommandType
@@ -228,7 +227,6 @@ class CommandHistory:
                 completions.append(f"/{cmd_name}")
 
         # Adapter completions
-        from cli.adapter_factory import create_adapter
         available_adapters = ["ollama", "lm_studio"]
         for adapter in available_adapters:
             if adapter.startswith(prefix):

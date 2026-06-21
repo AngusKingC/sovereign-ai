@@ -6,7 +6,7 @@ providing ultra-fast inference for time-sensitive tasks.
 """
 
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from groq import AsyncGroq
 

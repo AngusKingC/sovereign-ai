@@ -7,7 +7,7 @@ providing the primary local-first inference capability.
 
 import re
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import httpx
 

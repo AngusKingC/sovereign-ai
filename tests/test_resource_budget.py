@@ -1,8 +1,8 @@
 """Tests for Resource Budget."""
 
 import pytest
-from unittest.mock import Mock, AsyncMock
-from core.resource_budget import ResourceBudget, BudgetCheckResult
+from unittest.mock import Mock
+from core.resource_budget import ResourceBudget
 from core.observability import MemoryTraceEmitter
 
 

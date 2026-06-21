@@ -1,8 +1,6 @@
 """Tests for cli/serve.py."""
 
-import pytest
-import asyncio
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch
 
 
 def test_serve_constructs_full_orchestrator():

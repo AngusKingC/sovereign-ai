@@ -9,7 +9,6 @@ import smtplib
 import os
 from email import message_from_bytes
 from email.header import decode_header
-from typing import Any
 
 from core.observability import (
     TraceComponent,

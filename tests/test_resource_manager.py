@@ -11,11 +11,9 @@ from core.schemas import (
     QuantisationVariant,
     ModelEntry,
     ModelSource,
-    DownloadStatus,
     SystemProfile,
     GPUInfo,
     RAMInfo,
-    OllamaInfo,
 )
 from system.resource_manager import ResourceManager
 from core.observability import MemoryTraceEmitter

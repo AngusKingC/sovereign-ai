@@ -7,9 +7,7 @@ from unittest.mock import AsyncMock
 
 from skills.reminder.reminder_skill import ReminderSkill
 from core.observability import MemoryTraceEmitter
-from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType, ApprovalResponse
-from core.memory_router import MemoryRouter
-from core.exceptions import SkillExecutionError
+from core.approval_gate import ApprovalGate, ApprovalResponse
 
 
 class TestReminderSkill:

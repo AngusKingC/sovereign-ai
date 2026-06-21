@@ -6,7 +6,7 @@ local server API, enabling hardware control through LM Studio's GUI.
 """
 
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import httpx
 

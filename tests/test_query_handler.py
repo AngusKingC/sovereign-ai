@@ -1,8 +1,7 @@
 """Tests for QueryHandler with injected Orchestrator."""
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
-from datetime import datetime
+from unittest.mock import AsyncMock, patch
 from core.commands import Command, CommandType, CommandContext
 from core.handlers import QueryHandler
 from core.schemas import WorkerOutput
@@ -187,7 +186,7 @@ class TestQueryHandler:
     async def test_session_history_appended_on_success(self) -> None:
         """Test that session history is appended with user and assistant messages."""
         from core.session import SessionManager
-        from core.schemas import Message, MessageRole
+        from core.schemas import MessageRole
         
         mock_orchestrator = MockOrchestrator(should_fail=False)
         session_manager = SessionManager()

@@ -7,7 +7,6 @@ approval. Rollback is available to any previous version.
 """
 
 from datetime import datetime
-from typing import Any
 from uuid import uuid4
 
 from core.instruction_generator import InstructionGenerator

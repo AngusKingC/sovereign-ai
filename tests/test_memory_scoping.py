@@ -2,9 +2,9 @@
 
 import pytest
 from datetime import datetime, timezone
-from uuid import UUID, uuid4
+from uuid import uuid4
 
-from core.memory_router import MemoryRouter, MemoryScope, ScopedMemoryRouter
+from core.memory_router import MemoryRouter, ScopedMemoryRouter
 from core.observability import MemoryTraceEmitter
 from core.schemas import StrategicContext, EscalationDecision, WorkerOutput, Task
 

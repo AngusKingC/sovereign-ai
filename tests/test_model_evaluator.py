@@ -4,12 +4,11 @@ Tests for Model Evaluator.
 
 import pytest
 from datetime import datetime, timezone
-from uuid import uuid4
 from unittest.mock import AsyncMock, patch
 
 from system.model_evaluator import ModelEvaluator, ModelRecommendation, EvaluationResult
 from core.schemas import ModelEntry, QuantisationVariant, ModelSource, DownloadStatus, SystemProfile, GPUInfo, RAMInfo, EvaluationRecord
-from core.observability import MemoryTraceEmitter, TraceComponent, TraceEventType, TraceLevel
+from core.observability import MemoryTraceEmitter, TraceEventType
 
 
 class MockModelRegistry:

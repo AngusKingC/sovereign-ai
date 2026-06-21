@@ -3,12 +3,12 @@ Tests for Worker Factory.
 """
 
 import pytest
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from core.worker_factory import WorkerFactory, DynamicWorkerProfile, PlaceholderWorker
 from core.schemas import Task, TaskStatus, TaskPriority, WorkerProfile, WorkerStatus
-from core.observability import MemoryTraceEmitter, TraceComponent, TraceEventType, TraceLevel
+from core.observability import MemoryTraceEmitter, TraceEventType
 from core.exceptions import WorkerNotFoundError
 
 

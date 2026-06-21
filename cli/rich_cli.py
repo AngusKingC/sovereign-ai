@@ -5,7 +5,6 @@ The default is now the Textual TUI with arrow key navigation.
 """
 
 import sys
-import asyncio
 from pathlib import Path
 from typing import Optional, Any
 from rich.console import Console
