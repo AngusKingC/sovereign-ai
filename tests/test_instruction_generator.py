@@ -1,7 +1,7 @@
 """Tests for InstructionGenerator."""
 
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock, AsyncMock
@@ -194,8 +194,8 @@ class TestInstructionGenerator:
             version=1,
             content="# Old content",
             obsidian_path="workers/test-worker_INSTRUCTION.md",
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         
         mock_adapter.generate.return_value = LLMResponse(
@@ -227,8 +227,8 @@ class TestInstructionGenerator:
             version=1,
             content="# Old content",
             obsidian_path="workers/test-worker_INSTRUCTION.md",
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         
         mock_adapter.generate.return_value = LLMResponse(
@@ -263,8 +263,8 @@ class TestInstructionGenerator:
             version=1,
             content="# Old content",
             obsidian_path="workers/test-worker_INSTRUCTION.md",
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         
         mock_adapter.generate.return_value = LLMResponse(
@@ -297,8 +297,8 @@ class TestInstructionGenerator:
             version=1,
             content="# Old content",
             obsidian_path="workers/test-worker_INSTRUCTION.md",
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         
         mock_adapter.generate.return_value = LLMResponse(
@@ -331,8 +331,8 @@ class TestInstructionGenerator:
                     "version": 1,
                     "content": "# Test content",
                     "obsidian_path": "workers/test-worker_INSTRUCTION.md",
-                    "created_at": datetime.now().isoformat(),
-                    "updated_at": datetime.now().isoformat()
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat()
                 }
             }
         ]
@@ -429,8 +429,8 @@ class TestInstructionGenerator:
             version=1,
             content="# Old content",
             obsidian_path="workers/test-worker_INSTRUCTION.md",
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         
         mock_adapter.generate.return_value = LLMResponse(

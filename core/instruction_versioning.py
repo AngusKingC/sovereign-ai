@@ -6,7 +6,7 @@ rating trend drops below a threshold over N recent tasks. Proposed updates requi
 approval. Rollback is available to any previous version.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from core.instruction_generator import InstructionGenerator
@@ -121,7 +121,7 @@ class InstructionVersionManager:
             trigger_reason=trigger_reason,
             rating_trend=rating_trend,
             status="pending",
-            created_at=datetime.now()
+            created_at=datetime.now(timezone.utc)
         )
 
         # Track pending proposal for collision prevention
@@ -199,7 +199,7 @@ class InstructionVersionManager:
         
         # Create updated instruction file with proposed content
         new_version = current_instruction.version + 1
-        created_at = datetime.now()
+        created_at = datetime.now(timezone.utc)
         
         new_instruction = InstructionFile(
             worker_id=proposal.worker_id,
@@ -352,7 +352,7 @@ class InstructionVersionManager:
         
         # Create new version with rolled-back content
         new_version = current_instruction.version + 1
-        created_at = datetime.now()
+        created_at = datetime.now(timezone.utc)
         
         rollback_instruction = InstructionFile(
             worker_id=worker_id,
@@ -436,8 +436,8 @@ class InstructionVersionManager:
                     version=content_data.get("version", 1),
                     content=content_data.get("content", ""),
                     obsidian_path=content_data.get("obsidian_path", ""),
-                    created_at=datetime.fromisoformat(content_data.get("created_at", datetime.now().isoformat())),
-                    updated_at=datetime.fromisoformat(content_data.get("updated_at", datetime.now().isoformat()))
+                    created_at=datetime.fromisoformat(content_data.get("created_at", datetime.now(timezone.utc).isoformat())),
+                    updated_at=datetime.fromisoformat(content_data.get("updated_at", datetime.now(timezone.utc).isoformat()))
                 )
                 history.append(instruction)
             except Exception:

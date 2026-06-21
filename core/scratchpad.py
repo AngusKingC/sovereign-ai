@@ -5,7 +5,7 @@ Single responsibility: Manage ephemeral working memory scratchpads for worker re
 Scratchpads are separate from long-term memory and are compacted on task completion.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -150,7 +150,7 @@ class ScratchpadManager:
         
         # Update scratchpad
         scratchpad.summary = summary
-        scratchpad.completed_at = datetime.now()
+        scratchpad.completed_at = datetime.now(timezone.utc)
         scratchpad.is_compacted = True
         
         # Persist updated scratchpad

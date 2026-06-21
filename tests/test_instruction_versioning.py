@@ -1,7 +1,7 @@
 """Tests for InstructionVersionManager."""
 
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import Mock, AsyncMock
 
 from core.instruction_versioning import InstructionVersionManager
@@ -88,8 +88,8 @@ class TestInstructionVersionManager:
             version=1,
             content="# Test Worker Instruction",
             obsidian_path="workers/test-worker_INSTRUCTION.md",
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
     
     @pytest.mark.asyncio
@@ -116,7 +116,7 @@ class TestInstructionVersionManager:
             score=5,
             model_used="qwen2.5-coder:7b",
             instruction_file_version=1,
-            created_at=datetime.now()
+            created_at=datetime.now(timezone.utc)
         )]  # Only 1 rating, below min_ratings=5
         mock_instruction_generator.get_instruction_file.return_value = sample_instruction_file
         
@@ -138,7 +138,7 @@ class TestInstructionVersionManager:
                 score=5,
                 model_used="qwen2.5-coder:7b",
                 instruction_file_version=1,
-                created_at=datetime.now()
+                created_at=datetime.now(timezone.utc)
             )
             for i in range(10)
         ]  # 10 ratings, above min_ratings=5
@@ -148,8 +148,8 @@ class TestInstructionVersionManager:
             version=2,
             content="# Updated Instruction",
             obsidian_path="workers/test-worker_INSTRUCTION.md",
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         
         result = await version_manager.check_and_trigger_update(sample_profile)
@@ -173,7 +173,7 @@ class TestInstructionVersionManager:
                 score=5,
                 model_used="qwen2.5-coder:7b",
                 instruction_file_version=1,
-                created_at=datetime.now()
+                created_at=datetime.now(timezone.utc)
             )
             for i in range(10)
         ]
@@ -183,8 +183,8 @@ class TestInstructionVersionManager:
             version=2,
             content="# Updated Instruction",
             obsidian_path="workers/test-worker_INSTRUCTION.md",
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         
         await version_manager.check_and_trigger_update(sample_profile)
@@ -218,7 +218,7 @@ class TestInstructionVersionManager:
             trigger_reason="rating trend -0.8",
             rating_trend=-0.8,
             status="pending",
-            created_at=datetime.now()
+            created_at=datetime.now(timezone.utc)
         )
         
         mock_instruction_generator.get_instruction_file.return_value = sample_instruction_file
@@ -243,7 +243,7 @@ class TestInstructionVersionManager:
             trigger_reason="rating trend -0.8",
             rating_trend=-0.8,
             status="pending",
-            created_at=datetime.now()
+            created_at=datetime.now(timezone.utc)
         )
         
         mock_instruction_generator.get_instruction_file.return_value = sample_instruction_file
@@ -270,7 +270,7 @@ class TestInstructionVersionManager:
             trigger_reason="rating trend -0.8",
             rating_trend=-0.8,
             status="approved",  # Not pending
-            created_at=datetime.now()
+            created_at=datetime.now(timezone.utc)
         )
         
         with pytest.raises(ValueError, match="Cannot approve proposal with status approved"):
@@ -291,16 +291,16 @@ class TestInstructionVersionManager:
                 version=1,
                 content="# Version 1",
                 obsidian_path="workers/test-worker_INSTRUCTION.md",
-                created_at=datetime.now(),
-                updated_at=datetime.now()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             ),
             InstructionFile(
                 worker_id="test-worker",
                 version=2,
                 content="# Version 2",
                 obsidian_path="workers/test-worker_INSTRUCTION.md",
-                created_at=datetime.now(),
-                updated_at=datetime.now()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             ),
             sample_instruction_file
         ])
@@ -326,8 +326,8 @@ class TestInstructionVersionManager:
                 version=1,
                 content="# Version 1",
                 obsidian_path="workers/test-worker_INSTRUCTION.md",
-                created_at=datetime.now(),
-                updated_at=datetime.now()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             ),
             sample_instruction_file
         ])
@@ -413,7 +413,7 @@ class TestInstructionVersionManager:
                 score=5,
                 model_used="qwen2.5-coder:7b",
                 instruction_file_version=1,
-                created_at=datetime.now()
+                created_at=datetime.now(timezone.utc)
             )
             for i in range(10)
         ]
@@ -423,8 +423,8 @@ class TestInstructionVersionManager:
             version=2,
             content="# Updated Instruction",
             obsidian_path="workers/test-worker_INSTRUCTION.md",
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         
         await version_manager.check_and_trigger_update(sample_profile)
@@ -451,7 +451,7 @@ class TestInstructionVersionManager:
             trigger_reason="rating trend -0.8",
             rating_trend=-0.8,
             status="pending",
-            created_at=datetime.now()
+            created_at=datetime.now(timezone.utc)
         )
         
         mock_instruction_generator.get_instruction_file.return_value = sample_instruction_file
@@ -481,8 +481,8 @@ class TestInstructionVersionManager:
                 version=1,
                 content="# Version 1",
                 obsidian_path="workers/test-worker_INSTRUCTION.md",
-                created_at=datetime.now(),
-                updated_at=datetime.now()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             ),
             sample_instruction_file
         ])
@@ -512,7 +512,7 @@ class TestInstructionVersionManager:
             trigger_reason="rating trend -0.8",
             rating_trend=-0.8,
             status="pending",
-            created_at=datetime.now()
+            created_at=datetime.now(timezone.utc)
         )
         version_manager._pending_proposals["test-worker"] = existing_proposal
 
@@ -538,7 +538,7 @@ class TestInstructionVersionManager:
             trigger_reason="rating trend -0.8",
             rating_trend=-0.8,
             status="pending",
-            created_at=datetime.now()
+            created_at=datetime.now(timezone.utc)
         )
         version_manager._pending_proposals["test-worker"] = existing_proposal
 
@@ -575,7 +575,7 @@ class TestInstructionVersionManager:
                 score=5,
                 model_used="qwen2.5-coder:7b",
                 instruction_file_version=1,
-                created_at=datetime.now()
+                created_at=datetime.now(timezone.utc)
             )
             for i in range(10)
         ]
@@ -585,8 +585,8 @@ class TestInstructionVersionManager:
             version=2,
             content="# Updated Instruction",
             obsidian_path="workers/test-worker_INSTRUCTION.md",
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
 
         result = await version_manager.check_and_trigger_update(sample_profile)
@@ -610,7 +610,7 @@ class TestInstructionVersionManager:
             trigger_reason="rating trend -0.8",
             rating_trend=-0.8,
             status="pending",
-            created_at=datetime.now()
+            created_at=datetime.now(timezone.utc)
         )
 
         await version_manager.reject_update(proposal)
@@ -635,7 +635,7 @@ class TestInstructionVersionManager:
             trigger_reason="rating trend -0.8",
             rating_trend=-0.8,
             status="pending",
-            created_at=datetime.now()
+            created_at=datetime.now(timezone.utc)
         )
         version_manager._pending_proposals["test-worker"] = proposal
 
@@ -657,7 +657,7 @@ class TestInstructionVersionManager:
             trigger_reason="rating trend -0.8",
             rating_trend=-0.8,
             status="approved",  # Not pending
-            created_at=datetime.now()
+            created_at=datetime.now(timezone.utc)
         )
 
         with pytest.raises(ValueError, match="Cannot reject proposal with status approved"):

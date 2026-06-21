@@ -3,7 +3,7 @@ Tests for trajectory exporter module.
 """
 
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 from unittest.mock import AsyncMock
 
@@ -49,7 +49,7 @@ class TestTrajectoryExporter:
             complexity_score=0.8,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.COMPLETE,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         output = WorkerOutput(
             worker_id="worker-1",
@@ -73,7 +73,7 @@ class TestTrajectoryExporter:
             complexity_score=0.8,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.COMPLETE,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         output = WorkerOutput(
             worker_id="worker-1",
@@ -96,7 +96,7 @@ class TestTrajectoryExporter:
             complexity_score=0.8,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.COMPLETE,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         output = WorkerOutput(
             worker_id="worker-1",

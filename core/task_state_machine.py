@@ -102,7 +102,7 @@ class TaskStateMachine:
             task_id=task.task_id,
             from_state=from_state,
             to_state=to_state,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(timezone.utc),
             reason=reason,
             actor=actor,
         )

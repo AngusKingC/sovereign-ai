@@ -6,7 +6,7 @@ Provides PostgreSQL persistence via PostgresBackend when configured,
 with in-memory fallback when no DB is available.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import uuid4, UUID
 
@@ -76,7 +76,7 @@ class SessionManager:
             UUID string for the new session
         """
         session_id = str(uuid4())
-        created_at = datetime.now()
+        created_at = datetime.now(timezone.utc)
         
         if self.backend:
             # Store session in backend with user_id and created_at
@@ -113,7 +113,7 @@ class SessionManager:
                     complexity_score=0.0,
                     priority="normal",
                     current_state="received",
-                    created_at=datetime.now(),
+                    created_at=datetime.now(timezone.utc),
                 )
                 results = await self.backend.fetch(task)
                 if results:
@@ -150,9 +150,9 @@ class SessionManager:
                 "type": "session",
                 "session_id": session_id,
                 "user_id": self.user_id,
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
                 "messages": [msg.model_dump() for msg in history],
-                "expires_at": (datetime.now() + timedelta(days=self.session_expiry_days)).isoformat(),
+                "expires_at": (datetime.now(timezone.utc) + timedelta(days=self.session_expiry_days)).isoformat(),
             })
         else:
             # Append to memory
@@ -195,7 +195,7 @@ class SessionManager:
                 "session_id": session_id,
                 "user_id": self.user_id,
                 "summary": summary.model_dump(),
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             })
         
         return summary
@@ -239,7 +239,7 @@ class SessionManager:
                 complexity_score=0.0,
                 priority="normal",
                 current_state="received",
-                created_at=datetime.now(),
+                created_at=datetime.now(timezone.utc),
             )
             results = await self.backend.fetch(task)
             
@@ -282,12 +282,12 @@ class SessionManager:
                 complexity_score=0.0,
                 priority="normal",
                 current_state="received",
-                created_at=datetime.now(),
+                created_at=datetime.now(timezone.utc),
             )
             all_sessions = await self.backend.fetch(task)
             
             archived_count = 0
-            cutoff_date = datetime.now() - timedelta(days=self.session_expiry_days)
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=self.session_expiry_days)
             
             for session in all_sessions:
                 content = session.get("content", {})
@@ -302,7 +302,7 @@ class SessionManager:
                             await self.backend.write({
                                 "type": "session_archived",
                                 "session_id": session_id,
-                                "archived_at": datetime.now().isoformat(),
+                                "archived_at": datetime.now(timezone.utc).isoformat(),
                                 "original_data": content,
                             })
                             archived_count += 1

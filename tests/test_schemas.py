@@ -5,7 +5,7 @@ Single responsibility: Test all Pydantic schema definitions for validation,
 serialization, and type safety compliance.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 import pytest
@@ -117,7 +117,7 @@ class TestMessage:
         message = Message(
             role=MessageRole.USER,
             content="Hello",
-            timestamp=datetime.now(),
+            timestamp=datetime.now(timezone.utc),
         )
         assert message.role == MessageRole.USER
         assert message.content == "Hello"
@@ -129,7 +129,7 @@ class TestMessage:
         message = Message(
             role=MessageRole.ASSISTANT,
             content="Response",
-            timestamp=datetime.now(),
+            timestamp=datetime.now(timezone.utc),
             metadata=metadata,
         )
         assert message.metadata == metadata
@@ -140,7 +140,7 @@ class TestMessage:
             Message(
                 role="invalid",
                 content="Hello",
-                timestamp=datetime.now(),
+                timestamp=datetime.now(timezone.utc),
             )
 
     def test_json_serialization(self):
@@ -148,7 +148,7 @@ class TestMessage:
         original = Message(
             role=MessageRole.USER,
             content="Hello",
-            timestamp=datetime.now(),
+            timestamp=datetime.now(timezone.utc),
         )
         json_str = original.model_dump_json()
         assert isinstance(json_str, str)
@@ -166,7 +166,7 @@ class TestTask:
             intent="Test task",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         assert task.task_id is not None
         assert task.intent == "Test task"
@@ -184,7 +184,7 @@ class TestTask:
             intent="Child task",
             complexity_score=0.3,
             priority=TaskPriority.HIGH,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         assert task.parent_task_id == parent_id
 
@@ -195,7 +195,7 @@ class TestTask:
             intent="Low complexity",
             complexity_score=0.0,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         assert task_low.complexity_score == 0.0
 
@@ -204,7 +204,7 @@ class TestTask:
             intent="High complexity",
             complexity_score=1.0,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         assert task_high.complexity_score == 1.0
 
@@ -216,7 +216,7 @@ class TestTask:
                 intent="Invalid complexity",
                 complexity_score=-0.1,
                 priority=TaskPriority.NORMAL,
-                created_at=datetime.now(),
+                created_at=datetime.now(timezone.utc),
             )
 
         with pytest.raises(ValidationError):
@@ -225,7 +225,7 @@ class TestTask:
                 intent="Invalid complexity",
                 complexity_score=1.1,
                 priority=TaskPriority.NORMAL,
-                created_at=datetime.now(),
+                created_at=datetime.now(timezone.utc),
             )
 
     def test_validation_failures_non_negative(self):
@@ -236,7 +236,7 @@ class TestTask:
                 intent="Test task",
                 complexity_score=0.5,
                 priority=TaskPriority.NORMAL,
-                created_at=datetime.now(),
+                created_at=datetime.now(timezone.utc),
                 validation_failures=-1,
             )
 
@@ -247,7 +247,7 @@ class TestTask:
             intent="Test task",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         json_str = original.model_dump_json()
         assert isinstance(json_str, str)
@@ -453,7 +453,7 @@ class TestTraceEvent:
         """Test valid trace event construction."""
         event = TraceEvent(
             event_id=uuid4(),
-            timestamp=datetime.now(),
+            timestamp=datetime.now(timezone.utc),
             layer=Layer.L1,
             component="orchestrator",
             event_type=EventType.LLM_CALLED,
@@ -472,7 +472,7 @@ class TestTraceEvent:
         """Test valid trace event construction with optional fields."""
         event = TraceEvent(
             event_id=uuid4(),
-            timestamp=datetime.now(),
+            timestamp=datetime.now(timezone.utc),
             layer=Layer.L2,
             component="worker",
             event_type=EventType.OUTPUT_FINAL,
@@ -490,7 +490,7 @@ class TestTraceEvent:
         with pytest.raises(ValidationError):
             TraceEvent(
                 event_id=uuid4(),
-                timestamp=datetime.now(),
+                timestamp=datetime.now(timezone.utc),
                 layer=Layer.L1,
                 component="orchestrator",
                 event_type=EventType.LLM_CALLED,
@@ -504,7 +504,7 @@ class TestTraceEvent:
         with pytest.raises(ValidationError):
             TraceEvent(
                 event_id=uuid4(),
-                timestamp=datetime.now(),
+                timestamp=datetime.now(timezone.utc),
                 layer=Layer.L1,
                 component="orchestrator",
                 event_type=EventType.LLM_CALLED,
@@ -518,7 +518,7 @@ class TestTraceEvent:
         """Test JSON serialization roundtrip."""
         original = TraceEvent(
             event_id=uuid4(),
-            timestamp=datetime.now(),
+            timestamp=datetime.now(timezone.utc),
             layer=Layer.L1,
             component="orchestrator",
             event_type=EventType.LLM_CALLED,
@@ -576,7 +576,7 @@ class TestStrategicContext:
     def test_valid_construction(self):
         """Test valid strategic context construction."""
         context = StrategicContext(
-            last_updated=datetime.now(),
+            last_updated=datetime.now(timezone.utc),
         )
         assert context.active_goals == []
         assert context.pending_tasks == []
@@ -590,7 +590,7 @@ class TestStrategicContext:
             intent="Test task",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         context = StrategicContext(
             active_goals=["Goal 1"],
@@ -600,7 +600,7 @@ class TestStrategicContext:
             worker_performance={"worker_1": 0.8},
             cloud_spend_today=0.1,
             open_questions=["Question 1"],
-            last_updated=datetime.now(),
+            last_updated=datetime.now(timezone.utc),
         )
         assert len(context.active_goals) == 1
         assert len(context.pending_tasks) == 1
@@ -611,13 +611,13 @@ class TestStrategicContext:
         with pytest.raises(ValidationError):
             StrategicContext(
                 cloud_spend_today=-0.01,
-                last_updated=datetime.now(),
+                last_updated=datetime.now(timezone.utc),
             )
 
     def test_json_serialization(self):
         """Test JSON serialization roundtrip."""
         original = StrategicContext(
-            last_updated=datetime.now(),
+            last_updated=datetime.now(timezone.utc),
         )
         json_str = original.model_dump_json()
         assert isinstance(json_str, str)
@@ -631,7 +631,7 @@ class TestSessionSummary:
         """Test valid session summary construction."""
         summary = SessionSummary(
             session_id=uuid4(),
-            closed_at=datetime.now(),
+            closed_at=datetime.now(timezone.utc),
         )
         assert summary.session_id is not None
         assert summary.decisions_made == []
@@ -649,7 +649,7 @@ class TestSessionSummary:
             knowledge_updates=["Update 1"],
             escalations=2,
             total_tokens=1000,
-            closed_at=datetime.now(),
+            closed_at=datetime.now(timezone.utc),
         )
         assert len(summary.decisions_made) == 2
         assert summary.escalations == 2
@@ -661,7 +661,7 @@ class TestSessionSummary:
             SessionSummary(
                 session_id=uuid4(),
                 escalations=-1,
-                closed_at=datetime.now(),
+                closed_at=datetime.now(timezone.utc),
             )
 
     def test_total_tokens_non_negative(self):
@@ -670,14 +670,14 @@ class TestSessionSummary:
             SessionSummary(
                 session_id=uuid4(),
                 total_tokens=-1,
-                closed_at=datetime.now(),
+                closed_at=datetime.now(timezone.utc),
             )
 
     def test_json_serialization(self):
         """Test JSON serialization roundtrip."""
         original = SessionSummary(
             session_id=uuid4(),
-            closed_at=datetime.now(),
+            closed_at=datetime.now(timezone.utc),
         )
         json_str = original.model_dump_json()
         assert isinstance(json_str, str)
@@ -696,7 +696,7 @@ class TestUUIDGeneration:
             intent="Test task",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         assert task.task_id == task_id
         assert isinstance(task.task_id, UUID)
@@ -709,7 +709,7 @@ class TestUUIDGeneration:
             intent="Test task",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         assert isinstance(task.task_id, UUID)
 
@@ -719,7 +719,7 @@ class TestDatetimeHandling:
 
     def test_datetime_field_accepts_datetime(self):
         """Test datetime fields accept datetime objects."""
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         task = Task(
             task_id=uuid4(),
             intent="Test task",
@@ -732,7 +732,7 @@ class TestDatetimeHandling:
 
     def test_datetime_field_serializes_to_iso(self):
         """Test datetime fields serialize to ISO format."""
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         task = Task(
             task_id=uuid4(),
             intent="Test task",

@@ -5,7 +5,7 @@ Single responsibility: Test orchestrator-worker-memory integration
 to ensure components work together correctly.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
@@ -80,7 +80,7 @@ class TestIntegration:
             intent="Test task for integration",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
 
     def test_worker_uses_memory(self, echo_worker, sample_task):
@@ -210,7 +210,7 @@ class TestIntegration:
         from workers.ollama_worker import OllamaWorker
         from adapters.ollama import OllamaAdapter
         from core.schemas import Task, TaskPriority
-        from datetime import datetime, timezone
+        from datetime import datetime, timezone, timezone
         from uuid import uuid4
 
         # Create memory router with empty backends

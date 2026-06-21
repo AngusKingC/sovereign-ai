@@ -1,7 +1,7 @@
 """Tests for OrchestratorImprovementLoop."""
 
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import Mock, AsyncMock
 
 from core.orchestrator_improvement import OrchestratorImprovementLoop
@@ -252,7 +252,7 @@ class TestOrchestratorImprovementLoop:
             trigger_reason="routing accuracy 0.20 below threshold 0.6",
             rating_trend=0.0,
             status="pending",
-            created_at=datetime.now()
+            created_at=datetime.now(timezone.utc)
         )
         
         proposal = await improvement_loop.check_and_trigger_update()
@@ -280,7 +280,7 @@ class TestOrchestratorImprovementLoop:
             trigger_reason="rating trend -1.00 below threshold -0.5",
             rating_trend=-1.0,
             status="pending",
-            created_at=datetime.now()
+            created_at=datetime.now(timezone.utc)
         )
         
         proposal = await improvement_loop.check_and_trigger_update()
@@ -324,7 +324,7 @@ class TestOrchestratorImprovementLoop:
             trigger_reason="routing accuracy 0.20 below threshold 0.6",
             rating_trend=0.0,
             status="pending",
-            created_at=datetime.now()
+            created_at=datetime.now(timezone.utc)
         )
         
         await improvement_loop.check_and_trigger_update()

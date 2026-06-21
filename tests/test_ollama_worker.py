@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import patch
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 from core.schemas import Message, MessageRole, Task, WorkerOutput, WorkerProfile
 from core.worker_base import LLMResponse
@@ -60,7 +60,7 @@ class TestOllamaWorker:
             complexity_score=0.5,
             priority="normal",
             status="received",
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         prompt = await worker.build_prompt(task, [])
@@ -82,7 +82,7 @@ class TestOllamaWorker:
             complexity_score=0.5,
             priority="normal",
             status="received",
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         memory = [{"content": "Previous context"}]
@@ -105,7 +105,7 @@ class TestOllamaWorker:
             complexity_score=0.5,
             priority="normal",
             status="received",
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         prompt = await worker.build_prompt(task, [])
@@ -127,7 +127,7 @@ class TestOllamaWorker:
             complexity_score=0.5,
             priority="normal",
             status="received",
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         prompt = await worker.build_prompt(task, [])
@@ -221,7 +221,7 @@ class TestOllamaWorker:
             complexity_score=0.5,
             priority="normal",
             status="received",
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         with patch('core.observability.emit_trace'):

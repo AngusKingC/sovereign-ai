@@ -7,7 +7,7 @@ Integration tests require TOGETHER_API_KEY environment variable.
 
 import os
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from core.schemas import Message, MessageRole
 from core.worker_base import LLMResponse
@@ -91,7 +91,7 @@ class TestTogetherAdapterIntegration:
 
     @pytest.mark.asyncio
     async def test_generate_simple_message(self, adapter):
-        messages = [Message(role=MessageRole.USER, content="Hello", timestamp=datetime.now())]
+        messages = [Message(role=MessageRole.USER, content="Hello", timestamp=datetime.now(timezone.utc))]
         response = await adapter.generate(messages)
         assert isinstance(response, LLMResponse)
         assert response.content is not None
@@ -99,28 +99,28 @@ class TestTogetherAdapterIntegration:
     @pytest.mark.asyncio
     async def test_generate_with_system_message(self, adapter):
         messages = [
-            Message(role=MessageRole.SYSTEM, content="You are helpful.", timestamp=datetime.now()),
-            Message(role=MessageRole.USER, content="What is 2+2?", timestamp=datetime.now()),
+            Message(role=MessageRole.SYSTEM, content="You are helpful.", timestamp=datetime.now(timezone.utc)),
+            Message(role=MessageRole.USER, content="What is 2+2?", timestamp=datetime.now(timezone.utc)),
         ]
         response = await adapter.generate(messages)
         assert isinstance(response, LLMResponse)
 
     @pytest.mark.asyncio
     async def test_generate_with_temperature(self, adapter):
-        messages = [Message(role=MessageRole.USER, content="Say something creative.", timestamp=datetime.now())]
+        messages = [Message(role=MessageRole.USER, content="Say something creative.", timestamp=datetime.now(timezone.utc))]
         response = await adapter.generate(messages, temperature=0.8)
         assert isinstance(response, LLMResponse)
 
     @pytest.mark.asyncio
     async def test_generate_with_max_tokens(self, adapter):
-        messages = [Message(role=MessageRole.USER, content="Tell me a story.", timestamp=datetime.now())]
+        messages = [Message(role=MessageRole.USER, content="Tell me a story.", timestamp=datetime.now(timezone.utc))]
         response = await adapter.generate(messages, max_tokens=100)
         assert isinstance(response, LLMResponse)
 
     @pytest.mark.asyncio
     async def test_consecutive_generations(self, adapter):
-        messages1 = [Message(role=MessageRole.USER, content="What is 1+1?", timestamp=datetime.now())]
-        messages2 = [Message(role=MessageRole.USER, content="What is 2+2?", timestamp=datetime.now())]
+        messages1 = [Message(role=MessageRole.USER, content="What is 1+1?", timestamp=datetime.now(timezone.utc))]
+        messages2 = [Message(role=MessageRole.USER, content="What is 2+2?", timestamp=datetime.now(timezone.utc))]
         response1 = await adapter.generate(messages1)
         response2 = await adapter.generate(messages2)
         assert isinstance(response1, LLMResponse)

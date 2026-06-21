@@ -5,7 +5,7 @@ Single responsibility: Test Qdrant vector database backend operations,
 connection management, and vector search functionality.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
@@ -36,7 +36,7 @@ class TestQdrantBackend:
             intent="Test task",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
 
     def test_backend_initialization(self, qdrant_backend):
@@ -131,7 +131,7 @@ class TestQdrantBackend:
             intent="test intent",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         # Mock Qdrant client to avoid actual connection
@@ -187,7 +187,7 @@ class TestQdrantBackend:
             intent="test intent",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         # Mock Qdrant client

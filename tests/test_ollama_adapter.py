@@ -1,6 +1,6 @@
 """Tests for adapters/ollama.py"""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -35,7 +35,7 @@ class TestThinkingExtraction:
         mock_client.post = AsyncMock(return_value=mock_response)
         adapter._client = mock_client
 
-        messages = [Message(role=MessageRole.USER, content="What is the meaning of life?", timestamp=datetime.now())]
+        messages = [Message(role=MessageRole.USER, content="What is the meaning of life?", timestamp=datetime.now(timezone.utc))]
 
         response = await adapter.generate(messages)
 
@@ -77,7 +77,7 @@ class TestThinkingExtraction:
         mock_client.post = AsyncMock(return_value=mock_response)
         adapter._client = mock_client
 
-        messages = [Message(role=MessageRole.USER, content="What is the meaning of life?", timestamp=datetime.now())]
+        messages = [Message(role=MessageRole.USER, content="What is the meaning of life?", timestamp=datetime.now(timezone.utc))]
 
         response = await adapter.generate(messages)
 
@@ -113,7 +113,7 @@ class TestThinkingExtraction:
         mock_client.post = AsyncMock(return_value=mock_response)
         adapter._client = mock_client
 
-        messages = [Message(role=MessageRole.USER, content="What is the meaning of life?", timestamp=datetime.now())]
+        messages = [Message(role=MessageRole.USER, content="What is the meaning of life?", timestamp=datetime.now(timezone.utc))]
 
         response = await adapter.generate(messages)
 
@@ -150,7 +150,7 @@ class TestThinkingExtraction:
         mock_client.post = AsyncMock(return_value=mock_response)
         adapter._client = mock_client
 
-        messages = [Message(role=MessageRole.USER, content="What is the meaning of life?", timestamp=datetime.now())]
+        messages = [Message(role=MessageRole.USER, content="What is the meaning of life?", timestamp=datetime.now(timezone.utc))]
 
         response = await adapter.generate(messages)
 

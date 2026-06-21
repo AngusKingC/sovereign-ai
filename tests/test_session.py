@@ -1,7 +1,7 @@
 """Tests for SessionManager."""
 
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from core.session import SessionManager
@@ -38,8 +38,8 @@ class TestSessionManager:
         manager = SessionManager()
         session_id = await manager.create_session()
         
-        msg1 = Message(role=MessageRole.USER, content="First", timestamp=datetime.now())
-        msg2 = Message(role=MessageRole.ASSISTANT, content="Second", timestamp=datetime.now())
+        msg1 = Message(role=MessageRole.USER, content="First", timestamp=datetime.now(timezone.utc))
+        msg2 = Message(role=MessageRole.ASSISTANT, content="Second", timestamp=datetime.now(timezone.utc))
         
         await manager.append(session_id, msg1)
         await manager.append(session_id, msg2)
@@ -82,7 +82,7 @@ class TestSessionManager:
         manager = SessionManager()
         fake_session_id = str(uuid4())
         
-        msg = Message(role=MessageRole.USER, content="Test", timestamp=datetime.now())
+        msg = Message(role=MessageRole.USER, content="Test", timestamp=datetime.now(timezone.utc))
         
         with pytest.raises(ValueError) as exc_info:
             await manager.append(fake_session_id, msg)
@@ -142,7 +142,7 @@ class TestSessionManager:
         manager = SessionManager(backend=None)  # Explicitly None
         
         session_id = await manager.create_session()
-        msg = Message(role=MessageRole.USER, content="Test", timestamp=datetime.now())
+        msg = Message(role=MessageRole.USER, content="Test", timestamp=datetime.now(timezone.utc))
         
         await manager.append(session_id, msg)
         history = await manager.get_history(session_id)
@@ -158,8 +158,8 @@ class TestSessionManager:
         session1 = await manager.create_session()
         session2 = await manager.create_session()
         
-        msg1 = Message(role=MessageRole.USER, content="Session 1", timestamp=datetime.now())
-        msg2 = Message(role=MessageRole.USER, content="Session 2", timestamp=datetime.now())
+        msg1 = Message(role=MessageRole.USER, content="Session 1", timestamp=datetime.now(timezone.utc))
+        msg2 = Message(role=MessageRole.USER, content="Session 2", timestamp=datetime.now(timezone.utc))
         
         await manager.append(session1, msg1)
         await manager.append(session2, msg2)

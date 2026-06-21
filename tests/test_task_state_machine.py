@@ -1,7 +1,7 @@
 """Tests for Task State Machine."""
 
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from core.schemas import Task, TaskStatus, TaskPriority
@@ -37,7 +37,7 @@ class TestTaskStateMachine:
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.RECEIVED,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         # Test RECEIVED -> PLANNED
@@ -71,7 +71,7 @@ class TestTaskStateMachine:
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.COMPLETE,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         # Try to transition from COMPLETE (terminal state)
@@ -94,7 +94,7 @@ class TestTaskStateMachine:
                 complexity_score=0.5,
                 priority=TaskPriority.NORMAL,
                 current_state=terminal_state,
-                created_at=datetime.now(),
+                created_at=datetime.now(timezone.utc),
             )
             
             with pytest.raises(InvalidStateTransitionError):
@@ -111,7 +111,7 @@ class TestTaskStateMachine:
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.RECEIVED,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         # Valid transition
@@ -136,7 +136,7 @@ class TestTaskStateMachine:
                 complexity_score=0.5,
                 priority=TaskPriority.NORMAL,
                 current_state=terminal_state,
-                created_at=datetime.now(),
+                created_at=datetime.now(timezone.utc),
             )
             
             assert state_machine.is_terminal(task) is True
@@ -149,7 +149,7 @@ class TestTaskStateMachine:
                 complexity_score=0.5,
                 priority=TaskPriority.NORMAL,
                 current_state=non_terminal_state,
-                created_at=datetime.now(),
+                created_at=datetime.now(timezone.utc),
             )
             
             assert state_machine.is_terminal(task) is False
@@ -178,7 +178,7 @@ class TestTaskStateMachine:
                 complexity_score=0.5,
                 priority=TaskPriority.NORMAL,
                 current_state=current_state,
-                created_at=datetime.now(),
+                created_at=datetime.now(timezone.utc),
             )
             
             valid_next_states = state_machine.get_valid_next_states(task)
@@ -195,7 +195,7 @@ class TestTaskStateMachine:
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.RECEIVED,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         # Perform multiple transitions
@@ -234,7 +234,7 @@ class TestTaskStateMachine:
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.RECEIVED,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         # Perform transition
@@ -258,7 +258,7 @@ class TestTaskStateMachine:
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.COMPLETE,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         with pytest.raises(InvalidStateTransitionError) as exc_info:
@@ -281,7 +281,7 @@ class TestTaskStateMachine:
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.RECEIVED,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         # status should be in sync with current_state
@@ -311,7 +311,7 @@ class TestTaskStateMachine:
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.RECEIVED,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         # Perform transition
@@ -380,7 +380,7 @@ class TestTaskStateMachine:
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.EXECUTING,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         task = await orchestrator.state_machine.transition(
@@ -449,7 +449,7 @@ class TestTaskStateMachine:
             intent="Test task",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         # Route task (should transition through full happy path)
@@ -518,7 +518,7 @@ class TestTaskStateMachine:
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.RECEIVED,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         # Route task (should fail and transition to FAILED)
@@ -544,7 +544,7 @@ class TestTaskStateMachine:
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.DENIED,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         assert state_machine.is_terminal(task) is True
@@ -560,7 +560,7 @@ class TestTaskStateMachine:
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.AWAITING_APPROVAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         # Transition to DENIED
@@ -584,7 +584,7 @@ class TestTaskStateMachine:
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
             current_state=TaskStatus.DENIED,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         # Try to transition from DENIED to any other state

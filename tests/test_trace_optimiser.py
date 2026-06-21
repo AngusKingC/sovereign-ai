@@ -1,7 +1,7 @@
 """Tests for TraceOptimiser."""
 
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import Mock, AsyncMock
 
 from core.trace_optimiser import TraceOptimiser
@@ -221,7 +221,7 @@ class TestTraceOptimiser:
             trigger_reason="trace score below threshold",
             rating_trend=0.0,
             status="pending",
-            created_at=datetime.now()
+            created_at=datetime.now(timezone.utc)
         )
         mock_instruction_version_manager.check_and_trigger_update.return_value = proposal
 
@@ -250,7 +250,7 @@ class TestTraceOptimiser:
             trigger_reason="rating trend",
             rating_trend=-0.8,
             status="pending",
-            created_at=datetime.now()
+            created_at=datetime.now(timezone.utc)
         )
         mock_instruction_version_manager.check_and_trigger_update.return_value = proposal
 

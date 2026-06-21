@@ -5,7 +5,7 @@ LLM-based worker profile generation replacing the rule-based system from Prompt 
 Each worker gets an instruction file and changelog in Obsidian. Orchestrator gets identical files.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from core.worker_base import LLMAdapter
@@ -70,7 +70,7 @@ class InstructionGenerator:
         
         # Create instruction file
         version = 1
-        created_at = datetime.now()
+        created_at = datetime.now(timezone.utc)
         updated_at = created_at
         
         obsidian_path = self._get_obsidian_instruction_path(profile.worker_id)
@@ -192,7 +192,7 @@ class InstructionGenerator:
         
         # Create new instruction file with incremented version
         new_version = existing.version + 1
-        created_at = datetime.now()
+        created_at = datetime.now(timezone.utc)
         updated_at = created_at
         
         obsidian_path = existing.obsidian_path
@@ -302,8 +302,8 @@ class InstructionGenerator:
                 version=content_data.get("version", 1),
                 content=content_data.get("content", ""),
                 obsidian_path=content_data.get("obsidian_path", ""),
-                created_at=datetime.fromisoformat(content_data.get("created_at", datetime.now().isoformat())),
-                updated_at=datetime.fromisoformat(content_data.get("updated_at", datetime.now().isoformat()))
+                created_at=datetime.fromisoformat(content_data.get("created_at", datetime.now(timezone.utc).isoformat())),
+                updated_at=datetime.fromisoformat(content_data.get("updated_at", datetime.now(timezone.utc).isoformat()))
             )
         except Exception:
             return None
@@ -336,7 +336,7 @@ class InstructionGenerator:
                     trigger=content_data.get("trigger", ""),
                     diff_summary=content_data.get("diff_summary", ""),
                     rating_trend=content_data.get("rating_trend"),
-                    created_at=datetime.fromisoformat(content_data.get("created_at", datetime.now().isoformat()))
+                    created_at=datetime.fromisoformat(content_data.get("created_at", datetime.now(timezone.utc).isoformat()))
                 )
                 changelog.append(entry)
             except Exception:
@@ -359,7 +359,7 @@ Performance Score: {profile.performance_score}
 Generate a markdown instruction file with the following structure:
 # {profile.name} — Instruction File
 **Version**: 1
-**Generated**: {datetime.now().strftime('%Y-%m-%d')}
+**Generated**: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}
 
 ## Role
 [Describe the worker's role based on its purpose]

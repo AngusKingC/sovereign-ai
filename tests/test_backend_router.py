@@ -5,7 +5,7 @@ Single responsibility: Test memory backend routing logic,
 data type classification, and backend selection.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -63,7 +63,7 @@ class TestBackendRouter:
             intent="Test task",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
 
     def test_router_initialization(self):

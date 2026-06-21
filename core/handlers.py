@@ -5,6 +5,7 @@ They are interface-agnostic and can be used by CLI, Web GUI, and Standalone GUI.
 """
 
 import time
+from datetime import datetime, timezone
 from typing import Dict, Any
 from core.commands import (
     Command,
@@ -453,7 +454,6 @@ class QueryHandler(CommandHandler):
     async def execute(self, command: Command) -> CommandResult:
         """Execute query command."""
         from uuid import uuid4
-        from datetime import datetime
         
         start_time = time.perf_counter()
         
@@ -516,7 +516,7 @@ class QueryHandler(CommandHandler):
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
             status=TaskStatus.PENDING,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
         
         try:

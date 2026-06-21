@@ -13,7 +13,7 @@ import pytest
 # and breaks CI (which runs pytest without --ignore).
 pytest.importorskip("llama_cpp")
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from adapters.llama_cpp import LlamaCppAdapter
 from core.schemas import Message, MessageRole
@@ -57,8 +57,8 @@ class TestLlamaCppAdapter:
     def test_messages_to_prompt(self, llama_adapter):
         """Test message to prompt conversion."""
         messages = [
-            Message(role=MessageRole.SYSTEM, content="System message", timestamp=datetime.now()),
-            Message(role=MessageRole.USER, content="User message", timestamp=datetime.now()),
+            Message(role=MessageRole.SYSTEM, content="System message", timestamp=datetime.now(timezone.utc)),
+            Message(role=MessageRole.USER, content="User message", timestamp=datetime.now(timezone.utc)),
         ]
 
         prompt = llama_adapter._messages_to_prompt(messages)
@@ -78,7 +78,7 @@ class TestLlamaCppAdapter:
         """Test generate raises error when model not available."""
         import asyncio
 
-        messages = [Message(role=MessageRole.USER, content="test", timestamp=datetime.now())]
+        messages = [Message(role=MessageRole.USER, content="test", timestamp=datetime.now(timezone.utc))]
 
         with pytest.raises(RuntimeError, match="llama.cpp generation failed"):
             asyncio.run(llama_adapter.generate(messages))

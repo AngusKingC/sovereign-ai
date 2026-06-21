@@ -5,7 +5,7 @@ Records performance scores per worker, per model, and per instruction version,
 with trend analysis and multi-worker comparison support.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from core.memory_router import MemoryRouter
@@ -117,7 +117,7 @@ class RatingSystem:
             raise ValueError(f"Score must be between 1 and 10, got {score}")
         
         rating_id = str(uuid4())
-        created_at = datetime.now()
+        created_at = datetime.now(timezone.utc)
         
         rating = WorkerRating(
             rating_id=rating_id,
@@ -198,7 +198,7 @@ class RatingSystem:
                     model_used=rating_data.get("model_used", ""),
                     instruction_file_version=rating_data.get("instruction_file_version", 0),
                     comment=rating_data.get("comment"),
-                    created_at=datetime.fromisoformat(rating_data.get("created_at", datetime.now().isoformat()))
+                    created_at=datetime.fromisoformat(rating_data.get("created_at", datetime.now(timezone.utc).isoformat()))
                 )
                 ratings.append(rating)
             except Exception:
@@ -343,7 +343,7 @@ class RatingSystem:
         await self._ensure_tables()
         
         comparison_id = str(uuid4())
-        created_at = datetime.now()
+        created_at = datetime.now(timezone.utc)
         
         # Store in Postgres
         await self.memory_router.write_to_collection(

@@ -5,7 +5,7 @@ Single responsibility: Test Obsidian markdown vault integration,
 file I/O operations, and markdown formatting.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
@@ -36,7 +36,7 @@ class TestObsidianBackend:
             intent="Test task",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
 
     def test_backend_initialization(self, temp_vault):

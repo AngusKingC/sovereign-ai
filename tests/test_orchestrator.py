@@ -5,7 +5,7 @@ Single responsibility: Test worker routing logic, scoring algorithm,
 and task dispatch to appropriate workers.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
@@ -75,7 +75,7 @@ class TestOrchestrator:
             intent="Test task for routing",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
 
     def test_route_task_raises_value_error_with_no_workers(self, orchestrator, sample_task):
@@ -158,7 +158,7 @@ class TestOrchestrator:
             intent="debug this code",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
 
         profile1 = WorkerProfile(
@@ -206,7 +206,7 @@ class TestOrchestrator:
             intent="debug this code",
             complexity_score=0.2,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
 
         profile1 = WorkerProfile(
@@ -358,7 +358,7 @@ class TestOrchestrator:
             intent="random task",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
 
         profile1 = WorkerProfile(
@@ -406,7 +406,7 @@ class TestOrchestrator:
             intent="test task",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
 
         # Create a worker profile with DEPRECATED status
@@ -444,7 +444,7 @@ class TestOrchestrator:
             intent="test task",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
 
         # Create a worker profile with ARCHIVED status
@@ -482,7 +482,7 @@ class TestOrchestrator:
             intent="test task",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
 
         # Create a worker profile with ACTIVE status

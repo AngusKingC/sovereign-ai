@@ -5,7 +5,7 @@ Single responsibility: Test PostgreSQL memory backend operations,
 connection management, and data persistence.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
@@ -34,7 +34,7 @@ class TestPostgresBackend:
             intent="Test task",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
 
     def test_backend_initialization(self, postgres_backend):

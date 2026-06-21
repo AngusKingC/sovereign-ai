@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from core.schemas import (
     ResourceSnapshot,
     LoadDecision,
@@ -405,9 +405,9 @@ class TestResourceManager:
         
         # Set different last_used_at times
         loaded = await manager.get_loaded_models()
-        loaded[0].last_used_at = datetime.now() - timedelta(hours=1)  # Oldest, HIGH priority
-        loaded[1].last_used_at = datetime.now() - timedelta(minutes=30)  # Middle, NORMAL priority
-        loaded[2].last_used_at = datetime.now() - timedelta(minutes=5)  # Newest, HIGH priority
+        loaded[0].last_used_at = datetime.now(timezone.utc) - timedelta(hours=1)  # Oldest, HIGH priority
+        loaded[1].last_used_at = datetime.now(timezone.utc) - timedelta(minutes=30)  # Middle, NORMAL priority
+        loaded[2].last_used_at = datetime.now(timezone.utc) - timedelta(minutes=5)  # Newest, HIGH priority
         
         loaded[0].task_priority = TaskPriority.HIGH
         loaded[1].task_priority = TaskPriority.NORMAL

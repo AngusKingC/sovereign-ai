@@ -7,7 +7,7 @@ Integration tests require COHERE_API_KEY environment variable.
 
 import os
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from adapters.cohere import CohereAdapter
 from core.schemas import Message, MessageRole
@@ -108,7 +108,7 @@ class TestCohereAdapterIntegration:
     async def test_generate_simple_message(self, adapter):
         """Test generating a response with a simple message."""
         messages = [
-            Message(role=MessageRole.USER, content="Hello, how are you?", timestamp=datetime.now())
+            Message(role=MessageRole.USER, content="Hello, how are you?", timestamp=datetime.now(timezone.utc))
         ]
 
         response = await adapter.generate(messages)
@@ -123,8 +123,8 @@ class TestCohereAdapterIntegration:
     async def test_generate_with_system_message(self, adapter):
         """Test generating with a system message."""
         messages = [
-            Message(role=MessageRole.SYSTEM, content="You are a helpful assistant.", timestamp=datetime.now()),
-            Message(role=MessageRole.USER, content="What is 2+2?", timestamp=datetime.now())
+            Message(role=MessageRole.SYSTEM, content="You are a helpful assistant.", timestamp=datetime.now(timezone.utc)),
+            Message(role=MessageRole.USER, content="What is 2+2?", timestamp=datetime.now(timezone.utc))
         ]
 
         response = await adapter.generate(messages)
@@ -137,7 +137,7 @@ class TestCohereAdapterIntegration:
     async def test_generate_with_temperature(self, adapter):
         """Test generating with custom temperature."""
         messages = [
-            Message(role=MessageRole.USER, content="Say something creative.", timestamp=datetime.now())
+            Message(role=MessageRole.USER, content="Say something creative.", timestamp=datetime.now(timezone.utc))
         ]
 
         response = await adapter.generate(messages, temperature=0.8)
@@ -149,7 +149,7 @@ class TestCohereAdapterIntegration:
     async def test_generate_with_max_tokens(self, adapter):
         """Test generating with max tokens limit."""
         messages = [
-            Message(role=MessageRole.USER, content="Tell me a short story.", timestamp=datetime.now())
+            Message(role=MessageRole.USER, content="Tell me a short story.", timestamp=datetime.now(timezone.utc))
         ]
 
         response = await adapter.generate(messages, max_tokens=100)
@@ -160,8 +160,8 @@ class TestCohereAdapterIntegration:
     @pytest.mark.asyncio
     async def test_consecutive_generations(self, adapter):
         """Test multiple consecutive generations."""
-        messages1 = [Message(role=MessageRole.USER, content="What is 1+1?", timestamp=datetime.now())]
-        messages2 = [Message(role=MessageRole.USER, content="What is 2+2?", timestamp=datetime.now())]
+        messages1 = [Message(role=MessageRole.USER, content="What is 1+1?", timestamp=datetime.now(timezone.utc))]
+        messages2 = [Message(role=MessageRole.USER, content="What is 2+2?", timestamp=datetime.now(timezone.utc))]
 
         response1 = await adapter.generate(messages1)
         response2 = await adapter.generate(messages2)

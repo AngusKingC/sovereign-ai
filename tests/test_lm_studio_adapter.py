@@ -5,7 +5,7 @@ Single responsibility: Test LM Studio adapter functionality,
 server communication, and LLM generation.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -47,8 +47,8 @@ class TestLMStudioAdapter:
     def test_messages_to_openai_format(self, lm_studio_adapter):
         """Test message to OpenAI format conversion."""
         messages = [
-            Message(role=MessageRole.SYSTEM, content="System message", timestamp=datetime.now()),
-            Message(role=MessageRole.USER, content="User message", timestamp=datetime.now()),
+            Message(role=MessageRole.SYSTEM, content="System message", timestamp=datetime.now(timezone.utc)),
+            Message(role=MessageRole.USER, content="User message", timestamp=datetime.now(timezone.utc)),
         ]
 
         openai_format = lm_studio_adapter._messages_to_openai_format(messages)
@@ -99,7 +99,7 @@ class TestLMStudioAdapter:
         """Test generate raises error when server not available."""
         import asyncio
 
-        messages = [Message(role=MessageRole.USER, content="test", timestamp=datetime.now())]
+        messages = [Message(role=MessageRole.USER, content="test", timestamp=datetime.now(timezone.utc))]
 
         with pytest.raises(RuntimeError, match="LM Studio generation failed"):
             asyncio.run(lm_studio_adapter.generate(messages))
