@@ -5,7 +5,7 @@ Single responsibility: Test memory routing logic, access control enforcement,
 and backend selection for various data types and operations.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -79,7 +79,7 @@ class TestMemoryRouter:
             intent="Test task",
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
 
     def test_memory_router_initialization(self, mock_backend):
@@ -285,11 +285,9 @@ class TestMemoryRouter:
 
         import asyncio
         from core.schemas import StrategicContext
-        from datetime import datetime
-
         # Create a StrategicContext
         context = StrategicContext(
-            last_updated=datetime.utcnow(),
+            last_updated=datetime.now(timezone.utc),
             active_goals=["goal1", "goal2"],
             constraints=["constraint1"]
         )

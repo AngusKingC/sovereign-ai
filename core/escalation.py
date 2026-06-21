@@ -8,6 +8,7 @@ to cloud models based on confidence, errors, or denial flags.
 import time
 from typing import TYPE_CHECKING
 from uuid import uuid4
+from datetime import datetime, timezone
 
 from core.schemas import Task, WorkerOutput, EscalationDecision
 from core.observability import (
@@ -140,7 +141,7 @@ class EscalationEngine:
             action_parameters={"tier": decision.tier, "to_model": decision.suggested_model},
             risk_level="high",
             reason_for_approval="; ".join(decision.reasons),
-            expires_at=datetime.utcnow() + timedelta(minutes=5),
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
         )
 
         approval_response = await self._approval_gate.request_approval(approval_request)

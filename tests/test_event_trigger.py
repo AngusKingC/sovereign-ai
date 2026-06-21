@@ -3,7 +3,7 @@ Tests for event trigger system.
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from core.event_trigger import TriggerType, TriggerOperator, EventTrigger, TriggerEngine
 from core.observability import MemoryTraceEmitter
@@ -162,7 +162,7 @@ class TestEventTrigger:
             metric_name="daily_report",
             schedule_interval_seconds=3600,
         )
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         assert trigger.should_schedule(now) is True
 
     def test_should_schedule_after_interval(self):
@@ -172,8 +172,8 @@ class TestEventTrigger:
             metric_name="daily_report",
             schedule_interval_seconds=3600,
         )
-        trigger.last_triggered_at = datetime.utcnow() - timedelta(seconds=3700)
-        now = datetime.utcnow()
+        trigger.last_triggered_at = datetime.now(timezone.utc) - timedelta(seconds=3700)
+        now = datetime.now(timezone.utc)
         assert trigger.should_schedule(now) is True
 
     def test_should_schedule_before_interval(self):
@@ -183,8 +183,8 @@ class TestEventTrigger:
             metric_name="daily_report",
             schedule_interval_seconds=3600,
         )
-        trigger.last_triggered_at = datetime.utcnow() - timedelta(seconds=1800)
-        now = datetime.utcnow()
+        trigger.last_triggered_at = datetime.now(timezone.utc) - timedelta(seconds=1800)
+        now = datetime.now(timezone.utc)
         assert trigger.should_schedule(now) is False
 
     def test_should_schedule_disabled(self):
@@ -195,7 +195,7 @@ class TestEventTrigger:
             schedule_interval_seconds=3600,
             enabled=False,
         )
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         assert trigger.should_schedule(now) is False
 
 
@@ -329,7 +329,7 @@ class TestTriggerEngine:
             metric_name="daily_report",
             schedule_interval_seconds=3600,
         )
-        context = {"scheduled_time": datetime.utcnow().isoformat()}
+        context = {"scheduled_time": datetime.now(timezone.utc).isoformat()}
         task = trigger_engine.build_task(trigger, context)
         assert isinstance(task, Task)
         assert "daily_report" in task.intent

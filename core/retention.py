@@ -5,7 +5,7 @@ Single responsibility: Enforce configurable TTLs on memory data, archive expired
 and provide a retention engine for scheduled cleanup operations.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -66,7 +66,7 @@ class RetentionEngine:
             RetentionReport with counts and any errors
         """
         report = RetentionReport(
-            run_at=datetime.utcnow(),
+            run_at=datetime.now(timezone.utc),
             rules_applied=0,
             records_expired=0,
             records_archived=0,
@@ -156,7 +156,7 @@ class RetentionEngine:
             intent=f"{rule.scope}:{rule.data_type}",
             complexity_score=0.5,
             priority="normal",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
 
         try:
@@ -166,7 +166,7 @@ class RetentionEngine:
             return []
 
         # Filter records older than TTL
-        cutoff_time = datetime.utcnow() - timedelta(seconds=rule.ttl_seconds)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(seconds=rule.ttl_seconds)
         expired = []
 
         for record in records:

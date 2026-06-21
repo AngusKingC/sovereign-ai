@@ -225,7 +225,7 @@ class ApprovalGate:
             try:
                 await self.emitter.emit(TraceEvent(
                     event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     level=TraceLevel.WARNING,
                     component=TraceComponent.ORCHESTRATOR,
                     event_type=TraceEventType.OPERATION_ERROR,
@@ -239,7 +239,7 @@ class ApprovalGate:
                 try:
                     await self.emitter.emit(TraceEvent(
                         event_id=uuid4(),
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.ORCHESTRATOR,
                         level=TraceLevel.WARNING,
@@ -293,7 +293,7 @@ class ApprovalGate:
                 try:
                     await self.emitter.emit(TraceEvent(
                         event_id=uuid4(),
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.ORCHESTRATOR,
                         level=TraceLevel.WARNING,
@@ -324,7 +324,7 @@ class ApprovalGate:
             try:
                 await self.emitter.emit(TraceEvent(
                     event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.ORCHESTRATOR,
                     level=TraceLevel.ERROR,
@@ -338,7 +338,7 @@ class ApprovalGate:
                 try:
                     await self.emitter.emit(TraceEvent(
                         event_id=uuid4(),
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.ORCHESTRATOR,
                         level=TraceLevel.WARNING,
@@ -374,7 +374,7 @@ class ApprovalGate:
             try:
                 await self.emitter.emit(TraceEvent(
                     event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.ORCHESTRATOR,
                     level=TraceLevel.ERROR,
@@ -388,7 +388,7 @@ class ApprovalGate:
                 try:
                     await self.emitter.emit(TraceEvent(
                         event_id=uuid4(),
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.ORCHESTRATOR,
                         level=TraceLevel.WARNING,
@@ -404,7 +404,7 @@ class ApprovalGate:
         try:
             await self.emitter.emit(TraceEvent(
                 event_id=uuid4(),
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 event_type=TraceEventType.OPERATION_COMPLETE,
                 component=TraceComponent.ORCHESTRATOR,
                 level=TraceLevel.INFO,
@@ -423,7 +423,7 @@ class ApprovalGate:
             try:
                 await self.emitter.emit(TraceEvent(
                     event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.ORCHESTRATOR,
                     level=TraceLevel.WARNING,
@@ -475,7 +475,7 @@ class ApprovalGate:
         if approved:
             request.status = "approved"
             request.approved_by = responder
-            request.approved_at = datetime.utcnow()
+            request.approved_at = datetime.now(timezone.utc)
             
             # Set trust if always_approve is True and trust_registry is available
             if always_approve and self.trust_registry is not None:
@@ -490,7 +490,7 @@ class ApprovalGate:
                     try:
                         await self.emitter.emit(TraceEvent(
                             event_id=uuid4(),
-                            timestamp=datetime.utcnow(),
+                            timestamp=datetime.now(timezone.utc),
                             event_type=TraceEventType.OPERATION_ERROR,
                             component=TraceComponent.ORCHESTRATOR,
                             level=TraceLevel.WARNING,
@@ -505,7 +505,7 @@ class ApprovalGate:
         else:
             request.status = "denied"
             request.approved_by = responder
-            request.approved_at = datetime.utcnow()
+            request.approved_at = datetime.now(timezone.utc)
             request.denied_reason = "Denied by user"
         
         # Persist to Postgres
@@ -523,7 +523,7 @@ class ApprovalGate:
             try:
                 await self.emitter.emit(TraceEvent(
                     event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.ORCHESTRATOR,
                     level=TraceLevel.ERROR,
@@ -537,7 +537,7 @@ class ApprovalGate:
                 try:
                     await self.emitter.emit(TraceEvent(
                         event_id=uuid4(),
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.ORCHESTRATOR,
                         level=TraceLevel.WARNING,
@@ -555,7 +555,7 @@ class ApprovalGate:
             task_id=request.task_id,
             approved=approved,
             approved_by=responder,
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
         )
         
         # Transition task state
@@ -581,7 +581,7 @@ class ApprovalGate:
                 try:
                     await self.emitter.emit(TraceEvent(
                         event_id=uuid4(),
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         event_type=TraceEventType.OPERATION_COMPLETE,
                         component=TraceComponent.ORCHESTRATOR,
                         level=TraceLevel.INFO,
@@ -599,7 +599,7 @@ class ApprovalGate:
                     try:
                         await self.emitter.emit(TraceEvent(
                             event_id=uuid4(),
-                            timestamp=datetime.utcnow(),
+                            timestamp=datetime.now(timezone.utc),
                             event_type=TraceEventType.OPERATION_ERROR,
                             component=TraceComponent.ORCHESTRATOR,
                             level=TraceLevel.WARNING,
@@ -622,7 +622,7 @@ class ApprovalGate:
                 try:
                     await self.emitter.emit(TraceEvent(
                         event_id=uuid4(),
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         event_type=TraceEventType.OPERATION_COMPLETE,
                         component=TraceComponent.ORCHESTRATOR,
                         level=TraceLevel.INFO,
@@ -640,7 +640,7 @@ class ApprovalGate:
                     try:
                         await self.emitter.emit(TraceEvent(
                             event_id=uuid4(),
-                            timestamp=datetime.utcnow(),
+                            timestamp=datetime.now(timezone.utc),
                             event_type=TraceEventType.OPERATION_ERROR,
                             component=TraceComponent.ORCHESTRATOR,
                             level=TraceLevel.WARNING,
@@ -661,7 +661,7 @@ class ApprovalGate:
             try:
                 await self.emitter.emit(TraceEvent(
                     event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.ORCHESTRATOR,
                     level=TraceLevel.ERROR,
@@ -675,7 +675,7 @@ class ApprovalGate:
                 try:
                     await self.emitter.emit(TraceEvent(
                         event_id=uuid4(),
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.ORCHESTRATOR,
                         level=TraceLevel.WARNING,
@@ -759,7 +759,7 @@ class ApprovalGate:
             try:
                 await self.emitter.emit(TraceEvent(
                     event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.ORCHESTRATOR,
                     level=TraceLevel.ERROR,
@@ -773,7 +773,7 @@ class ApprovalGate:
                 try:
                     await self.emitter.emit(TraceEvent(
                         event_id=uuid4(),
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.ORCHESTRATOR,
                         level=TraceLevel.WARNING,
@@ -789,7 +789,7 @@ class ApprovalGate:
         try:
             await self.emitter.emit(TraceEvent(
                 event_id=uuid4(),
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 event_type=TraceEventType.OPERATION_COMPLETE,
                 component=TraceComponent.ORCHESTRATOR,
                 level=TraceLevel.INFO,
@@ -808,7 +808,7 @@ class ApprovalGate:
             try:
                 await self.emitter.emit(TraceEvent(
                     event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.ORCHESTRATOR,
                     level=TraceLevel.WARNING,
@@ -873,7 +873,7 @@ class ApprovalGate:
                 try:
                     await self.emitter.emit(TraceEvent(
                         event_id=uuid4(),
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.ORCHESTRATOR,
                         level=TraceLevel.ERROR,
@@ -887,7 +887,7 @@ class ApprovalGate:
                     try:
                         await self.emitter.emit(TraceEvent(
                             event_id=uuid4(),
-                            timestamp=datetime.utcnow(),
+                            timestamp=datetime.now(timezone.utc),
                             event_type=TraceEventType.OPERATION_ERROR,
                             component=TraceComponent.ORCHESTRATOR,
                             level=TraceLevel.WARNING,
@@ -919,7 +919,7 @@ class ApprovalGate:
                 try:
                     await self.emitter.emit(TraceEvent(
                         event_id=uuid4(),
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.ORCHESTRATOR,
                         level=TraceLevel.ERROR,
@@ -933,7 +933,7 @@ class ApprovalGate:
                     try:
                         await self.emitter.emit(TraceEvent(
                             event_id=uuid4(),
-                            timestamp=datetime.utcnow(),
+                            timestamp=datetime.now(timezone.utc),
                             event_type=TraceEventType.OPERATION_ERROR,
                             component=TraceComponent.ORCHESTRATOR,
                             level=TraceLevel.WARNING,
@@ -952,7 +952,7 @@ class ApprovalGate:
             try:
                 await self.emitter.emit(TraceEvent(
                     event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     event_type=TraceEventType.OPERATION_COMPLETE,
                     component=TraceComponent.ORCHESTRATOR,
                     level=TraceLevel.INFO,
@@ -970,7 +970,7 @@ class ApprovalGate:
                 try:
                     await self.emitter.emit(TraceEvent(
                         event_id=uuid4(),
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.ORCHESTRATOR,
                         level=TraceLevel.WARNING,

@@ -5,7 +5,7 @@ Single responsibility: Manage event-based task triggers for the MonitorDaemon.
 Supports threshold, schedule, and change triggers to automatically create tasks.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
@@ -93,7 +93,7 @@ class EventTrigger(BaseModel):
         if self.last_triggered_at is None:
             return True
 
-        time_since_last_trigger = datetime.utcnow() - self.last_triggered_at
+        time_since_last_trigger = datetime.now(timezone.utc) - self.last_triggered_at
         return time_since_last_trigger.total_seconds() >= self.schedule_interval_seconds
 
 
@@ -189,7 +189,7 @@ class TriggerEngine:
 
     async def evaluate_schedule_triggers(self) -> None:
         """Evaluate all schedule triggers and fire if needed."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         for trigger in self._triggers.values():
             if trigger.trigger_type == TriggerType.SCHEDULE:
@@ -204,7 +204,7 @@ class TriggerEngine:
             context: Additional context about the trigger firing
         """
         # Update trigger state
-        trigger.last_triggered_at = datetime.utcnow()
+        trigger.last_triggered_at = datetime.now(timezone.utc)
         trigger.trigger_count += 1
 
         # Build and submit task
@@ -262,7 +262,7 @@ class TriggerEngine:
             metric_value = context.get("metric_value", 0)
             intent += f" crossed threshold {trigger.threshold} (current: {metric_value})"
         elif trigger.trigger_type == TriggerType.SCHEDULE:
-            scheduled_time = context.get("scheduled_time", datetime.utcnow().isoformat())
+            scheduled_time = context.get("scheduled_time", datetime.now(timezone.utc).isoformat())
             intent += f" at scheduled time {scheduled_time}"
 
         return Task(
@@ -271,5 +271,5 @@ class TriggerEngine:
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
             current_state="received",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )

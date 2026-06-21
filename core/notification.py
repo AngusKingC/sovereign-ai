@@ -4,7 +4,7 @@ Notification System - routes interrupts and notifications with urgency-based del
 Single responsibility: Queue and deliver notifications based on urgency, integrate with ApprovalGate for action requests.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -136,7 +136,7 @@ class NotificationSystem:
                         action_parameters=notification.data,
                         risk_level="medium",
                         reason_for_approval="Notification requires user action",
-                        expires_at=datetime.utcnow() + timedelta(seconds=300),
+                        expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
                     )
                     response = await self._approval_gate.request_approval(request)
 

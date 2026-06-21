@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import Mock, AsyncMock
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from core.retention import RetentionRule, RetentionReport, RetentionEngine
@@ -45,7 +45,7 @@ class TestRetentionReport:
     async def test_retention_report_constructs_with_correct_defaults(self) -> None:
         """Test that RetentionReport constructs with correct defaults."""
         report = RetentionReport(
-            run_at=datetime.utcnow(),
+            run_at=datetime.now(timezone.utc),
             rules_applied=1,
             records_expired=10,
             records_archived=5,
@@ -61,7 +61,7 @@ class TestRetentionReport:
     async def test_retention_report_errors_defaults_to_empty_list(self) -> None:
         """Test that RetentionReport.errors defaults to empty list."""
         report = RetentionReport(
-            run_at=datetime.utcnow(),
+            run_at=datetime.now(timezone.utc),
             rules_applied=0,
             records_expired=0,
             records_archived=0,
@@ -114,7 +114,7 @@ class TestRetentionEngine:
                 "id": str(uuid4()),
                 "scope": "global",
                 "data_type": "task",
-                "created_at": datetime.utcnow() - timedelta(days=2),
+                "created_at": datetime.now(timezone.utc) - timedelta(days=2),
             }
         ])
         mock_router.write = AsyncMock()
@@ -135,7 +135,7 @@ class TestRetentionEngine:
                 "id": str(uuid4()),
                 "scope": "global",
                 "data_type": "task",
-                "created_at": datetime.utcnow() - timedelta(days=2),
+                "created_at": datetime.now(timezone.utc) - timedelta(days=2),
             }
         ])
         mock_router.write = AsyncMock()
@@ -188,7 +188,7 @@ class TestRetentionEngine:
                 "id": str(uuid4()),
                 "scope": "global",
                 "data_type": "task",
-                "created_at": datetime.utcnow() - timedelta(days=2),
+                "created_at": datetime.now(timezone.utc) - timedelta(days=2),
             }
         ])
         mock_router.write = AsyncMock(side_effect=Exception("write error"))
@@ -209,13 +209,13 @@ class TestRetentionEngine:
                 "id": str(uuid4()),
                 "scope": "global",
                 "data_type": "task",
-                "created_at": datetime.utcnow() - timedelta(days=2),
+                "created_at": datetime.now(timezone.utc) - timedelta(days=2),
             },
             {
                 "id": str(uuid4()),
                 "scope": "global",
                 "data_type": "task",
-                "created_at": datetime.utcnow() - timedelta(days=2),
+                "created_at": datetime.now(timezone.utc) - timedelta(days=2),
             }
         ])
         mock_router.write = AsyncMock(side_effect=Exception("write error"))
@@ -238,13 +238,13 @@ class TestRetentionEngine:
                 "id": str(uuid4()),
                 "scope": "global",
                 "data_type": "task",
-                "created_at": datetime.utcnow() - timedelta(days=2),
+                "created_at": datetime.now(timezone.utc) - timedelta(days=2),
             },
             {
                 "id": str(uuid4()),
                 "scope": "global",
                 "data_type": "task",
-                "created_at": datetime.utcnow() - timedelta(minutes=30),
+                "created_at": datetime.now(timezone.utc) - timedelta(minutes=30),
             }
         ])
         
@@ -264,7 +264,7 @@ class TestRetentionEngine:
                 "id": str(uuid4()),
                 "scope": "global",
                 "data_type": "task",
-                "created_at": datetime.utcnow() - timedelta(minutes=30),
+                "created_at": datetime.now(timezone.utc) - timedelta(minutes=30),
             }
         ])
         
@@ -288,7 +288,7 @@ class TestRetentionEngine:
             "id": str(uuid4()),
             "scope": "global",
             "data_type": "task",
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
         }
         
         await engine._archive(record)
@@ -339,7 +339,7 @@ class TestRetentionDaemon:
         mock_engine.run = AsyncMock()
         
         mock_report = RetentionReport(
-            run_at=datetime.utcnow(),
+            run_at=datetime.now(timezone.utc),
             rules_applied=1,
             records_expired=0,
             records_archived=0,

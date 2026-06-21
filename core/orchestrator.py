@@ -126,7 +126,7 @@ class Orchestrator:
             List of worker IDs ordered by routing score (highest first)
         """
         from core.schemas import Task, TaskPriority, WorkerStatus
-        from datetime import datetime
+        from datetime import datetime, timezone
         from uuid import uuid4
         
         # Create a minimal task object for scoring
@@ -136,7 +136,7 @@ class Orchestrator:
             intent=task,
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         
         # Score each worker using the existing algorithm
@@ -481,7 +481,7 @@ class Orchestrator:
                 current_context = await self.memory_router.get_global_context(caller_id="orchestrator")
                 if current_context is None:
                     from datetime import datetime
-                    current_context = StrategicContext(last_updated=datetime.utcnow())
+                    current_context = StrategicContext(last_updated=datetime.now(timezone.utc))
                 
                 # Update active goals with recent task
                 current_context.active_goals.append(f"Task {task.task_id}: {task.intent} routed to {worker_id}")
@@ -491,7 +491,7 @@ class Orchestrator:
                 
                 # Update timestamp
                 from datetime import datetime
-                current_context.last_updated = datetime.utcnow()
+                current_context.last_updated = datetime.now(timezone.utc)
                 
                 await self.memory_router.set_global_context(current_context, caller_id="orchestrator")
             except Exception as e:
@@ -605,7 +605,7 @@ class Orchestrator:
             current_context = await self.memory_router.get_global_context(caller_id="orchestrator")
             if current_context is None:
                 from datetime import datetime
-                current_context = StrategicContext(last_updated=datetime.utcnow())
+                current_context = StrategicContext(last_updated=datetime.now(timezone.utc))
             
             # Update active goals with recent task
             current_context.active_goals.append(f"Task {task.task_id}: {task.intent} routed to {selected_worker_id}")
@@ -615,7 +615,7 @@ class Orchestrator:
             
             # Update timestamp
             from datetime import datetime
-            current_context.last_updated = datetime.utcnow()
+            current_context.last_updated = datetime.now(timezone.utc)
             
             await self.memory_router.set_global_context(current_context, caller_id="orchestrator")
         except Exception as e:
@@ -779,7 +779,7 @@ class Orchestrator:
             ValueError: If priority is not a valid TaskPriority value
         """
         from uuid import uuid4
-        from datetime import datetime
+        from datetime import datetime, timezone
         from core.schemas import TaskPriority
 
         # Validate and convert priority string to enum
@@ -800,7 +800,7 @@ class Orchestrator:
             intent=intent,
             complexity_score=0.5,  # Default complexity
             priority=priority_enum,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
 
         # Route the task

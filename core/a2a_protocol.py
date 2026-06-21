@@ -6,6 +6,7 @@ Single responsibility: Route sub-tasks between workers with circular dependency 
 
 from uuid import UUID, uuid4
 from typing import Any
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field
 
@@ -121,7 +122,7 @@ class A2ARouter:
                 intent=request.input,
                 complexity_score=0.5,  # Default complexity for sub-tasks
                 priority=request.priority,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
 
             # Route via orchestrator

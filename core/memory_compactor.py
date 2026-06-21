@@ -7,7 +7,7 @@ Hot tier is in-context (dict). Warm tier is Qdrant (semantic search). Cold tier 
 
 import asyncio
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import TYPE_CHECKING
 
@@ -86,7 +86,7 @@ class MemoryCompactor:
         if full_key in self._hot_store:
             entry = self._hot_store[full_key]
             entry.access_count += 1
-            entry.last_accessed = datetime.utcnow()
+            entry.last_accessed = datetime.now(timezone.utc)
             
             # Emit trace event (fire and forget, don't await)
             start_time = time.perf_counter()
@@ -134,8 +134,8 @@ class MemoryCompactor:
             value=value,
             tier=MemoryTier.HOT,
             access_count=0,
-            last_accessed=datetime.utcnow(),
-            created_at=datetime.utcnow(),
+            last_accessed=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc),
             scope=scope,
         )
         self._hot_store[full_key] = entry
@@ -177,7 +177,7 @@ class MemoryCompactor:
         full_key = f"{entry_to_evict.scope}:{entry_to_evict.key}"
         
         # Determine destination tier based on age
-        age = datetime.utcnow() - entry_to_evict.last_accessed
+        age = datetime.now(timezone.utc) - entry_to_evict.last_accessed
         if age < self._warm_threshold:
             destination_tier = MemoryTier.WARM
             prefix = "warm"
@@ -231,7 +231,7 @@ class MemoryCompactor:
         """
         moved_to_warm = 0
         moved_to_cold = 0
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         keys_to_remove = []
         for full_key, entry in self._hot_store.items():

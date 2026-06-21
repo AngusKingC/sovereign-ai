@@ -6,7 +6,7 @@ or sequentially, collect all responses, and allow user to select the best.
 """
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -105,7 +105,7 @@ class MultiWorkerDispatcher:
         if mode not in ("parallel", "sequential"):
             raise ValueError(f"Invalid mode: {mode}. Must be 'parallel' or 'sequential'")
         
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         
         # Get worker IDs
         if worker_ids is None:
@@ -168,7 +168,7 @@ class MultiWorkerDispatcher:
             responses = await self._dispatch_sequential(task, eligible_workers)
         
         # Calculate total duration
-        total_duration_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+        total_duration_ms = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
         
         # Count successes and failures
         success_count = sum(1 for r in responses if r.succeeded)
@@ -222,10 +222,10 @@ class MultiWorkerDispatcher:
                     succeeded=False,
                 )
             
-            start_time = datetime.utcnow()
+            start_time = datetime.now(timezone.utc)
             try:
                 response = await worker.execute(task)
-                duration_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+                duration_ms = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
                 return WorkerResponse(
                     worker_id=worker_id,
                     response=response,
@@ -233,7 +233,7 @@ class MultiWorkerDispatcher:
                     succeeded=True,
                 )
             except Exception as e:
-                duration_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+                duration_ms = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
                 await self._emitter.emit(TraceEvent(
                     event_type=TraceEventType.MULTI_WORKER_WORKER_FAILED,
                     component=TraceComponent.MULTI_WORKER,
@@ -312,10 +312,10 @@ class MultiWorkerDispatcher:
                     # Ensure failure must not abort dispatch
                     pass
             
-            start_time = datetime.utcnow()
+            start_time = datetime.now(timezone.utc)
             try:
                 response = await worker.execute(task)
-                duration_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+                duration_ms = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
                 responses.append(WorkerResponse(
                     worker_id=worker_id,
                     response=response,
@@ -323,7 +323,7 @@ class MultiWorkerDispatcher:
                     succeeded=True,
                 ))
             except Exception as e:
-                duration_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+                duration_ms = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
                 await self._emitter.emit(TraceEvent(
                     event_type=TraceEventType.MULTI_WORKER_WORKER_FAILED,
                     component=TraceComponent.MULTI_WORKER,

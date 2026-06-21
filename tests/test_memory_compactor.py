@@ -7,7 +7,7 @@ Tests the hot/warm/cold memory tier system with periodic background compaction.
 import asyncio
 import pytest
 from unittest.mock import AsyncMock
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from core.memory_compactor import MemoryCompactor, MemoryTier, TieredMemoryEntry
@@ -108,7 +108,7 @@ class TestMemoryCompactor:
         """Test that _evict_from_hot() moves old entry to cold tier."""
         await compactor.put("key1", {"data": "value1"}, "global")
         # Manually set last_accessed to be old
-        compactor._hot_store["global:key1"].last_accessed = datetime.utcnow() - timedelta(days=2)
+        compactor._hot_store["global:key1"].last_accessed = datetime.now(timezone.utc) - timedelta(days=2)
         await compactor.put("key2", {"data": "value2"}, "global")
         # Trigger eviction by adding third entry
         await compactor.put("key3", {"data": "value3"}, "global")
@@ -133,7 +133,7 @@ class TestMemoryCompactor:
         """Test that compact() moves entries older than warm_threshold to warm tier."""
         await compactor.put("key1", {"data": "value1"}, "global")
         # Manually set last_accessed to be old
-        compactor._hot_store["global:key1"].last_accessed = datetime.utcnow() - timedelta(days=2)
+        compactor._hot_store["global:key1"].last_accessed = datetime.now(timezone.utc) - timedelta(days=2)
         summary = await compactor.compact("global")
         assert summary["moved_to_warm"] == 1
         assert "global:key1" not in compactor._hot_store
@@ -143,7 +143,7 @@ class TestMemoryCompactor:
         """Test that compact() moves entries older than cold_threshold to cold tier."""
         await compactor.put("key1", {"data": "value1"}, "global")
         # Manually set last_accessed to be very old
-        compactor._hot_store["global:key1"].last_accessed = datetime.utcnow() - timedelta(days=10)
+        compactor._hot_store["global:key1"].last_accessed = datetime.now(timezone.utc) - timedelta(days=10)
         summary = await compactor.compact("global")
         assert summary["moved_to_cold"] == 1
         assert "global:key1" not in compactor._hot_store
@@ -154,8 +154,8 @@ class TestMemoryCompactor:
         await compactor.put("key1", {"data": "value1"}, "global")
         await compactor.put("key2", {"data": "value2"}, "global")
         # Set different ages
-        compactor._hot_store["global:key1"].last_accessed = datetime.utcnow() - timedelta(days=2)
-        compactor._hot_store["global:key2"].last_accessed = datetime.utcnow() - timedelta(days=10)
+        compactor._hot_store["global:key1"].last_accessed = datetime.now(timezone.utc) - timedelta(days=2)
+        compactor._hot_store["global:key2"].last_accessed = datetime.now(timezone.utc) - timedelta(days=10)
         summary = await compactor.compact("global")
         assert summary["moved_to_warm"] == 1
         assert summary["moved_to_cold"] == 1
@@ -165,7 +165,7 @@ class TestMemoryCompactor:
     async def test_compact_emits_trace_event_with_summary(self, compactor, emitter):
         """Test that compact() emits a trace event with summary."""
         await compactor.put("key1", {"data": "value1"}, "global")
-        compactor._hot_store["global:key1"].last_accessed = datetime.utcnow() - timedelta(days=2)
+        compactor._hot_store["global:key1"].last_accessed = datetime.now(timezone.utc) - timedelta(days=2)
         summary = await compactor.compact("global")
         # Wait for async trace event emission
         await asyncio.sleep(0.01)
@@ -199,8 +199,8 @@ class TestMemoryCompactor:
             value={"data": "test"},
             tier=MemoryTier.HOT,
             access_count=0,
-            last_accessed=datetime.utcnow(),
-            created_at=datetime.utcnow(),
+            last_accessed=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc),
             scope="global",
         )
         assert entry.key == "test_key"
@@ -262,7 +262,7 @@ class TestMemoryRouterIntegration:
             complexity_score=0.5,
             priority="normal",
             current_state="received",
-            created_at=datetime.now(),
+            created_at=datetime.now(timezone.utc),
         )
     
     @pytest.mark.asyncio

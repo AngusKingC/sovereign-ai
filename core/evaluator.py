@@ -7,7 +7,7 @@ final evaluation records.
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.worker_base import LLMAdapter
 from core.memory_router import MemoryRouter
@@ -124,7 +124,7 @@ Where:
             conciseness=scores["conciseness"],
             composite_score=composite_score,
             evaluator_model=self.evaluator_model,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         
         # Emit trace event
@@ -181,7 +181,7 @@ Where:
             evaluator_score=evaluator_score,
             manual_rating=manual_rating,
             final_score=final_score,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         
         # Persist to memory router
@@ -249,7 +249,7 @@ Where:
                     evaluator_score=evaluator_score,
                     manual_rating=content_data.get("manual_rating"),
                     final_score=content_data.get("final_score", 0.0),
-                    timestamp=datetime.fromisoformat(content_data.get("timestamp", datetime.utcnow().isoformat()))
+                    timestamp=datetime.fromisoformat(content_data.get("timestamp", datetime.now(timezone.utc).isoformat()))
                 )
                 records.append(record)
             except Exception:

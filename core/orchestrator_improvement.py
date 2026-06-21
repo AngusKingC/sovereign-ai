@@ -6,7 +6,7 @@ The orchestrator tracks its own performance, proposes instruction updates when r
 quality degrades, and improves via the same InstructionVersionManager mechanism.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from core.orchestrator import Orchestrator
@@ -258,7 +258,7 @@ class OrchestratorImprovementLoop:
         # Update task_completed to True
         metrics_data = result[0].get("content", {})
         metrics_data["task_completed"] = True
-        metrics_data["updated_at"] = datetime.utcnow().isoformat()
+        metrics_data["updated_at"] = datetime.now(timezone.utc).isoformat()
         
         # Persist the updated record
         await self.memory_router.write_to_collection(

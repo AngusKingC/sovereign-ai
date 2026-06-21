@@ -6,7 +6,7 @@ and routing requests to appropriate memory backends.
 """
 
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable
 from uuid import uuid4
@@ -404,7 +404,7 @@ class MemoryRouter:
                     complexity_score=0.0,
                     priority=TaskPriority.NORMAL,
                     current_state=TaskStatus.RECEIVED,
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc),
                 )
                 results = await backend.fetch(task)
                 # Apply filter matching in Python (backends don't support filtered queries natively)

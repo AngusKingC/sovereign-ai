@@ -5,7 +5,7 @@ Single responsibility: Manage task state transitions with validation,
 history tracking, and observability.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from core.schemas import Task, TaskStatus, TaskStateTransition
@@ -220,7 +220,7 @@ class TaskStateMachine:
                 "task_id": str(task_id),
                 "step": step,
                 "state": state.value,
-                "checkpointed_at": datetime.utcnow().isoformat(),
+                "checkpointed_at": datetime.now(timezone.utc).isoformat(),
             }
             
             await self.memory_router.write(
@@ -296,7 +296,7 @@ class TaskStateMachine:
                         complexity_score=0,
                         priority="medium",
                         current_state=TaskStatus.RECEIVED,
-                        created_at=datetime.utcnow(),
+                        created_at=datetime.now(timezone.utc),
                     )
                     memory = await self.memory_router.fetch(task)
                     if memory:

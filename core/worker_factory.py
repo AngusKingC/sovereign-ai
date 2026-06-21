@@ -9,7 +9,7 @@ import asyncio
 import re
 from typing import TYPE_CHECKING
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field
 
@@ -159,7 +159,7 @@ class WorkerFactory:
                 try:
                     await self.emitter.emit(TraceEvent(
                         event_id=uuid4(),
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.ORCHESTRATOR,
                         level=TraceLevel.ERROR,
@@ -183,7 +183,7 @@ class WorkerFactory:
                         "complexity_min": profile.complexity_min,
                         "complexity_max": profile.complexity_max,
                         "preferred_complexity": profile.preferred_complexity,
-                        "created_at": datetime.utcnow().isoformat(),
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                     },
                     collection="workers",
                     document_id=profile.worker_id
@@ -192,7 +192,7 @@ class WorkerFactory:
                 try:
                     await self.emitter.emit(TraceEvent(
                         event_id=uuid4(),
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.ORCHESTRATOR,
                         level=TraceLevel.ERROR,
@@ -216,7 +216,7 @@ class WorkerFactory:
                 try:
                     await self.emitter.emit(TraceEvent(
                         event_id=uuid4(),
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         event_type=TraceEventType.OPERATION_ERROR,
                         component=TraceComponent.ORCHESTRATOR,
                         level=TraceLevel.ERROR,
@@ -231,7 +231,7 @@ class WorkerFactory:
         try:
             await self.emitter.emit(TraceEvent(
                 event_id=uuid4(),
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 event_type=TraceEventType.ORCHESTRATOR_WORKER_REGISTERED,
                 component=TraceComponent.ORCHESTRATOR,
                 level=TraceLevel.INFO,
@@ -319,7 +319,7 @@ class WorkerFactory:
         try:
             await self.emitter.emit(TraceEvent(
                 event_id=uuid4(),
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 event_type=TraceEventType.ORCHESTRATOR_WORKER_DEREGISTERED,
                 component=TraceComponent.ORCHESTRATOR,
                 level=TraceLevel.INFO,
@@ -364,7 +364,7 @@ class WorkerFactory:
             
             await self.emitter.emit(TraceEvent(
                 event_id=uuid4(),
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 event_type=TraceEventType.OPERATION_COMPLETE,
                 component=TraceComponent.ORCHESTRATOR,
                 level=TraceLevel.INFO,
@@ -378,7 +378,7 @@ class WorkerFactory:
             try:
                 await self.emitter.emit(TraceEvent(
                     event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.ORCHESTRATOR,
                     level=TraceLevel.ERROR,
@@ -566,12 +566,12 @@ class PlaceholderWorker(WorkerBase):
             Message(
                 role=MessageRole.SYSTEM,
                 content="Placeholder system message",
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
             ),
             Message(
                 role=MessageRole.USER,
                 content=task.intent,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
             ),
         ]
     
