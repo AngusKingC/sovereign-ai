@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from core.adapter_fallback import AdapterFallbackChain
     from core.evaluator import OutputEvaluator
     from core.trace_optimiser import TraceOptimiser
+    from core.a2a_protocol import A2ARouter, A2ARequest, A2AResponse
 
 from core.input_sanitiser import InputSanitiser
 
@@ -480,7 +481,7 @@ class Orchestrator:
             try:
                 current_context = await self.memory_router.get_global_context(caller_id="orchestrator")
                 if current_context is None:
-                    from datetime import datetime
+                    from datetime import datetime, timezone
                     current_context = StrategicContext(last_updated=datetime.now(timezone.utc))
                 
                 # Update active goals with recent task
@@ -490,7 +491,7 @@ class Orchestrator:
                 current_context.pending_tasks = list(self.workers.keys())
                 
                 # Update timestamp
-                from datetime import datetime
+                from datetime import datetime, timezone
                 current_context.last_updated = datetime.now(timezone.utc)
                 
                 await self.memory_router.set_global_context(current_context, caller_id="orchestrator")
@@ -604,7 +605,7 @@ class Orchestrator:
         try:
             current_context = await self.memory_router.get_global_context(caller_id="orchestrator")
             if current_context is None:
-                from datetime import datetime
+                from datetime import datetime, timezone
                 current_context = StrategicContext(last_updated=datetime.now(timezone.utc))
             
             # Update active goals with recent task
@@ -614,7 +615,7 @@ class Orchestrator:
             current_context.pending_tasks = list(self.workers.keys())
             
             # Update timestamp
-            from datetime import datetime
+            from datetime import datetime, timezone
             current_context.last_updated = datetime.now(timezone.utc)
             
             await self.memory_router.set_global_context(current_context, caller_id="orchestrator")

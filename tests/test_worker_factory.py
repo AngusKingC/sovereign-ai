@@ -190,7 +190,7 @@ class TestWorkerFactory:
         """Test get_or_create_worker returns existing worker when can_route is True."""
         # Create a worker first
         description = "file writer"
-        created_worker = await factory.create_worker(description, task)
+        await factory.create_worker(description, task)
         
         # Get or create should return existing worker
         worker = await factory.get_or_create_worker(task)

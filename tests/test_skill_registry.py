@@ -92,7 +92,7 @@ class TestSkillRegistry:
             dependencies=[],
             hardware="",
             tags=["test"],
-            skill_path="/tmp/test_skill",
+            skill_path="/tmp/test_skill",  # nosec B108 -- local-first; test fixture path
         )
         registry._skills["test_skill"] = metadata
 
@@ -115,7 +115,7 @@ class TestSkillRegistry:
             dependencies=[],
             hardware="",
             tags=["test"],
-            skill_path="/tmp/skill1",
+            skill_path="/tmp/skill1",  # nosec B108 -- local-first; test fixture path
         )
 
         result = registry.all_skills()

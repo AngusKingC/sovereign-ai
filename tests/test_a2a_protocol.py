@@ -99,7 +99,7 @@ class TestA2ARouter:
             requester_agent_id="worker_1",
         )
         
-        response = await router.submit(request)
+        await router.submit(request)
         
         mock_orchestrator.route_task.assert_called_once()
         call_args = mock_orchestrator.route_task.call_args[0][0]

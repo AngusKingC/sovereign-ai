@@ -60,7 +60,7 @@ class TestTTSSkill:
             with patch("platform.system") as mock_platform:
                 mock_platform.return_value = "Windows"
 
-                with patch("winsound.PlaySound") as mock_play:
+                with patch("winsound.PlaySound"):
                     with patch("tempfile.NamedTemporaryFile") as mock_temp:
                         mock_temp_file = MagicMock()
                         mock_temp_file.name = "temp.wav"
@@ -68,7 +68,7 @@ class TestTTSSkill:
                         mock_temp.__exit__ = Mock(return_value=False)
                         mock_temp.return_value = mock_temp
 
-                        with patch("os.unlink") as mock_unlink:
+                        with patch("os.unlink"):
                             await skill.speak("Hello world")
 
                             mock_synthesise.assert_called_once_with("Hello world", None)

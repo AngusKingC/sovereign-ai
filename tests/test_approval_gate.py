@@ -109,7 +109,7 @@ class TestApprovalGateSchemas:
             scope_id="scope_123",
             session_id="sess_xyz",
             scope_type="file_write",
-            scope_pattern="/tmp/*",
+            scope_pattern="/tmp/*",  # nosec B108 -- local-first; test fixture path
             size_limit_mb=1024,
             time_limit_seconds=3600,
             expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
@@ -292,13 +292,13 @@ class TestApprovalGate:
             scope_id="scope_123",
             session_id="sess_xyz",
             scope_type="file_write",
-            scope_pattern="/tmp/",
+            scope_pattern="/tmp/",  # nosec B108 -- local-first; test fixture path
             expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
             granted_by="user_123",
         )
         gate._scope_cache["sess_xyz"] = [scope]
         
-        result = await gate.check_scope("sess_xyz", "file_write", {"path": "/tmp/test.txt"})
+        result = await gate.check_scope("sess_xyz", "file_write", {"path": "/tmp/test.txt"})  # nosec B108 -- local-first; test fixture path
         
         assert result is True
     
@@ -310,7 +310,7 @@ class TestApprovalGate:
         
         gate = ApprovalGate(mock_state_machine, mock_router, emitter)
         
-        result = await gate.check_scope("sess_xyz", "file_write", {"path": "/tmp/test.txt"})
+        result = await gate.check_scope("sess_xyz", "file_write", {"path": "/tmp/test.txt"})  # nosec B108 -- local-first; test fixture path
         
         assert result is False
     
@@ -333,7 +333,7 @@ class TestApprovalGate:
         )
         gate._scope_cache["sess_xyz"] = [scope]
         
-        result = await gate.check_scope("sess_xyz", "file_write", {"path": "/tmp/test.txt"})
+        result = await gate.check_scope("sess_xyz", "file_write", {"path": "/tmp/test.txt"})  # nosec B108 -- local-first; test fixture path
         
         assert result is False
     
@@ -349,7 +349,7 @@ class TestApprovalGate:
             scope_id="scope_123",
             session_id="sess_xyz",
             scope_type="file_write",
-            scope_pattern="/tmp/*",
+            scope_pattern="/tmp/*",  # nosec B108 -- local-first; test fixture path
             expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
             granted_by="user_123",
         )
@@ -387,13 +387,13 @@ class TestApprovalGate:
             scope_id="scope_123",
             session_id="sess_xyz",
             scope_type="file_write",
-            scope_pattern="/tmp/*",
+            scope_pattern="/tmp/*",  # nosec B108 -- local-first; test fixture path
             expires_at=datetime.now(timezone.utc) - timedelta(hours=1),  # Expired
             granted_by="user_123",
         )
         gate._scope_cache["sess_xyz"] = [scope]
         
-        result = await gate.check_scope("sess_xyz", "file_write", {"path": "/tmp/test.txt"})
+        result = await gate.check_scope("sess_xyz", "file_write", {"path": "/tmp/test.txt"})  # nosec B108 -- local-first; test fixture path
         
         assert result is False
     
@@ -410,14 +410,14 @@ class TestApprovalGate:
             scope_id="scope_123",
             session_id="sess_xyz",
             scope_type="file_write",
-            scope_pattern="/tmp/*",
+            scope_pattern="/tmp/*",  # nosec B108 -- local-first; test fixture path
             expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
             granted_by="user_123",
             is_active=False,
         )
         gate._scope_cache["sess_xyz"] = [scope]
         
-        result = await gate.check_scope("sess_xyz", "file_write", {"path": "/tmp/test.txt"})
+        result = await gate.check_scope("sess_xyz", "file_write", {"path": "/tmp/test.txt"})  # nosec B108 -- local-first; test fixture path
         
         assert result is False
     
@@ -433,7 +433,7 @@ class TestApprovalGate:
             scope_id="scope_123",
             session_id="sess_xyz",
             scope_type="file_write",
-            scope_pattern="/tmp/",
+            scope_pattern="/tmp/",  # nosec B108 -- local-first; test fixture path
             expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
             granted_by="user_123",
         )

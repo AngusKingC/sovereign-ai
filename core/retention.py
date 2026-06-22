@@ -6,7 +6,7 @@ and provide a retention engine for scheduled cleanup operations.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
@@ -18,6 +18,9 @@ from core.observability import (
     TraceEmitter,
     MemoryTraceEmitter,
 )
+
+if TYPE_CHECKING:
+    from core.memory_router import MemoryRouter
 
 
 class RetentionRule(BaseModel):

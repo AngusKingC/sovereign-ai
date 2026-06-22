@@ -17,20 +17,20 @@ from rich.prompt import Prompt
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from core.commands import (
+from core.commands import (  # noqa: E402 -- path manipulation required
     Command,
     CommandContext,
     CommandType,
     get_command_registry,
     register_command_alias,
 )
-from core.handlers import register_default_handlers
-from core.session import SessionManager
-from core.orchestrator import Orchestrator
-from core.input_sanitiser import InputSanitiser
-from cli.adapter_factory import create_worker
-from cli.command_history import CommandHistory
-from system.worker_persistence import WorkerPersistence
+from core.handlers import register_default_handlers  # noqa: E402 -- path manipulation required
+from core.session import SessionManager  # noqa: E402 -- path manipulation required
+from core.orchestrator import Orchestrator  # noqa: E402 -- path manipulation required
+from core.input_sanitiser import InputSanitiser  # noqa: E402 -- path manipulation required
+from cli.adapter_factory import create_worker  # noqa: E402 -- path manipulation required
+from cli.command_history import CommandHistory  # noqa: E402 -- path manipulation required
+from system.worker_persistence import WorkerPersistence  # noqa: E402 -- path manipulation required
 
 
 class JarvisRichCLI:

@@ -580,7 +580,7 @@ class TestResourceManager:
         total_vram_mb = 24000
         loaded_model_vram_gb = 5.0  # Healthy amount
 
-        available = await manager.available_vram_mb(total_vram_mb, loaded_model_vram_gb)
+        await manager.available_vram_mb(total_vram_mb, loaded_model_vram_gb)
 
         events = emitter.get_events()
         warning_events = [e for e in events if e.level.upper() == "WARNING" and "critically low" in e.message]

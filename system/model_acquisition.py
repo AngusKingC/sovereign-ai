@@ -32,6 +32,8 @@ from core.observability import (
 
 if TYPE_CHECKING:
     from core.memory_router import MemoryRouter
+    from system.resource_manager import ResourceManager
+    from system.model_acquisition import ModelRegistry
 
 
 class ModelAcquisition:
@@ -217,7 +219,7 @@ class ModelAcquisition:
             # Calculate quality score based on likes and downloads
             likes = model_data.get("likes", 0)
             downloads = model_data.get("downloads", 0)
-            quality_signal = min(1.0, (likes / 1000.0) + (downloads / 100000.0))
+            min(1.0, (likes / 1000.0) + (downloads / 100000.0))
 
             return ModelEntry(
                 model_id=f"huggingface/{model_id}",
@@ -341,7 +343,7 @@ class ModelAcquisition:
             profiler = SystemProfiler(self.memory_router)
             system_profile = await profiler.get_cached()
             if system_profile and system_profile.storage:
-                total_disk_mb = sum(s.total_mb for s in system_profile.storage)
+                sum(s.total_mb for s in system_profile.storage)
                 available_disk_mb = sum(s.available_mb for s in system_profile.storage)
                 
                 # Estimate model size (default to 10GB if unknown)

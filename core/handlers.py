@@ -6,7 +6,7 @@ They are interface-agnostic and can be used by CLI, Web GUI, and Standalone GUI.
 
 import time
 from datetime import datetime, timezone
-from typing import Dict, Any
+from typing import TYPE_CHECKING, Dict, Any
 from core.commands import (
     Command,
     CommandHandler,
@@ -21,6 +21,10 @@ from core.observability import (
 )
 from core.schemas import Message, MessageRole, Task, TaskPriority, TaskStatus
 from core.session import SessionManager
+
+if TYPE_CHECKING:
+    from core.orchestrator import Orchestrator
+    from core.input_sanitiser import InputSanitiser
 
 
 def register_default_handlers(

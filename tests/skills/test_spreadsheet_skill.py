@@ -64,7 +64,7 @@ class TestSpreadsheetSkill:
         mock_csv.__exit__ = Mock(return_value=None)
 
         with patch("builtins.open", return_value=mock_csv):
-            with patch("csv.DictWriter") as mock_writer:
+            with patch("csv.DictWriter"):
                 result = await spreadsheet_skill.write_csv("test.csv", [{"name": "Alice"}])
 
         assert result["success"] is True

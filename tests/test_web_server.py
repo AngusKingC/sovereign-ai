@@ -148,13 +148,13 @@ class TestWebServer:
 
     def test_websocket_rejects_connection_without_token(self):
         """Test that WebSocket /ws rejects connection without token (close code 1008)."""
-        with self.client.websocket_connect("/ws") as websocket:
+        with self.client.websocket_connect("/ws"):
             # The connection should be rejected immediately
             pass
 
     def test_websocket_accepts_connection_with_valid_token(self):
         """Test that WebSocket /ws accepts connection with valid token."""
-        with self.client.websocket_connect("/ws?token=test-token") as websocket:
+        with self.client.websocket_connect("/ws?token=test-token"):
             # Connection should be accepted
             pass
 

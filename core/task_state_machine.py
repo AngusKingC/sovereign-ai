@@ -76,7 +76,7 @@ class TaskStateMachine:
                 event = TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.ORCHESTRATOR,
-                    message=f"Invalid state transition attempted",
+                    message="Invalid state transition attempted",
                     level=TraceLevel.ERROR,
                     data={
                         "task_id": str(task.task_id),
@@ -86,7 +86,7 @@ class TaskStateMachine:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception as emit_error:
+            except Exception:
                 # Cleanup path — trace emit failure should not crash transition validation
                 # Per Rule 17: broad except requires inline comment + WARNING trace
                 pass
@@ -129,7 +129,7 @@ class TaskStateMachine:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception as emit_error:
+        except Exception:
             # Cleanup path — trace emit failure should not crash transition
             # Per Rule 17: broad except requires inline comment + WARNING trace
             pass
@@ -164,7 +164,7 @@ class TaskStateMachine:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception as emit_error:
+            except Exception:
                 # Cleanup path — trace emit failure should not crash persistence error handling
                 # Per Rule 17: broad except requires inline comment + WARNING trace
                 pass
@@ -249,7 +249,7 @@ class TaskStateMachine:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception as emit_error:
+            except Exception:
                 # Cleanup path — trace emit failure should not crash checkpoint
                 # Per Rule 17: broad except requires inline comment + WARNING trace
                 pass
@@ -268,7 +268,7 @@ class TaskStateMachine:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception as emit_error:
+            except Exception:
                 # Cleanup path — trace emit failure should not crash checkpoint error handling
                 # Per Rule 17: broad except requires inline comment + WARNING trace
                 pass
@@ -318,7 +318,7 @@ class TaskStateMachine:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception as emit_error:
+            except Exception:
                 # Cleanup path — trace emit failure should not crash checkpoint loading
                 # Per Rule 17: broad except requires inline comment + WARNING trace
                 pass
@@ -338,7 +338,7 @@ class TaskStateMachine:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception as emit_error:
+            except Exception:
                 # Cleanup path — trace emit failure should not crash checkpoint loading error handling
                 # Per Rule 17: broad except requires inline comment + WARNING trace
                 pass

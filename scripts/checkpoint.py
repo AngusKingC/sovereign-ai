@@ -22,7 +22,7 @@ def main():
     label = sys.argv[1]
 
     # Stage all changes
-    print(f"Staging all changes...")
+    print("Staging all changes...")
     subprocess.run(["git", "add", "-A"], check=True)
 
     # Commit with checkpoint message
@@ -35,7 +35,7 @@ def main():
     subprocess.run(["git", "tag", label], check=True)
 
     # Push to remote
-    print(f"Pushing to remote...")
+    print("Pushing to remote...")
     try:
         # Get current branch name
         result = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True, check=True)
@@ -43,11 +43,11 @@ def main():
         
         subprocess.run(["git", "push", "origin", branch], check=True)
         subprocess.run(["git", "push", "origin", "--tags"], check=True)
-        print(f"✓ Pushed to remote")
+        print("✓ Pushed to remote")
     except subprocess.CalledProcessError as e:
         print(f"⚠ Warning: Failed to push to remote: {e}")
         print(f"✓ Local checkpoint saved: {label}")
-        print(f"  (Remote push failed, but local snapshot is still valid)")
+        print("  (Remote push failed, but local snapshot is still valid)")
         return
 
     print(f"✓ Checkpoint saved: {label}")

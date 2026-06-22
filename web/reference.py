@@ -17,13 +17,13 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from core.commands import (
+from core.commands import (  # noqa: E402 -- path manipulation required
     Command,
     CommandContext,
     CommandType,
     get_command_registry,
 )
-from core.handlers import register_default_handlers
+from core.handlers import register_default_handlers  # noqa: E402 -- path manipulation required
 
 
 class WebCommandRequest(BaseModel):
@@ -104,7 +104,7 @@ class WebGUIReference:
                 return WebCommandResponse(
                     success=False,
                     message=f"Unknown command type: {request.command_type}",
-                    error=f"Invalid command type"
+                    error="Invalid command type"
                 )
             
             # Create command

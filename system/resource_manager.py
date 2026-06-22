@@ -28,6 +28,7 @@ from core.observability import (
 
 if TYPE_CHECKING:
     from core.memory_router import MemoryRouter
+    from system.model_acquisition import ModelRegistry
 
 
 class ResourceManager:
@@ -426,7 +427,7 @@ class ResourceManager:
                     event = TraceEvent(
                         event_type=TraceEventType.RESOURCE_LOAD_APPROVED,
                         component=TraceComponent.SYSTEM,
-                        message=f"Model fits in available VRAM",
+                        message="Model fits in available VRAM",
                         level=TraceLevel.INFO,
                         data={},
                         duration_ms=0,
@@ -521,7 +522,7 @@ class ResourceManager:
                             event = TraceEvent(
                                 event_type=TraceEventType.RESOURCE_LOAD_DENIED,
                                 component=TraceComponent.SYSTEM,
-                                message=f"No approval callback for pinned model eviction",
+                                message="No approval callback for pinned model eviction",
                                 level=TraceLevel.WARNING,
                                 data={},
                                 duration_ms=0,
@@ -825,7 +826,7 @@ class ResourceManager:
             # Send unload signal to Ollama API
             try:
                 async with httpx.AsyncClient(timeout=5.0) as client:
-                    response = await client.post(
+                    await client.post(
                         f"{self._ollama_api_url}/api/generate",
                         json={"model": model_id, "keep_alive": 0},
                     )

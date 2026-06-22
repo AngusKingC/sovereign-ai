@@ -49,7 +49,7 @@ def restore_checkpoint(tag):
     print(f"✓ Restored to: {tag}")
     print()
     print("WARNING: You are in detached HEAD state.")
-    print(f"To continue work, create a new branch:")
+    print("To continue work, create a new branch:")
     print(f"  git checkout -b continue-from-{tag}")
 
 

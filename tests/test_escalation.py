@@ -110,7 +110,7 @@ class TestEscalationFlow:
         ))
         
         # Process task
-        result = await orchestrator.process_task(task, "worker1")
+        await orchestrator.process_task(task, "worker1")
         
         # Verify evaluate was called
         assert mock_escalation_engine.evaluate.called
@@ -148,7 +148,7 @@ class TestEscalationFlow:
         ))
         
         # Process task
-        result = await orchestrator.process_task(task, "worker1")
+        await orchestrator.process_task(task, "worker1")
         
         # Verify evaluate was called but request_approval was not
         assert mock_escalation_engine.evaluate.called
@@ -194,7 +194,7 @@ class TestEscalationFlow:
         ))
         
         # Process task
-        result = await orchestrator.process_task(task, "worker1")
+        await orchestrator.process_task(task, "worker1")
         
         # Verify request_approval was called
         assert mock_escalation_engine.request_approval.called

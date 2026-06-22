@@ -87,7 +87,7 @@ def serve(
     )
     
     # Create WorkerPersistence
-    worker_persistence = WorkerPersistence(
+    WorkerPersistence(
         memory_router=memory_router,
         emitter=emitter,
         obsidian_vault_path=None
@@ -148,7 +148,7 @@ def serve(
     
     # Create WorkerFactory (requires orchestrator)
     # Pass None for persistence to avoid asyncio.create_task in __init__ (no event loop in serve)
-    worker_factory = WorkerFactory(
+    WorkerFactory(
         skill_registry=skill_registry,
         orchestrator=orchestrator,
         memory_router=memory_router,

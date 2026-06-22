@@ -166,7 +166,7 @@ class TestMemoryCompactor:
         """Test that compact() emits a trace event with summary."""
         await compactor.put("key1", {"data": "value1"}, "global")
         compactor._hot_store["global:key1"].last_accessed = datetime.now(timezone.utc) - timedelta(days=2)
-        summary = await compactor.compact("global")
+        await compactor.compact("global")
         # Wait for async trace event emission
         await asyncio.sleep(0.01)
         events = emitter.get_events()

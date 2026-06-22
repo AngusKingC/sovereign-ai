@@ -488,7 +488,7 @@ class TestModelAcquisition:
         acquisition = ModelAcquisition(mock_router)
         
         registry = MockModelRegistry()
-        resource_manager = MockResourceManager()
+        MockResourceManager()
         
         # Original model that doesn't fit
         registry.add_model(

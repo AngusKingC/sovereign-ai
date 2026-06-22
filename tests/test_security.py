@@ -513,7 +513,7 @@ class TestInputSanitiserWiring:
             context=CommandContext(
                 interface_type="cli",
                 session_id="test",
-                working_directory="/tmp"
+                working_directory="/tmp"  # nosec B108 -- local-first; test fixture path
             )
         )
         await handler.execute(command)

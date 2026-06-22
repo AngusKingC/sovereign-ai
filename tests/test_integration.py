@@ -88,7 +88,6 @@ class TestIntegration:
         import asyncio
 
         # Write some memory first
-        import asyncio
 
         data = {"content": "Test memory entry", "source": "integration_test"}
         asyncio.run(echo_worker.memory_router.write(data))
@@ -164,7 +163,7 @@ class TestIntegration:
 
         import asyncio
 
-        output = asyncio.run(orchestrator.route_task(sample_task))
+        asyncio.run(orchestrator.route_task(sample_task))
 
         # Check that trace emitter captured events
         events = trace_emitter.get_events()
@@ -210,7 +209,7 @@ class TestIntegration:
         from workers.ollama_worker import OllamaWorker
         from adapters.ollama import OllamaAdapter
         from core.schemas import Task, TaskPriority
-        from datetime import datetime, timezone, timezone
+        from datetime import datetime, timezone
         from uuid import uuid4
 
         # Create memory router with empty backends

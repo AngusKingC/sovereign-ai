@@ -82,7 +82,7 @@ class TestRetentionManager:
         
         manager = RetentionManager(mock_router, emitter=emitter)
         
-        count = await manager.prune_task_history()
+        await manager.prune_task_history()
         
         call_args = mock_router.write.call_args[0][0]
         assert "awaiting_approval" in call_args["skip_states"]
@@ -95,7 +95,7 @@ class TestRetentionManager:
         
         manager = RetentionManager(mock_router, emitter=emitter)
         
-        count = await manager.prune_task_history()
+        await manager.prune_task_history()
         
         call_args = mock_router.write.call_args[0][0]
         assert "in_progress" in call_args["skip_states"]
@@ -122,7 +122,7 @@ class TestRetentionManager:
         
         manager = RetentionManager(mock_router, emitter=emitter)
         
-        count = await manager.prune_qdrant_vectors()
+        await manager.prune_qdrant_vectors()
         
         mock_router.write.assert_called_once()
         call_args = mock_router.write.call_args[0][0]
@@ -137,7 +137,7 @@ class TestRetentionManager:
         
         manager = RetentionManager(mock_router, emitter=emitter)
         
-        count = await manager.archive_obsidian_notes()
+        await manager.archive_obsidian_notes()
         
         mock_router.write.assert_called_once()
         call_args = mock_router.write.call_args[0][0]

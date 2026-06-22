@@ -40,7 +40,7 @@ def test_no_direct_emit_trace_calls_in_production_code():
         if lines:
             violations[filepath] = lines
     assert not violations, (
-        f"Found direct emit_trace() calls in production files "
-        f"(violates DI rules):\n" +
-        "\n".join(f"  {f}: lines {l}" for f, l in violations.items())
+        "Found direct emit_trace() calls in production files "
+        "(violates DI rules):\n" +
+        "\n".join(f"  {f}: lines {line_numbers}" for f, line_numbers in violations.items())
     )

@@ -50,7 +50,7 @@ class TestQueryHandler:
             args=["test", "query"],
             context=CommandContext(
                 interface_type="cli",
-                working_directory="/tmp"
+                working_directory="/tmp"  # nosec B108 -- local-first; test fixture path
             )
         )
         
@@ -78,7 +78,7 @@ class TestQueryHandler:
             args=["test", "query"],
             context=CommandContext(
                 interface_type="cli",
-                working_directory="/tmp"
+                working_directory="/tmp"  # nosec B108 -- local-first; test fixture path
             )
         )
         
@@ -100,7 +100,7 @@ class TestQueryHandler:
             args=[],
             context=CommandContext(
                 interface_type="cli",
-                working_directory="/tmp"
+                working_directory="/tmp"  # nosec B108 -- local-first; test fixture path
             )
         )
         
@@ -126,11 +126,11 @@ class TestQueryHandler:
             args=["test", "query"],
             context=CommandContext(
                 interface_type="cli",
-                working_directory="/tmp"
+                working_directory="/tmp"  # nosec B108 -- local-first; test fixture path
             )
         )
         
-        result = await handler.execute(command)
+        await handler.execute(command)
         
         # Should have emitted 3 trace events: COMMAND_RECEIVED, OPERATION_START, COMMAND_EXECUTED
         assert mock_emitter.emit.call_count == 3
@@ -151,11 +151,11 @@ class TestQueryHandler:
             args=["test", "query"],
             context=CommandContext(
                 interface_type="cli",
-                working_directory="/tmp"
+                working_directory="/tmp"  # nosec B108 -- local-first; test fixture path
             )
         )
         
-        result = await handler.execute(command)
+        await handler.execute(command)
         
         # Should have emitted 3 trace events: COMMAND_RECEIVED, OPERATION_START, COMMAND_FAILED
         assert mock_emitter.emit.call_count == 3
@@ -171,7 +171,7 @@ class TestQueryHandler:
             args=["what", "is", "the", "weather"],
             context=CommandContext(
                 interface_type="cli",
-                working_directory="/tmp"
+                working_directory="/tmp"  # nosec B108 -- local-first; test fixture path
             )
         )
         
@@ -201,7 +201,7 @@ class TestQueryHandler:
             context=CommandContext(
                 interface_type="cli",
                 session_id=session_id,
-                working_directory="/tmp"
+                working_directory="/tmp"  # nosec B108 -- local-first; test fixture path
             )
         )
         

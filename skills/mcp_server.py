@@ -120,7 +120,8 @@ class MCPServer:
 
     def start(self) -> None:
         """Start the HTTP server in a background thread."""
-        handler = lambda *args, **kwargs: MCPRequestHandler(*args, mcp_server=self, **kwargs)
+        def handler(*args, **kwargs):
+            return MCPRequestHandler(*args, mcp_server=self, **kwargs)
         self._server = HTTPServer((self._host, self._port), handler)
         self._server_thread = threading.Thread(target=self._server.serve_forever, daemon=True)
         self._server_thread.start()

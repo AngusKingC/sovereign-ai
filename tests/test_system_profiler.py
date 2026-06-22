@@ -74,12 +74,12 @@ class TestSystemProfiler:
              patch('psutil.cpu_freq') as mock_cpu_freq, \
              patch('psutil.virtual_memory') as mock_virtual_memory, \
              patch('psutil.disk_partitions') as mock_disk_partitions, \
-             patch('pynvml.nvmlInit') as mock_nvml_init, \
-             patch('pynvml.nvmlDeviceGetHandleByIndex') as mock_nvml_device, \
+             patch('pynvml.nvmlInit'), \
+             patch('pynvml.nvmlDeviceGetHandleByIndex'), \
              patch('pynvml.nvmlDeviceGetName') as mock_nvml_name, \
              patch('pynvml.nvmlDeviceGetMemoryInfo') as mock_nvml_memory, \
              patch('pynvml.nvmlSystemGetDriverVersion') as mock_nvml_driver, \
-             patch('pynvml.nvmlShutdown') as mock_nvml_shutdown, \
+             patch('pynvml.nvmlShutdown'), \
              patch('platform.processor') as mock_processor, \
              patch('platform.machine') as mock_machine, \
              patch('platform.system') as mock_system, \
@@ -265,7 +265,7 @@ class TestSystemProfiler:
             mock_httpx.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             mock_httpx.return_value.__aexit__ = AsyncMock()
             
-            profile = await profiler.profile()
+            await profiler.profile()
             
             # Verify profile was stored (called twice for Postgres and Obsidian)
             assert len(mock_router.writes) == 2
@@ -334,7 +334,7 @@ class TestSystemProfiler:
             mock_httpx.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             mock_httpx.return_value.__aexit__ = AsyncMock()
             
-            profile = await profiler.profile()
+            await profiler.profile()
             
             # Verify trace events were emitted
             events = trace_emitter.get_events()

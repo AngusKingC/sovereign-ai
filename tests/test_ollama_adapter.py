@@ -115,7 +115,7 @@ class TestThinkingExtraction:
 
         messages = [Message(role=MessageRole.USER, content="What is the meaning of life?", timestamp=datetime.now(timezone.utc))]
 
-        response = await adapter.generate(messages)
+        await adapter.generate(messages)
 
         # Assert event was emitted with full multi-line content
         events = emitter.get_events()

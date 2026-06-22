@@ -453,7 +453,7 @@ class TestTaskStateMachine:
         )
         
         # Route task (should transition through full happy path)
-        output = await orchestrator.route_task(task)
+        await orchestrator.route_task(task)
         
         # Verify final state is COMPLETE
         assert task.current_state == TaskStatus.COMPLETE

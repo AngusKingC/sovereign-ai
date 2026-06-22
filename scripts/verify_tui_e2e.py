@@ -136,13 +136,13 @@ async def verify_tui_e2e() -> None:
             memory_router=memory_router,
             emitter=emitter,
         )
-        output_evaluator = OutputEvaluator(
+        OutputEvaluator(
             llm_adapter=ollama_adapter,
             memory_router=memory_router,
             evaluator_model="default",
             emitter=emitter,
         )
-        trace_optimiser = TraceOptimiser(
+        TraceOptimiser(
             memory_router=memory_router,
             instruction_version_manager=instruction_versioning,
             emitter=emitter,
@@ -159,7 +159,7 @@ async def verify_tui_e2e() -> None:
             emitter=emitter,
         )
 
-        worker_factory = WorkerFactory(
+        WorkerFactory(
             skill_registry=skill_registry,
             orchestrator=orchestrator,
             memory_router=memory_router,
@@ -332,11 +332,11 @@ async def verify_tui_e2e() -> None:
         print("=== Summary ===")
         print()
         print("Gate 5 (prompt-37.6.1 target: query flow + memory):")
-        print(f"  - Query 1 executed: True")
-        print(f"  - Query 2 executed: True")
+        print("  - Query 1 executed: True")
+        print("  - Query 2 executed: True")
         print(f"  - memory_router not None: {memory_router is not None}")
         print("Gate 6 (prompt-37.6.1 target: adapter swap):")
-        print(f"  - Swap executed: True")
+        print("  - Swap executed: True")
         print(f"  - memory_router preserved: {new_memory_router is original_memory_router}")
         print(f"  - memory_router is not None: {new_memory_router is not None}")
         print("F7 (trace spam):")

@@ -69,7 +69,7 @@ class TestFileWriterSkill:
     async def test_execute_with_non_string_content(self, skill):
         """Test that non-string content raises ValueError."""
         with pytest.raises(ValueError, match="Content must be a string"):
-            await skill.execute("/tmp/test.txt", 123)
+            await skill.execute("/tmp/test.txt", 123)  # nosec B108 -- local-first; test fixture path
 
     @pytest.mark.asyncio
     async def test_file_writer_with_approval_gate_none_proceeds_without_approval(self, skill):

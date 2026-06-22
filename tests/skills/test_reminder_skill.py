@@ -105,7 +105,7 @@ class TestReminderSkill:
     @pytest.mark.asyncio
     async def test_create_proceeds_without_approval_when_no_gate_injected(self):
         """create proceeds without approval when no gate injected (low-risk operation)."""
-        skill = ReminderSkill(
+        ReminderSkill(
             memory_router=self.memory_router,
             emitter=self.emitter,
             approval_gate=None,

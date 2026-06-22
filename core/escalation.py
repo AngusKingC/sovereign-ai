@@ -21,6 +21,7 @@ from core.observability import (
 if TYPE_CHECKING:
     from core.approval_gate import ApprovalGate
     from core.memory_router import MemoryRouter
+    from core.observability import TraceEmitter
 
 
 class EscalationEngine:
@@ -130,7 +131,7 @@ class EscalationEngine:
         """
         from core.observability import TraceEvent
         from core.approval_gate import ApprovalRequest
-        from datetime import datetime, timedelta
+        from datetime import timedelta
 
         approval_request = ApprovalRequest(
             request_id=str(uuid4()),

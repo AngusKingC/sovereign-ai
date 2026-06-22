@@ -6,7 +6,7 @@ from unittest.mock import patch
 def test_serve_subcommand_is_registered():
     """Test that passing ['serve'] to the CLI dispatcher reaches the serve entry point without an argparse error."""
     # Mock the serve function to avoid actually starting the server
-    with patch('cli.serve.serve') as mock_serve:
+    with patch('cli.serve.serve'):
         # Mock typer.run to prevent it from actually running
         with patch('typer.run') as mock_typer_run:
             # Set up sys.argv to simulate 'jarvis serve' command
@@ -32,7 +32,7 @@ def test_serve_subcommand_strips_serve_from_argv():
     contained 'serve', causing 'Got unexpected extra argument (serve)' exit code 2.
     """
     import sys
-    with patch('cli.serve.serve') as mock_serve:
+    with patch('cli.serve.serve'):
         with patch('typer.run') as mock_typer_run:
             original_argv = sys.argv
             try:

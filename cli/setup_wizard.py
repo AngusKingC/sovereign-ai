@@ -80,14 +80,12 @@ class SetupWizard:
         )
 
         # Ollama check
-        ollama_reachable = False
         available_models = []
         if config["adapter"] == "ollama":
             try:
                 import httpx
                 response = httpx.get("http://localhost:11434/api/tags", timeout=3)
                 if response.status_code == 200:
-                    ollama_reachable = True
                     data = response.json()
                     if "models" in data:
                         available_models = [m["name"] for m in data["models"]]
