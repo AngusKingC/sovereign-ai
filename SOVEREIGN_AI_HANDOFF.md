@@ -1,6 +1,6 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-22 — post-prompt-58.6 (datetime.utcnow in Field(default_factory=...) cleanup)
+**Last updated**: 2026-06-22 — post-prompt-58.7 (datetime.utcnow in system/ and skills/ cleanup)
 
 **Test baseline**: 1166 passed, 56 skipped, 0 failures, 0 warnings
 
@@ -233,6 +233,7 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 | 58 | Datetime UTCNow Cleanup | 1167 | 107 datetime.utcnow() calls replaced with datetime.now(timezone.utc) (28 test + 78 production + 1 scope expansion). Zero utcnow remain. 46+ bare datetime.now() calls deferred to Plan 58.5 (pre-existing L19 violations outside scope). |
 | 58.5 | Bare datetime.now() cleanup | 1167 | 231 bare datetime.now() calls replaced with datetime.now(timezone.utc) (205 test + 26 production). Zero bare datetime.now() remain. 0 Category C deferrals (all calls were Category A/B - safe to convert). L19 compliance achieved for all datetime calls. |
 | 58.6 | Datetime UTCNow in Field(default_factory=...) | 1166 | 12 datetime.utcnow function references in Field(default_factory=...) replaced with lambda: datetime.now(timezone.utc) (8 files). Zero utcnow remain in core/. 2 pre-existing ruff errors suppressed with scoped noqa. |
+| 58.7 | Datetime UTCNow in system/ and skills/ | 1166 | 46 datetime.utcnow() calls replaced with datetime.now(timezone.utc) (10 in system/, 36 in skills/). 1 default_factory=datetime.utcnow replaced with lambda: datetime.now(timezone.utc). Zero utcnow remain repo-wide. 1 F541 ruff error fixed. |
 
 ---
 
@@ -289,12 +290,12 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ## Next 5 prompts
 
-### Plan 59 — Marine stack Python implementation (P2)
-- Implement the 4 Marine SKILL.md files as Python skills (weather first, then tidal, AIS, passage_planner).
-
 ### Plan 60 — Full checkpoint scan (P1)
 - 5-plan milestone: full scan. Verify Plans 57-59 progress.
 
-### Plan 61 — (open slot for next GLM scoping)
-### Plan 62 — (open slot)
+### Plan 61 — Marine stack Python implementation (P2)
+- Implement the 4 Marine SKILL.md files as Python skills (weather first, then tidal, AIS, passage_planner).
+
+### Plan 62 — (open slot for next GLM scoping)
 ### Plan 63 — (open slot)
+### Plan 64 — (open slot)
