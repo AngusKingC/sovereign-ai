@@ -1,6 +1,6 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-21 — post-prompt-58.5 (bare datetime.now() cleanup)
+**Last updated**: 2026-06-22 — Devin Desktop config added (AGENTS.md, workflows, skills)
 
 **Test baseline**: 1167 passed, 55 skipped, 0 failures, 0 warnings
 
@@ -11,7 +11,16 @@
 - pip-audit: 19 CVEs across 4 packages (was 55 — Plan 56 fixed 36 CVEs)
 - Vulture: 20 high-confidence findings (was 32 — Plan 57 removed 16, deferred 16 as Category C)
 
-**Devin rules**: **Inline approach (2026-06-21)** — rules travel with each plan as `## Section 0: Rules` at the top. GLM maintains the canonical content in `/home/z/my-project/download/global_rules_v2.md` (currently v2.2, 23 rules: L1-L23). Each plan's Section 0 is a copy of this file's rules body. The `/globalrules/` folder in the repo is **reference-only** (a snapshot from Plan 54, not authoritative). Devin reads rules from Section 0 of the current plan, NOT from `/globalrules/global_rules.md`. L20 self-evolution is active: every plan's C9 step requires a rule-proposal section.
+**Devin rules**: **Devin Desktop config (2026-06-22)** — three layers of rules/tools:
+1. **AGENTS.md** (repo root, always-on): 22 stable rules across 6 categories. Devin Desktop auto-discovers this.
+2. **Section 0** (per-plan, evolving): L1-L25 rules that grow via L20 self-evolution (Devin proposes via C9, GLM accepts/rejects). GLM maintains canonical source at `/home/z/my-project/download/global_rules_v2.md` (v2.4, 25 rules).
+3. **Workflows + Skills** (`.windsurf/` directory):
+   - `/jarvis-close` — full C1-C13 closing sequence (prevents "forgot to tag")
+   - `/jarvis-verify` — post-edit syntax + diff + test checks
+   - `/jarvis-scan` — sequential 6-tool full scan (L24 enforced)
+   - `jarvis-b108-suppress` skill — auto-invoked on B108 bandit findings
+   - `jarvis-f841-triage` skill — auto-invoked on F841 ruff findings
+The `/globalrules/` folder is reference-only (frozen Plan 54 snapshot).
 
 ---
 
