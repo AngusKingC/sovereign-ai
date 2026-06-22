@@ -8,27 +8,50 @@
 **Clone (GLM, review sandbox)**: `/home/z/my-project/sovereign-ai-framework/` (Linux; optional deps NOT installed — see L19)
 **`origin` remote**: points to the GitHub repo above. All `git push origin` / `git pull origin` commands target this repo.
 
+---
+
+## Start here (for a new GLM chat receiving this handoff)
+
+If you are a new GLM chat and the user has pasted this handoff + a Devin execution log, follow this sequence:
+
+1. **If the repo is not cloned in your sandbox, clone it now:**
+   ```bash
+   git clone https://github.com/AngusKingC/sovereign-ai.git /home/z/my-project/sovereign-ai-framework
+   ```
+   (If it's already cloned, `cd /home/z/my-project/sovereign-ai-framework && git fetch origin` to get the latest.)
+
+2. **⚠ L19 (critical — read before doing anything):** GLM must NOT run `mypy`, `bandit`, `pytest`, `pip-audit`, or `vulture` on its clone. Counts come from Devin's execution log only. Different OS, different Python env, different tool versions give false confidence. GLM's clone is for reading files (line numbers, content, structure) and `git fetch`/`git show`/`git log` (read-only) — NOT for running tools.
+
+3. **Start the [GLM workflow](#glm-workflow) at Step 1.** Read the pasted execution log end-to-end, then proceed through Steps 2-8 in order.
+
+4. **Do not edit the repo directly.** GLM produces files in `/home/z/my-project/download/` for the user to copy to Devin's working tree. See [Roles](#roles) for the full separation rules.
+
+---
+
 **Test baseline**: 1166 passed, 56 skipped, 0 failures, 0 warnings (verified at Plan 59 S1.1)
 
 ---
 
 ## Table of contents
 
+0. [Start here](#start-here-for-a-new-glm-chat-receiving-this-handoff) — onboarding for a new GLM chat (clone, L19 reminder, where to begin)
 1. [Repository & environment](#repository--environment) — repo URL, clone paths, Python version, OS, optional deps
 2. [Project vision](#project-vision)
 3. [What works right now](#what-works-right-now)
 4. [What's broken right now](#whats-broken-right-now)
 5. [What's built but not reachable](#whats-built-but-not-reachable)
 6. [What's deferred (not started)](#whats-deferred-not-started)
-7. [Opening + Closing steps](#opening--closing-steps-mandatory--glm-copies-these-into-every-plan) — mandatory template for every plan
-8. [Architecture rules](#architecture-rules-never-violate)
-9. [Dependency injection rules](#dependency-injection-rules)
-10. [Completed prompts](#completed-prompts)
-11. [Known landmines](#known-landmines)
-12. [Hardware context](#hardware-context)
-13. [Environment](#environment) — Python version, install/run commands, optional deps
-14. [User domain context](#user-domain-context)
-15. [Next 5 prompts](#next-5-prompts)
+7. [Roles](#roles) — who does what (GLM vs Devin vs User)
+8. [GLM workflow](#glm-workflow) — GLM's 7-step post-execution process
+9. [Devin plan template](#devin-plan-template) — opening + closing steps GLM copies into every plan
+10. [Architecture rules](#architecture-rules-never-violate)
+11. [Dependency injection rules](#dependency-injection-rules)
+12. [Completed prompts](#completed-prompts)
+13. [Known landmines](#known-landmines)
+14. [Hardware context](#hardware-context)
+15. [Environment](#environment) — Python version, install/run commands, optional deps
+16. [User domain context](#user-domain-context)
+17. [Next 5 prompts](#next-5-prompts)
 
 ---
 
@@ -44,9 +67,9 @@
 ---
 
 **Static analysis baseline (post-prompt-59)**:
-- Ruff: 0 errors (was 111 — Plan 59 fixed all: F541=14, F401=2, F811=3, F841=41, E402=21, F821=21, E731=1, E741=1)
+- Ruff: 0 errors (Plan 59 S1.2 baseline was 110; Plan 55 full-scan was 111, drifted -1 from Plan 58.7 F541 fix. Plan 59 fixed 104: F541=14, F401=2, F811=3, F841=41, E402=21, F821=21, E731=1, E741=1. Remaining 6 were E402 suppressed via `# noqa: E402 -- path manipulation required` in cli/rich_cli.py, cli/tui.py, gui/reference.py, web/reference.py — ruff reports 0 because suppressed findings don't count.)
 - Mypy (full-repo): 283 errors (deferred to Phase 4 — Plans 66-74)
-- Bandit: 3179 low, 0 medium (22 B108 suppressed in tests/ with scoped # nosec B108)
+- Bandit: 3179 low (unchanged from Plan 55), 0 medium (was 22 — Plan 59 suppressed all 22 B108 findings in tests/ with scoped `# nosec B108 -- local-first; test fixture path`)
 - pip-audit: 19 CVEs across 4 packages (was 55 — Plan 56 fixed 36 CVEs)
 - Vulture: 20 high-confidence findings (was 32 — Plan 57 removed 16, deferred 16 as Category C)
 
@@ -140,9 +163,155 @@ When a subsystem is wired into a runtime entry point, remove it from this table.
 
 ---
 
-## Opening + Closing steps (mandatory — GLM copies these into every plan)
+## Roles
 
-These are the template steps GLM includes in every plan file. Devin executes them from the plan, not from this handoff.
+Three actors collaborate on this project. Each has a distinct job — do not cross the lines.
+
+| Actor | Job | Tools |
+|---|---|---|
+| **User** | Pastes Devin's execution log to GLM after each prompt. Copies GLM's download files to Devin's working tree when review fixes are needed. | IM chat with GLM; file copy on Devin's machine. |
+| **GLM** (this AI) | 7-step post-execution workflow (see [GLM workflow](#glm-workflow)). Creates plans, review guides, and revised plans. **Never edits the repo directly** — produces files in `/home/z/my-project/download/` for the user to copy. | `git fetch origin`, `git show`, `git log` (read-only). No push, no commit, no tool runs on clone (L19). |
+| **Devin** | Executes plans. Runs tests, ruff, mypy, bandit, pip-audit, vulture. Commits, tags, pushes. Updates CHANGELOG, handoff, and proposes rules. | PowerShell on Windows; the repo's working tree. |
+
+**Key separation rules:**
+- GLM does NOT commit to or push to the repo. GLM does NOT directly modify Devin's local working tree. GLM MAY produce edited copies of repo files (CHANGELOG.md, SOVEREIGN_AI_HANDOFF.md, AGENTS.md) in `/home/z/my-project/download/` for the user to manually copy to Devin's working tree. The user is the bridge — GLM never touches origin or Devin's filesystem directly. Devin does the actual commits (closing steps 7-10).
+- GLM does NOT run pytest/mypy/ruff/bandit/pip-audit/vulture on its clone (L19). Counts come from Devin's execution log.
+- Devin does NOT create plans or review guides. GLM does.
+- The user is the bridge — copies files between GLM's download folder and Devin's working tree.
+
+---
+
+## GLM workflow
+
+When the user pastes a Devin execution log, GLM follows these 7 steps in order. Do not skip steps. Do not improvise.
+
+### Step 1 — Read the pasted execution log
+
+The user's paste IS the execution log. It contains every command Devin ran, every output, every error, every STOP condition. Read it end-to-end before doing anything else. Extract:
+- Actual test count, ruff count, mypy count, bandit count, pip-audit count, vulture count
+- Any STOP conditions triggered
+- Any rule proposals Devin submitted (C9)
+- Any deviations from the plan (scope creep, silent skips, etc.)
+
+### Step 2 — Check the latest repo to verify Devin followed the prompt correctly
+
+```bash
+git fetch origin
+git log --oneline origin/master -5
+git show origin/master:CHANGELOG.md | sed -n '/prompt-{N}/,/^## /p' | head -30
+git ls-remote --tags origin | grep prompt-{N}
+```
+
+Verify:
+- The prompt's tag exists on origin (e.g. `prompt-59`)
+- The CHANGELOG entry matches what Devin reported in the execution log
+- The commit stat matches the files the plan said to touch (no scope creep)
+- The handoff's "Completed prompts" table has the new row
+- The handoff's baselines are updated
+- The "Next 5 prompts" queue is refilled
+
+If anything doesn't match, flag it to the user — Devin may have deviated from the plan.
+
+### Step 3 — Read the handoff to remind yourself how to make prompts
+
+Re-read these sections every time:
+- [Start here](#start-here-for-a-new-glm-chat-receiving-this-handoff) — the onboarding block at the top (clone if needed, L19 reminder)
+- [Roles](#roles) — confirm who does what
+- [GLM workflow](#glm-workflow) — this section
+- [Devin plan template](#devin-plan-template) — the opening + closing steps to copy into the new plan
+- [Known landmines](#known-landmines) — avoid repeating past mistakes
+- [Completed prompts](#completed-prompts) — what's been done, what patterns emerged
+- [Next 5 prompts](#next-5-prompts) — what's queued next
+
+**Also read from the repo (not the handoff):**
+- `AGENTS.md` — the 22 stable rules Devin auto-discovers. Read this before Step 4 (creating new AGENTS.md rules) so you don't propose duplicates. Get it via `git show origin/master:AGENTS.md` or read from your clone at `AGENTS.md`.
+- The previous plan's Section 0 (L1-L26 evolving rules). Plans live in `GLM Prompts/{decade}s/plan-{N-1}.md` in the repo, where `{decade}` is the floor of the plan number divided by 10 (e.g. plan-59 → `50s`, plan-60 → `60s`, plan-61 → `60s`, plan-72 → `70s`). Read the previous plan's Section 0 and carry its L1-L26 rules forward into the new plan, adding any new L-rules that were proposed in the previous plan's C9 rule-proposal step. Example: `git show origin/master:"GLM Prompts/50s/plan-59.md" | sed -n '/^## Section 0/,/^---$/p'`
+
+### Step 4 — Create new AGENTS.md rules from execution-log findings
+
+GLM sees patterns across multiple execution logs that Devin can't see (Devin only executes one plan at a time and has no memory of past execution logs). When GLM spots a recurring inefficiency, mistake, or workaround in Devin's execution logs, GLM creates a new rule for `AGENTS.md` — the always-on stable rules file that Devin auto-discovers.
+
+**Before creating a new rule**: read `AGENTS.md` from the repo (`git show origin/master:AGENTS.md` or read from your clone). Confirm the rule doesn't already exist — if it does, don't create a duplicate. If a similar rule exists but doesn't cover the specific pattern you spotted, propose amending the existing rule rather than adding a new one.
+
+**When to create a rule**: after reading the execution log (Step 1) and reviewing the repo state (Step 2), scan for any of these signals:
+- Devin repeated the same mistake across 2+ prompts (e.g. running `mypy .` instead of file-scoped, using Unix commands on Windows, forgetting to tag)
+- Devin hit a STOP condition that a simple rule could have prevented
+- Devin worked around a problem in a way that suggests the rules didn't cover it
+- Devin's execution took noticeably longer than necessary due to a workflow gap
+- A landmine in the handoff's "Known landmines" section would be better as an AGENTS.md rule (so Devin follows it automatically, not just when GLM notices)
+
+**How to format the rule**: write the rule as an instruction to Devin, phrased to fit AGENTS.md's existing categories (PowerShell / scans / git / editing / scope / etc.). Each rule needs:
+- **Rule text**: one-line instruction (e.g. "Always use file-scoped mypy (`mypy file.py`), never `mypy .` — it takes 2-5 minutes and stalls the terminal.")
+- **Category**: which AGENTS.md section it belongs in
+- **Trigger**: concrete event from the execution log (e.g. "Devin ran `mypy .` in Plan 59 S3.3 and waited 4 minutes")
+- **Expected benefit**: one line — what gets faster/cleaner if Devin follows this rule
+
+**Where to put the rules**: in the new plan's opening Step 3 (see [Devin plan template](#devin-plan-template)). Devin will read them at S0.3 and add them to AGENTS.md before any other coding. Do NOT put the rules in the context brief — they go in the plan itself so Devin finds them at the right moment.
+
+**If no new patterns are found**: the plan's opening Step 3 should say "No new AGENTS.md rules this prompt." Silence is NOT acceptable — explicit reflection is required, same as Devin's C9 rule-proposal step.
+
+**Relationship to Devin's C9 rule-proposal step**: complementary, not duplicative. Devin's C9 proposes rules based on what Devin noticed during execution. GLM's Step 4 creates rules based on patterns GLM noticed across multiple execution logs. Both feed into AGENTS.md, but via different paths: Devin's C9 goes through the user-review-then-commit path; GLM's Step 4 goes directly into the next plan for Devin to implement at opening.
+
+### Step 5 — Make the prompt + review guide for Claude
+
+Create two files in `/home/z/my-project/download/` (clear the folder first — see [File hygiene](#file-hygiene)):
+
+1. **`plan-{N}.md`** — the plan Devin will execute. Structure:
+   - Section 0: rules (L1-L26, evolving)
+   - Why this plan exists
+   - Opening steps (S0) — copied from [Devin plan template](#devin-plan-template)
+   - Body steps (S1, S2, ...) — the actual work
+   - Closing: "Run `/jarvis-close`" — references [Devin plan template](#devin-plan-template)
+   - STOP conditions
+   - Out of scope (deferred)
+
+2. **`plan-{N}-context-brief.md`** — the review guide for Claude. ~30-50 lines, pointer-based (reference handoff sections by pointer, don't copy). Include:
+   - What's different from the previous plan
+   - What this plan does (1-2 lines per step)
+   - Baselines (tests, ruff, mypy, etc. — sourced from handoff, NOT from GLM clone per L19)
+   - Review focus questions for Claude (3-6 specific questions)
+
+### Step 6 — Review Claude's proposals
+
+**User-bridge step**: GLM and Claude are different AIs in different chats. The user bridges them: they paste the plan + context brief to Claude in a separate chat, then paste Claude's findings back to this GLM chat. **Wait for the user's paste before proceeding.** Do not assume Claude's findings — you cannot see them until the user pastes them.
+
+When Claude reviews the plan, it returns findings. GLM's job:
+- **Blocking findings (B1, B2, ...)**: must be fixed before plan execution. Either fix the plan file directly, or if the finding is about repo state (e.g. duplicate CHANGELOG entries), produce a fix in the download folder for the user to apply.
+- **High-severity (H1, H2, ...)**: should be fixed. Same approach.
+- **Medium (M1, M2, ...)**: fix if cheap, defer if expensive. Document deferrals.
+- **Low (L1, L2, ...)**: defer unless trivial.
+
+Per the [Claude review workflow](#claude-review-workflow) section: no cap on revision rounds — continue until PLACE with zero findings. If the same blocking finding persists across 3+ rounds, flag it to the user as a potential impasse (don't auto-escalate, but do surface the stalemate).
+
+### Step 7 — Implement the good proposals
+
+Apply the fixes from step 6 to the plan file (and to download-folder copies of repo files if the finding is about repo state). Keep a `CHANGES.md` in the download folder summarizing what was applied, what was deferred, and why.
+
+**File hygiene**: before generating a new batch of files, clear the download folder:
+```bash
+rm -f /home/z/my-project/download/*
+```
+This prevents stale files from confusing the user.
+
+### Step 8 — Remake the prompt as "Rev 2" (if review changed it)
+
+If Claude's review produced changes (Step 6-7), the revised plan becomes "Rev 2". Update the plan file in place (don't create `plan-60-rev2.md` — overwrite `plan-60.md`). Update the context brief to note "Revised: Rev 2, changes from Rev 1: <list>".
+
+If the review produced no changes (PLACE on first pass), skip this step.
+
+**Final delivery**: the download folder should contain exactly:
+- `plan-{N}.md` — the plan for Devin (revised if applicable)
+- `plan-{N}-context-brief.md` — the review guide for Claude (for reference)
+- Any repo-file copies the user needs to apply manually (e.g. `CHANGELOG.md`, `SOVEREIGN_AI_HANDOFF.md`) — only if the review found issues in repo state
+- `CHANGES.md` — summary of what was applied (only if Rev 2)
+
+Tell the user: "Copy `plan-{N}.md` to `c:\Jarvis\GLM Prompts\{decade}s\plan-{N}.md` and point Devin at it."
+
+---
+
+## Devin plan template
+
+GLM copies these opening + closing steps into every plan file. Devin executes them from the plan, not from this handoff.
 
 ### Opening steps (GLM puts these at the start of every plan's Step 0)
 
@@ -164,9 +333,33 @@ These are the template steps GLM includes in every plan file. Devin executes the
    - **Do NOT run `git pull origin master`.** Devin's local working copy is authoritative. Pulling from GitHub risks overwriting local work or pulling in unexpected changes. The previous-tag check above is sufficient to confirm the prior plan was pushed.
    - **If review fixes need to be applied** (e.g. CHANGELOG/handoff corrections from GLM review), they are applied MANUALLY to the local copy BEFORE the plan starts — not via git pull.
 
+3. **Read AGENTS.md in full and add any new rules GLM specified for this plan** (mandatory before any coding step):
+   ```powershell
+   Get-Content AGENTS.md
+   ```
+   - Read every rule in AGENTS.md end-to-end. These are the always-on rules Devin auto-discovers — they govern every coding step in this plan. Do NOT skip this read even if you've read AGENTS.md before; rules may have changed since the previous plan.
+   - After reading, check this plan's opening for any new rules GLM created based on execution-log findings (see [GLM workflow → Step 4](#step-4--create-new-agentsmd-rules-from-execution-log-findings)). GLM puts new rules directly in the plan, not in the context brief.
+   - If this plan specifies new rules, **add them to AGENTS.md now** before any other step:
+     1. Open `AGENTS.md`
+     2. For each new rule, find the section matching the rule's `Category` (PowerShell / scans / git / editing / scope / etc.)
+     3. Append the rule at the end of that section, numbered as the next rule in the section
+     4. Commit the change:
+        ```powershell
+        git add AGENTS.md
+        git commit -m "rules: add AGENTS.md rule(s) from plan-{N} opening step 3
+
+        Created by GLM based on execution-log findings.
+        Trigger: <from plan>
+        Expected benefit: <from plan>"
+        ```
+   - **Do NOT proceed to any coding step until AGENTS.md is read in full AND all new rules are committed.** Coding without the rules active risks repeating the same inefficiency the rule addresses.
+   - If this plan says "No new AGENTS.md rules this prompt," skip the add-to-AGENTS.md part but still read AGENTS.md in full.
+
 Note: `Start-Transcript` does NOT work with Devin's multi-terminal architecture — Devin runs commands in separate terminal instances. The execution log is the user's chat paste (which shows every command + output). Do not use `Start-Transcript`.
 
 ### Closing steps (GLM puts these at the end of every plan)
+
+Devin executes all of these. Steps 7-8 (handoff update + rule proposal) are Devin's responsibility (NOT GLM's — GLM does not edit the repo).
 
 1. Run full test suite: `python -m pytest tests/ -q --tb=short`. Confirm zero new failures.
 2. `ruff check <files_touched>` — zero errors.
@@ -188,9 +381,17 @@ Note: `Start-Transcript` does NOT work with Devin's multi-terminal architecture 
    - Tag: prompt-{N} verified on origin
    ```
    Use `-Encoding utf8` on both `Get-Content` and `Add-Content` (L15).
-7. **Execution log**: the user pastes Devin's chat transcript to GLM after each prompt. This IS the execution log — it contains every command, output, error, and thinking step. GLM reads it to extract actual counts, issues for next prompt, and STOP conditions. No separate log file or transcript is needed.
-8. Update this handoff: move completed plan to "Completed prompts" table, update test baseline + static analysis baseline, refill "Next 5 prompts" queue.
-9. **Rule proposal (self-evolution — L20 in global_rules_v2.md, L24 in this handoff)**: scan your work this prompt for recurring error patterns or landmines not covered by `global_rules.md`. If found, append a `## Rule proposal for global_rules.md` section to your closing report with:
+7. Update this handoff — 5 updates required:
+   - **(a) Completed prompts table**: move completed plan to "Completed prompts" table (add new row at the bottom with #, prompt name, test count, one-line notes).
+   - **(b) Baselines**: update "Test baseline" line and "Static analysis baseline" block with actual counts from this plan's S1.
+   - **(c) Next 5 prompts queue**: shift the queue — Plan {N+1} becomes active, add a new open slot at the bottom. If the active plan changed scope during execution, update its entry in the queue.
+   - **(d) Status sections** (mandatory — these drift if not updated every plan):
+     - **"What works right now"**: add any newly-working feature (e.g. "POST /api/tasks now returns task_id" after wiring). Remove any feature that broke during this plan.
+     - **"What's broken right now"**: add any new breakage discovered/fixed-partially this plan. Mark resolved items as "(RESOLVED by Plan {N})" — see F4/F9 in that section for the pattern. Remove fully-resolved items if the section gets too long.
+     - **"What's built but not reachable"**: remove any subsystem that got wired into a runtime entry point this plan. Add any new subsystem built but not yet wired. Update the "Why it's dormant" column if the reason changed.
+     - **"What's deferred (not started)"**: add any newly-deferred item. Remove any item that got started this plan (it should move to "Completed prompts" or "What's built but not reachable" as appropriate).
+   - **(e) Landmines**: if this plan hit a new failure pattern not covered by existing landmines, add a new landmine entry (L{n+1} or M{n+1} after Plan 60 renumbers). If a landmine was resolved by a rule added to AGENTS.md, mark it "(FIXED — captured as AGENTS.md rule {n})".
+8. **Rule proposal (self-evolution — L20 in global_rules_v2.md, L24 in this handoff)**: scan your work this prompt for recurring error patterns or landmines not covered by `global_rules.md`. If found, append a `## Rule proposal for global_rules.md` section to your closing report with:
    ```
    Trigger: <what happened this prompt — concrete, e.g. "TypeError comparing naive and aware datetime in test_calendar.py line 47">
    Recurrence: <prompt numbers where this same pattern bit, or "first occurrence">
@@ -199,8 +400,15 @@ Note: `Start-Transcript` does NOT work with Devin's multi-terminal architecture 
    Why existing rules didn't catch it: <one line>
    ```
    If no new failure patterns were encountered, append: `## Rule proposal — none (no new failure patterns this prompt)`. Silence is NOT acceptable — explicit reflection is required. GLM reviews each proposal after the plan completes and updates `global_rules.md` (now v2) if accepted.
-10. `git add CHANGELOG.md SOVEREIGN_AI_HANDOFF.md && git commit -m "docs: prompt-{N} changelog and handoff update"`
-11. `git push origin master && git push origin prompt-{N}`
+9. `git add CHANGELOG.md SOVEREIGN_AI_HANDOFF.md && git commit -m "docs: prompt-{N} changelog and handoff update"`
+10. `git push origin master && git push origin prompt-{N}`
+11. **Post-push verification** (mandatory — confirms the push actually worked):
+    ```powershell
+    git ls-remote --tags origin | findstr prompt-{N}
+    ```
+    Expected: returns the tag SHA (e.g. `2e9f883...`). If empty, the push failed — re-run step 10. If still empty after a second attempt, STOP and report (network issue, auth issue, or tag conflict).
+
+**Note**: The user pastes Devin's chat transcript to GLM after the plan completes — this is covered in [GLM workflow → Step 1](#step-1--read-the-pasted-execution-log), not here. Devin does not need to do anything for this; it happens automatically when the user copies the chat.
 
 ### Plan completion checklist (GLM puts this at the end of every plan — Devin must paste ALL before reporting done)
 
@@ -210,9 +418,10 @@ Note: `Start-Transcript` does NOT work with Devin's multi-terminal architecture 
 3. C5 file list: <paste git show prompt-{N} --stat>
 4. C10 pushed: <paste git push origin prompt-{N}>
 5. C11 tag on origin: <paste git ls-remote --tags origin | findstr prompt-{N}>
-6. Handoff updated: <paste the new completed-prompts table row>
+6. Handoff completed-prompts row: <paste the new completed-prompts table row>
 7. Handoff baselines updated: <paste the test baseline + mypy count lines>
-8. Rule proposal section: <paste either the proposal block OR "none — no new failure patterns this prompt">
+8. Handoff status sections updated: <paste the diff of "What works" / "What's broken" / "What's built but not reachable" / "What's deferred" sections — show what changed>
+9. Rule proposal section: <paste either the proposal block OR "none — no new failure patterns this prompt">
 ```
 
 If any check fails or output is missing (including the rule-proposal section), the plan is NOT complete (Rule 21, L17, L24).
@@ -247,7 +456,7 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 18. Tests change with code. Full test suite MUST pass before tagging.
 19. Execute steps and gates in listed order. Gate output must be pasted literally — "PASSED" without evidence is forbidden.
 20. `table_name` in `memory/postgres.py` MUST be validated against `^[a-zA-Z_][a-zA-Z0-9_]{0,62}$` at construction time.
-21. **Closing steps C1-C11 are MANDATORY. A plan is NOT complete until the completion checklist passes.** Tag-push gate verification (`git ls-remote --tags origin | findstr prompt-NN`) is mandatory. Handoff baselines MUST be updated.
+21. **Closing steps 1-11 are MANDATORY for code-touching plans. A plan is NOT complete until the completion checklist passes.** Tag-push gate verification (`git ls-remote --tags origin | findstr prompt-NN`) is mandatory. Handoff baselines MUST be updated. **Docs-only exception**: plans that touch no `.py` files may skip steps 2 (ruff) and 3 (mypy) — no code to lint/type-check. All other steps (1, 4-11) remain mandatory, including tests (to confirm no test fixtures broke from docs changes), CHANGELOG, handoff update, rule proposal, tag, push, and post-push verify.
 
 ---
 
@@ -318,7 +527,7 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 - Every 5th plan (55, 60...): full scan (ruff + mypy . + bandit + pip-audit + vulture + pytest).
 - Security-sensitive plans: always run bandit.
 - Dependency-touching plans: always run pip-audit.
-- Docs-only plans: git tag check + pytest count only.
+- Docs-only plans (no `.py` files touched): pytest count + tag check + handoff/CHANGELOG update + rule proposal + tag + push + post-push verify. Skip ruff (step 2) and mypy (step 3) — no code to check. See architecture rule 21 for the docs-only exception clause.
 
 ---
 
