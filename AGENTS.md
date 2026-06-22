@@ -38,57 +38,62 @@ For per-plan evolving rules (L1-L25+), read `## Section 0: Rules` at the top of 
 1. **PowerShell only.** Never use `grep`, `cat`, `sed`, `awk`, `head`, `tail`, `touch`. Use `Select-String`, `Get-Content`, `Set-Content`, `Add-Content`, `Get-ChildItem`, `Measure-Object`, `Where-Object`, `ForEach-Object`.
 2. **File-scoped mypy only.** Never `mypy .` — except in 5-plan checkpoint plans (55, 60, 65, 70, 75, 80) where full-repo mypy is the point.
 3. **Sequential scans.** Run scan tools (pytest, ruff, mypy, bandit, pip-audit, vulture) ONE AT A TIME. Parallel execution corrupts output streams and produces wrong counts.
+4. **Bandit finding count — use specific filter.** When counting bandit findings by ID (e.g., B108), filter on the literal `>> Issue: [B` pattern (the issue header line), not just the ID string. The ID appears in multiple line types per finding (issue header, "More Info" URL, and after suppression, "nosec encountered" warning lines), so `bandit ... | Select-String "B108" | Measure-Object -Line` overcounts by ~2x and triggers false-positive STOP conditions. Use:
+   ```powershell
+   bandit -r <scope> -ll --exclude .venv,venv,env,.git,node_modules,__pycache__,build,dist,.tox,.eggs,.pytest_cache 2>&1 | Select-String ">> Issue: \[B108" | Measure-Object -Line
+   ```
+   Or read the `Total issues (by severity):` summary line at the end of bandit output for the authoritative medium/high counts.
 
 ### Edit discipline
-4. **Never use `replace_all`.** It corrupted `a2a_protocol.py` and `escalation.py` in Plan 58 by mangling adjacent lines. Edit each occurrence individually or use targeted line-specific replacements.
-5. **Syntax check after every file edit, BEFORE tests:**
+5. **Never use `replace_all`.** It corrupted `a2a_protocol.py` and `escalation.py` in Plan 58 by mangling adjacent lines. Edit each occurrence individually or use targeted line-specific replacements.
+6. **Syntax check after every file edit, BEFORE tests:**
    ```powershell
    python -c "import ast; ast.parse(open('file.py').read())"
    ```
    If syntax error, STOP — fix before proceeding. Don't wait 90 seconds for tests to catch it.
-6. **Diff check after every file edit:**
+7. **Diff check after every file edit:**
    ```powershell
    git diff --stat <file>
    ```
    Confirm only intended files changed. If unexpected files appear, STOP.
 
 ### Git discipline
-7. **Tag EVERY prompt.** Even docs-only plans must have `git tag prompt-{N}`. Tag the docs commit if no code commit exists. (Plan 56 skipped this — caused verification failure.)
-8. **Tag verification before push:**
+8. **Tag EVERY prompt.** Even docs-only plans must have `git tag prompt-{N}`. Tag the docs commit if no code commit exists. (Plan 56 skipped this — caused verification failure.)
+9. **Tag verification before push:**
    ```powershell
    git tag --list prompt-{N}
    ```
    If empty, tag wasn't created. Create it before proceeding to push.
-9. **Post-push verification (mandatory):**
-   ```powershell
-   git ls-remote --tags origin | Select-String "prompt-{N}"
-   ```
-   If empty, push failed. Fix before reporting completion.
+10. **Post-push verification (mandatory):**
+    ```powershell
+    git ls-remote --tags origin | Select-String "prompt-{N}"
+    ```
+    If empty, push failed. Fix before reporting completion.
 
 ### CHANGELOG discipline
-10. **Append to END only.** Never insert at the top. Oldest entry at top, newest at bottom.
-11. **Use temp-file pattern** (not here-strings, which hang when auto-indented):
+11. **Append to END only.** Never insert at the top. Oldest entry at top, newest at bottom.
+12. **Use temp-file pattern** (not here-strings, which hang when auto-indented):
     ```powershell
     $lines = @("...", "...")
     Set-Content -Path $temp -Value $lines -Encoding utf8
     Get-Content $temp | Add-Content -Path "C:\Jarvis\CHANGELOG.md" -Encoding utf8
     ```
-12. **Simplified format**: ~10-15 lines per entry. Title, changed files, results, test count math. No fluff.
+13. **Simplified format**: ~10-15 lines per entry. Title, changed files, results, test count math. No fluff.
 
 ### Scope discipline
-13. **Pre-declare scope before editing.** List files you WILL edit and files you will NOT edit. Any file outside the "will edit" list requires STOP and GLM authorization.
-14. **HARD STOP on scope expansion.** If you discover work that needs doing outside the plan's scope, STOP and report. Do not fix it unilaterally — even if it looks like a 1-line fix. (Plan 58's two HARD STOPs worked correctly: 1 authorized, 1 deferred.)
-15. **Baseline reconciliation.** If S1 actual count ≠ plan's expected count, you MUST update the handoff baseline in C10 with the actual number + reason for the difference. Don't let stale baselines propagate.
+14. **Pre-declare scope before editing.** List files you WILL edit and files you will NOT edit. Any file outside the "will edit" list requires STOP and GLM authorization.
+15. **HARD STOP on scope expansion.** If you discover work that needs doing outside the plan's scope, STOP and report. Do not fix it unilaterally — even if it looks like a 1-line fix. (Plan 58's two HARD STOPs worked correctly: 1 authorized, 1 deferred.)
+16. **Baseline reconciliation.** If S1 actual count ≠ plan's expected count, you MUST update the handoff baseline in C10 with the actual number + reason for the difference. Don't let stale baselines propagate.
 
 ### Architecture (never violate)
-16. `core/` never imports from `adapters/`, `cli/`, `workers/`, `memory/`, `skills/`, `web/`, or `system/`.
-17. `TraceEmitter` via constructor injection only. Never use the global `emit_trace()` function.
-18. No raw LLM calls outside `adapters/`.
-19. No memory access outside `MemoryRouter`.
-20. All I/O operations are async.
+17. `core/` never imports from `adapters/`, `cli/`, `workers/`, `memory/`, `skills/`, `web/`, or `system/`.
+18. `TraceEmitter` via constructor injection only. Never use the global `emit_trace()` function.
+19. No raw LLM calls outside `adapters/`.
+20. No memory access outside `MemoryRouter`.
+21. All I/O operations are async.
 
 ### Temp file discipline
-21. **Temp files go in `C:\Jarvis\temp\` or `C:\Jarvis\scan\logs\`, NOT repo root.** After the temp file's content has been appended to CHANGELOG.md (or wherever it's consumed), DELETE the temp file. Never leave temp files in repo root — they get committed accidentally and pollute the working tree.
+22. **Temp files go in `C:\Jarvis\temp\` or `C:\Jarvis\scan\logs\`, NOT repo root.** After the temp file's content has been appended to CHANGELOG.md (or wherever it's consumed), DELETE the temp file. Never leave temp files in repo root — they get committed accidentally and pollute the working tree.
     ```powershell
     # After appending temp file to CHANGELOG:
     Remove-Item "C:\Jarvis\temp\changelog-entry-prompt-{N}.md"
