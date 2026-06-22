@@ -12,8 +12,6 @@
 
 > **⚠ Verification needed (B2 from Plan 59 review, 2026-06-22)**: The CHANGELOG entries for 58.5, 58.6, and 58.7 contain contradictory baseline counts (see NOTE blocks in CHANGELOG.md). The 1166/56 figure above is the post-58.7 state as reported, but the progression from 58.5 (1167/55) to 58.6 (1166/56) shows one test moved from passed to skipped — the specific test was not identified. **Plan 59 S1.1 MUST capture the actual baseline** by running `python -m pytest tests/ -q --tb=short` on Windows. If the actual count differs from 1166/56, investigate per L3 landmine (silent skip). Per L19, GLM must NOT run pytest on clone (missing optional deps — anthropic, cohere, google, groq, openai, asyncpg, qdrant — would give a false count).
 
-> **⚠ Verification needed (B2 from Plan 59 review, 2026-06-22)**: The CHANGELOG entries for 58.5, 58.6, and 58.7 contain contradictory baseline counts (see NOTE blocks in CHANGELOG.md). The 1166/56 figure above is the post-58.7 state as reported, but the progression from 58.5 (1167/55) to 58.6 (1166/56) shows one test moved from passed to skipped — the specific test was not identified. **Plan 59 S1.1 MUST capture the actual baseline** by running `python -m pytest tests/ -q --tb=short` on Windows. If the actual count differs from 1166/56, investigate per L3 landmine (silent skip). Per L19, GLM must NOT run pytest on clone (missing optional deps — anthropic, cohere, google, groq, openai, asyncpg, qdrant — would give a false count).
-
 ---
 
 ## Table of contents
@@ -48,7 +46,7 @@
 ---
 
 **Static analysis baseline (post-prompt-55 — 5-plan milestone)**:
-- Ruff: 110 errors (F401=0 since Plan 54; clone-verified 2026-06-22 — was 111 at Plan 55 milestone, drift due to Plan 58.7 F541 fix)
+- Ruff: 111 errors (F401=0 since Plan 54; per Plan 55 full-scan baseline — actual count captured by Devin at Plan 59 S1.2)
 - Mypy (full-repo): 283 errors (was 282 — delta +1)
 - Bandit: 3179 low, 22 medium (22 B108 pre-existing in tests/, deferred)
 - pip-audit: 19 CVEs across 4 packages (was 55 — Plan 56 fixed 36 CVEs)
@@ -156,10 +154,17 @@ These are the template steps GLM includes in every plan file. Devin executes the
    ```
    If empty, STOP — previous prompt's tag wasn't pushed. Fix that first.
 
-2. **Pull latest**:
+2. **Verify local working copy is clean and on master** (do NOT pull):
    ```powershell
-   git pull origin master
+   git status
+   git branch --show-current
+   git rev-parse HEAD
    ```
+   - `git status` should show "nothing to commit, working tree clean"
+   - `git branch --show-current` should show `master`
+   - `git rev-parse HEAD` should match the expected post-`prompt-{N-1}` HEAD
+   - **Do NOT run `git pull origin master`.** Devin's local working copy is authoritative. Pulling from GitHub risks overwriting local work or pulling in unexpected changes. The previous-tag check above is sufficient to confirm the prior plan was pushed.
+   - **If review fixes need to be applied** (e.g. CHANGELOG/handoff corrections from GLM review), they are applied MANUALLY to the local copy BEFORE the plan starts — not via git pull.
 
 Note: `Start-Transcript` does NOT work with Devin's multi-terminal architecture — Devin runs commands in separate terminal instances. The execution log is the user's chat paste (which shows every command + output). Do not use `Start-Transcript`.
 
@@ -309,7 +314,6 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 - **L23 (test-production datetime coupling)**: when changing `datetime.utcnow()` to `datetime.now(timezone.utc)` in test files, check if production code compares datetimes with test data. If production uses `utcnow()` (naive) and tests use `now(timezone.utc)` (aware), Python raises `TypeError: can't compare offset-naive and offset-aware datetimes`. Both must change together. Always scope datetime changes to include both test AND production files that interact with the same datetime values. **Captured as global_rules_v2.md L19** — Devin now has this as a behavioral rule, not just a GLM-side landmine.
 - **L24 (self-evolution meta-mechanism — NEW 2026-06-21)**: Every plan's closing sequence MUST include a rule-proposal step (C9 above). Devin scans its work for failure patterns not covered by `global_rules.md` and either (a) submits a structured proposal, or (b) explicitly states "none — no new failure patterns this prompt." Silence is NOT acceptable — explicit reflection is required. GLM reviews each proposal after the plan completes and updates `global_rules.md` if accepted. This makes `global_rules.md` a living document that grows with the project's actual failures, rather than relying on GLM to notice recurring patterns reactively (which is what L22 attempted, less reliably). First active prompt: Plan 54 (or whichever plan first ships global_rules_v2.md to Devin).
 - **L25 (L-numbering collision — flagged 2026-06-22 by Plan 59 review, deferred to Plan 60)**: This handoff's "Known landmines" section uses labels L1-L24, but per-plan Section 0 (in plan files) ALSO uses labels L1-Lxx with DIFFERENT meanings. Example: handoff L20 = "line numbers verified against clone SHA," but Plan 59 Section 0 L20 = "self-evolution rule proposal." Same label, different rules — causes confusion when cross-referencing. **Deferred fix**: rename handoff landmines from `L1-L24` to `M1-M24` (minefield) at Plan 60 (5-plan milestone, full scan). Reserve `L1-Lxx` for per-plan evolving rules only. Update all cross-references in plan files and CHANGELOG entries at that time.
-- **L25 (L-numbering collision — flagged 2026-06-22 by Plan 59 review, deferred to Plan 60)**: This handoff's "Known landmines" section uses labels L1-L24, but per-plan Section 0 (in plan files) ALSO uses labels L1-Lxx with DIFFERENT meanings. Example: handoff L20 = "line numbers verified against clone SHA," but Plan 59 Section 0 L20 = "self-evolution rule proposal." Same label, different rules — causes confusion when cross-referencing. **Deferred fix**: rename handoff landmines from `L1-L24` to `M1-M24` (minefield) at Plan 60 (5-plan milestone, full scan). Reserve `L1-Lxx` for per-plan evolving rules only. Update all cross-references in plan files and CHANGELOG entries at that time.
 
 **Verification cadence (L18)**:
 - Every plan: ruff (file-scoped) + mypy (file-scoped) + pytest.
@@ -354,12 +358,12 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ## Next 5 prompts
 
-### Plan 59 — Ruff cleanup (110→0) + B108 scoped suppressions (READY FOR EXECUTION)
+### Plan 59 — Ruff cleanup (113→0) + B108 scoped suppressions (READY FOR EXECUTION)
 - **Status**: Reviewed by GLM on 2026-06-22. Decision: PLACE → revised → READY. All blocking findings (B1, B2) and high-severity findings (H1, H2) addressed.
 - **Blocking fixes applied** (commits `9fe2cf5`, `648f8bb` on branch `review/plan-59-revisions`): duplicate prompt-57 CHANGELOG entries removed; 58.6/58.7 baseline contradictions flagged; L25 landmine added; Plan 59 added to this queue.
 - **Plan file**: local-only (gitignored under `GLM Prompts/`). Revised plan at `/home/z/my-project/download/plan-59.md` — copy to Devin's local plan folder before execution.
 - **Verification needed at S1.1**: capture actual test baseline on Windows to resolve B2 contradiction (1166/56 vs 1167/55).
-- **Clone-verified baselines** (2026-06-22): ruff=110 (was estimated 113), B108=22 (all in tests/), prompt-58.7 tag=`66315df` on origin.
+- **Baselines**: per handoff Plan 55 full-scan (ruff=111, B108=22 in tests/). Actual counts captured by Devin at S1.1/S1.2/S1.3 — do NOT trust GLM clone counts (L19).
 
 ### Plan 60 — Full checkpoint scan (P1)
 - 5-plan milestone: full scan. Verify Plans 57-59 progress.
