@@ -27,8 +27,9 @@ def serve(
     # Get or create token
     token = asyncio.run(auth_manager.get_or_create_token())
     
-    # Print token on first run
-    print(f"Jarvis auth token: {token} — save this, it won't be shown again")
+    # Display token on first run (mask middle portion to reduce log exposure)
+    masked = token[:6] + "..." + token[-4:] if len(token) > 10 else token
+    print(f"Jarvis auth token (masked): {masked} — full token stored in .env file")
     
     # Instantiate MemoryTraceEmitter
     emitter = MemoryTraceEmitter()

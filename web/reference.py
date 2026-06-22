@@ -7,9 +7,10 @@ The web GUI would typically use FastAPI + WebSockets for real-time communication
 """
 
 from typing import Dict, Any, List, Optional
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect, Header, HTTPException
 from pydantic import BaseModel
 import json
+import os
 
 # Add project root to path
 import sys
@@ -24,6 +25,21 @@ from core.commands import (
     get_command_registry,
 )
 from core.handlers import register_default_handlers
+
+
+def _verify_token(authorization: str = Header(default=None)) -> None:
+    """Verify Bearer token from Authorization header.
+
+    Raises:
+        HTTPException: 401 if token is missing or invalid
+    """
+    expected = os.environ.get("JARVIS_AUTH_TOKEN")
+    if not expected:
+        raise HTTPException(status_code=503, detail="Auth not configured")
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    if authorization[7:] != expected:
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 class WebCommandRequest(BaseModel):
@@ -92,9 +108,9 @@ class WebGUIReference:
             commands = registry.get_all_commands()
             return {"commands": [cmd.value for cmd in commands]}
         
-        @self.app.post("/execute")
+        @self.app.post("/execute", dependencies=[Depends(_verify_token)])
         async def execute_command(request: WebCommandRequest):
-            """Execute a command via HTTP POST."""
+            """Execute a command via HTTP POST (requires auth)."""
             registry = get_command_registry()
             
             # Resolve command type
@@ -133,7 +149,14 @@ class WebGUIReference:
         
         @self.app.websocket("/ws/{session_id}")
         async def websocket_endpoint(websocket: WebSocket, session_id: str):
-            """WebSocket endpoint for real-time communication."""
+            """WebSocket endpoint for real-time communication (requires auth via ?token= query param)."""
+            # Validate token from query params before accepting connection
+            token = websocket.query_params.get("token")
+            expected = os.environ.get("JARVIS_AUTH_TOKEN")
+            if not expected or not token or token != expected:
+                await websocket.close(code=1008)
+                return
+
             await websocket.accept()
             self.active_connections[session_id] = websocket
             

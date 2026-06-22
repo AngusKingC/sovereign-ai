@@ -138,10 +138,12 @@ class CodeExecutionSkill:
                     "error": "Approval request failed",
                 }
 
-        # Execute code in subprocess
+        # Execute code in subprocess (use exec to avoid shell injection)
         try:
-            process = await asyncio.create_subprocess_shell(
-                "python -c \"" + code.replace('"', '\\"') + "\"",
+            import sys
+
+            process = await asyncio.create_subprocess_exec(
+                sys.executable, "-c", code,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )

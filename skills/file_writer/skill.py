@@ -17,6 +17,7 @@ from core.observability import (
     NullTraceEmitter,
 )
 from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType
+from core.path_validator import validate_path
 
 if TYPE_CHECKING:
     pass
@@ -68,6 +69,9 @@ class FileWriterSkill:
             raise ValueError("Path must be a non-empty string")
         if not isinstance(content, str):
             raise ValueError("Content must be a string")
+
+        # Path traversal protection: block sensitive system paths
+        validate_path(path)
 
         # Check approval scope first
         if self.approval_gate:

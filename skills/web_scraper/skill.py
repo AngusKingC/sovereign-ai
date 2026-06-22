@@ -17,6 +17,7 @@ from core.observability import (
     MemoryTraceEmitter,
 )
 from core.input_sanitiser import InputSanitiser
+from core.url_validator import validate_url
 
 
 class WebScraperSkill:
@@ -43,6 +44,9 @@ class WebScraperSkill:
         """
         if not url or not isinstance(url, str):
             raise ValueError("URL must be a non-empty string")
+
+        # SSRF protection: block requests to private/internal networks
+        validate_url(url)
 
         try:
             async with httpx.AsyncClient() as client:

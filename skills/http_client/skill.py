@@ -15,6 +15,7 @@ from core.observability import (
     TraceEmitter,
     MemoryTraceEmitter,
 )
+from core.url_validator import validate_url
 
 
 class HttpClientSkill:
@@ -53,6 +54,9 @@ class HttpClientSkill:
         Returns:
             Dict with status_code, body, and headers.
         """
+        # SSRF protection: block requests to private/internal networks
+        validate_url(url)
+
         start_time = asyncio.get_event_loop().time()
 
         try:
@@ -110,6 +114,9 @@ class HttpClientSkill:
         Returns:
             Dict with status_code, body, and headers.
         """
+        # SSRF protection: block requests to private/internal networks
+        validate_url(url)
+
         if self._approval_gate:
             request = ApprovalRequest(
                 request_id=str(uuid4()),
@@ -188,6 +195,9 @@ class HttpClientSkill:
         Returns:
             Dict with status_code, body, and headers.
         """
+        # SSRF protection: block requests to private/internal networks
+        validate_url(url)
+
         if self._approval_gate:
             request = ApprovalRequest(
                 request_id=str(uuid4()),
@@ -264,6 +274,9 @@ class HttpClientSkill:
         Returns:
             Dict with status_code, body, and headers.
         """
+        # SSRF protection: block requests to private/internal networks
+        validate_url(url)
+
         if self._approval_gate:
             request = ApprovalRequest(
                 request_id=str(uuid4()),

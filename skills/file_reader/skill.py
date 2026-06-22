@@ -13,6 +13,7 @@ from core.observability import (
     TraceEmitter,
     MemoryTraceEmitter,
 )
+from core.path_validator import validate_path
 
 
 class FileReaderSkill:
@@ -40,6 +41,9 @@ class FileReaderSkill:
         """
         if not path or not isinstance(path, str):
             raise ValueError("Path must be a non-empty string")
+
+        # Path traversal protection: block sensitive system paths
+        validate_path(path)
 
         try:
             import aiofiles
