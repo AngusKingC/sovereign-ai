@@ -4,7 +4,7 @@ Notes Skill - Postgres-backed notes via MemoryRouter.
 Single responsibility: Manage notes stored in MemoryRouter with approval gating.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from core.observability import (
@@ -88,7 +88,7 @@ class NotesSkill:
                     action_parameters={"title": title, "tags": tags or []},
                     risk_level="low",
                     reason_for_approval="Note creation is low-risk but requires tracking",
-                    expires_at=datetime.utcnow() + timedelta(seconds=300),
+                    expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
                 )
                 response = await self._approval_gate.request_approval(request)
                 if not response.approved:
@@ -145,8 +145,8 @@ class NotesSkill:
                 "title": title,
                 "content": content,
                 "tags": tags or [],
-                "created_at": datetime.utcnow().isoformat(),
-                "updated_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             }
             
             await self._memory_router.scoped_write("notes", f"notes:{note_id}", note)
@@ -409,7 +409,7 @@ class NotesSkill:
                     action_parameters={"note_id": note_id, "title": title, "tags": tags},
                     risk_level="low",
                     reason_for_approval="Note update is low-risk but requires tracking",
-                    expires_at=datetime.utcnow() + timedelta(seconds=300),
+                    expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
                 )
                 response = await self._approval_gate.request_approval(request)
                 if not response.approved:
@@ -491,7 +491,7 @@ class NotesSkill:
                 note["content"] = content
             if tags is not None:
                 note["tags"] = tags
-            note["updated_at"] = datetime.utcnow().isoformat()
+            note["updated_at"] = datetime.now(timezone.utc).isoformat()
             
             await self._memory_router.scoped_write("notes", f"notes:{note_id}", note)
             
@@ -586,7 +586,7 @@ class NotesSkill:
                     action_parameters={"note_id": note_id},
                     risk_level="medium",
                     reason_for_approval="Note deletion is destructive",
-                    expires_at=datetime.utcnow() + timedelta(seconds=300),
+                    expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
                 )
                 response = await self._approval_gate.request_approval(request)
                 if not response.approved:

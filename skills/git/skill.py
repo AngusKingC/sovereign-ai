@@ -2,7 +2,7 @@
 
 import asyncio
 from typing import Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType
@@ -176,7 +176,7 @@ class GitSkill:
                 action_parameters={"message": message},
                 risk_level="medium",
                 reason_for_approval="Git commit requires approval per policy",
-                expires_at=datetime.utcnow() + timedelta(seconds=300),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
             )
             response = await self._approval_gate.request_approval(request)
             approved = response.approved
@@ -255,7 +255,7 @@ class GitSkill:
                 action_parameters={"remote": remote, "branch": branch},
                 risk_level="medium",
                 reason_for_approval="Git push requires approval per policy",
-                expires_at=datetime.utcnow() + timedelta(seconds=300),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
             )
             response = await self._approval_gate.request_approval(request)
             approved = response.approved
@@ -324,7 +324,7 @@ class GitSkill:
                 action_parameters={"remote": remote, "branch": branch},
                 risk_level="medium",
                 reason_for_approval="Git pull requires approval per policy",
-                expires_at=datetime.utcnow() + timedelta(seconds=300),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
             )
             response = await self._approval_gate.request_approval(request)
             approved = response.approved

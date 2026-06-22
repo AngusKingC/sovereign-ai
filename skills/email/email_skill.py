@@ -282,7 +282,7 @@ class EmailSkill:
         
         # Request approval
         try:
-            from datetime import datetime, timedelta
+            from datetime import datetime, timedelta, timezone
             from uuid import uuid4
             
             request = ApprovalRequest(
@@ -294,7 +294,7 @@ class EmailSkill:
                 action_parameters={"to": to, "subject": subject},
                 risk_level="medium",
                 reason_for_approval="Email can send external communications",
-                expires_at=datetime.utcnow() + timedelta(seconds=300),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
             )
             response = await self._approval_gate.request_approval(request)
             if not response.approved:

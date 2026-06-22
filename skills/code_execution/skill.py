@@ -76,7 +76,7 @@ class CodeExecutionSkill:
         # Request approval if gate is present
         if self._approval_gate is not None:
             try:
-                from datetime import datetime, timedelta
+                from datetime import datetime, timedelta, timezone
                 from uuid import uuid4
 
                 request = ApprovalRequest(
@@ -84,11 +84,11 @@ class CodeExecutionSkill:
                     task_id=str(uuid4()),
                     session_id="default",
                     action_type=ApprovalActionType.SHELL_COMMAND,
-                    action_description=f"Execute Python code",
+                    action_description="Execute Python code",
                     action_parameters={"code_length": len(code)},
                     risk_level="high",
                     reason_for_approval="Code execution can modify system state",
-                    expires_at=datetime.utcnow() + timedelta(seconds=300),
+                    expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
                 )
                 response = await self._approval_gate.request_approval(request)
                 if not response.approved:

@@ -5,7 +5,7 @@ Single responsibility: Evaluate and recommend the best available model
 for a worker's task type based on hardware constraints and task suitability.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -90,7 +90,7 @@ class ModelEvaluator:
         try:
             await self.emitter.emit(TraceEvent(
                 event_id=uuid4(),
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 event_type=TraceEventType.OPERATION_START,
                 component=TraceComponent.SYSTEM,
                 level=TraceLevel.INFO,
@@ -125,14 +125,14 @@ class ModelEvaluator:
                 worker_id=worker_id,
                 task_type=",".join(task_tags),
                 recommendations=[],
-                evaluated_at=datetime.utcnow(),
+                evaluated_at=datetime.now(timezone.utc),
                 hardware_snapshot={},
             )
             
             try:
                 await self.emitter.emit(TraceEvent(
                     event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     event_type=TraceEventType.OPERATION_COMPLETE,
                     component=TraceComponent.SYSTEM,
                     level=TraceLevel.WARNING,
@@ -244,14 +244,14 @@ class ModelEvaluator:
             worker_id=worker_id,
             task_type=",".join(task_tags),
             recommendations=recommendations,
-            evaluated_at=datetime.utcnow(),
+            evaluated_at=datetime.now(timezone.utc),
             hardware_snapshot=hardware_snapshot,
         )
 
         try:
             await self.emitter.emit(TraceEvent(
                 event_id=uuid4(),
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 event_type=TraceEventType.OPERATION_COMPLETE,
                 component=TraceComponent.SYSTEM,
                 level=TraceLevel.INFO,
@@ -317,7 +317,7 @@ class ModelEvaluator:
         try:
             await self.emitter.emit(TraceEvent(
                 event_id=uuid4(),
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 event_type=TraceEventType.OPERATION_COMPLETE,
                 component=TraceComponent.SYSTEM,
                 level=TraceLevel.INFO,

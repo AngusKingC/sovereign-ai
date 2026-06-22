@@ -5,7 +5,7 @@ Single responsibility: Read and write ICS calendar files with approval gating.
 """
 
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from core.observability import (
@@ -96,7 +96,7 @@ class CalendarSkill:
             )
             
             # Get current time and end time
-            now = datetime.utcnow().replace(tzinfo=None)
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             end_time = now + timedelta(days=days)
             
             # Extract events
@@ -246,7 +246,7 @@ class CalendarSkill:
                 action_parameters={"summary": summary, "start": start, "end": end},
                 risk_level="medium",
                 reason_for_approval="Calendar events modify stored data",
-                expires_at=datetime.utcnow() + timedelta(seconds=300),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
             )
             response = await self._approval_gate.request_approval(request)
             if not response.approved:
@@ -330,7 +330,7 @@ class CalendarSkill:
                 event.add("location", location)
             if description:
                 event.add("description", description)
-            event.add("dtstamp", datetime.utcnow())
+            event.add("dtstamp", datetime.now(timezone.utc))
             
             # Add to calendar
             calendar.add_component(event)
@@ -436,7 +436,7 @@ class CalendarSkill:
                 action_parameters={"uid": uid},
                 risk_level="medium",
                 reason_for_approval="Calendar events modify stored data",
-                expires_at=datetime.utcnow() + timedelta(seconds=300),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
             )
             response = await self._approval_gate.request_approval(request)
             if not response.approved:

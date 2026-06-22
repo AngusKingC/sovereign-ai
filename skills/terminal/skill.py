@@ -80,7 +80,7 @@ class TerminalSkill:
         # Request approval if gate is present
         if self._approval_gate is not None:
             try:
-                from datetime import datetime, timedelta
+                from datetime import datetime, timedelta, timezone
                 from uuid import uuid4
 
                 request = ApprovalRequest(
@@ -92,7 +92,7 @@ class TerminalSkill:
                     action_parameters={"command": command, "working_dir": self._working_dir},
                     risk_level="high",
                     reason_for_approval="Shell commands can modify system state",
-                    expires_at=datetime.utcnow() + timedelta(seconds=300),
+                    expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
                 )
                 response = await self._approval_gate.request_approval(request)
                 if not response.approved:

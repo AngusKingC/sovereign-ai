@@ -6,7 +6,7 @@ to survive daemon restarts. Supports immediate, deferred, recurring, and conditi
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import TYPE_CHECKING
 
@@ -43,7 +43,7 @@ class ScheduledTask(BaseModel):
     task_id: str
     schedule_type: TaskScheduleType
     enabled: bool = True
-    scheduled_at: datetime = Field(default_factory=datetime.utcnow)
+    scheduled_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     run_at: datetime | None = None  # For DEFERRED tasks
     interval_seconds: int | None = None  # For RECURRING tasks
     condition: str | None = None  # For CONDITIONAL tasks
@@ -264,7 +264,7 @@ class MonitorDaemon:
                         complexity_score=0,
                         priority="medium",
                         current_state=TaskStatus.RECEIVED,
-                        created_at=datetime.utcnow(),
+                        created_at=datetime.now(timezone.utc),
                     )
                     memory = await self.memory_router.fetch(task)
                     if memory:
@@ -323,7 +323,7 @@ class MonitorDaemon:
         """
         while self._running:
             try:
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc)
                 
                 # Dispatch tasks
                 for task_id, scheduled_task in list(self._scheduled_tasks.items()):

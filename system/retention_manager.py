@@ -271,10 +271,10 @@ class RetentionManager:
         Returns:
             RetentionReport with accumulated counts
         """
-        from datetime import datetime
+        from datetime import datetime, timezone
         
         report = RetentionReport(
-            run_at=datetime.utcnow(),
+            run_at=datetime.now(timezone.utc),
             rules_applied=4,
             records_expired=0,
             records_archived=0,

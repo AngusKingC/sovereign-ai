@@ -3,7 +3,7 @@
 import asyncio
 import json
 from typing import Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType
@@ -111,7 +111,7 @@ class DockerSkill:
                 action_parameters={"container_id": container_id},
                 risk_level="medium",
                 reason_for_approval="Docker start requires approval per policy",
-                expires_at=datetime.utcnow() + timedelta(seconds=300),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
             )
             response = await self._approval_gate.request_approval(request)
             approved = response.approved
@@ -179,7 +179,7 @@ class DockerSkill:
                 action_parameters={"container_id": container_id},
                 risk_level="medium",
                 reason_for_approval="Docker stop requires approval per policy",
-                expires_at=datetime.utcnow() + timedelta(seconds=300),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
             )
             response = await self._approval_gate.request_approval(request)
             approved = response.approved
@@ -294,7 +294,7 @@ class DockerSkill:
                 action_parameters={"container_id": container_id, "command": command},
                 risk_level="high",
                 reason_for_approval="Docker exec requires approval per policy",
-                expires_at=datetime.utcnow() + timedelta(seconds=300),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
             )
             response = await self._approval_gate.request_approval(request)
             approved = response.approved

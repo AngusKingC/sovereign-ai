@@ -3,7 +3,7 @@
 import asyncio
 import httpx
 from typing import Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType
@@ -120,7 +120,7 @@ class HttpClientSkill:
                 action_parameters={"url": url},
                 risk_level="medium",
                 reason_for_approval="HTTP POST requires approval per policy",
-                expires_at=datetime.utcnow() + timedelta(seconds=300),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
             )
             response = await self._approval_gate.request_approval(request)
             approved = response.approved
@@ -198,7 +198,7 @@ class HttpClientSkill:
                 action_parameters={"url": url},
                 risk_level="medium",
                 reason_for_approval="HTTP PUT requires approval per policy",
-                expires_at=datetime.utcnow() + timedelta(seconds=300),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
             )
             response = await self._approval_gate.request_approval(request)
             approved = response.approved
@@ -274,7 +274,7 @@ class HttpClientSkill:
                 action_parameters={"url": url},
                 risk_level="medium",
                 reason_for_approval="HTTP DELETE requires approval per policy",
-                expires_at=datetime.utcnow() + timedelta(seconds=300),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
             )
             response = await self._approval_gate.request_approval(request)
             approved = response.approved

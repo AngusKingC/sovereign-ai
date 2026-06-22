@@ -2,7 +2,7 @@
 
 import asyncio
 from typing import Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType
@@ -99,7 +99,7 @@ class ClipboardSkill:
                 action_parameters={"content_length": len(content)},
                 risk_level="low",
                 reason_for_approval="Clipboard write requires approval per policy",
-                expires_at=datetime.utcnow() + timedelta(seconds=300),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
             )
             response = await self._approval_gate.request_approval(request)
             approved = response.approved
@@ -168,7 +168,7 @@ class ClipboardSkill:
                 action_parameters={},
                 risk_level="low",
                 reason_for_approval="Clipboard clear requires approval per policy",
-                expires_at=datetime.utcnow() + timedelta(seconds=300),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
             )
             response = await self._approval_gate.request_approval(request)
             approved = response.approved

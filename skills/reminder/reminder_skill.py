@@ -4,7 +4,7 @@ Reminder Skill - Postgres-backed reminders via MemoryRouter.
 Single responsibility: Manage reminders stored in MemoryRouter with approval gating.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from core.observability import (
@@ -88,7 +88,7 @@ class ReminderSkill:
                     action_parameters={"text": text, "due_at": due_at, "channel": channel},
                     risk_level="low",
                     reason_for_approval="Reminder creation is low-risk but requires tracking",
-                    expires_at=datetime.utcnow() + timedelta(seconds=300),
+                    expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
                 )
                 response = await self._approval_gate.request_approval(request)
                 if not response.approved:
@@ -401,7 +401,7 @@ class ReminderSkill:
         try:
             reminders = await self.list_pending()
             
-            now = datetime.utcnow().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
             due = [r for r in reminders if r["due_at"] <= now]
             
             return due

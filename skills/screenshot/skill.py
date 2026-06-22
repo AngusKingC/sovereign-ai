@@ -5,7 +5,7 @@ Single responsibility: Capture screen content as PNG bytes or save to file.
 """
 
 from io import BytesIO
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from PIL import ImageGrab
@@ -58,7 +58,7 @@ class ScreenshotSkill:
                 action_parameters={"region": region},
                 risk_level="low",
                 reason_for_approval="Screenshot capture requires approval per policy",
-                expires_at=datetime.utcnow() + timedelta(seconds=300),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
             )
             response = await approval_gate.request_approval(request)
             if not response.approved:

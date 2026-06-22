@@ -6,7 +6,7 @@ Single responsibility: Write content to local filesystem with approval gate.
 
 from typing import TYPE_CHECKING
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.observability import (
     TraceComponent,
@@ -90,7 +90,7 @@ class FileWriterSkill:
                     action_parameters={"path": path, "mode": mode},
                     risk_level="medium",
                     reason_for_approval="File write requires approval",
-                    expires_at=datetime.utcnow() + timedelta(seconds=300),
+                    expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
                 )
                 
                 try:
@@ -99,7 +99,7 @@ class FileWriterSkill:
                         try:
                             await self.emitter.emit(TraceEvent(
                                 event_id=uuid4(),
-                                timestamp=datetime.utcnow(),
+                                timestamp=datetime.now(timezone.utc),
                                 event_type=TraceEventType.OPERATION_COMPLETE,
                                 component=TraceComponent.WORKER,
                                 level=TraceLevel.WARNING,
@@ -121,7 +121,7 @@ class FileWriterSkill:
                     try:
                         await self.emitter.emit(TraceEvent(
                             event_id=uuid4(),
-                            timestamp=datetime.utcnow(),
+                            timestamp=datetime.now(timezone.utc),
                             event_type=TraceEventType.OPERATION_ERROR,
                             component=TraceComponent.WORKER,
                             level=TraceLevel.ERROR,
@@ -149,7 +149,7 @@ class FileWriterSkill:
             try:
                 await self.emitter.emit(TraceEvent(
                     event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     event_type=TraceEventType.OPERATION_COMPLETE,
                     component=TraceComponent.WORKER,
                     level=TraceLevel.INFO,
@@ -172,7 +172,7 @@ class FileWriterSkill:
             try:
                 await self.emitter.emit(TraceEvent(
                     event_id=uuid4(),
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.WORKER,
                     level=TraceLevel.ERROR,

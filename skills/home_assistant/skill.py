@@ -6,7 +6,7 @@ Single responsibility: Control Home Assistant entities and fetch states.
 
 import os
 from typing import Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import httpx
@@ -219,7 +219,7 @@ class HomeAssistantSkill:
                 action_parameters={"domain": domain, "service": service, "entity_id": entity_id, **kwargs},
                 risk_level="medium",
                 reason_for_approval="Home Assistant service call requires approval per policy",
-                expires_at=datetime.utcnow() + timedelta(seconds=300),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
             )
             response = await approval_gate.request_approval(request)
             if not response.approved:
