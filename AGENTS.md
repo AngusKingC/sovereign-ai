@@ -109,9 +109,9 @@ For per-plan evolving rules (L1-L25+), read `## Section 0: Rules` at the top of 
 
 ## Known landmines (learned the hard way)
 
-- **L19**: never mix naive/aware `datetime`. Use `datetime.now(timezone.utc)` everywhere. Never `datetime.utcnow()` or bare `datetime.now()`. Two patterns to watch: `datetime.utcnow()` (direct call) and `default_factory=datetime.utcnow` (function reference without parentheses — use `default_factory=lambda: datetime.now(timezone.utc)` instead).
-- **L24**: run scan tools sequentially. Plan 55 ran 6 tools in parallel — output streams mixed, reported "37 CVEs" when actual was 55. Wrong baseline propagated to handoff.
-- **L25**: test fixture parameters may be required by pytest/middleware/pydantic even if vulture flags them as unused. Don't remove without checking decorator context.
+- **M19**: never mix naive/aware `datetime`. Use `datetime.now(timezone.utc)` everywhere. Never `datetime.utcnow()` or bare `datetime.now()`. Two patterns to watch: `datetime.utcnow()` (direct call) and `default_factory=datetime.utcnow` (function reference without parentheses — use `default_factory=lambda: datetime.now(timezone.utc)` instead).
+- **M24**: run scan tools sequentially. Plan 55 ran 6 tools in parallel — output streams mixed, reported "37 CVEs" when actual was 55. Wrong baseline propagated to handoff.
+- **M25**: test fixture parameters may be required by pytest/middleware/pydantic even if vulture flags them as unused. Don't remove without checking decorator context.
 - **Stale baselines**: always verify counts via grep at S1. The handoff's numbers may be from 5 plans ago. If actual ≠ expected, STOP and report — don't silently proceed with wrong scope.
 
 ---
