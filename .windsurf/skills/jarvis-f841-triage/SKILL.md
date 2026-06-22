@@ -14,7 +14,7 @@ When ruff reports F841 (unused-variable) findings. The unsafe fix removes the va
 ### Step 1: List all F841 findings
 
 ```powershell
-ruff check . --select F841 2>&1
+ruff check . --select F841 --exclude .venv,venv,env,.git,node_modules,__pycache__,build,dist,.tox,.eggs,.pytest_cache 2>&1
 ```
 
 ### Step 2: For EACH finding, read the line and classify

@@ -34,7 +34,7 @@ python -m pytest tests/test_<name>.py -v | Select-Object -Last 5
 If tests fail:
 1. Do NOT revert yet — read the failure output
 2. Determine if the failure is from your edit or pre-existing
-3. If from your edit: fix the edit or revert with `git checkout -- <file>`
+3. If from your edit: fix the edit or stash with git stash (recoverable) or revert with git checkout -- <file> (destructive — only if you're sure)
 4. If pre-existing: note in CHANGELOG, continue
 
 ## Step 4: Ruff check on touched files
@@ -47,4 +47,4 @@ If ruff finds new errors introduced by your edits, fix them before proceeding.
 
 ## Expected result
 
-All syntax checks pass, diff shows only intended files, targeted tests pass (1167 total when full suite runs). If any step fails, STOP and fix before moving to the next file or the closing sequence.
+All syntax checks pass, diff shows only intended files, targeted tests pass (check SOVEREIGN_AI_HANDOFF.md for current baseline). If any step fails, STOP and fix before moving to the next file or the closing sequence.

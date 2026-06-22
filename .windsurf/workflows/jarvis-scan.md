@@ -13,7 +13,7 @@ description: "Run the 6-tool full checkpoint scan SEQUENTIALLY (never in paralle
 python -m pytest tests/ -q --tb=short | Select-Object -Last 5
 ```
 
-Wait for completion. Record: `<N> passed, <M> skipped`. Expected: `1167 passed, 55 skipped`.
+Wait for completion. Record: `<N> passed, <M> skipped`. Expected: check SOVEREIGN_AI_HANDOFF.md for current baseline.
 
 ## Tool 2: ruff (full-repo)
 
@@ -65,7 +65,7 @@ After ALL 6 tools complete (do NOT compile mid-scan), create a summary:
 $summary = @(
     "## Full Checkpoint Scan Results",
     "",
-    "**Date**: 2026-06-21",
+    "**Date**: <YYYY-MM-DD>",
     "**Tests**: <tool 1 result>",
     "**Ruff**: <tool 2 result> errors",
     "**Mypy (full-repo)**: <tool 3 result> errors",

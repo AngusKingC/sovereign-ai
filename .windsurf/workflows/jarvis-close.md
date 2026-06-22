@@ -11,7 +11,7 @@ Execute each step in order. Paste output for each. Do NOT skip steps.
 ```powershell
 python -m pytest tests/ -q --tb=short | Select-Object -Last 5
 ```
-Expected: `1167 passed, 55 skipped`. If tests fail, STOP.
+Expected: check SOVEREIGN_AI_HANDOFF.md for current baseline. If tests fail, STOP.
 
 ## Step 2: Ruff check on touched files
 ```powershell
@@ -53,7 +53,7 @@ Write entry to temp file:
 ```powershell
 $lines = @(
     "",
-    "## 2026-06-21 HH:MM — prompt-{N}",
+    "## <YYYY-MM-DD> HH:MM — prompt-{N}",
     "",
     "**Plan**: <one-line plan title>",
     "",
