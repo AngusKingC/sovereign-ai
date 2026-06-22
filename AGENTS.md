@@ -13,17 +13,17 @@ For per-plan evolving rules (L1-L25+), read `## Section 0: Rules` at the top of 
 - **Repo**: https://github.com/AngusKingC/sovereign-ai
 - **OS**: Windows (PowerShell, not Unix)
 
-## Current state (post-Plan 58, as of 2026-06-21)
+## Current state (post-Plan 58.6, as of 2026-06-22)
 
-- **Tests**: 1167 passed, 55 skipped, 0 failed
+- **Tests**: 1166 passed, 56 skipped, 0 failed
 - **Static analysis**: ruff 111, mypy 283, vulture 20, pip-audit 19 CVEs, bandit 0 high (B108 skipped via CI)
-- **datetime**: `datetime.utcnow()` = 0 (Plan 58 fixed), bare `datetime.now()` = 231 (Plan 58.5 pending)
+- **datetime**: `datetime.utcnow()` = 0 in core/ (Plans 58+58.6 fixed), 46 remaining in system/+skills/ (Plan 58.7 in progress). bare `datetime.now()` = 0 (Plan 58.5 fixed)
 - **Plan cadence**: 5-plan milestones with full scans (Plans 55, 60, 65, 70, 75, 80)
 
 ## Optimized queue to core complete (24 plans)
 
-1. **Phase 1** (current debt): Plan 58.5 (bare datetime.now()), 59 (ruff), 60 (full scan)
-2. **Phase 2** (measurement layer): 61 (trace store), 62 (eval harness), 62.5 (eval validation), 63 (improvement loop E2E)
+1. **Phase 1** (current debt): Plan 58.7 (utcnow in system/skills — in progress), 59 (ruff + B108), 60 (full scan)
+2. **Phase 2** (measurement layer): 61 (trace store), 62 (eval harness), 62.5 (eval validation), 63a (improvement loop wire), 63b (improvement loop validate)
 3. **Phase 3** (user-facing): 64-65 (Postgres persistence)
 4. **Phase 4** (debt with measurement): 66-74 (mypy batches with eval gates)
 5. **Phase 5** (wire dormant subsystems): 75-80 (MonitorDaemon, MemoryCompactor, TriggerEngine, ResourceBudget, VerbosityManager, TrajectoryExporter)
@@ -87,11 +87,23 @@ For per-plan evolving rules (L1-L25+), read `## Section 0: Rules` at the top of 
 19. No memory access outside `MemoryRouter`.
 20. All I/O operations are async.
 
+### Temp file discipline
+21. **Temp files go in `C:\Jarvis\temp\` or `C:\Jarvis\scan\logs\`, NOT repo root.** After the temp file's content has been appended to CHANGELOG.md (or wherever it's consumed), DELETE the temp file. Never leave temp files in repo root — they get committed accidentally and pollute the working tree.
+    ```powershell
+    # After appending temp file to CHANGELOG:
+    Remove-Item "C:\Jarvis\temp\changelog-entry-prompt-{N}.md"
+    ```
+    Before any `git add`, check for stray temp files:
+    ```powershell
+    Get-ChildItem C:\Jarvis\*.md | Where-Object { $_.Name -match "changelog-entry|temp|tmp" }
+    ```
+    If any found, delete them before committing.
+
 ---
 
 ## Known landmines (learned the hard way)
 
-- **L19**: never mix naive/aware `datetime`. Use `datetime.now(timezone.utc)` everywhere. Never `datetime.utcnow()`.
+- **L19**: never mix naive/aware `datetime`. Use `datetime.now(timezone.utc)` everywhere. Never `datetime.utcnow()` or bare `datetime.now()`. Two patterns to watch: `datetime.utcnow()` (direct call) and `default_factory=datetime.utcnow` (function reference without parentheses — use `default_factory=lambda: datetime.now(timezone.utc)` instead).
 - **L24**: run scan tools sequentially. Plan 55 ran 6 tools in parallel — output streams mixed, reported "37 CVEs" when actual was 55. Wrong baseline propagated to handoff.
 - **L25**: test fixture parameters may be required by pytest/middleware/pydantic even if vulture flags them as unused. Don't remove without checking decorator context.
 - **Stale baselines**: always verify counts via grep at S1. The handoff's numbers may be from 5 plans ago. If actual ≠ expected, STOP and report — don't silently proceed with wrong scope.
@@ -135,7 +147,7 @@ Read `## Section 0: Rules` at the top of the current plan file. These rules grow
 ## Quick reference: plan execution flow
 
 1. Read Section 0 of the plan file (evolving rules)
-2. Read this guidelines.md (stable rules) — already loaded
+2. Read this AGENTS.md (stable rules) — already loaded
 3. Execute S0 (opening verification: tag check, pull, HEAD check)
 4. Execute S1-S5 (steps with verification gates + STOP conditions)
 5. Execute C1-C13 (closing sequence: test, lint, commit, tag, docs, push, verify)
