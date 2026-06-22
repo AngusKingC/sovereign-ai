@@ -15,7 +15,7 @@
 
 **Note**: AGENTS.md is now active (always-on). The 22 stable rules in AGENTS.md (which include the temp-file rule, L15) are already loaded — don't repeat them here. Section 0 contains only the evolving L-rules that grow via L20 self-evolution.
 
-**AGENTS.md SHA**: at S0.3, after `git rev-parse HEAD`, also capture the AGENTS.md blob SHA via `git rev-parse HEAD:AGENTS.md` and paste it here. This anchors the plan to a specific AGENTS.md state per handoff L20 ("Line numbers verified against clone SHA").
+**AGENTS.md SHA**: d296e8091d616cd90b14635d49a2a8036327df64 (captured at S0.4)
 
 **Tripwire**: this plan assumes AGENTS.md rules 1-22 as of 2026-06-22 (post-58.7). If AGENTS.md has been modified since, STOP and verify the stable rules haven't drifted from what L1-L26 below assume.
 
