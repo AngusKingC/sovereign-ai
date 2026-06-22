@@ -61,3 +61,6 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# GLM plan files (local only)
+GLM Prompts/
