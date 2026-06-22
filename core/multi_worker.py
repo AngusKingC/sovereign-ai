@@ -45,7 +45,7 @@ class MultiWorkerResult(BaseModel):
     task: str
     mode: str
     responses: list[WorkerResponse]
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     winner_worker_id: str | None = None
 
 

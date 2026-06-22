@@ -58,7 +58,7 @@ class DynamicWorkerProfile(BaseModel):
     active_tasks: int = Field(default=0, ge=0)
     version: int = Field(default=1, ge=1)
     status: WorkerStatus = Field(default=WorkerStatus.ACTIVE)
-    creation_date: datetime = Field(default_factory=datetime.utcnow)
+    creation_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     instruction_file_ref: str | None = None
 
 

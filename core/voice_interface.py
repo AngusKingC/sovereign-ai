@@ -6,7 +6,7 @@ This module defines the voice interface layer that will be wired to real audio c
 and Whisper STT in Prompt 33.5.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
@@ -37,7 +37,7 @@ class VoiceCommand(BaseModel):
     command_id: UUID = Field(default_factory=uuid4)
     transcript: str
     confidence: float = Field(ge=0.0, le=1.0)
-    detected_at: datetime = Field(default_factory=datetime.utcnow)
+    detected_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     wake_word_detected: bool = False
 
 

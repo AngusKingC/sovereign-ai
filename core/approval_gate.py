@@ -56,7 +56,7 @@ class ApprovalRequest(BaseModel):
     reason_for_approval: str = Field(..., description="Why this action requires approval")
     
     # Timing
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="When request was created")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When request was created")
     timeout_seconds: int = Field(default=300, ge=30, le=3600, description="Timeout in seconds")
     expires_at: datetime = Field(..., description="When request expires")
     
@@ -83,7 +83,7 @@ class ApprovalResponse(BaseModel):
     
     # Metadata
     approved_by: str = Field(..., description="User ID who made the decision")
-    approved_at: datetime = Field(default_factory=datetime.utcnow, description="When decision was made")
+    approved_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When decision was made")
     
     # Scope reference
     scope_id: Optional[str] = Field(default=None, description="If approved by scope, scope ID")
@@ -105,7 +105,7 @@ class ApprovalScope(BaseModel):
     time_limit_seconds: Optional[int] = Field(default=None, ge=0, description="Max duration in seconds")
     
     # Timing
-    granted_at: datetime = Field(default_factory=datetime.utcnow, description="When scope was granted")
+    granted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When scope was granted")
     expires_at: datetime = Field(..., description="When scope expires")
     
     # Metadata

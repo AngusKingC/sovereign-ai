@@ -5,7 +5,7 @@ Single responsibility: Define all Pydantic models and type schemas used across t
 Ensures type safety and validation at all boundaries.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional
 from uuid import UUID, uuid4
@@ -439,7 +439,7 @@ class LoadDecision(BaseModel):
     reason: str = Field(description="Human-readable reason for decision")
 
 
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable  # noqa: E402 -- conditional import for Protocol definition
 
 
 @runtime_checkable
@@ -560,7 +560,7 @@ class OrchestratorMetrics(BaseModel):
     routing_score: float = Field(description="Score assigned to selected worker at routing time")
     task_completed: bool = Field(description="Whether the task reached a terminal success state")
     user_rating: float | None = Field(default=None, description="Manual rating if provided (1-10), else None")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="When this routing decision was made")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When this routing decision was made")
 
 
 class EvaluatorScore(BaseModel):
@@ -573,7 +573,7 @@ class EvaluatorScore(BaseModel):
     conciseness: float = Field(description="Appropriately brief (0.0-1.0)")
     composite_score: float = Field(description="Weighted average of above four")
     evaluator_model: str = Field(description="Which model performed the evaluation")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="When evaluation was performed")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When evaluation was performed")
 
 
 class EvaluationRecord(BaseModel):
@@ -584,7 +584,7 @@ class EvaluationRecord(BaseModel):
     evaluator_score: EvaluatorScore | None = Field(default=None, description="Auto-eval score if performed")
     manual_rating: float | None = Field(default=None, description="Manual rating 1-10 if provided")
     final_score: float = Field(description="Resolved score (manual wins if present)")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="When record was created")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When record was created")
 
 
 class Scratchpad(BaseModel):

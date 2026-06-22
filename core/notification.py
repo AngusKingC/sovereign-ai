@@ -40,7 +40,7 @@ class Notification(BaseModel):
     title: str = Field(..., description="Notification title")
     message: str = Field(..., description="Notification message content")
     source: str = Field(..., description="Component that raised the notification")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="When notification was created")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When notification was created")
     data: dict = Field(default_factory=dict, description="Arbitrary payload for downstream consumers")
     delivered: bool = Field(default=False, description="Whether notification has been delivered")
 
@@ -51,7 +51,7 @@ class NotificationSystem:
     def __init__(
         self,
         approval_gate: "ApprovalGate | None" = None,
-        telegram_gateway: "TelegramGateway | None" = None,
+        telegram_gateway: "TelegramGateway | None" = None,  # noqa: F821 -- forward reference in string annotation
         emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the notification system.

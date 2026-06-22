@@ -8,7 +8,7 @@ validation, and rotation. Token stored in .env file, never in config YAML.
 from __future__ import annotations
 
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 class AuthToken(BaseModel):
     """Auth token metadata."""
     token: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     rotated_at: datetime | None = None
 
 

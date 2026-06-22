@@ -54,7 +54,7 @@ class EventTrigger(BaseModel):
     schedule_interval_seconds: int | None = Field(default=None, description="Interval in seconds for schedule triggers")
     enabled: bool = Field(default=True, description="Whether the trigger is enabled")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional trigger metadata")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="When the trigger was created")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When the trigger was created")
     last_triggered_at: datetime | None = Field(default=None, description="When the trigger last fired")
     trigger_count: int = Field(default=0, description="Number of times the trigger has fired")
 
