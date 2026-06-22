@@ -51,49 +51,50 @@ For per-plan evolving rules (L1-L25+), read `## Section 0: Rules` at the top of 
    python -c "import ast; ast.parse(open('file.py').read())"
    ```
    If syntax error, STOP — fix before proceeding. Don't wait 90 seconds for tests to catch it.
-7. **Diff check after every file edit:**
+7. **Structured-markdown edits — Edit tool only.** When editing `SOVEREIGN_AI_HANDOFF.md`, `AGENTS.md`, plan files in `GLM Prompts/`, or `CHANGELOG.md`, use the Edit tool with exact `old_str`/`new_str` pairs. NEVER use PowerShell `-replace`, `ForEach-Object`, or `Set-Content` for structured markdown — these have corrupted the handoff (Plan 60 S2.2 `ForEach-Object` over `---` separators inserted the prompt-59 row 5 times; Plan 60 S3.1 `-replace` chains left duplicate L24/M24 and L25/M25 entries). If the plan provides exact `old_str`/`new_str` pairs, use them as-is. If the plan provides only prose instructions, STOP and request GLM guidance via user.
+8. **Diff check after every file edit:**
    ```powershell
    git diff --stat <file>
    ```
    Confirm only intended files changed. If unexpected files appear, STOP.
 
 ### Git discipline
-8. **Tag EVERY prompt.** Even docs-only plans must have `git tag prompt-{N}`. Tag the docs commit if no code commit exists. (Plan 56 skipped this — caused verification failure.)
-9. **Tag verification before push:**
+9. **Tag EVERY prompt.** Even docs-only plans must have `git tag prompt-{N}`. Tag the docs commit if no code commit exists. (Plan 56 skipped this — caused verification failure.)
+10. **Tag verification before push:**
    ```powershell
    git tag --list prompt-{N}
    ```
    If empty, tag wasn't created. Create it before proceeding to push.
-10. **Post-push verification (mandatory):**
+11. **Post-push verification (mandatory):**
     ```powershell
     git ls-remote --tags origin | Select-String "prompt-{N}"
     ```
     If empty, push failed. Fix before reporting completion.
 
 ### CHANGELOG discipline
-11. **Append to END only.** Never insert at the top. Oldest entry at top, newest at bottom.
-12. **Use temp-file pattern** (not here-strings, which hang when auto-indented):
+12. **Append to END only.** Never insert at the top. Oldest entry at top, newest at bottom.
+13. **Use temp-file pattern** (not here-strings, which hang when auto-indented):
     ```powershell
     $lines = @("...", "...")
     Set-Content -Path $temp -Value $lines -Encoding utf8
     Get-Content $temp | Add-Content -Path "C:\Jarvis\CHANGELOG.md" -Encoding utf8
     ```
-13. **Simplified format**: ~10-15 lines per entry. Title, changed files, results, test count math. No fluff.
+14. **Simplified format**: ~10-15 lines per entry. Title, changed files, results, test count math. No fluff.
 
 ### Scope discipline
-14. **Pre-declare scope before editing.** List files you WILL edit and files you will NOT edit. Any file outside the "will edit" list requires STOP and GLM authorization.
-15. **HARD STOP on scope expansion.** If you discover work that needs doing outside the plan's scope, STOP and report. Do not fix it unilaterally — even if it looks like a 1-line fix. (Plan 58's two HARD STOPs worked correctly: 1 authorized, 1 deferred.)
-16. **Baseline reconciliation.** If S1 actual count ≠ plan's expected count, you MUST update the handoff baseline in C10 with the actual number + reason for the difference. Don't let stale baselines propagate.
+15. **Pre-declare scope before editing.** List files you WILL edit and files you will NOT edit. Any file outside the "will edit" list requires STOP and GLM authorization.
+16. **HARD STOP on scope expansion.** If you discover work that needs doing outside the plan's scope, STOP and report. Do not fix it unilaterally — even if it looks like a 1-line fix. (Plan 58's two HARD STOPs worked correctly: 1 authorized, 1 deferred.)
+17. **Baseline reconciliation.** If S1 actual count ≠ plan's expected count, you MUST update the handoff baseline in C10 with the actual number + reason for the difference. Don't let stale baselines propagate.
 
 ### Architecture (never violate)
-17. `core/` never imports from `adapters/`, `cli/`, `workers/`, `memory/`, `skills/`, `web/`, or `system/`.
-18. `TraceEmitter` via constructor injection only. Never use the global `emit_trace()` function.
-19. No raw LLM calls outside `adapters/`.
-20. No memory access outside `MemoryRouter`.
-21. All I/O operations are async.
+18. `core/` never imports from `adapters/`, `cli/`, `workers/`, `memory/`, `skills/`, `web/`, or `system/`.
+19. `TraceEmitter` via constructor injection only. Never use the global `emit_trace()` function.
+20. No raw LLM calls outside `adapters/`.
+21. No memory access outside `MemoryRouter`.
+22. All I/O operations are async.
 
 ### Temp file discipline
-22. **Temp files go in `C:\Jarvis\temp\` or `C:\Jarvis\scan\logs\`, NOT repo root.** After the temp file's content has been appended to CHANGELOG.md (or wherever it's consumed), DELETE the temp file. Never leave temp files in repo root — they get committed accidentally and pollute the working tree.
+23. **Temp files go in `C:\Jarvis\temp\` or `C:\Jarvis\scan\logs\`, NOT repo root.** After the temp file's content has been appended to CHANGELOG.md (or wherever it's consumed), DELETE the temp file. Never leave temp files in repo root — they get committed accidentally and pollute the working tree.
     ```powershell
     # After appending temp file to CHANGELOG:
     Remove-Item "C:\Jarvis\temp\changelog-entry-prompt-{N}.md"
