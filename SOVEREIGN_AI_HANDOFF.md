@@ -1,11 +1,54 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-22 — post-prompt-58.7 (datetime.utcnow in system/ and skills/ cleanup)
+**Last updated**: 2026-06-22 — post-prompt-58.7 + Plan 59 review optimizations
+
+**Repository**: https://github.com/AngusKingC/sovereign-ai
+**Default branch**: `master`
+**Clone (Devin, Windows)**: Devin's local working copy (path managed by Devin Desktop)
+**Clone (GLM, review sandbox)**: `/home/z/my-project/sovereign-ai-framework/` (Linux; optional deps NOT installed — see L19)
+**`origin` remote**: points to the GitHub repo above. All `git push origin` / `git pull origin` commands target this repo.
 
 **Test baseline**: 1166 passed, 56 skipped, 0 failures, 0 warnings
 
+> **⚠ Verification needed (B2 from Plan 59 review, 2026-06-22)**: The CHANGELOG entries for 58.5, 58.6, and 58.7 contain contradictory baseline counts (see NOTE blocks in CHANGELOG.md). The 1166/56 figure above is the post-58.7 state as reported, but the progression from 58.5 (1167/55) to 58.6 (1166/56) shows one test moved from passed to skipped — the specific test was not identified. **Plan 59 S1.1 MUST capture the actual baseline** by running `python -m pytest tests/ -q --tb=short` on Windows. If the actual count differs from 1166/56, investigate per L3 landmine (silent skip). Per L19, GLM must NOT run pytest on clone (missing optional deps — anthropic, cohere, google, groq, openai, asyncpg, qdrant — would give a false count).
+
+> **⚠ Verification needed (B2 from Plan 59 review, 2026-06-22)**: The CHANGELOG entries for 58.5, 58.6, and 58.7 contain contradictory baseline counts (see NOTE blocks in CHANGELOG.md). The 1166/56 figure above is the post-58.7 state as reported, but the progression from 58.5 (1167/55) to 58.6 (1166/56) shows one test moved from passed to skipped — the specific test was not identified. **Plan 59 S1.1 MUST capture the actual baseline** by running `python -m pytest tests/ -q --tb=short` on Windows. If the actual count differs from 1166/56, investigate per L3 landmine (silent skip). Per L19, GLM must NOT run pytest on clone (missing optional deps — anthropic, cohere, google, groq, openai, asyncpg, qdrant — would give a false count).
+
+---
+
+## Table of contents
+
+1. [Repository & environment](#repository--environment) — repo URL, clone paths, Python version, OS, optional deps
+2. [Project vision](#project-vision)
+3. [What works right now](#what-works-right-now)
+4. [What's broken right now](#whats-broken-right-now)
+5. [What's built but not reachable](#whats-built-but-not-reachable)
+6. [What's deferred (not started)](#whats-deferred-not-started)
+7. [Opening + Closing steps](#opening--closing-steps-mandatory--glm-copies-these-into-every-plan) — mandatory template for every plan
+8. [Architecture rules](#architecture-rules-never-violate)
+9. [Dependency injection rules](#dependency-injection-rules)
+10. [Completed prompts](#completed-prompts)
+11. [Known landmines](#known-landmines)
+12. [Hardware context](#hardware-context)
+13. [Environment](#environment) — Python version, install/run commands, optional deps
+14. [User domain context](#user-domain-context)
+15. [Next 5 prompts](#next-5-prompts)
+
+---
+
+## Repository & environment
+
+- **Repo**: https://github.com/AngusKingC/sovereign-ai (GitHub, private)
+- **Default branch**: `master`
+- **Tags**: `prompt-{N}` for each completed plan (e.g. `prompt-58.7`). Tag-push gate is mandatory (L5/L17/Rule 21).
+- **Clone (Devin)**: Windows local path managed by Devin Desktop. All plan execution happens here.
+- **Clone (GLM review)**: `/home/z/my-project/sovereign-ai-framework/` on Linux sandbox. Used for read-only verification (line numbers, file existence, ruff/bandit counts). **Cannot run pytest** — optional deps not installed (see L19).
+- **`origin` remote**: always refers to the GitHub repo above.
+
+---
+
 **Static analysis baseline (post-prompt-55 — 5-plan milestone)**:
-- Ruff: 111 errors (F401=0 since Plan 54)
+- Ruff: 110 errors (F401=0 since Plan 54; clone-verified 2026-06-22 — was 111 at Plan 55 milestone, drift due to Plan 58.7 F541 fix)
 - Mypy (full-repo): 283 errors (was 282 — delta +1)
 - Bandit: 3179 low, 22 medium (22 B108 pre-existing in tests/, deferred)
 - pip-audit: 19 CVEs across 4 packages (was 55 — Plan 56 fixed 36 CVEs)
@@ -13,7 +56,7 @@
 
 **Devin rules**: **Devin Desktop config (2026-06-22)** — three layers of rules/tools:
 1. **AGENTS.md** (repo root, always-on): 22 stable rules across 6 categories. Devin Desktop auto-discovers this.
-2. **Section 0** (per-plan, evolving): L1-L25 rules that grow via L20 self-evolution (Devin proposes via C9, GLM accepts/rejects). GLM maintains canonical source at `/home/z/my-project/download/global_rules_v2.md` (v2.4, 25 rules).
+2. **Section 0** (per-plan, evolving): L1-L26 rules that grow via L20 self-evolution (Devin proposes via C9, GLM accepts/rejects). Canonical source: `globalrules/global_rules_v2.md` in this repo (v2.4, 25 rules — Plan 59 Section 0 extended to L26, the repo copy will catch up at next docs sync).
 3. **Workflows + Skills** (`.windsurf/` directory):
    - `/jarvis-close` — full C1-C13 closing sequence (prevents "forgot to tag")
    - `/jarvis-verify` — post-edit syntax + diff + test checks
@@ -47,13 +90,17 @@ A local-first, self-improving AI assistant for one user's specific context: medi
 
 ## What's broken right now
 
-### F4 — `cli/serve.py` constructs cognition-loop subsystems but never wires them
-- **Cause**: Subsystems constructed with `_` prefix (Plan 46) to silence F841. Never wired into request path.
-- **Fix**: Plan 52 — wire `worker_factory`, `output_evaluator`, `trace_optimiser`, `worker_persistence` into orchestrator loop.
-- **Verification**: Start `jarvis serve`, hit `POST /api/tasks` — should return a real `task_id`.
+> **Note**: Previously tracked issues F4 and F9 have been resolved. Kept here for historical context — see "What's built but not reachable" for currently-dormant subsystems.
 
-### F9 — 55 dependency CVEs across 14 packages
-- Deferred to Plan 56. Run `pip-audit` for current list.
+### F4 — `cli/serve.py` cognition-loop wiring (RESOLVED by Plan 52)
+- **Was**: Subsystems constructed with `_` prefix (Plan 46) to silence F841, never wired into request path.
+- **Fix (Plan 52)**: `worker_factory`, `output_evaluator`, `trace_optimiser` wired into orchestrator loop in `cli/serve.py` and `cli/tui.py`.
+- **Remaining**: `TrajectoryExporter` still dormant — see "What's built but not reachable" table below. Wiring deferred to a future plan (not Plan 52, which is complete).
+
+### F9 — Dependency CVEs (PARTIALLY RESOLVED by Plan 56)
+- **Was**: 55 dependency CVEs across 14 packages.
+- **Fix (Plan 56)**: 11 packages upgraded, 36 CVEs fixed. pip-audit: 55→19 CVEs.
+- **Remaining**: 19 CVEs across 4 packages — deferred pending upstream patches (Starlette blocked by FastAPI incompatibility, chromadb/diskcache no confirmed fixes). Run `pip-audit` for current list.
 
 ---
 
@@ -72,14 +119,14 @@ A local-first, self-improving AI assistant for one user's specific context: medi
 | NotificationSystem | `core/notification.py` | Same |
 | ResourceBudget | `core/resource_budget.py` | Same |
 | VerbosityManager | `core/verbosity.py` | Same |
-| TrajectoryExporter | `system/trajectory_exporter.py` | Functional (prompt-45) but not reachable. Wiring deferred to Plan 52. |
+| TrajectoryExporter | `system/trajectory_exporter.py` | Functional (prompt-45) but not reachable. Wiring NOT done in Plan 52 (Plan 52 wired cognition loop only). Deferred to a future plan. |
 | MemoryCompactor | `core/memory_compactor.py` | Same |
 | MCPServer | `skills/mcp_server.py` | Built but never started |
 | MCPAdapter | `adapters/mcp_adapter.py` | Built but never constructed |
-| MarineWeather (SKILL.md) | `skills/marine/weather/SKILL.md` | Spec only — no Python implementation yet (Plan 59) |
-| MarineAIS (SKILL.md) | `skills/marine/ais/SKILL.md` | Same |
-| MarineTidal (SKILL.md) | `skills/marine/tidal/SKILL.md` | Same |
-| MarinePassagePlanner (SKILL.md) | `skills/marine/passage_planner/SKILL.md` | Same |
+| MarineWeather (SKILL.md) | `skills/marine/weather/SKILL.md` | Spec only — no Python implementation yet (Plan 61) |
+| MarineAIS (SKILL.md) | `skills/marine/ais/SKILL.md` | Spec only — no Python implementation yet (Plan 61) |
+| MarineTidal (SKILL.md) | `skills/marine/tidal/SKILL.md` | Spec only — no Python implementation yet (Plan 61) |
+| MarinePassagePlanner (SKILL.md) | `skills/marine/passage_planner/SKILL.md` | Spec only — no Python implementation yet (Plan 61) |
 
 When a subsystem is wired into a runtime entry point, remove it from this table.
 
@@ -87,7 +134,7 @@ When a subsystem is wired into a runtime entry point, remove it from this table.
 
 ## What's deferred (not started)
 
-1. **Marine stack** — weather, AIS, tidal, passage_planner. Ship as portable SKILL.md files.
+1. **Marine stack Python implementation** — weather, AIS, tidal, passage_planner. SKILL.md specs exist (created Plan 55). Implement as Python skills — Plan 61.
 2. **Sandboxed execution** for `skills/terminal/` and `skills/code_execution/`. Currently runs subprocesses on host.
 3. **Streaming output** from Ollama through worker pipeline to TUI/Web GUI.
 4. **Function-calling / tool-use loop.** Route-once-generate-once is a generation behind.
@@ -261,6 +308,8 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 - **L22 (recurring mistakes)**: If GLM notices Devin repeating the same mistake or inefficient workflow pattern across multiple prompts (e.g. running `mypy .` instead of file-scoped, skipping tag-push, using Unix commands on Windows), GLM should add a step to the next plan instructing Devin to add the lesson to its `global_rules.md` file. Example plan step: "Add to `global_rules.md`: 'Always use file-scoped mypy (e.g. `mypy file.py`), never `mypy .` — it takes 2-5 minutes and stalls the terminal.' If `global_rules.md` doesn't exist or can't be edited, skip and document the skip in CHANGELOG." This ensures Devin's behavioral guardrails stay current with recurring issues GLM observes from the execution logs. **Note**: As of 2026-06-21, this mechanism is now **structural** — every plan's closing sequence includes C9 (rule-proposal step) per L24 below. GLM no longer needs to add ad-hoc rule-addition steps; the structural mechanism handles it.
 - **L23 (test-production datetime coupling)**: when changing `datetime.utcnow()` to `datetime.now(timezone.utc)` in test files, check if production code compares datetimes with test data. If production uses `utcnow()` (naive) and tests use `now(timezone.utc)` (aware), Python raises `TypeError: can't compare offset-naive and offset-aware datetimes`. Both must change together. Always scope datetime changes to include both test AND production files that interact with the same datetime values. **Captured as global_rules_v2.md L19** — Devin now has this as a behavioral rule, not just a GLM-side landmine.
 - **L24 (self-evolution meta-mechanism — NEW 2026-06-21)**: Every plan's closing sequence MUST include a rule-proposal step (C9 above). Devin scans its work for failure patterns not covered by `global_rules.md` and either (a) submits a structured proposal, or (b) explicitly states "none — no new failure patterns this prompt." Silence is NOT acceptable — explicit reflection is required. GLM reviews each proposal after the plan completes and updates `global_rules.md` if accepted. This makes `global_rules.md` a living document that grows with the project's actual failures, rather than relying on GLM to notice recurring patterns reactively (which is what L22 attempted, less reliably). First active prompt: Plan 54 (or whichever plan first ships global_rules_v2.md to Devin).
+- **L25 (L-numbering collision — flagged 2026-06-22 by Plan 59 review, deferred to Plan 60)**: This handoff's "Known landmines" section uses labels L1-L24, but per-plan Section 0 (in plan files) ALSO uses labels L1-Lxx with DIFFERENT meanings. Example: handoff L20 = "line numbers verified against clone SHA," but Plan 59 Section 0 L20 = "self-evolution rule proposal." Same label, different rules — causes confusion when cross-referencing. **Deferred fix**: rename handoff landmines from `L1-L24` to `M1-M24` (minefield) at Plan 60 (5-plan milestone, full scan). Reserve `L1-Lxx` for per-plan evolving rules only. Update all cross-references in plan files and CHANGELOG entries at that time.
+- **L25 (L-numbering collision — flagged 2026-06-22 by Plan 59 review, deferred to Plan 60)**: This handoff's "Known landmines" section uses labels L1-L24, but per-plan Section 0 (in plan files) ALSO uses labels L1-Lxx with DIFFERENT meanings. Example: handoff L20 = "line numbers verified against clone SHA," but Plan 59 Section 0 L20 = "self-evolution rule proposal." Same label, different rules — causes confusion when cross-referencing. **Deferred fix**: rename handoff landmines from `L1-L24` to `M1-M24` (minefield) at Plan 60 (5-plan milestone, full scan). Reserve `L1-Lxx` for per-plan evolving rules only. Update all cross-references in plan files and CHANGELOG entries at that time.
 
 **Verification cadence (L18)**:
 - Every plan: ruff (file-scoped) + mypy (file-scoped) + pytest.
@@ -280,6 +329,21 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ---
 
+## Environment
+
+- **Python**: 3.12.13 (Devin's venv on Windows; GLM sandbox has 3.12.13 in `/home/z/.venv/`)
+- **OS (Devin)**: Windows — use PowerShell, not Unix commands (L21). `Select-String` not `grep`, `Measure-Object` not `wc`.
+- **OS (GLM review sandbox)**: Linux — cannot run pytest/mypy/bandit/pip-audit/vulture meaningfully because optional deps are not installed (L19). Use for read-only verification only (file existence, line numbers, ruff/bandit static counts).
+- **Install (Devin)**: `pip install -r requirements.txt` in venv. CLI entry point `jarvis` installed via `pip install -e .`.
+- **Run tests (Devin)**: `python -m pytest tests/ -q --tb=short`
+- **Optional dependencies** (in `requirements.txt` but NOT installed in GLM sandbox — causes collection errors on `test_anthropic_adapter.py`, `test_cohere_adapter.py`, `test_gemini_adapter.py`, `test_groq_adapter.py`, `test_openai_adapter.py`, `test_postgres_backend.py`, `test_qdrant_backend.py`):
+  - `anthropic`, `cohere`, `google-genai`, `groq`, `openai` — LLM provider SDKs
+  - `asyncpg` — Postgres async driver (for `memory/postgres.py`)
+  - `qdrant-client` — vector DB SDK (for `memory/qdrant.py`)
+- **GLM sandbox limitation**: `pip install` is blocked by PEP 668 (externally-managed-environment). GLM must NOT attempt to install optional deps — counts come from Devin's execution log per L19.
+
+---
+
 ## User domain context
 
 - **Media production** — video scripts, content creation
@@ -290,8 +354,16 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ## Next 5 prompts
 
+### Plan 59 — Ruff cleanup (110→0) + B108 scoped suppressions (READY FOR EXECUTION)
+- **Status**: Reviewed by GLM on 2026-06-22. Decision: PLACE → revised → READY. All blocking findings (B1, B2) and high-severity findings (H1, H2) addressed.
+- **Blocking fixes applied** (commits `9fe2cf5`, `648f8bb` on branch `review/plan-59-revisions`): duplicate prompt-57 CHANGELOG entries removed; 58.6/58.7 baseline contradictions flagged; L25 landmine added; Plan 59 added to this queue.
+- **Plan file**: local-only (gitignored under `GLM Prompts/`). Revised plan at `/home/z/my-project/download/plan-59.md` — copy to Devin's local plan folder before execution.
+- **Verification needed at S1.1**: capture actual test baseline on Windows to resolve B2 contradiction (1166/56 vs 1167/55).
+- **Clone-verified baselines** (2026-06-22): ruff=110 (was estimated 113), B108=22 (all in tests/), prompt-58.7 tag=`66315df` on origin.
+
 ### Plan 60 — Full checkpoint scan (P1)
 - 5-plan milestone: full scan. Verify Plans 57-59 progress.
+- **Includes**: L25 landmine fix (renumber handoff landmines L1-L24 → M1-M24 to avoid collision with per-plan Section 0 L-rules).
 
 ### Plan 61 — Marine stack Python implementation (P2)
 - Implement the 4 Marine SKILL.md files as Python skills (weather first, then tidal, AIS, passage_planner).

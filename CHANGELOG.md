@@ -270,58 +270,9 @@ This changelog documents all implementations, changes, and decisions made during
   - tests/test_task_state_machine.py:355,425,499 (raw_output x3) - method signature required
 - Tag: prompt-57 verified on origin
 
-## 2026-06-21 19:12 — prompt-57
+## 2026-06-21 21:41 � prompt-58
 
-**Plan**: Vulture cleanup — 32 high-confidence dead-code findings
-
-**Changed**:
-- adapters/anthropic.py, cohere.py, deepseek.py, gemini.py, groq.py, huggingface.py, llama_cpp.py, lm_studio.py, mistral.py, ollama.py, openai.py, together.py (12 files) - removed structured_output parameter
-- core/memory_router.py - removed record_type parameter
-- core/worker_base.py - removed structured_output parameter, added TraceEmitter to TYPE_CHECKING
-- core/worker_factory.py - removed structured_output parameter, added LLMResponse/WorkerOutput to TYPE_CHECKING
-- workers/echo_worker.py - removed structured_output parameter
-- tests/test_ollama_worker.py - removed structured_output parameter, fixed unused mock_emit variables
-
-**Results**:
-- Tests: 1167 passed, 55 skipped (unchanged)
-- Vulture: 32 → 20 findings (16 removed, 16 deferred as Category C)
-- Category C deferrals:
-  - core/event_trigger.py:85 (last_check_time) - used by callers
-  - core/schemas.py:135,174,197,517 (cls x4) - pydantic @field_validator protocol requires it
-  - tests/test_anthropic_adapter.py:36, test_cohere_adapter.py:42, test_deepseek_adapter.py:40, test_gemini_adapter.py:37, test_groq_adapter.py:37, test_huggingface_adapter.py:40, test_mistral_adapter.py:40, test_openai_adapter.py:37, test_together_adapter.py:40 (mock_client x9) - needed for fixture dependencies
-  - tests/test_security.py:285,313,344,380 (req x4) - middleware calls call_next(request)
-  - tests/test_serve.py:70 (auth) - caller passes 3 arguments
-  - tests/test_task_state_machine.py:355,425,499 (raw_output x3) - method signature required
-- Tag: prompt-57 verified on origin
-
-## 2026-06-21 19:12 — prompt-57
-
-**Plan**: Vulture cleanup — 32 high-confidence dead-code findings
-
-**Changed**:
-- adapters/anthropic.py, cohere.py, deepseek.py, gemini.py, groq.py, huggingface.py, llama_cpp.py, lm_studio.py, mistral.py, ollama.py, openai.py, together.py (12 files) - removed structured_output parameter
-- core/memory_router.py - removed record_type parameter
-- core/worker_base.py - removed structured_output parameter, added TraceEmitter to TYPE_CHECKING
-- core/worker_factory.py - removed structured_output parameter, added LLMResponse/WorkerOutput to TYPE_CHECKING
-- workers/echo_worker.py - removed structured_output parameter
-- tests/test_ollama_worker.py - removed structured_output parameter, fixed unused mock_emit variables
-
-**Results**:
-- Tests: 1167 passed, 55 skipped (unchanged)
-- Vulture: 32 → 20 findings (16 removed, 16 deferred as Category C)
-- Category C deferrals:
-  - core/event_trigger.py:85 (last_check_time) - used by callers
-  - core/schemas.py:135,174,197,517 (cls x4) - pydantic @field_validator protocol requires it
-  - tests/test_anthropic_adapter.py:36, test_cohere_adapter.py:42, test_deepseek_adapter.py:40, test_gemini_adapter.py:37, test_groq_adapter.py:37, test_huggingface_adapter.py:40, test_mistral_adapter.py:40, test_openai_adapter.py:37, test_together_adapter.py:40 (mock_client x9) - needed for fixture dependencies
-  - tests/test_security.py:285,313,344,380 (req x4) - middleware calls call_next(request)
-  - tests/test_serve.py:70 (auth) - caller passes 3 arguments
-  - tests/test_task_state_machine.py:355,425,499 (raw_output x3) - method signature required
-- Tag: prompt-57 verified on origin
-
-
-## 2026-06-21 21:41 � prompt-58
-
-**Plan**: Datetime UTCNow Cleanup � Replace all datetime.utcnow() with datetime.now(timezone.utc) for L19 compliance
+**Plan**: Datetime UTCNow Cleanup � Replace all datetime.utcnow() with datetime.now(timezone.utc) for L19 compliance
 
 **Changed**:
 - tests/test_retention.py: replaced 13 datetime.utcnow() calls, added timezone import
@@ -351,7 +302,7 @@ This changelog documents all implementations, changes, and decisions made during
 - Tag: prompt-58 created and verified locally
 
 **Deferred items**:
-- 46+ bare datetime.now() calls (without timezone) across 9 files � pre-existing L19 violations outside Plan 58 scope. Queued for Plan 58.5 (or next housekeeping plan).
+- 46+ bare datetime.now() calls (without timezone) across 9 files � pre-existing L19 violations outside Plan 58 scope. Queued for Plan 58.5 (or next housekeeping plan).
   - tests/: test_trajectory_exporter.py (3), test_trace_optimiser.py (2), test_together_adapter.py (7), test_task_state_machine.py (27+)
   - core/: task_state_machine.py (1), session.py (10), scratchpad.py (1), rating_system.py (2), instruction_versioning.py (5), instruction_generator.py (6), handlers.py (1)
 
@@ -395,6 +346,8 @@ This changelog documents all implementations, changes, and decisions made during
 - Mypy: 43 pre-existing errors (baseline 283 full-repo)
 - Tag: prompt-58.6 verified on origin
 
+**NOTE (B2 fix from Plan 59 review, 2026-06-22)**: Reported baseline (1166/56) matches result -- this is incorrect. 58.5 ended at 1167/55, so 58.6's true baseline was 1167/55 and the result shows 1 test moved from passed to skipped. The specific test was not identified in the original entry. Plan 59 S1.1 must capture the actual baseline; if a silent skip was introduced, investigate per L3 landmine (@pytest.mark.skip because mocking was hard -- fix the mock, don't skip).
+
 ## 2026-06-22 14:12 — prompt-58.7
 
 **Plan**: Fix 46 remaining datetime.utcnow in system/ and skills/
@@ -424,3 +377,5 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: All checks passed (fixed 1 F541 error in code_execution/skill.py)
 - Mypy: 99 errors in 24 files (pre-existing, not related to datetime changes)
 - Tag: prompt-58.7 verified locally
+
+**NOTE (B2 fix from Plan 59 review, 2026-06-22)**: Reported baseline (1167/55) is incorrect -- 58.6 ended at 1166/56, so 58.7's true baseline was 1166/56 (matching its result, no test count change). The '1167/55' figure appears to be a typo carried over from the 58.5 state. Plan 59 S1.1 must capture the actual baseline to confirm.
