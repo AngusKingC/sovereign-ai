@@ -379,3 +379,21 @@ This changelog documents all implementations, changes, and decisions made during
 - Tag: prompt-58.7 verified locally
 
 **NOTE (B2 fix from Plan 59 review, 2026-06-22)**: Reported baseline (1167/55) is incorrect -- 58.6 ended at 1166/56, so 58.7's true baseline was 1166/56 (matching its result, no test count change). The '1167/55' figure appears to be a typo carried over from the 58.5 state. Plan 59 S1.1 must capture the actual baseline to confirm.
+
+## 2026-06-22 17:27 — prompt-59
+
+**Plan**: Ruff Cleanup (113→0) + B108 Scoped Suppressions
+
+**Changed**:
+- cli/rich_cli.py, cli/tui.py, gui/reference.py, web/reference.py: E402 suppressions (path manipulation required)
+- core/escalation.py, core/handlers.py, core/orchestrator.py, core/retention.py, system/model_acquisition.py, system/resource_manager.py: F821 TYPE_CHECKING imports
+- core/orchestrator.py: timezone imports for datetime.now(timezone.utc)
+- skills/mcp_server.py: E731 lambda→def conversion
+- tests/test_di_compliance.py: E741 ambiguous variable rename
+- 41 files total: ruff auto-fixes + manual fixes + B108 suppressions
+
+**Results**:
+- Tests: 1166 passed, 56 skipped (matches baseline)
+- Ruff: 110→0 errors (F541=14, F401=2, F811=3, F841=41, E402=21, F821=21, E731=1, E741=1)
+- B108: 22 findings suppressed with # nosec B108 -- local-first; test fixture path
+- Tag: prompt-59 verified on origin

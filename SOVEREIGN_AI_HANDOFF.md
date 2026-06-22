@@ -1,6 +1,6 @@
 # Sovereign AI Agent Framework — Project Handoff
 
-**Last updated**: 2026-06-22 — post-prompt-58.7 + Plan 59 review optimizations
+**Last updated**: 2026-06-22 — post-prompt-59 (ruff cleanup 110→0 + B108 suppressions 22)
 
 **Repository**: https://github.com/AngusKingC/sovereign-ai
 **Default branch**: `master`
@@ -8,9 +8,7 @@
 **Clone (GLM, review sandbox)**: `/home/z/my-project/sovereign-ai-framework/` (Linux; optional deps NOT installed — see L19)
 **`origin` remote**: points to the GitHub repo above. All `git push origin` / `git pull origin` commands target this repo.
 
-**Test baseline**: 1166 passed, 56 skipped, 0 failures, 0 warnings
-
-> **⚠ Verification needed (B2 from Plan 59 review, 2026-06-22)**: The CHANGELOG entries for 58.5, 58.6, and 58.7 contain contradictory baseline counts (see NOTE blocks in CHANGELOG.md). The 1166/56 figure above is the post-58.7 state as reported, but the progression from 58.5 (1167/55) to 58.6 (1166/56) shows one test moved from passed to skipped — the specific test was not identified. **Plan 59 S1.1 MUST capture the actual baseline** by running `python -m pytest tests/ -q --tb=short` on Windows. If the actual count differs from 1166/56, investigate per L3 landmine (silent skip). Per L19, GLM must NOT run pytest on clone (missing optional deps — anthropic, cohere, google, groq, openai, asyncpg, qdrant — would give a false count).
+**Test baseline**: 1166 passed, 56 skipped, 0 failures, 0 warnings (verified at Plan 59 S1.1)
 
 ---
 
@@ -45,10 +43,10 @@
 
 ---
 
-**Static analysis baseline (post-prompt-55 — 5-plan milestone)**:
-- Ruff: 111 errors (F401=0 since Plan 54; per Plan 55 full-scan baseline — actual count captured by Devin at Plan 59 S1.2)
-- Mypy (full-repo): 283 errors (was 282 — delta +1)
-- Bandit: 3179 low, 22 medium (22 B108 pre-existing in tests/, deferred)
+**Static analysis baseline (post-prompt-59)**:
+- Ruff: 0 errors (was 111 — Plan 59 fixed all: F541=14, F401=2, F811=3, F841=41, E402=21, F821=21, E731=1, E741=1)
+- Mypy (full-repo): 283 errors (deferred to Phase 4 — Plans 66-74)
+- Bandit: 3179 low, 0 medium (22 B108 suppressed in tests/ with scoped # nosec B108)
 - pip-audit: 19 CVEs across 4 packages (was 55 — Plan 56 fixed 36 CVEs)
 - Vulture: 20 high-confidence findings (was 32 — Plan 57 removed 16, deferred 16 as Category C)
 
@@ -358,20 +356,17 @@ Plans go through Claude review before Devin execution. Context briefs are ~30-50
 
 ## Next 5 prompts
 
-### Plan 59 — Ruff cleanup (113→0) + B108 scoped suppressions (READY FOR EXECUTION)
-- **Status**: Reviewed by GLM on 2026-06-22. Decision: PLACE → revised → READY. All blocking findings (B1, B2) and high-severity findings (H1, H2) addressed.
-- **Blocking fixes applied** (commits `9fe2cf5`, `648f8bb` on branch `review/plan-59-revisions`): duplicate prompt-57 CHANGELOG entries removed; 58.6/58.7 baseline contradictions flagged; L25 landmine added; Plan 59 added to this queue.
-- **Plan file**: local-only (gitignored under `GLM Prompts/`). Revised plan at `/home/z/my-project/download/plan-59.md` — copy to Devin's local plan folder before execution.
-- **Verification needed at S1.1**: capture actual test baseline on Windows to resolve B2 contradiction (1166/56 vs 1167/55).
-- **Baselines**: per handoff Plan 55 full-scan (ruff=111, B108=22 in tests/). Actual counts captured by Devin at S1.1/S1.2/S1.3 — do NOT trust GLM clone counts (L19).
-
 ### Plan 60 — Full checkpoint scan (P1)
 - 5-plan milestone: full scan. Verify Plans 57-59 progress.
 - **Includes**: L25 landmine fix (renumber handoff landmines L1-L24 → M1-M24 to avoid collision with per-plan Section 0 L-rules).
 
-### Plan 61 — Marine stack Python implementation (P2)
-- Implement the 4 Marine SKILL.md files as Python skills (weather first, then tidal, AIS, passage_planner).
+### Plan 61 — Trace store implementation (P2)
+- Implement persistent trace event storage in Postgres for measurement layer.
 
-### Plan 62 — (open slot for next GLM scoping)
-### Plan 63 — (open slot)
-### Plan 64 — (open slot)
+### Plan 62 — Eval harness implementation (P3)
+- Implement evaluation harness for improvement loop (offline evaluation of LLM outputs).
+
+### Plan 63 — Improvement loop wire (P4)
+- Wire up improvement loop components (trace store + eval harness + orchestrator).
+
+### Plan 64 — (open slot for next GLM scoping)
