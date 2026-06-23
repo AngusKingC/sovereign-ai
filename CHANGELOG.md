@@ -413,3 +413,21 @@ This changelog documents all implementations, changes, and decisions made during
 - pip-audit: 19 CVEs (baseline held)
 - Vulture: 20 → 23 findings (+3, within tolerance)
 - Tag: prompt-60 verified on origin
+
+## 2026-06-23 16:51 â€” prompt-61
+
+**Plan**: Trace Store Implementation (Postgres Backend)
+
+**Changed**:
+- memory/postgres_trace_store.py: New Postgres trace store backend with asyncpg connection pooling
+- memory/__init__.py: Added PostgresTraceStore export
+- memory/router.py: Added trace_store parameter and get_trace_store() method to BackendRouter
+- core/observability.py: Added trace_store routing via constructor injection, fire-and-forget background task for persistence
+- tests/test_postgres_trace_store.py: 13 unit tests (11 Postgres-dependent skip, 2 backend-independent pass)
+- tests/test_postgres_trace_store_integration.py: 2 integration tests (1 Postgres-dependent skip, 1 pass)
+
+**Results**:
+- Tests: 1170 passed, 67 skipped (baseline 1166 â†’ 1170 passed, +4; 56 â†’ 67 skipped, +11 from new trace store tests)
+- Ruff: 0 errors (file-scoped cleanup)
+- Mypy: 2 pre-existing errors in memory/router.py (not introduced by this plan)
+- Tag: prompt-61 verified on origin

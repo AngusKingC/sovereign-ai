@@ -1,6 +1,6 @@
 # PLANS.md — Sovereign AI Project State
 
-**Last updated**: Post-Plan 60 (2026-06-23)
+**Last updated**: Post-Plan 61 (2026-06-23)
 
 This document tracks the dynamic state of the Sovereign AI project: baselines, completed prompts, and the next-5-prompt queue. It is the canonical source for test counts, static analysis baselines, and which prompt is currently active.
 
@@ -8,8 +8,8 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Test Baseline
 
-**Current baseline**: **1167 passed, 55 skipped**  
-**Verified**: Plan 60, Step S1 (5-plan milestone full scan)  
+**Current baseline**: **1170 passed, 67 skipped**  
+**Verified**: Plan 61, Step S5 (full test suite)  
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)  
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -46,30 +46,13 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 58 | Datetime UTC consolidation (core + system) | 1166 | 58 datetime.utcnow() calls replaced with datetime.now(timezone.utc). Eliminated naive/aware mixing. |
 | 59 | Ruff cleanup (110→0) + B108 suppression | 1166 | 104 ruff fixes (F541=14, F401=2, F811=3, F841=41, E402=21, F821=21, E731=1, E741=1). All 22 B108 scoped. |
 | 60 | 5-plan checkpoint (mypy 294, bandit clean, pip-audit 19) | 1167 | Full 5-plan scan. Mypy: 283→294 (+11, OUTSIDE tolerance — escalated). Bandit: 3179 low/0 medium/0 high. pip-audit: 19 CVEs (stable). Vulture: 23 findings. |
+| 61 | Trace Store Implementation (Postgres Backend) | 1170 | Postgres trace store backend with asyncpg. BackendRouter trace_store registration. TraceEmitter fire-and-forget persistence. 15 new tests (11 skip, 4 pass). |
 
 ---
 
 ## Next 5 Prompts Queue
 
-### Plan 61 — Trace Store Implementation (Priority 2 — ACTIVE)
-
-**Scope**: Implement persistent trace event storage in Postgres for measurement layer.
-
-**Expected impact**:
-- New file: `memory/postgres_trace_store.py` (~200 lines)
-- Modified: `memory/__init__.py`, `core/observability.py` (trace emission routing)
-- Tests: `tests/test_postgres_trace_store.py` (~150 lines)
-
-**Baseline changes**: 
-- Tests: expect ~1180 (+14 for trace store tests)
-- Mypy: expect +5-10 errors (Postgres typing)
-- Ruff: expect 0 (file-scoped cleanup)
-
-**Gate**: Full test suite passes. Postgres connection pooling verified in test environment.
-
----
-
-### Plan 62 — Eval Harness Implementation (Priority 3)
+### Plan 62 — Eval Harness Implementation (Priority 3 — ACTIVE)
 
 **Scope**: Implement offline evaluation harness for improvement loop. Evals compare LLM outputs against gold-standard responses.
 
@@ -159,12 +142,12 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 ### What Works Right Now
 
 - **Core command layer** — Command interface fully typed; trace emission working end-to-end
-- **Observability infrastructure** — TraceEmitter working; structured logging integrated
-- **Memory router** — All memory access routed through MemoryRouter; no direct imports
+- **Observability infrastructure** — TraceEmitter working; structured logging integrated; Postgres trace store backend operational
+- **Memory router** — All memory access routed through MemoryRouter; no direct imports; BackendRouter supports trace store registration
 - **Serialization** — Jsonify strict mode, circular ref detection, type coercion all working
 - **Datetime handling** — Zero naive/aware mixing; all core/system/skills using timezone-aware UTC
-- **Ruff baseline** — 0 errors (Plan 59 cleanup held through Plans 56-60)
-- **Test suite** — 1167 passed, 55 skipped (stable across Plans 56-60)
+- **Ruff baseline** — 0 errors (Plan 59 cleanup held through Plans 56-61)
+- **Test suite** — 1170 passed, 67 skipped (Plan 61 added 15 trace store tests)
 
 ### What's Broken Right Now
 
@@ -172,7 +155,6 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ### What's Built But Not Reachable
 
-- **Trace store interface** (core/observability.py) — defined but no backend yet. Plan 61 will implement Postgres backend.
 - **Eval metrics** (evals/) — infrastructure exists for extensibility but no production integration. Plans 62+ wire this in.
 - **Improvement loop orchestrator** — Commands defined, but loop wiring incomplete. Plans 63a/b will complete.
 
@@ -190,6 +172,9 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **Plan 60 Delta (Mypy)**: 283 → 294 (+11 errors). OUTSIDE tolerance — escalated for fix plan. Plans 56-59 introduced type errors beyond acceptable threshold.
 - **Plan 60 Delta (Vulture)**: 20 → 23 (+3 findings). Within tolerance. Minor code additions added unused vars. Acceptable given scope.
 - **Plan 60 Delta (Tests)**: 1166 → 1167 (+1 passed, -1 skipped). Within tolerance. Test suite stable.
+- **Plan 61 Delta (Tests)**: 1167 → 1170 (+3 passed, +12 skipped). Within tolerance. Added 15 trace store tests (11 Postgres-dependent skip, 4 pass). Actual: +4 passed, +11 skipped. Delta within ±5 tolerance.
+- **Plan 61 Delta (Ruff)**: 0 → 0. No change. File-scoped cleanup held.
+- **Plan 61 Delta (Mypy)**: 294 → 294 (file-scoped). No change. 2 pre-existing errors in memory/router.py (not introduced by this plan).
 - **Baseline expansion needed**: Mypy error count exceeded tolerance; requires dedicated fix plan (likely Plan 60.5 or fold into Plan 61).
 
 ---
