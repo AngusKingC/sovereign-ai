@@ -4,7 +4,7 @@
 
 Sovereign AI is a local-first, self-improving AI assistant framework built for a single user's context: media production, sailing, 3D printing, and CNC machining. It runs locally by default, escalates to cloud when the task demands it, and monitors open-loop background tasks (weather, AIS, email) — interrupting only when necessary.
 
-**Core philosophy**: Strong, robust, simple core. Wire as you go. No new horizontal capability until the existing stack is reachable and demonstrably improving worker outputs.
+**Core philosophy**: Strong, robust, modular, simple core. Wire as you go. No new horizontal capability until the existing stack is reachable and demonstrably improving worker outputs.
 
 **Stack**: Python 3.12, Textual TUI + Rich CLI + FastAPI web server.
 
@@ -64,7 +64,7 @@ When the user pastes a Devin execution log, GLM follows these steps in order. Do
 
 5. **Make the prompt + context brief.** Two files in `/home/z/my-project/download/`: `plan-{N}.md` (the plan Devin executes) and `plan-{N}-context-brief.md` (the review guide for Claude, ~30-50 lines, pointer-based).
 
-6. **Pause for Claude review.** The user bridges: they paste the plan + context brief to Claude in a separate chat, then paste Claude's findings back to you. **Wait for the user's paste.** Apply blocking/high findings; keep a `CHANGES.md` summary.
+6. **Pause for Claude review.** The user bridges: they paste the plan + context brief to Claude in a separate chat, then paste Claude's findings back to you. Claude reviews only — does not create or edit plan files, visual diagrams, only identifies issues and improvements. Wait for the user's paste. Apply findings at GLM's discretion.
 
 7. **Deliver the final plan.** Tell the user: "Copy `plan-{N}.md` to `c:\Jarvis\GLM Prompts\{decade}s\plan-{N}.md` and point Devin at it."
 
@@ -76,8 +76,11 @@ GLM copies this opening + closing structure into every plan file. Devin runs the
 
 ### Opening (S0)
 
-1. **Run `/jarvis-open`** — verifies previous prompt's tag on origin and confirms working copy is clean and on master. If the workflow is missing or fails, STOP and report.
-2. **Read AGENTS.md in full** and add any new rules GLM specified for this plan. Commit the AGENTS.md change before any coding step. AGENTS.md is always-on — every file edit in this plan MUST comply with its rules. **If an AGENTS.md rule's application is ambiguous, read `LANDMINES.md` for the trigger and diagnostic context behind the rule.** Then proceed to the plan body (S1 onward).
+S0.1. **Run `/jarvis-open`** — verifies previous prompt's tag on origin and confirms working copy is clean and on master. If the workflow is missing or fails, STOP and report.
+
+S0.2. **Read AGENTS.md in full.** AGENTS.md is always-on — every file edit in this plan MUST comply with its rules. If an AGENTS.md rule's application is ambiguous, read `LANDMINES.md` for the trigger and diagnostic context behind the rule.
+
+S0.3. **Add any new rules GLM specified for this plan and commit** before any coding step. Then proceed to the plan body (S1 onward).
 
 ### Plan body (S1-Sn)
 Execute all steps specified in the plan file. After each file edit, run `/jarvis-verify`. If any step has a STOP condition, pause and report to the user before proceeding.

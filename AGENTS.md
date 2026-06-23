@@ -108,8 +108,9 @@ OR22. Re-read AGENTS.md before any file edit; never edit outside scope. Before e
 ### Verbosity & Audit
 OR23. Cite rules by number when applying them. When executing a step that applies a rule, cite it: "Applying AR{n}: <rule name>" or "Applying OR{n}: <rule name>". When a rule prevents an action, cite it: "Blocked by AR{n}: <rule name>". This creates an audit trail and makes rule compliance explicit and verifiable in the execution log.
 
-### Test with new implimentations
-OR24. Every new implementation (new module, new class, new public function) MUST have a corresponding test file with tests covering the key paths. No implementation is "complete" until its tests pass. (Source: GLM observation — OR18 implied this but didn't state it.)
+### Test with new implementations
+OR24. Every new implementation (new module, new class, new public function) MUST have a corresponding test file with tests covering the key paths. No implementation is "complete" until its tests pass. (Source: GLM-direct, no landmine)
+
 ---
 
 ## Landmines that have graduated to rules
