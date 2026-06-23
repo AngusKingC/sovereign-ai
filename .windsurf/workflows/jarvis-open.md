@@ -21,6 +21,8 @@ git rev-parse HEAD
 ```
 Do NOT pull. Confirm branch is `master` and there are no uncommitted changes.
 
+**Note**: Changes to `GLM Prompts/` directory should be ignored for working copy cleanliness check — these are plan artifacts managed separately.
+
 ## Expected result
 
 Tag verified, working copy clean. Only then proceed to the plan's own S0.3 (AGENTS.md rules, if any — this is plan-specific and lives in the plan file itself, not in this skill) and the plan body.
