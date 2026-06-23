@@ -28,7 +28,8 @@ if TYPE_CHECKING:
     from core.skill_registry import SkillRegistry
     from core.orchestrator import Orchestrator
     from core.memory_router import MemoryRouter
-    from core.schemas import LLMResponse, WorkerOutput
+    from core.worker_base import LLMResponse
+    from core.schemas import WorkerOutput
     from system.worker_persistence import WorkerPersistence
     from core.instruction_generator import InstructionGenerator
 

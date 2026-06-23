@@ -86,6 +86,7 @@ class A2ARouter:
                 await self._emitter.emit(event)
             except Exception:
                 pass
+            assert request.parent_task_id is not None
             raise CircularDependencyError(request.task_id, request.parent_task_id)
 
         # Register child task under parent

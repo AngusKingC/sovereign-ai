@@ -7,7 +7,7 @@ without holding opinions or writing beliefs. Pure analysis and dispatch.
 
 import asyncio
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from core.schemas import Task, WorkerOutput, TaskStatus, WorkerStatus, StrategicContext
 from core.observability import (
@@ -865,7 +865,7 @@ class Orchestrator:
             preferred_complexity, tasks_completed, avg_confidence.
             Workers without a profile return a minimal dict with just worker_id.
         """
-        result = []
+        result: list[dict[str, Any]] = []
         for worker_id, worker in self.workers.items():
             profile = getattr(worker, "profile", None)
             if profile is None:

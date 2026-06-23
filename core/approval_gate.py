@@ -5,7 +5,7 @@ Single responsibility: Manage approval requests, scopes, and state transitions
 for actions requiring human authorization.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Literal, Optional
 from uuid import UUID, uuid4
@@ -443,6 +443,31 @@ class ApprovalGate:
             decision_reason="Pending approval",
             approved_by="system",
         )
+
+    async def submit_for_approval(
+        self,
+        proposal_id: str,
+        description: str,
+        context: dict
+    ) -> None:
+        """Legacy method for backward compatibility with tests.
+        
+        Deprecated: Use request_approval with ApprovalRequest instead.
+        This method is kept for backward compatibility with existing tests.
+        """
+        # Create a minimal ApprovalRequest from the legacy parameters
+        request = ApprovalRequest(
+            request_id=str(uuid4()),
+            task_id=str(proposal_id),
+            session_id="legacy",
+            action_type=ApprovalActionType.FILE_WRITE,
+            action_description=description,
+            action_parameters=context,
+            risk_level="medium",
+            reason_for_approval=description,
+            expires_at=datetime.now(timezone.utc).replace(second=0, microsecond=0) + timedelta(minutes=5)
+        )
+        await self.request_approval(request)
     
     async def respond(self, request_id: str, approved: bool, responder: str, always_approve: bool = False) -> ApprovalResponse:
         """Respond to a pending approval request.

@@ -85,7 +85,7 @@ class RatingSystem:
                 pass
             raise
     
-    async def record_rating(
+    async def _record_rating_impl(
         self,
         worker_id: str,
         task_id: str,
@@ -322,7 +322,7 @@ class RatingSystem:
         if not model_averages:
             return None
         
-        best_model = max(model_averages, key=model_averages.get)
+        best_model = max(model_averages, key=lambda k: model_averages[k])
         return best_model
     
     async def record_comparison(
@@ -375,3 +375,34 @@ class RatingSystem:
             ))
         except Exception:
             pass
+
+    async def record_rating(
+        self,
+        worker_id: str,
+        score: float,
+        task_id: str | None = None,
+        model_used: str | None = None,
+        instruction_file_version: int | None = None,
+        comment: str | None = None,
+    ) -> WorkerRating:
+        """Record a rating for a worker.
+        
+        This method supports both the legacy 2-arg signature (worker_id, score)
+        and the new full signature for backward compatibility with tests.
+        """
+        # Handle legacy 2-arg call from tests
+        if task_id is None and model_used is None and instruction_file_version is None and comment is None:
+            # Legacy call: record_rating(worker_id, score)
+            task_id = str(uuid4())
+            model_used = "unknown"
+            instruction_file_version = 0
+            comment = "Legacy rating call"
+        
+        return await self._record_rating_impl(
+            worker_id=worker_id,
+            task_id=task_id,
+            score=int(score),
+            model_used=model_used,
+            instruction_file_version=instruction_file_version,
+            comment=comment,
+        )

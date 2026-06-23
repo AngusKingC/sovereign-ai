@@ -9,6 +9,9 @@ from enum import Enum
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
+if TYPE_CHECKING:
+    from gateways.telegram.gateway import TelegramGateway
+
 from pydantic import BaseModel, Field
 
 from core.observability import (
@@ -51,7 +54,7 @@ class NotificationSystem:
     def __init__(
         self,
         approval_gate: "ApprovalGate | None" = None,
-        telegram_gateway: "TelegramGateway | None" = None,  # noqa: F821 -- forward reference in string annotation
+        telegram_gateway: "TelegramGateway | None" = None,
         emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the notification system.

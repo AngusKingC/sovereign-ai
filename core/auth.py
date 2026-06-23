@@ -111,6 +111,7 @@ class AuthManager:
         if self._token is None:
             await self.get_or_create_token()
         
+        assert self._token is not None
         is_valid = secrets.compare_digest(provided, self._token)
         
         try:

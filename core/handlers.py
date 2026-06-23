@@ -142,7 +142,7 @@ class StatusHandler(CommandHandler):
             data={"command": "status"}
         ))
         
-        status_info = {
+        status_info: dict[str, Any] = {
             "system": "operational",
             "adapters": ["ollama", "lm_studio", "openai", "anthropic", "gemini", "groq", "cohere", "huggingface", "together", "mistral", "deepseek"],
             "memory_backends": ["obsidian", "postgres", "qdrant"],
@@ -495,11 +495,11 @@ class QueryHandler(CommandHandler):
         query = await self._input_sanitiser.sanitise(query, source="cli_query")
 
         # Append user message to session history if session manager available
-        if self.session_manager and command.context.session_id:
+        if self.session_manager and command.context is not None and command.context.session_id:
             try:
                 await self.session_manager.append(
                     command.context.session_id,
-                    Message(role=MessageRole.USER, content=query, timestamp=time.perf_counter())
+                    Message(role=MessageRole.USER, content=query, timestamp=datetime.now(timezone.utc))
                 )
             except Exception:
                 # Ignore session errors to not block query processing
@@ -530,11 +530,11 @@ class QueryHandler(CommandHandler):
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             
             # Append assistant response to session history if session manager available
-            if self.session_manager and command.context.session_id:
+            if self.session_manager and command.context is not None and command.context.session_id:
                 try:
                     await self.session_manager.append(
                         command.context.session_id,
-                        Message(role=MessageRole.ASSISTANT, content=worker_output.content, timestamp=time.perf_counter())
+                        Message(role=MessageRole.ASSISTANT, content=worker_output.content, timestamp=datetime.now(timezone.utc))
                     )
                 except Exception:
                     # Ignore session errors to not block query processing

@@ -8,11 +8,12 @@ final evaluation records.
 
 import json
 from datetime import datetime, timezone
+from typing import cast
 
 from core.worker_base import LLMAdapter
 from core.memory_router import MemoryRouter
 from core.observability import MemoryTraceEmitter, TraceEmitter, TraceEvent, TraceEventType, TraceComponent, TraceLevel
-from core.schemas import EvaluatorScore, EvaluationRecord
+from core.schemas import EvaluatorScore, EvaluationRecord, Message
 
 
 class OutputEvaluator:
@@ -78,7 +79,7 @@ Where:
         
         # Call LLM
         response = await self.llm_adapter.generate(
-            messages=[{"role": "user", "content": prompt}],
+            messages=cast(list[Message], [{"role": "user", "content": prompt}]),
             temperature=0.3,
             max_tokens=500
         )

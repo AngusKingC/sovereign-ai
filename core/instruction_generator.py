@@ -7,13 +7,14 @@ Each worker gets an instruction file and changelog in Obsidian. Orchestrator get
 
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import cast
 
 from core.worker_base import LLMAdapter
 from core.worker_factory import DynamicWorkerProfile
 from core.memory_router import MemoryRouter
 from core.rating_system import RatingSystem
 from core.observability import MemoryTraceEmitter, TraceEmitter, TraceEvent, TraceEventType, TraceComponent, TraceLevel
-from core.schemas import InstructionFile, InstructionChangelogEntry
+from core.schemas import InstructionFile, InstructionChangelogEntry, Message
 
 
 class InstructionGenerator:
@@ -61,7 +62,7 @@ class InstructionGenerator:
         
         # Generate instruction content using LLM
         response = await self.adapter.generate(
-            messages=[{"role": "user", "content": prompt}],
+            messages=cast(list[Message], [{"role": "user", "content": prompt}]),
             temperature=0.7,
             max_tokens=2000
         )
@@ -174,7 +175,7 @@ class InstructionGenerator:
         
         # Generate updated instruction content using LLM
         response = await self.adapter.generate(
-            messages=[{"role": "user", "content": prompt}],
+            messages=cast(list[Message], [{"role": "user", "content": prompt}]),
             temperature=0.7,
             max_tokens=2000
         )
@@ -184,7 +185,7 @@ class InstructionGenerator:
         # Generate diff summary
         diff_prompt = self._build_diff_summary_prompt(existing.content, content)
         diff_response = await self.adapter.generate(
-            messages=[{"role": "user", "content": diff_prompt}],
+            messages=cast(list[Message], [{"role": "user", "content": diff_prompt}]),
             temperature=0.3,
             max_tokens=500
         )

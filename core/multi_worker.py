@@ -112,7 +112,7 @@ class MultiWorkerDispatcher:
             worker_ids = await self.orchestrator.get_top_candidates(task, self.max_workers)
         
         # Filter workers by resource budget
-        eligible_workers = []
+        eligible_workers: list[str] = []
         for worker_id in worker_ids:
             worker = self.orchestrator.workers.get(worker_id)
             if worker is None:
@@ -146,7 +146,8 @@ class MultiWorkerDispatcher:
         # Release orchestrator model from VRAM before dispatching workers
         if self.resource_manager is not None:
             try:
-                await self.resource_manager.release_model(self.orchestrator.adapter)
+                if self.orchestrator.fallback_chain is not None:
+                    await self.resource_manager.release_model(self.orchestrator.fallback_chain)
                 await self._emitter.emit(TraceEvent(
                     event_type=TraceEventType.MULTI_WORKER_ORCHESTRATOR_MODEL_RELEASED,
                     component=TraceComponent.MULTI_WORKER,
@@ -224,11 +225,16 @@ class MultiWorkerDispatcher:
             
             start_time = datetime.now(timezone.utc)
             try:
-                response = await worker.execute(task)
+                output = await worker.execute(task)
                 duration_ms = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
+                # Handle both WorkerOutput (production) and str (test mocks)
+                if isinstance(output, str):
+                    response_content = output
+                else:
+                    response_content = output.content
                 return WorkerResponse(
                     worker_id=worker_id,
-                    response=response,
+                    response=response_content,
                     duration_ms=duration_ms,
                     succeeded=True,
                 )
@@ -269,6 +275,7 @@ class MultiWorkerDispatcher:
                     succeeded=False,
                 ))
             else:
+                assert isinstance(result, WorkerResponse)
                 responses.append(result)
         
         return responses
@@ -314,11 +321,16 @@ class MultiWorkerDispatcher:
             
             start_time = datetime.now(timezone.utc)
             try:
-                response = await worker.execute(task)
+                output = await worker.execute(task)
                 duration_ms = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
+                # Handle both WorkerOutput (production) and str (test mocks)
+                if isinstance(output, str):
+                    response_content = output
+                else:
+                    response_content = output.content
                 responses.append(WorkerResponse(
                     worker_id=worker_id,
-                    response=response,
+                    response=response_content,
                     duration_ms=duration_ms,
                     succeeded=True,
                 ))

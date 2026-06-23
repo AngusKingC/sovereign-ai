@@ -257,6 +257,37 @@ class WorkerBase(ABC):
 
         return output
 
+    async def execute(self, task: str | Task) -> WorkerOutput | str:
+        """Legacy method for backward compatibility with tests.
+        
+        Deprecated: Use run() with Task object instead.
+        This method is kept for backward compatibility with existing tests.
+        Returns WorkerOutput in production, but may return str in test mocks.
+        """
+        # If task is a string, convert to Task object
+        if isinstance(task, str):
+            from core.schemas import Task, TaskPriority, TaskStatus
+            from uuid import uuid4
+            from datetime import datetime, timezone
+            task = Task(
+                task_id=uuid4(),
+                intent=task,
+                complexity_score=0.5,
+                priority=TaskPriority.NORMAL,
+                current_state=TaskStatus.RECEIVED,
+                created_at=datetime.now(timezone.utc),
+            )
+        return await self.run(task)
+
+    @property
+    def adapter(self) -> LLMAdapter:
+        """Legacy property for backward compatibility with tests.
+        
+        Deprecated: Use llm attribute instead.
+        This property is kept for backward compatibility with existing tests.
+        """
+        return self.llm
+
 
 
 

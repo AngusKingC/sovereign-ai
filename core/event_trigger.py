@@ -20,7 +20,7 @@ from core.observability import (
     TraceLevel,
     TraceEvent,
 )
-from core.schemas import Task, TaskPriority
+from core.schemas import Task, TaskPriority, TaskStatus
 
 if TYPE_CHECKING:
     from core.orchestrator import Orchestrator
@@ -211,7 +211,7 @@ class TriggerEngine:
         task = self.build_task(trigger, context)
 
         try:
-            await self.orchestrator.process_task(task)
+            await self.orchestrator.route_task(task)
 
             try:
                 event = TraceEvent(
@@ -270,6 +270,6 @@ class TriggerEngine:
             intent=intent,
             complexity_score=0.5,
             priority=TaskPriority.NORMAL,
-            current_state="received",
+            current_state=TaskStatus.RECEIVED,
             created_at=datetime.now(timezone.utc),
         )
