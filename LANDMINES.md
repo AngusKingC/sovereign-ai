@@ -75,3 +75,11 @@ Append-only historical record of failure patterns. See AGENTS.md for guidance on
 **Impact**: 2 failed test rounds, time lost reverting. Fix: per OR27, add compatibility shims that preserve old runtime behavior while satisfying type checker. Never change runtime types in type-remediation plans without verifying test assertions first.
 
 ---
+
+## L10 — Devin leaves zombie PowerShell processes after execution
+
+**Trigger**: Plans 64-66 execution, Devin spawned hundreds of PowerShell processes without exiting them. Each command execution created a new session that was never disposed.
+
+**Impact**: Memory exhaustion, handle exhaustion, system instability. User's PC became sluggish with hundreds of orphaned PowerShell processes consuming resources.
+
+---

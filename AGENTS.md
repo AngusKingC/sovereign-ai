@@ -124,6 +124,12 @@ OR24. Every new implementation (new module, new class, new public function) MUST
 ### Type remediation discipline
 OR27. When fixing type errors requires interface changes that would break existing tests, add compatibility shims to maintain backward compatibility. The shim should delegate to the new implementation while accepting the old signature. Mark the shim as deprecated with a docstring noting the legacy status. This allows type fixes without test modifications, which are outside scope for type-remediation plans. (Source: L9)
 
+### PowerShell discipline
+OR28. PowerShell session cleanup: After each command execution block, Devin MUST close the PowerShell session. If executing multiple commands in sequence, use a single session with `;` separation rather than spawning multiple sessions. At plan closing (or every 20 commands, whichever comes first), verify no orphaned processes remain:
+- **On Windows**: `Get-Process powershell | Where-Object { $_.Id -ne $PID } | Measure-Object` — if count >5, kill orphans before proceeding.
+- **On Linux/macOS**: `ps aux | grep -c powershell` or skip this check (Devin runs on Windows; this fallback is for local verification only).
+(Source: L10 — Devin leaves zombie PowerShell processes after execution)
+
 ---
 
 ## Landmines that have graduated to rules
@@ -140,6 +146,7 @@ This section maps landmines to their corresponding rules.
 | L6 | OR20 | Naive/aware datetime mixing |
 | L7 | OR17 | Stale baselines propagate through plans |
 | L8 | OR16, OR22 | Scope drift: editing files outside declared scope |
+| L10 | OR28 | Devin leaves zombie PowerShell processes after execution |
 
 ---
 
