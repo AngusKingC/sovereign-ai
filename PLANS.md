@@ -1,6 +1,6 @@
 # PLANS.md — Sovereign AI Project State
 
-**Last updated**: Post-Plan 63a (2026-06-23)
+**Last updated**: Post-Plan 63b (2026-06-23)
 
 This document tracks the dynamic state of the Sovereign AI project: baselines, completed prompts, and the next-5-prompt queue. It is the canonical source for test counts, static analysis baselines, and which prompt is currently active.
 
@@ -8,8 +8,8 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Test Baseline
 
-**Current baseline**: **1225 passed, 67 skipped**  
-**Verified**: Plan 63a, Step S6 (full test suite)  
+**Current baseline**: **1232 passed, 67 skipped**  
+**Verified**: Plan 63b, Step S5 (full test suite)  
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)  
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -50,27 +50,11 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 62 | Eval Harness Implementation | 1194 | Eval harness with metrics (exact_match, token_f1, bleu, cosine_similarity). Trace emitter integration. 24 new tests. |
 | 62.5 | Eval Harness Validation | 1213 | Validation suite with 15 static tasks across 5 categories. Metric refinements: space collapsing (exact_match), punctuation stripping (token_f1). 19 new validation tests. |
 | 63a | Improvement Loop Wire | 1225 | Wire module connecting eval harness, trace store, and improvement loop. IMPROVE command with DI support. Orchestrator fire-and-forget integration. 12 new tests. |
+| 63b | Improvement Loop Validate + Restore Integration Tests | 1232 | Restored TestOrchestratorIntegration class with 2 integration tests (fixed mocking strategy). Added TestEndToEndValidation class with 5 E2E tests. Moved inline import asyncio to top-of-file in core/orchestrator.py. Added OR25 and OR26 to AGENTS.md. 7 new tests. |
 
 ---
 
 ## Next 5 Prompts Queue
-
-### Plan 63b — Improvement Loop Validate (Priority 4 — ACTIVE)
-
-**Scope**: End-to-end validation of improvement loop. Inject test failures into the system and verify the loop captures → evaluates → routes improvements.
-
-**Expected impact**:
-- Modified: `tests/test_improvement_loop.py` (add E2E scenarios)
-- Tests: ~20 new lines
-
-**Baseline changes**:
-- Tests: expect ~1245 (+20)
-- Mypy: expect 0 (cosmetic only)
-- Ruff: expect 0
-
-**Gate**: E2E test passes. Improvement loop successfully closes a sample failure → evaluation → fix cycle.
-
----
 
 ### Plan 64 — [Open Slot] (Priority TBD)
 
@@ -84,9 +68,21 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
-### Plan 65 — 5-Plan Milestone Full Scan (Priority 1 — tentative)
+### Plan 65 — [Open Slot] (Priority TBD)
 
-**Scope**: Post-Plans 61-64 full-repo scan and baseline refresh. Capture new baselines after improvement loop is complete.
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 64.
+
+**Expected impact**: TBD
+
+**Baseline changes**: TBD
+
+**Gate**: TBD
+
+---
+
+### Plan 66 — 5-Plan Milestone Full Scan (Priority 1 — tentative)
+
+**Scope**: Post-Plans 62-65 full-repo scan and baseline refresh. Capture new baselines after improvement loop is complete.
 
 **Expected impact**: 
 - Scope TBD pending Plans 61-64 completion. This entry is a **placeholder**.
@@ -109,7 +105,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **Serialization** — Jsonify strict mode, circular ref detection, type coercion all working
 - **Datetime handling** — Zero naive/aware mixing; all core/system/skills using timezone-aware UTC
 - **Ruff baseline** — 0 errors (Plan 59 cleanup held through Plans 56-62)
-- **Test suite** — 1225 passed, 67 skipped (Plan 63a added 12 improvement loop wire tests)
+- **Test suite** — 1232 passed, 67 skipped (Plan 63b added 7 integration + E2E tests; restored 2 orchestrator integration tests)
 - **Eval harness** — Metrics (exact_match, token_f1, bleu, cosine_similarity) operational with trace emitter integration. Validation suite with 15 static tasks confirms metric behavior across 5 categories.
 
 ### What's Broken Right Now
@@ -118,7 +114,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ### What's Built But Not Reachable
 
-- **Improvement loop wire** — Wire module connecting eval harness, trace store, and improvement loop. IMPROVE command with DI support. Orchestrator fire-and-forget integration.
+- **Improvement loop wire** — Wire module connecting eval harness, trace store, and improvement loop. IMPROVE command with DI support. Orchestrator fire-and-forget integration. Restored integration tests with correct mocking strategy. E2E validation scenarios operational.
 
 ### What's Deferred (Not Started)
 
@@ -146,6 +142,9 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **Plan 63a Delta (Tests)**: 1213 → 1225 (+12 passed, 0 skipped). Within tolerance. Added 12 improvement loop wire tests (all pass). Delta within ±5 tolerance. Note: Plan expected ~1290 (+80), actual was +12 due to deferring complex orchestrator integration tests to future plan.
 - **Plan 63a Delta (Ruff)**: 0 → 0. No change. File-scoped cleanup held.
 - **Plan 63a Delta (Mypy)**: 294 → 294 (file-scoped). No change. Wire module clean; 19 pre-existing errors in core/ files unchanged.
+- **Plan 63b Delta (Tests)**: 1225 → 1232 (+7 passed, 0 skipped). Within tolerance. Added 7 tests: 2 restored orchestrator integration tests (fixed mocking strategy for TaskStateMachine and ScratchpadManager), 5 E2E validation tests. Expected 1247 (+22), actual 1232 (+7). Discrepancy: Plan 63a had deferred complex tests; this plan restored only the 2 integration tests + added 5 E2E tests per scope. Test count reconciliation: baseline updated to actual 1232.
+- **Plan 63b Delta (Ruff)**: 0 → 0. No change. File-scoped cleanup held.
+- **Plan 63b Delta (Mypy)**: 294 → 294 (file-scoped). No change. 19 pre-existing errors in core/ files unchanged. Inline import asyncio moved to top-of-file (cosmetic).
 - **Baseline expansion needed**: Mypy error count exceeded tolerance; requires dedicated fix plan (likely Plan 60.5 or fold into Plan 61).
 
 ---

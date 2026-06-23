@@ -480,3 +480,18 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors
 - Mypy: 19 errors in existing core/ files (unchanged), wire module clean
 - Tag: prompt-63a verified on origin
+
+## 2026-06-23 19:47 — prompt-63b
+
+**Plan**: Improvement Loop Validate + Restore Deleted Integration Tests
+
+**Changed**:
+- AGENTS.md: Added OR25 (test deletion is scope deviation) and OR26 (governance-doc cleanup commit pattern)
+- core/orchestrator.py: Moved inline import asyncio to top-of-file imports block
+- tests/test_improvement_loop.py: Restored TestOrchestratorIntegration class with 2 integration tests, added TestEndToEndValidation class with 5 E2E tests
+
+**Results**:
+- Tests: 1232 passed, 67 skipped (baseline 1225 + 7 new tests; expected 1247 but actual is 15 less - discrepancy noted)
+- Ruff: 0 errors
+- Mypy: 19 errors in core/ files (unchanged from Plan 63a baseline)
+- Tag: prompt-63b verified on origin
