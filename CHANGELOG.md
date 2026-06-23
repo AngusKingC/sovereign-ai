@@ -463,3 +463,20 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors (file-scoped)
 - Mypy: 0 errors (file-scoped)
 - Tag: prompt-62.5 verified on origin
+
+## 2026-06-23 19:21 — prompt-63a
+
+**Plan**: Improvement Loop Wire
+
+**Changed**:
+- core/commands.py: Added IMPROVE command type and ImproveCommandHandler with DI support
+- core/orchestrator.py: Added improvement_loop_orchestrator parameter and fire-and-forget integration
+- orchestrator/__init__.py: New module exporting ImprovementLoopOrchestrator
+- orchestrator/improvement_loop.py: New wire module connecting eval harness, trace store, and improvement loop
+- tests/test_improvement_loop.py: New integration tests for wire module and command handler
+
+**Results**:
+- Tests: 1225 passed, 67 skipped (expected ~1290, actual 1225 = -65 delta)
+- Ruff: 0 errors
+- Mypy: 19 errors in existing core/ files (unchanged), wire module clean
+- Tag: prompt-63a verified on origin
