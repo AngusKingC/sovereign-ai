@@ -91,10 +91,14 @@ OR16. HARD STOP on scope expansion. If you discover work outside the plan's scop
 
 OR17. Baseline reconciliation. If S1 actual count ≠ plan's expected count, update PLANS.md baseline with actual number + reason. Don't let stale baselines propagate. (Source: L7)
 
+OR26. Governance-doc edits discovered at /jarvis-open must be a separate commit and tag. If `git status` at S0.1 shows modified/untracked governance docs (`AGENTS.md`, `AI_HANDOFF.md`, `PLANS.md`, `CHANGELOG.md`, `LANDMINES.md`) or plan files (`GLM Prompts/`), commit them as a standalone `docs: cleanup pre-prompt-{N}` commit and tag as `docs-cleanup-{N}` -- do NOT bundle them into the next `prompt-{N}` tag. The CHANGELOG entry for `prompt-{N}` must list only the files actually edited as part of the plan body. (Source: GLM observation, Plan 63a execution -- 13 files were bundled into `prompt-63a` tag; CHANGELOG only documented 5.)
+
 ### Test discipline
 OR18. Tests change with code. Full test suite MUST pass before tagging.
 
 OR19. Test fixture parameters may be required by pytest/middleware/pydantic even if vulture flags them as unused. Don't remove without checking decorator context. (Source: L5)
+
+OR25. Test deletion is a scope deviation. If a test listed in the plan's S4 test specification cannot be made to pass due to mocking complexity, fixture difficulty, or API mismatch, STEP and report to the user. Do NOT delete the test, comment it out, or replace it with a "deferred to a future plan" note. Tests specified in the plan are part of the plan's scope; removing them is a HARD STOP under OR16. (Source: GLM observation, Plan 63a execution -- two integration tests were silently deleted after failing twice, leaving the plan's central wiring claim unverified.)
 
 ### Datetime discipline
 OR20. Never mix naive/aware `datetime`. Use `datetime.now(timezone.utc)` everywhere. Never `datetime.utcnow()` or bare `datetime.now()`. Watch for `default_factory=datetime.utcnow` (use `default_factory=lambda: datetime.now(timezone.utc)` instead). (Source: L6)
