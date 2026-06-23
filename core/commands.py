@@ -10,9 +10,12 @@ All interfaces share the same command registry, ensuring backwards compatibility
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, TypeVar
 from pydantic import BaseModel, Field
 from datetime import datetime
+
+if TYPE_CHECKING:
+    from orchestrator.improvement_loop import ImprovementLoopOrchestrator
 
 
 class CommandType(str, Enum):
@@ -35,6 +38,7 @@ class CommandType(str, Enum):
     ADAPTER = "adapter"  # Switch adapters
     THEME = "theme"  # Change theme
     STATUS = "status"  # Show status
+    IMPROVE = "improve"  # Trigger improvement loop
 
 
 class CommandContext(BaseModel):
@@ -87,6 +91,76 @@ class CommandHandler(ABC):
     def get_menu_item(self) -> Dict[str, Any]:
         """Return menu item definition for GUI interfaces."""
         pass
+
+
+class ImproveCommandHandler(CommandHandler):
+    """Handler for the IMPROVE command - triggers the improvement loop."""
+
+    def __init__(self) -> None:
+        """Initialize the command handler with a default trace emitter."""
+        super().__init__()
+        self._improvement_orchestrator: Optional["ImprovementLoopOrchestrator"] = None
+
+    def set_improvement_orchestrator(self, orchestrator: "ImprovementLoopOrchestrator") -> None:
+        """Set the improvement loop orchestrator instance (dependency injection)."""
+        self._improvement_orchestrator = orchestrator
+
+    async def execute(self, command: Command) -> CommandResult:
+        """Execute the improve command by routing to the improvement loop orchestrator.
+
+        Args:
+            command: Command with optional kwargs["task_id"] for targeted improvement,
+                     or kwargs["recent_count"] for batch improvement over last N tasks.
+
+        Returns:
+            CommandResult with improvement task results.
+        """
+        if self._improvement_orchestrator is None:
+            return CommandResult(
+                success=False,
+                message="Improvement loop orchestrator not configured",
+                error="ImprovementLoopOrchestrator not set. Call set_improvement_orchestrator() first."
+            )
+
+        task_id = command.kwargs.get("task_id")
+        recent_count = command.kwargs.get("recent_count", 10)
+
+        try:
+            result = await self._improvement_orchestrator.process_improvement_task(
+                task_id=task_id,
+                recent_count=recent_count
+            )
+
+            return CommandResult(
+                success=True,
+                message="Improvement task completed",
+                data=result
+            )
+
+        except Exception as e:
+            return CommandResult(
+                success=False,
+                message=f"Improvement task failed: {str(e)}",
+                error=str(e)
+            )
+
+    def get_help(self) -> str:
+        """Return help text for the improve command."""
+        return (
+            "/improve [task_id] [recent_count]\n"
+            "Trigger the improvement loop to evaluate and improve task performance.\n"
+            "  task_id: Optional specific task ID to evaluate\n"
+            "  recent_count: Number of recent tasks to evaluate (default: 10)"
+        )
+
+    def get_menu_item(self) -> Dict[str, Any]:
+        """Return menu item definition for GUI interfaces."""
+        return {
+            "label": "Improve",
+            "description": "Trigger improvement loop",
+            "icon": "sparkles",
+            "category": "system"
+        }
 
 
 T = TypeVar('T', bound=CommandHandler)
@@ -173,3 +247,8 @@ def register_command_alias(alias: str, command_type: CommandType) -> None:
     """Register a command alias with the global registry."""
     registry = get_command_registry()
     registry.register_alias(alias, command_type)
+
+
+# Register the IMPROVE command
+register_command(CommandType.IMPROVE, ImproveCommandHandler())
+register_command_alias("/improve", CommandType.IMPROVE)

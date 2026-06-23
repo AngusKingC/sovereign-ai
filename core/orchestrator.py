@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from core.evaluator import OutputEvaluator
     from core.trace_optimiser import TraceOptimiser
     from core.a2a_protocol import A2ARouter, A2ARequest, A2AResponse
+    from orchestrator.improvement_loop import ImprovementLoopOrchestrator
 
 from core.input_sanitiser import InputSanitiser
 
@@ -39,6 +40,7 @@ class Orchestrator:
         self,
         memory_router: "MemoryRouter",
         improvement_loop: "OrchestratorImprovementLoop | None" = None,
+        improvement_loop_orchestrator: "ImprovementLoopOrchestrator | None" = None,
         cloud_fallback_model: str = "gpt-4o",
         approval_gate: "ApprovalGate | None" = None,
         escalation_engine: "EscalationEngine | None" = None,
@@ -48,9 +50,24 @@ class Orchestrator:
         output_evaluator: "OutputEvaluator | None" = None,
         emitter: TraceEmitter | None = None,
     ) -> None:
-        """Initialize the orchestrator with dependencies."""
+        """Initialize the orchestrator with dependencies.
+
+        Args:
+            memory_router: MemoryRouter for memory operations
+            improvement_loop: OrchestratorImprovementLoop for improvement decisions (deprecated, use improvement_loop_orchestrator)
+            improvement_loop_orchestrator: ImprovementLoopOrchestrator wire module for improvement tasks
+            cloud_fallback_model: Fallback model for cloud operations
+            approval_gate: ApprovalGate for approval requests
+            escalation_engine: EscalationEngine for escalation logic
+            fallback_chain: AdapterFallbackChain for adapter fallback
+            a2a_router: A2ARouter for agent-to-agent routing
+            input_sanitiser: InputSanitiser for input validation
+            output_evaluator: OutputEvaluator for output evaluation
+            emitter: TraceEmitter for observability
+        """
         self.memory_router = memory_router
-        self.improvement_loop = improvement_loop
+        self.improvement_loop = improvement_loop  # Deprecated: use improvement_loop_orchestrator
+        self.improvement_loop_orchestrator = improvement_loop_orchestrator
         self.cloud_fallback_model = cloud_fallback_model
         self.approval_gate = approval_gate
         self.escalation_engine = escalation_engine
@@ -266,6 +283,23 @@ class Orchestrator:
                 except Exception:
                     # Silently fail if scratchpad compaction fails
                     pass
+
+                # Improvement loop integration -- fire-and-forget via wire module
+                if self.improvement_loop_orchestrator is not None:
+                    try:
+                        import asyncio
+                        # Route through wire module for full error handling
+                        improvement_task = asyncio.create_task(
+                            self.improvement_loop_orchestrator.process_improvement_task(
+                                task_id=str(task.task_id)
+                            )
+                        )
+                        # Suppress "Task exception was never retrieved" warning
+                        improvement_task.add_done_callback(lambda t: t.exception() if t.exception() else None)
+                    except Exception:
+                        # Per AR18: improvement loop failure should not crash task processing
+                        pass
+
                 # Mark task as completed in orchestrator metrics
                 if self.improvement_loop:
                     try:
