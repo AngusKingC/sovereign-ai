@@ -11,6 +11,7 @@ from uuid import uuid4
 from datetime import datetime, timezone
 
 from core.schemas import Task, WorkerOutput, EscalationDecision
+from core.approval_gate import ApprovalActionType
 from core.observability import (
     TraceComponent,
     TraceLevel,
@@ -137,7 +138,7 @@ class EscalationEngine:
             request_id=str(uuid4()),
             task_id=str(task.task_id),
             session_id=str(uuid4()),
-            action_type="cloud_escalation",
+            action_type=ApprovalActionType.CLOUD_ESCALATION,
             action_description=f"Escalate task {task.task_id} to {decision.tier} model {decision.suggested_model}",
             action_parameters={"tier": decision.tier, "to_model": decision.suggested_model},
             risk_level="high",

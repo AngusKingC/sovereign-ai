@@ -691,7 +691,7 @@ class Orchestrator:
         
         return task
 
-    async def process_pending_approval(self, task_id: str, approved: bool) -> Task | None:
+    async def process_pending_approval(self, task_id: str, approved: bool) -> WorkerOutput | Task | None:
         """
         Process a task that was awaiting approval.
         

@@ -151,14 +151,14 @@ class RetentionEngine:
         # For now, we'll call memory_router.fetch() and filter in Python
         
         # Create a dummy task for the fetch call
-        from core.schemas import Task
+        from core.schemas import Task, TaskPriority
         from uuid import uuid4
         
         dummy_task = Task(
             task_id=uuid4(),
             intent=f"{rule.scope}:{rule.data_type}",
             complexity_score=0.5,
-            priority="normal",
+            priority=TaskPriority.NORMAL,
             created_at=datetime.now(timezone.utc),
         )
 

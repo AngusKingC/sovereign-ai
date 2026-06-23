@@ -7,8 +7,9 @@ with appropriate capabilities by matching against the SkillRegistry.
 
 import asyncio
 import re
+import typing
 from typing import TYPE_CHECKING
-from uuid import uuid4
+from uuid import uuid4, UUID
 from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field
@@ -517,7 +518,7 @@ class PlaceholderWorker(WorkerBase):
     
     def __init__(
         self,
-        profile: WorkerProfile,
+        profile: "WorkerProfile | DynamicWorkerProfile",
         memory_router: "MemoryRouter",
         emitter: TraceEmitter | None = None,
     ) -> None:
@@ -554,7 +555,7 @@ class PlaceholderWorker(WorkerBase):
                 return self._cost_per_token
         
         super().__init__(
-            profile=profile,
+            profile=typing.cast(WorkerProfile, profile),
             llm=MockLLMAdapter(),
             memory_router=memory_router,
             emitter=emitter,
@@ -581,7 +582,7 @@ class PlaceholderWorker(WorkerBase):
         from core.schemas import WorkerOutput
         return WorkerOutput(
             worker_id=self.profile.worker_id,
-            task_id=task_id,
+            task_id=UUID(task_id),
             content=raw.content,
             confidence=0.5,
             model_used=raw.model,

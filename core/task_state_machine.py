@@ -7,8 +7,9 @@ history tracking, and observability.
 
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+from uuid import UUID
 
-from core.schemas import Task, TaskStatus, TaskStateTransition
+from core.schemas import Task, TaskStatus, TaskPriority, TaskStateTransition
 from core.observability import (
     TraceComponent,
     TraceEventType,
@@ -291,10 +292,10 @@ class TaskStateMachine:
                 try:
                     # Create a task to fetch the checkpoint data
                     task = Task(
-                        task_id=key.split(":")[1] if ":" in key else key,
+                        task_id=UUID(key.split(":")[1] if ":" in key else key),
                         intent=key,
                         complexity_score=0,
-                        priority="medium",
+                        priority=TaskPriority.HIGH,
                         current_state=TaskStatus.RECEIVED,
                         created_at=datetime.now(timezone.utc),
                     )

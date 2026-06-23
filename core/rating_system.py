@@ -398,6 +398,12 @@ class RatingSystem:
             instruction_file_version = 0
             comment = "Legacy rating call"
         
+        # Ensure all required parameters have values
+        task_id = task_id or str(uuid4())
+        model_used = model_used or "unknown"
+        instruction_file_version = instruction_file_version or 0
+        comment = comment or None
+        
         return await self._record_rating_impl(
             worker_id=worker_id,
             task_id=task_id,

@@ -11,7 +11,7 @@ from typing import Any
 from uuid import uuid4, UUID
 
 from core.memory_router import MemoryBackend
-from core.schemas import Message, SessionSummary, Task
+from core.schemas import Message, SessionSummary, Task, TaskPriority, TaskStatus
 
 
 class SessionManager:
@@ -111,8 +111,8 @@ class SessionManager:
                     task_id=uuid4(),
                     intent=f"session:{session_id}",
                     complexity_score=0.0,
-                    priority="normal",
-                    current_state="received",
+                    priority=TaskPriority.NORMAL,
+                    current_state=TaskStatus.RECEIVED,
                     created_at=datetime.now(timezone.utc),
                 )
                 results = await self.backend.fetch(task)
@@ -237,8 +237,8 @@ class SessionManager:
                 task_id=uuid4(),
                 intent=intent,
                 complexity_score=0.0,
-                priority="normal",
-                current_state="received",
+                priority=TaskPriority.NORMAL,
+                current_state=TaskStatus.RECEIVED,
                 created_at=datetime.now(timezone.utc),
             )
             results = await self.backend.fetch(task)
@@ -280,8 +280,8 @@ class SessionManager:
                 task_id=uuid4(),
                 intent="session:all",
                 complexity_score=0.0,
-                priority="normal",
-                current_state="received",
+                priority=TaskPriority.NORMAL,
+                current_state=TaskStatus.RECEIVED,
                 created_at=datetime.now(timezone.utc),
             )
             all_sessions = await self.backend.fetch(task)
