@@ -16,6 +16,10 @@ from typing import Any, Dict, Optional
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict
 from uuid import UUID, uuid4
+import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TraceLevel(str, Enum):
@@ -351,13 +355,43 @@ class TraceEmitter:
     Components implement this interface to emit trace events.
     """
     
+    def __init__(self, trace_store: Optional[Any] = None, memory_router: Optional[Any] = None) -> None:
+        """Initialize the trace emitter.
+        
+        Args:
+            trace_store: Optional trace store backend for persistence
+            memory_router: Optional memory router to obtain trace store from
+        """
+        # If memory_router is provided, get trace_store from it
+        if memory_router is not None and hasattr(memory_router, 'get_trace_store'):
+            self.trace_store = memory_router.get_trace_store()
+        else:
+            self.trace_store = trace_store
+        self._last_trace_task: Optional[asyncio.Task] = None
+    
     async def emit(self, event: TraceEvent) -> None:
         """Emit a trace event.
         
         Args:
             event: The trace event to emit
         """
+        # Schedule trace storage as fire-and-forget background task
+        if self.trace_store is not None:
+            trace_event_dict = event.model_dump()
+            self._last_trace_task = asyncio.create_task(self._safe_store_trace(trace_event_dict))
         raise NotImplementedError
+    
+    async def _safe_store_trace(self, trace_event: Dict[str, Any]) -> None:
+        """Best-effort trace persistence. Failures here must never affect
+        the emission path — trace storage is an optional backend.
+        
+        Args:
+            trace_event: Trace event dictionary to store
+        """
+        try:
+            await self.trace_store.store_trace(trace_event)
+        except Exception as exc:  # noqa: BLE001 — optional backend, swallow by design
+            logger.warning("Trace store write failed; continuing without persistence: %s", exc)
     
     async def emit_with_context(
         self,
@@ -404,8 +438,22 @@ class ConsoleTraceEmitter(TraceEmitter):
     visibility in CLI environments.
     """
     
+    def __init__(self, trace_store: Optional[Any] = None, memory_router: Optional[Any] = None) -> None:
+        """Initialize the console trace emitter.
+        
+        Args:
+            trace_store: Optional trace store backend for persistence
+            memory_router: Optional memory router to obtain trace store from
+        """
+        super().__init__(trace_store=trace_store, memory_router=memory_router)
+    
     async def emit(self, event: TraceEvent) -> None:
         """Emit a trace event to console."""
+        # Schedule trace storage as fire-and-forget background task
+        if self.trace_store is not None:
+            trace_event_dict = event.model_dump()
+            self._last_trace_task = asyncio.create_task(self._safe_store_trace(trace_event_dict))
+        
         # Format: [TIMESTAMP] [LEVEL] [COMPONENT] EVENT_TYPE: message
         timestamp = event.timestamp.isoformat()
         level = str(event.level).upper()
@@ -432,12 +480,23 @@ class MemoryTraceEmitter(TraceEmitter):
     This emitter stores trace events in memory for programmatic access.
     """
     
-    def __init__(self) -> None:
-        """Initialize the memory emitter."""
+    def __init__(self, trace_store: Optional[Any] = None, memory_router: Optional[Any] = None) -> None:
+        """Initialize the memory emitter.
+        
+        Args:
+            trace_store: Optional trace store backend for persistence
+            memory_router: Optional memory router to obtain trace store from
+        """
+        super().__init__(trace_store=trace_store, memory_router=memory_router)
         self._events: list[TraceEvent] = []
     
     async def emit(self, event: TraceEvent) -> None:
         """Emit a trace event to memory."""
+        # Schedule trace storage as fire-and-forget background task
+        if self.trace_store is not None:
+            trace_event_dict = event.model_dump()
+            self._last_trace_task = asyncio.create_task(self._safe_store_trace(trace_event_dict))
+        
         self._events.append(event)
     
     def get_events(
@@ -490,8 +549,21 @@ class NullTraceEmitter(TraceEmitter):
     Useful for testing or when tracing is disabled.
     """
     
+    def __init__(self, trace_store: Optional[Any] = None, memory_router: Optional[Any] = None) -> None:
+        """Initialize the null trace emitter.
+        
+        Args:
+            trace_store: Optional trace store backend for persistence
+            memory_router: Optional memory router to obtain trace store from
+        """
+        super().__init__(trace_store=trace_store, memory_router=memory_router)
+    
     async def emit(self, event: TraceEvent) -> None:
         """Silently absorb trace events (no-op)."""
+        # Schedule trace storage as fire-and-forget background task
+        if self.trace_store is not None:
+            trace_event_dict = event.model_dump()
+            self._last_trace_task = asyncio.create_task(self._safe_store_trace(trace_event_dict))
         pass
 
 

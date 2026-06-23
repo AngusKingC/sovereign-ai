@@ -28,11 +28,20 @@ class BackendRouter:
         postgres: MemoryBackend | None = None,
         qdrant: MemoryBackend | None = None,
         obsidian: MemoryBackend | None = None,
+        trace_store: Any | None = None,
     ) -> None:
-        """Initialize the router with available backends."""
+        """Initialize the router with available backends.
+        
+        Args:
+            postgres: Postgres backend for structured data
+            qdrant: Qdrant backend for vector data
+            obsidian: Obsidian backend for document data
+            trace_store: Optional trace store backend for trace event persistence
+        """
         self.postgres = postgres
         self.qdrant = qdrant
         self.obsidian = obsidian
+        self.trace_store = trace_store
 
     def get_backend_for_type(self, data_type: DataType) -> MemoryBackend | None:
         """Get the appropriate backend for a given data type."""
@@ -84,4 +93,12 @@ class BackendRouter:
         """Check if a backend is available for the given data type."""
         backend = self.get_backend_for_type(data_type)
         return backend is not None
+
+    def get_trace_store(self) -> Any | None:
+        """Get the trace store backend if available.
+        
+        Returns:
+            Trace store instance or None if not configured
+        """
+        return self.trace_store
 
