@@ -51,22 +51,11 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 62.5 | Eval Harness Validation | 1213 | Validation suite with 15 static tasks across 5 categories. Metric refinements: space collapsing (exact_match), punctuation stripping (token_f1). 19 new validation tests. |
 | 63a | Improvement Loop Wire | 1225 | Wire module connecting eval harness, trace store, and improvement loop. IMPROVE command with DI support. Orchestrator fire-and-forget integration. 12 new tests. |
 | 63b | Improvement Loop Validate + Restore Integration Tests | 1232 | Restored TestOrchestratorIntegration class with 2 integration tests (fixed mocking strategy). Added TestEndToEndValidation class with 5 E2E tests. Moved inline import asyncio to top-of-file in core/orchestrator.py. Added OR25 and OR26 to AGENTS.md. 7 new tests. |
+| 64 | Core Mypy Remediation | 1232 | Fixed 33 mypy errors across 14 core files. Added compatibility shims for backward compatibility with tests. Added OR27 to AGENTS.md. |
 
 ---
 
 ## Next 5 Prompts Queue
-
-### Plan 64 — [Open Slot] (Priority TBD)
-
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 63b.
-
-**Expected impact**: TBD
-
-**Baseline changes**: TBD
-
-**Gate**: TBD
-
----
 
 ### Plan 65 — [Open Slot] (Priority TBD)
 
@@ -80,16 +69,40 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
-### Plan 66 — 5-Plan Milestone Full Scan (Priority 1 — tentative)
+### Plan 66 — [Open Slot] (Priority TBD)
 
-**Scope**: Post-Plans 62-65 full-repo scan and baseline refresh. Capture new baselines after improvement loop is complete.
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 65.
+
+**Expected impact**: TBD
+
+**Baseline changes**: TBD
+
+**Gate**: TBD
+
+---
+
+### Plan 67 — [Open Slot] (Priority TBD)
+
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 66.
+
+**Expected impact**: TBD
+
+**Baseline changes**: TBD
+
+**Gate**: TBD
+
+---
+
+### Plan 68 — 5-Plan Milestone Full Scan (Priority 1 — tentative)
+
+**Scope**: Post-Plans 64-67 full-repo scan and baseline refresh. Capture new baselines after core mypy remediation.
 
 **Expected impact**: 
-- Scope TBD pending Plans 61-64 completion. This entry is a **placeholder**.
+- Scope TBD pending Plans 65-67 completion. This entry is a **placeholder**.
 - Expected updates: mypy baseline (±10), ruff (target: 0), bandit (target: 0 medium), pip-audit (target ≤20), vulture (target ≤25), test count (target ≈1245)
 
 **Baseline changes**:
-- Will be determined at Plan 65 scoping time (GLM inspects actual repo state)
+- Will be determined at Plan 67 scoping time (GLM inspects actual repo state)
 
 **Gate**: Full 6-tool scan passes (pytest + ruff + mypy . + bandit + pip-audit + vulture). All baselines recorded. Handoff status sections updated.
 

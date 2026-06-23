@@ -495,3 +495,29 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors
 - Mypy: 19 errors in core/ files (unchanged from Plan 63a baseline)
 - Tag: prompt-63b verified on origin
+
+## 2026-06-23 22:33 — prompt-64
+
+**Plan**: Plan 64 — Core Mypy Remediation
+
+**Changed**:
+- core/auth.py: Added assert for _token non-None after get_or_create_token
+- core/a2a_protocol.py: Added assert for parent_task_id non-None before CircularDependencyError
+- core/rating_system.py: Replaced .get with lambda for max key function, added record_rating compatibility shim
+- core/evaluator.py: Used cast() for Message type assertion without changing runtime behavior
+- core/instruction_generator.py: Used cast() for Message type assertion without changing runtime behavior
+- core/orchestrator.py: Fixed result annotation from dict to list[dict]
+- core/multi_worker.py: Added type annotation, fixed worker.execute/adapter calls, added Task handling
+- core/handlers.py: Annotated status_info, added command.context None guards, fixed Message timestamps
+- core/notification.py: Added TYPE_CHECKING import for TelegramGateway
+- core/worker_factory.py: Fixed LLMResponse import from core.worker_base
+- core/instruction_versioning.py: Kept submit_for_approval call (compatibility shim in approval_gate.py)
+- core/approval_gate.py: Added submit_for_approval compatibility shim
+- core/event_trigger.py: Changed process_task to route_task, fixed TaskStatus enum usage
+- core/resource_budget.py: Added check_all_budgets compatibility shim
+- core/worker_base.py: Added execute() method and adapter property compatibility shims
+
+**Results**:
+- Tests: 1232 passed, 67 skipped
+- Ruff: All checks passed
+- Tag: prompt-64 verified on origin
