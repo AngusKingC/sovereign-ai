@@ -13,7 +13,7 @@ description: "Run the 6-tool full checkpoint scan SEQUENTIALLY (never in paralle
 python -m pytest tests/ -q --tb=short | Select-Object -Last 5
 ```
 
-Wait for completion. Record: `<N> passed, <M> skipped`. Expected: check SOVEREIGN_AI_HANDOFF.md for current baseline.
+Wait for completion. Record: `<N> passed, <M> skipped`. Expected: check PLANS.md for current baseline.
 
 ## Tool 2: ruff (full-repo)
 

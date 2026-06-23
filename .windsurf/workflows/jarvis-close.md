@@ -1,6 +1,6 @@
 ---
 name: jarvis-close
-description: "Sovereign AI closing sequence — C1 through C13. Run this after all plan work is complete. Includes test suite, lint, commit, tag, changelog, handoff update, push, and verification."
+description: "Sovereign AI closing sequence — C1 through C13. Run this after all plan work is complete. Includes test suite, lint, commit, tag, changelog, plans update, landmines update, push, and verification."
 ---
 
 # Jarvis Close — Plan Closing Sequence
@@ -11,7 +11,7 @@ Execute each step in order. Paste output for each. Do NOT skip steps.
 ```powershell
 python -m pytest tests/ -q --tb=short | Select-Object -Last 5
 ```
-Expected: check SOVEREIGN_AI_HANDOFF.md for current baseline. If tests fail, STOP.
+Expected: check `PLANS.md` for current baseline. If tests fail, STOP.
 
 ## Step 2: Ruff check on touched files
 ```powershell
@@ -76,29 +76,64 @@ Get-Content C:\Jarvis\CHANGELOG.md | Select-Object -Last 12
 ```
 Verify: `$newCount > $oldCount` and last 12 lines show the new entry.
 
+Clean up temp file:
+```powershell
+Remove-Item "C:\Jarvis\scan\logs\changelog-entry-prompt-{N}.md"
+```
+
 ## Step 9: Rule proposal (L20 — MANDATORY)
 
 Include either Option A (propose a new rule) or Option B (explicit none with justification listing patterns considered). Silence is NOT acceptable.
 
-## Step 10: Update SOVEREIGN_AI_HANDOFF.md
-- Update "Last updated" line
-- Update test baseline + static analysis baseline
-- Add row to Completed prompts table
-- Update Next 5 prompts (remove completed plan, shift up)
+**If proposing a rule based on a landmine captured at Step 11**, include the source reference: e.g., "Source: landmine L{n}" — so the rule's diagnostic context is traceable. The landmine itself is never edited after capture (append-only).
 
-## Step 11: Commit docs
+## Step 10: Update PLANS.md
+
+`PLANS.md` (in repo root) is the dynamic project state. 
+
+**IMPORTANT**: Use the Edit tool (AGENTS.md OR7) with exact `old_str`/`new_str` pairs. NEVER use PowerShell `-replace`, `ForEach-Object`, or `Set-Content`.
+
+Update all 6 sections:
+
+- **(a) Completed prompts table**: add new row at the bottom with #, prompt name, test count, one-line notes.
+- **(b) Test baseline**: update "Current baseline:" line if test count changed. Include new count and source (Plan {N} S{step}).
+- **(c) Static analysis baseline**: update the 5-tool table if any tool count changed. Include source (Plan {N} S{step}) and delta notes.
+- **(d) Next 5 prompts queue**: shift the queue — Plan {N+1} becomes active, add a new open slot at the bottom. If the active plan changed scope, update its queue entry.
+- **(e) Status sections**: if any feature moved between sections (e.g., from "Built but not reachable" to "Works right now"), update the 4 status subsections.
+- **(f) Baseline reconciliation notes**: add explanation of any tool count deltas, with tolerance justification (within/outside acceptable range).
+
+After all updates, verify with:
 ```powershell
-git add CHANGELOG.md SOVEREIGN_AI_HANDOFF.md
-git commit -m "docs: prompt-{N} changelog and handoff update"
+git diff PLANS.md | Select-Object -First 30
 ```
+Confirm only the 6 intended sections changed. If unexpected sections appear, revert and re-edit.
 
-## Step 12: Push
+## Step 11: Update LANDMINES.md (only if new failure pattern)
+
+If this plan hit a new failure pattern not covered by existing landmines, append a new entry to `LANDMINES.md` using the structured format:
+- **L{n+1}**: one-line label
+- Trigger: what happened this prompt — concrete, with file + line
+- Impact: why it bites
+- Mitigation: how to avoid it next time
+
+**Landmines are append-only** — capture once, never edit after. Do NOT add "FIXED" cross-references to landmine entries when a rule is later added to AGENTS.md. The linkage goes the other way: the AGENTS.md rule references its source landmine ("Source: landmine L{n}") at the time the rule is proposed.
+
+If no new failure patterns were encountered, skip this step. Silence is acceptable here (unlike C9 — landmines are only added when patterns actually emerge).
+
+## Step 12: Commit docs
+```powershell
+git add CHANGELOG.md PLANS.md LANDMINES.md
+git commit -m "docs: prompt-{N} changelog, plans, and landmines update"
+```
+(If `LANDMINES.md` was not updated this plan, omit it from the `git add`.)
+
+## Step 13: Push
 ```powershell
 git push origin master
 git push origin prompt-{N}
 ```
 
-## Step 13: Post-push verification (MANDATORY)
+## Step 14: Post-push verification (MANDATORY)
 ```powershell
 git ls-remote --tags origin | Select-String "prompt-{N}"
 ```
@@ -113,9 +148,10 @@ Paste ALL of:
 4. C7 file list (git show --stat)
 5. C8 CHANGELOG (last 12 lines)
 6. C9 rule proposal (block or "none" with justification)
-7. C10 handoff updates
-8. C11 docs commit output
-9. C12 push output
-10. C13 tag on origin (git ls-remote output)
+7. C10 PLANS.md updates (paste git diff showing all 6 sections: Completed Prompts, Test Baseline, Analysis Baseline, Queue Shift, Status Sections, Reconciliation Notes)
+8. C11 LANDMINES.md update (paste new entry, OR "no new failure patterns this plan")
+9. C12 docs commit output
+10. C13 push output
+11. C14 tag on origin (git ls-remote output)
 
 If ANY check fails or output is missing, the plan is NOT complete.

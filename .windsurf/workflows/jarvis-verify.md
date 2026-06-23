@@ -47,4 +47,4 @@ If ruff finds new errors introduced by your edits, fix them before proceeding.
 
 ## Expected result
 
-All syntax checks pass, diff shows only intended files, targeted tests pass (check SOVEREIGN_AI_HANDOFF.md for current baseline). If any step fails, STOP and fix before moving to the next file or the closing sequence.
+All syntax checks pass, diff shows only intended files, targeted tests pass (check PLANS.md for current baseline). If any step fails, STOP and fix before moving to the next file or the closing sequence.
