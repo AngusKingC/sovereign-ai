@@ -1,0 +1,137 @@
+[
+  {
+    "task_id": "exact-1",
+    "predicted": "The quick brown fox",
+    "gold": "The quick brown fox",
+    "category": "exact",
+    "expected_exact_match": 1.0,
+    "min_token_f1": 1.0,
+    "notes": "Perfect match"
+  },
+  {
+    "task_id": "exact-2",
+    "predicted": "  The quick brown fox  ",
+    "gold": "The quick brown fox",
+    "category": "exact",
+    "expected_exact_match": 1.0,
+    "min_token_f1": 1.0,
+    "notes": "Whitespace variation"
+  },
+  {
+    "task_id": "exact-3",
+    "predicted": "THE QUICK BROWN FOX",
+    "gold": "the quick brown fox",
+    "category": "exact",
+    "expected_exact_match": 0.0,
+    "min_token_f1": 1.0,
+    "notes": "Case variation - exact_match 0.0, token_f1 1.0"
+  },
+  {
+    "task_id": "near-1",
+    "predicted": "The quick brown fox jumps",
+    "gold": "The quick brown fox",
+    "category": "near",
+    "expected_exact_match": 0.0,
+    "min_token_f1": 0.75,
+    "notes": "One extra word"
+  },
+  {
+    "task_id": "near-2",
+    "predicted": "The quick brown",
+    "gold": "The quick brown fox",
+    "category": "near",
+    "expected_exact_match": 0.0,
+    "min_token_f1": 0.67,
+    "notes": "One missing word"
+  },
+  {
+    "task_id": "near-3",
+    "predicted": "The fast brown fox",
+    "gold": "The quick brown fox",
+    "category": "near",
+    "expected_exact_match": 0.0,
+    "min_token_f1": 0.60,
+    "notes": "Synonym substitution"
+  },
+  {
+    "task_id": "no-1",
+    "predicted": "Lorem ipsum dolor",
+    "gold": "The quick brown fox",
+    "category": "no",
+    "expected_exact_match": 0.0,
+    "min_token_f1": 0.0,
+    "notes": "Completely different"
+  },
+  {
+    "task_id": "no-2",
+    "predicted": "",
+    "gold": "The quick brown fox",
+    "category": "no",
+    "expected_exact_match": 0.0,
+    "min_token_f1": 0.0,
+    "notes": "Empty prediction"
+  },
+  {
+    "task_id": "no-3",
+    "predicted": "asdf qwer zxcv",
+    "gold": "The quick brown fox",
+    "category": "no",
+    "expected_exact_match": 0.0,
+    "min_token_f1": 0.0,
+    "notes": "Nonsense"
+  },
+  {
+    "task_id": "punct-1",
+    "predicted": "Hello, world!",
+    "gold": "Hello world",
+    "category": "punctuation",
+    "expected_exact_match": 0.0,
+    "min_token_f1": 0.67,
+    "notes": "Comma added"
+  },
+  {
+    "task_id": "punct-2",
+    "predicted": "The end.",
+    "gold": "The end",
+    "category": "punctuation",
+    "expected_exact_match": 0.0,
+    "min_token_f1": 0.67,
+    "notes": "Period added"
+  },
+  {
+    "task_id": "punct-3",
+    "predicted": "Wait — what?",
+    "gold": "Wait what",
+    "category": "punctuation",
+    "expected_exact_match": 0.0,
+    "min_token_f1": 0.50,
+    "notes": "Multiple punctuation"
+  },
+  {
+    "task_id": "edge-1",
+    "predicted": "",
+    "gold": "",
+    "category": "edge",
+    "expected_exact_match": 1.0,
+    "min_token_f1": 1.0,
+    "notes": "Both empty"
+  },
+  {
+    "task_id": "edge-2",
+    "predicted": "The   quick   fox",
+    "gold": "The quick fox",
+    "category": "edge",
+    "expected_exact_match": 1.0,
+    "min_token_f1": 1.0,
+    "notes": "Multiple internal spaces - normalized to single space"
+  },
+  {
+    "task_id": "edge-3",
+    "predicted": "42 is the answer",
+    "gold": "42 is the answer",
+    "category": "edge",
+    "expected_exact_match": 1.0,
+    "min_token_f1": 1.0,
+    "notes": "Numbers"
+  }
+]

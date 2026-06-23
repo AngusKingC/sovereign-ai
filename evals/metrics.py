@@ -2,10 +2,17 @@
 
 This module provides lightweight, self-contained metric functions for offline
 evaluation. All metrics use stdlib only (no external dependencies).
+
+Metric priority order for evaluation:
+- exact_match: strict ground truth (character-level identity after normalization)
+- token_f1: fuzzy ground truth (word overlap, order-independent)
+- bleu, cosine_similarity: supplementary metrics with known limitations
 """
 
 from collections import Counter
 import math
+import re
+import string
 
 
 def compute_exact_match(predicted: str, gold: str) -> float:
@@ -16,9 +23,11 @@ def compute_exact_match(predicted: str, gold: str) -> float:
         gold: The gold-standard (expected) output
         
     Returns:
-        1.0 if strings match exactly (after stripping whitespace), 0.0 otherwise
+        1.0 if strings match exactly (after stripping whitespace and collapsing multiple spaces), 0.0 otherwise
     """
-    return 1.0 if predicted.strip() == gold.strip() else 0.0
+    predicted_norm = re.sub(r'\s+', ' ', predicted.strip())
+    gold_norm = re.sub(r'\s+', ' ', gold.strip())
+    return 1.0 if predicted_norm == gold_norm else 0.0
 
 
 def compute_token_f1(predicted: str, gold: str) -> float:
@@ -33,8 +42,10 @@ def compute_token_f1(predicted: str, gold: str) -> float:
     Returns:
         F1 score in range [0.0, 1.0]
     """
-    pred_tokens = set(predicted.lower().split())
-    gold_tokens = set(gold.lower().split())
+    pred_clean = predicted.lower().translate(str.maketrans('', '', string.punctuation))
+    gold_clean = gold.lower().translate(str.maketrans('', '', string.punctuation))
+    pred_tokens = set(pred_clean.split())
+    gold_tokens = set(gold_clean.split())
     
     if not gold_tokens:
         return 1.0 if not pred_tokens else 0.0

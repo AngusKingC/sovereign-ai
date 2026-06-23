@@ -1,5 +1,6 @@
 """Unit tests for evaluation harness and metrics."""
 
+import json
 import pytest
 from datetime import datetime, timezone
 from evals.harness import EvalHarness, EvalResult
@@ -194,3 +195,128 @@ class TestEvalHarness:
         """Test that timestamps use UTC timezone (OR20)."""
         result = await harness.evaluate("hello", "hello")
         assert result.timestamp.tzinfo == timezone.utc
+
+
+class TestEvalValidation:
+    """Validation tests using static fixture suite."""
+
+    @pytest.fixture
+    def harness(self):
+        """Create a default EvalHarness instance."""
+        return EvalHarness()
+
+    @pytest.fixture(scope="module")
+    def validation_suite(self):
+        """Load validation tasks from JSON fixture."""
+        with open("evals/validation_tasks.json") as f:
+            return json.load(f)
+
+    def _load_task(self, suite, task_id):
+        """Helper to load a specific task by ID."""
+        task = next((t for t in suite if t["task_id"] == task_id), None)
+        assert task is not None, f"Task {task_id} not found in validation suite"
+        return task
+
+    def test_validation_suite_loads(self, validation_suite):
+        """Verify JSON loads, has 15 entries, all have required keys."""
+        assert len(validation_suite) == 15
+        required_keys = ["task_id", "predicted", "gold", "category", "expected_exact_match", "notes"]
+        for task in validation_suite:
+            for key in required_keys:
+                assert key in task, f"Task {task['task_id']} missing key {key}"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("task_id", ["exact-1", "exact-2", "exact-3"])
+    async def test_exact_match_tasks(self, harness, validation_suite, task_id):
+        """Test exact-match category tasks."""
+        task = self._load_task(validation_suite, task_id)
+        result = await harness.evaluate(task["predicted"], task["gold"], task_id=task_id)
+        assert result.metrics["exact_match"] == task["expected_exact_match"], \
+            f"{task_id}: expected exact_match={task['expected_exact_match']}, got {result.metrics['exact_match']}"
+        if task_id == "exact-3":
+            assert result.metrics["token_f1"] == 1.0, f"{task_id}: case variation should yield token_f1=1.0"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("task_id", ["near-1", "near-2", "near-3"])
+    async def test_near_match_tasks(self, harness, validation_suite, task_id):
+        """Test near-match category tasks."""
+        task = self._load_task(validation_suite, task_id)
+        result = await harness.evaluate(task["predicted"], task["gold"], task_id=task_id)
+        assert result.metrics["exact_match"] == 0.0, f"{task_id}: expected exact_match=0.0"
+        assert result.metrics["token_f1"] >= task["min_token_f1"], \
+            f"{task_id}: expected token_f1 >= {task['min_token_f1']}, got {result.metrics['token_f1']}"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("task_id", ["no-1", "no-2", "no-3"])
+    async def test_no_match_tasks(self, harness, validation_suite, task_id):
+        """Test no-match category tasks."""
+        task = self._load_task(validation_suite, task_id)
+        result = await harness.evaluate(task["predicted"], task["gold"], task_id=task_id)
+        assert result.metrics["exact_match"] == 0.0, f"{task_id}: expected exact_match=0.0"
+        assert result.metrics["token_f1"] < 0.5, f"{task_id}: expected token_f1 < 0.5"
+        assert result.metrics["bleu"] < 0.5, f"{task_id}: expected bleu < 0.5"
+        assert result.metrics["cosine_similarity"] < 0.5, f"{task_id}: expected cosine_similarity < 0.5"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("task_id", ["punct-1", "punct-2", "punct-3"])
+    async def test_punctuation_tasks(self, harness, validation_suite, task_id):
+        """Test punctuation category tasks."""
+        task = self._load_task(validation_suite, task_id)
+        result = await harness.evaluate(task["predicted"], task["gold"], task_id=task_id)
+        assert result.metrics["exact_match"] == 0.0, f"{task_id}: expected exact_match=0.0"
+        assert result.metrics["token_f1"] >= task["min_token_f1"], \
+            f"{task_id}: expected token_f1 >= {task['min_token_f1']}, got {result.metrics['token_f1']}"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("task_id", ["edge-1", "edge-2", "edge-3"])
+    async def test_edge_cases(self, harness, validation_suite, task_id):
+        """Test edge case tasks."""
+        task = self._load_task(validation_suite, task_id)
+        result = await harness.evaluate(task["predicted"], task["gold"], task_id=task_id)
+        if task_id == "edge-1":
+            assert result.metrics["exact_match"] == 1.0, f"{task_id}: expected exact_match=1.0"
+            assert result.metrics["token_f1"] == 1.0, f"{task_id}: expected token_f1=1.0"
+        elif task_id == "edge-2":
+            assert result.metrics["exact_match"] == 1.0, f"{task_id}: expected exact_match=1.0 (normalized)"
+            assert result.metrics["token_f1"] == 1.0, f"{task_id}: expected token_f1=1.0"
+        elif task_id == "edge-3":
+            assert result.metrics["exact_match"] == 1.0, f"{task_id}: expected exact_match=1.0"
+
+    @pytest.mark.asyncio
+    async def test_batch_eval_on_validation_suite(self, harness, validation_suite):
+        """Run all 15 entries through evaluate_batch."""
+        predictions = [(t["predicted"], t["gold"]) for t in validation_suite]
+        task_ids = [t["task_id"] for t in validation_suite]
+        results = await harness.evaluate_batch(predictions, task_ids)
+        assert len(results) == 15
+        assert all(isinstance(r, EvalResult) for r in results)
+
+    @pytest.mark.asyncio
+    async def test_summary_on_validation_suite(self, harness, validation_suite):
+        """Run suite, call summary(), verify all 4 metrics present, each count == 15."""
+        predictions = [(t["predicted"], t["gold"]) for t in validation_suite]
+        task_ids = [t["task_id"] for t in validation_suite]
+        await harness.evaluate_batch(predictions, task_ids)
+        summary = harness.summary()
+        assert "exact_match" in summary
+        assert "token_f1" in summary
+        assert "bleu" in summary
+        assert "cosine_similarity" in summary
+        assert summary["exact_match"]["count"] == 15
+        assert summary["token_f1"]["count"] == 15
+        assert summary["bleu"]["count"] == 15
+        assert summary["cosine_similarity"]["count"] == 15
+
+    @pytest.mark.asyncio
+    async def test_metric_priority_order(self, harness, validation_suite):
+        """
+        Metric priority order (design note):
+        - exact_match: ground truth for strict evaluation (character-level identity)
+        - token_f1: ground truth for fuzzy evaluation (word overlap, order-independent)
+        - bleu, cosine_similarity: supplementary metrics; document limitations, don't fix
+        For case variations (exact-3): exact_match=0.0 (strict) and token_f1=1.0 (fuzzy) are both correct.
+        """
+        task = self._load_task(validation_suite, "exact-3")
+        result = await harness.evaluate(task["predicted"], task["gold"], task_id="exact-3")
+        assert result.metrics["exact_match"] == 0.0, "Case variation: strict exact_match should be 0.0"
+        assert result.metrics["token_f1"] == 1.0, "Case variation: fuzzy token_f1 should be 1.0"
