@@ -5,6 +5,7 @@ Single responsibility: Analytical coordination layer that routes tasks to worker
 without holding opinions or writing beliefs. Pure analysis and dispatch.
 """
 
+import asyncio
 import time
 from typing import TYPE_CHECKING
 
@@ -287,7 +288,6 @@ class Orchestrator:
                 # Improvement loop integration -- fire-and-forget via wire module
                 if self.improvement_loop_orchestrator is not None:
                     try:
-                        import asyncio
                         # Route through wire module for full error handling
                         improvement_task = asyncio.create_task(
                             self.improvement_loop_orchestrator.process_improvement_task(
