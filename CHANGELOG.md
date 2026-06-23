@@ -540,3 +540,23 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors
 - Mypy: 16 errors → 0 errors
 - Tag: prompt-65 verified on origin
+
+## 2026-06-24 01:16 — prompt-66
+
+**Plan**: System Cleanup and Final Core Hardening
+
+**Changed**:
+- system/model_acquisition.py: Fixed 4 mypy errors (import path, params type, last_progress type, resource_manager optional)
+- system/voice_daemon.py: Fixed 3 enum errors (TaskPriority, TaskStatus imports and usage)
+- system/trajectory_exporter.py: Fixed 3 errors (removed record_type param, added type: ignore for aiofiles)
+- system/retention_manager.py: Fixed 4 func-returns-value errors (removed try-except to allow exception propagation)
+- system/retention_daemon.py: Fixed 2 attr-defined errors (added RETENTION_DAEMON to TraceComponent enum)
+- system/monitor_daemon.py: Fixed 2 arg-type errors (added UUID wrapper and TaskPriority import)
+- system/model_evaluator.py: Fixed 5 attr-defined errors (changed emitter to _emitter)
+- core/observability.py: Added RETENTION_DAEMON to TraceComponent enum
+
+**Results**:
+- Tests: 1231 passed, 68 skipped
+- Ruff: All checks passed
+- Mypy: 23 errors → 0 errors in core/ and system/
+- Tag: prompt-66 verified on origin
