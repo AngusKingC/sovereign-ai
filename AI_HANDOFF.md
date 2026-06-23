@@ -41,7 +41,7 @@ Three actors collaborate on this project. Each has a distinct job — do not cro
 
 The minimum needed to start working. Full environment (Python version, OS, optional deps, install commands) lives in `AGENTS.md` inside the repo — read it after cloning.
 
-- **Repo**: https://github.com/AngusKingC/sovereign-ai (GitHub, private)
+- **Repo**: https://github.com/AngusKingC/sovereign-ai (GitHub)
 - **Default branch**: `master`
 - **Tags**: `prompt-{N}` for each completed plan (e.g. `prompt-59`). Tag-push gate is mandatory.
 - **Clone (Devin)**: Windows local path managed by Devin Desktop. All plan execution happens here.
@@ -62,9 +62,9 @@ When the user pastes a Devin execution log, GLM follows these steps in order. Do
 
 4. **Create new AGENTS.md rules** if you spotted a recurring pattern across multiple execution logs that a rule could prevent. Put the rule in the new plan's opening Step 3 (not in the context brief). If no new patterns, the plan's opening Step 3 says "No new AGENTS.md rules this prompt."
 
-5. **Make the prompt + context brief.** Two files in `/home/z/my-project/download/`: `plan-{N}.md` (the plan Devin executes) and `plan-{N}-context-brief.md` (the review guide for Claude, ~30-50 lines, pointer-based).
+5. **Make the prompt + context brief.** Two files in `/home/z/my-project/download/`: `plan-{N}.md` (the plan Devin executes) and `plan-{N}-context-brief.md` (the review guide for Claude, ~30-50 lines, pointer-based). **Context brief is only created for the first file (Rev 1). Rev 2+ revisions do not need a context brief — Claude reviews the revised plan directly.**
 
-6. **Pause for Claude review.** The user bridges: they paste the plan + context brief to Claude in a separate chat, then paste Claude's findings back to you. Claude reviews only — does not create or edit plan files, visual diagrams, only identifies issues and improvements. Wait for the user's paste. Apply findings at GLM's discretion.
+6. **Pause for Claude review.** The user bridges: they paste the plan + context brief (Rev 1 only) or just the revised plan (Rev 2+) to Claude in a separate chat, then paste Claude's findings back to you. Claude reviews only — does not create or edit plan files, visual diagrams, only identifies issues and improvements. Wait for the user's paste. Apply findings at GLM's discretion.
 
 7. **Deliver the final plan.** Tell the user: "Copy `plan-{N}.md` to `c:\Jarvis\GLM Prompts\{decade}s\plan-{N}.md` and point Devin at it."
 
