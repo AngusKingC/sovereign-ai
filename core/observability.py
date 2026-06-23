@@ -142,6 +142,10 @@ class TraceEventType(str, Enum):
     MULTI_WORKER_DISPATCH_STARTED = "multi_worker_dispatch_started"
     MULTI_WORKER_ORCHESTRATOR_MODEL_RELEASED = "multi_worker_orchestrator_model_released"
     MULTI_WORKER_WORKER_FAILED = "multi_worker_worker_failed"
+    
+    # Eval events
+    EVAL_COMPLETE = "eval_complete"
+    EVAL_WARNING = "eval_warning"
     MULTI_WORKER_WORKER_MODEL_ENSURED = "multi_worker_worker_model_ensured"
     MULTI_WORKER_WORKER_MODEL_RELEASED = "multi_worker_worker_model_released"
     MULTI_WORKER_DISPATCH_COMPLETED = "multi_worker_dispatch_completed"
