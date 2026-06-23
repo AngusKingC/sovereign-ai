@@ -1,6 +1,6 @@
 # PLANS.md — Sovereign AI Project State
 
-**Last updated**: Post-Plan 60 (2026-06-22)
+**Last updated**: Post-Plan 60 (2026-06-23)
 
 This document tracks the dynamic state of the Sovereign AI project: baselines, completed prompts, and the next-5-prompt queue. It is the canonical source for test counts, static analysis baselines, and which prompt is currently active.
 
@@ -8,8 +8,8 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Test Baseline
 
-**Current baseline**: **1166 passed, 56 skipped**  
-**Verified**: Plan 60, Step 1.1 (5-plan milestone full scan)  
+**Current baseline**: **1167 passed, 55 skipped**  
+**Verified**: Plan 60, Step S1 (5-plan milestone full scan)  
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)  
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -17,15 +17,15 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Static Analysis Baseline
 
-**Captured**: Plan 60 (5-plan milestone full scan — 2026-06-22)
+**Captured**: Plan 60 (5-plan milestone full scan — 2026-06-23)
 
 | Tool | Baseline | Source | Notes |
 |---|---|---|---|
-| **Ruff** | 0 errors | Plan 60 S1.2 | No errors. Plan 59 cleanup fully held. |
-| **Mypy (full-repo)** | 277 errors in 67 files | Plan 60 S1.3 | Delta: -6 from Plan 55 baseline (283 → 277). Within tolerance. Full-repo only at 5-plan checkpoints. |
-| **Bandit** | 3,179 low severity | Plan 60 S1.4 | Plan 59 suppressed all 22 B108 findings. Zero medium, zero high. |
-| **pip-audit** | 19 CVEs (4 packages) | Plan 60 S1.5 | Stable across Plans 56-60. No actionable fixes (upstream only). |
-| **Vulture** | 22 high-confidence findings | Plan 60 S1.6 | Delta: +2 from Plan 55 baseline (20 → 22). Within tolerance. Dead code analysis only. |
+| **Ruff** | 0 errors | Plan 60 S2 | No errors. Plan 59 cleanup fully held. |
+| **Mypy (full-repo)** | 294 errors in 77 files | Plan 60 S3 | Delta: +11 from Plan 55 baseline (283 → 294). OUTSIDE tolerance — escalated for fix plan. Full-repo only at 5-plan checkpoints. |
+| **Bandit** | 3,179 low, 0 medium, 0 high | Plan 60 S4 | Plan 59 suppressed all B108 findings. Zero medium, zero high. |
+| **pip-audit** | 19 CVEs across 4 packages | Plan 60 S5 | Stable across Plans 56-60. No actionable fixes (upstream only). |
+| **Vulture** | 23 high-confidence findings | Plan 60 S6 | Delta: +3 from Plan 55 baseline (20 → 23). Within tolerance. Dead code analysis only. |
 
 **Per-plan verification cadence**:
 - **Every plan**: Ruff (file-scoped) + Mypy (file-scoped) + Pytest
@@ -45,7 +45,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 57 | Core serialization audit + JSON safety | 1166 | Jsonify strict mode, serializer audit, circular ref detection. |
 | 58 | Datetime UTC consolidation (core + system) | 1166 | 58 datetime.utcnow() calls replaced with datetime.now(timezone.utc). Eliminated naive/aware mixing. |
 | 59 | Ruff cleanup (110→0) + B108 suppression | 1166 | 104 ruff fixes (F541=14, F401=2, F811=3, F841=41, E402=21, F821=21, E731=1, E741=1). All 22 B108 scoped. |
-| 60 | 5-plan checkpoint (mypy 277, bandit clean, pip-audit 19) | 1166 | Full 5-plan scan. Mypy: 283→277 (-6). Bandit medium: 22→0. pip-audit: 19 CVEs (stable). Vulture: 22 findings. |
+| 60 | 5-plan checkpoint (mypy 294, bandit clean, pip-audit 19) | 1167 | Full 5-plan scan. Mypy: 283→294 (+11, OUTSIDE tolerance — escalated). Bandit: 3179 low/0 medium/0 high. pip-audit: 19 CVEs (stable). Vulture: 23 findings. |
 
 ---
 
@@ -164,11 +164,11 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **Serialization** — Jsonify strict mode, circular ref detection, type coercion all working
 - **Datetime handling** — Zero naive/aware mixing; all core/system/skills using timezone-aware UTC
 - **Ruff baseline** — 0 errors (Plan 59 cleanup held through Plans 56-60)
-- **Test suite** — 1166 passed, 56 skipped (stable across Plans 56-60)
+- **Test suite** — 1167 passed, 55 skipped (stable across Plans 56-60)
 
 ### What's Broken Right Now
 
-- (None currently — baseline is clean.)
+- Mypy error count exceeded tolerance (283 → 294, +11 errors). Escalated for fix plan. Plans 56-59 introduced type errors beyond acceptable threshold.
 
 ### What's Built But Not Reachable
 
@@ -187,9 +187,10 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Baseline Reconciliation Notes
 
-- **Plan 60 Delta (Mypy)**: 283 → 277 (-6 errors). Within tolerance. New datetime fixes introduced 2 errors; plan cleanup eliminated 8. Net negative (good).
-- **Plan 60 Delta (Vulture)**: 20 → 22 (+2 findings). Within tolerance. Minor code additions added 2 unused vars. Acceptable given scope.
-- **No baseline expansion needed**: Test count stable; ruff holds at 0; no new critical issues.
+- **Plan 60 Delta (Mypy)**: 283 → 294 (+11 errors). OUTSIDE tolerance — escalated for fix plan. Plans 56-59 introduced type errors beyond acceptable threshold.
+- **Plan 60 Delta (Vulture)**: 20 → 23 (+3 findings). Within tolerance. Minor code additions added unused vars. Acceptable given scope.
+- **Plan 60 Delta (Tests)**: 1166 → 1167 (+1 passed, -1 skipped). Within tolerance. Test suite stable.
+- **Baseline expansion needed**: Mypy error count exceeded tolerance; requires dedicated fix plan (likely Plan 60.5 or fold into Plan 61).
 
 ---
 
