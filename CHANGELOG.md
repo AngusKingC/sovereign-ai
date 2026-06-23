@@ -448,3 +448,18 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors (file-scoped cleanup)
 - Mypy: 0 errors (file-scoped, type annotations fixed)
 - Tag: prompt-62 verified on origin
+
+## 2026-06-23 18:30 — prompt-62.5
+
+**Plan**: Eval Harness Validation
+
+**Changed**:
+- evals/validation_tasks.json: new static fixture with 15 validation tasks across 5 categories
+- evals/metrics.py: added space collapsing to exact_match, punctuation stripping to token_f1, documented metric priority
+- tests/test_eval_harness.py: added TestEvalValidation class with 9 parameterized validation tests
+
+**Results**:
+- Tests: 1213 passed, 67 skipped (+19 validation tests)
+- Ruff: 0 errors (file-scoped)
+- Mypy: 0 errors (file-scoped)
+- Tag: prompt-62.5 verified on origin

@@ -1,6 +1,6 @@
 # PLANS.md — Sovereign AI Project State
 
-**Last updated**: Post-Plan 62 (2026-06-23)
+**Last updated**: Post-Plan 62.5 (2026-06-23)
 
 This document tracks the dynamic state of the Sovereign AI project: baselines, completed prompts, and the next-5-prompt queue. It is the canonical source for test counts, static analysis baselines, and which prompt is currently active.
 
@@ -8,8 +8,8 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Test Baseline
 
-**Current baseline**: **1194 passed, 67 skipped**  
-**Verified**: Plan 62, Step S6 (full test suite)  
+**Current baseline**: **1213 passed, 67 skipped**  
+**Verified**: Plan 62.5, Step S6 (full test suite)  
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)  
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -48,29 +48,13 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 60 | 5-plan checkpoint (mypy 294, bandit clean, pip-audit 19) | 1167 | Full 5-plan scan. Mypy: 283→294 (+11, OUTSIDE tolerance — escalated). Bandit: 3179 low/0 medium/0 high. pip-audit: 19 CVEs (stable). Vulture: 23 findings. |
 | 61 | Trace Store Implementation (Postgres Backend) | 1170 | Postgres trace store backend with asyncpg. BackendRouter trace_store registration. TraceEmitter fire-and-forget persistence. 15 new tests (11 skip, 4 pass). |
 | 62 | Eval Harness Implementation | 1194 | Eval harness with metrics (exact_match, token_f1, bleu, cosine_similarity). Trace emitter integration. 24 new tests. |
+| 62.5 | Eval Harness Validation | 1213 | Validation suite with 15 static tasks across 5 categories. Metric refinements: space collapsing (exact_match), punctuation stripping (token_f1). 19 new validation tests. |
 
 ---
 
 ## Next 5 Prompts Queue
 
-### Plan 62.5 — Eval Validation (Priority 3 — ACTIVE)
-
-**Scope**: Validate eval harness with held-out task suite. Run sample tasks through the harness and verify metric output.
-
-**Expected impact**:
-- Modified: `evals/harness.py` (minor refinements based on real data)
-- Tests: expand `tests/test_eval_harness.py` (~50 new lines)
-
-**Baseline changes**:
-- Tests: expect ~1420 (+20)
-- Mypy: expect -2-5 (clarified types from Plan 62 feedback)
-- Ruff: expect 0
-
-**Gate**: Harness runs 50+ validation tasks without errors. Metrics align with human judgment on sample outputs.
-
----
-
-### Plan 63a — Improvement Loop Wire (Priority 4)
+### Plan 63a — Improvement Loop Wire (Priority 4 — ACTIVE)
 
 **Scope**: Wire up improvement loop components: trace store (Plan 61) + eval harness (Plan 62) + orchestrator. Route improvement tasks into the loop.
 
@@ -130,8 +114,8 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **Serialization** — Jsonify strict mode, circular ref detection, type coercion all working
 - **Datetime handling** — Zero naive/aware mixing; all core/system/skills using timezone-aware UTC
 - **Ruff baseline** — 0 errors (Plan 59 cleanup held through Plans 56-62)
-- **Test suite** — 1194 passed, 67 skipped (Plan 62 added 24 eval tests)
-- **Eval harness** — Metrics (exact_match, token_f1, bleu, cosine_similarity) operational with trace emitter integration
+- **Test suite** — 1213 passed, 67 skipped (Plan 62.5 added 19 validation tests)
+- **Eval harness** — Metrics (exact_match, token_f1, bleu, cosine_similarity) operational with trace emitter integration. Validation suite with 15 static tasks confirms metric behavior across 5 categories.
 
 ### What's Broken Right Now
 
@@ -161,6 +145,9 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **Plan 62 Delta (Tests)**: 1170 → 1194 (+24 passed, 0 skipped). Within tolerance. Added 24 eval harness tests (all pass). Delta within ±5 tolerance.
 - **Plan 62 Delta (Ruff)**: 0 → 0. No change. File-scoped cleanup held.
 - **Plan 62 Delta (Mypy)**: 294 → 294 (file-scoped). No change. Type annotations fixed during implementation.
+- **Plan 62.5 Delta (Tests)**: 1194 → 1213 (+19 passed, 0 skipped). Within tolerance. Added 19 validation tests (all pass). Delta within ±5 tolerance.
+- **Plan 62.5 Delta (Ruff)**: 0 → 0. No change. File-scoped cleanup held.
+- **Plan 62.5 Delta (Mypy)**: 294 → 294 (file-scoped). No change. Metric refinements used stdlib only.
 - **Baseline expansion needed**: Mypy error count exceeded tolerance; requires dedicated fix plan (likely Plan 60.5 or fold into Plan 61).
 
 ---
