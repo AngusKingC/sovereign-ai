@@ -39,6 +39,7 @@ class TraceComponent(str, Enum):
     WORKER = "worker"
     EMBEDDER = "embedder"
     SYSTEM = "system"
+    RETENTION_DAEMON = "retention_daemon"
     
     # Adapters
     ADAPTER = "adapter"

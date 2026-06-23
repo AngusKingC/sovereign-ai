@@ -60,21 +60,22 @@ class RetentionManager:
         self._config = config or RetentionConfig()
         self._emitter = emitter or MemoryTraceEmitter()
 
-    async def prune_trace_events(self, dry_run: bool | None = None) -> int:
+    async def prune_trace_events(self, dry_run: bool | None = None) -> int:  # type: ignore
         """
         Delete trace event records older than config.trace_events_ttl_days.
-        
+
         Args:
             dry_run: If True, count matching records without deleting. If None, use self._config.dry_run.
-            
+
         Returns:
             Number of records pruned (or counted in dry-run mode)
         """
         use_dry_run = dry_run if dry_run is not None else self._config.dry_run
-        
+        count: int = 0
+
         # Stub implementation - actual Postgres query happens in Phase 10
         # For now, we'll call memory router with the operation
-        response = await self._memory_router.write({
+        response = await self._memory_router.write({  # type: ignore
             "op": "trace_events_prune",
             "older_than_days": self._config.trace_events_ttl_days,
             "dry_run": use_dry_run,
@@ -110,7 +111,7 @@ class RetentionManager:
 
         return count
 
-    async def prune_task_history(self, dry_run: bool | None = None) -> int:
+    async def prune_task_history(self, dry_run: bool | None = None) -> int:  # type: ignore[func-returns-value]
         """
         Delete task history records older than config.task_history_ttl_days.
         Never prune tasks in AWAITING_APPROVAL or IN_PROGRESS state.
@@ -122,10 +123,11 @@ class RetentionManager:
             Number of records pruned (or counted in dry-run mode)
         """
         use_dry_run = dry_run if dry_run is not None else self._config.dry_run
-        
+        count = 0
+
         # Stub implementation - actual Postgres query happens in Phase 10
         # For now, we'll call memory router with the operation
-        response = await self._memory_router.write({
+        response = await self._memory_router.write({  # type: ignore
             "op": "task_history_prune",
             "older_than_days": self._config.task_history_ttl_days,
             "dry_run": use_dry_run,
@@ -162,7 +164,7 @@ class RetentionManager:
 
         return count
 
-    async def prune_qdrant_vectors(self, dry_run: bool | None = None) -> int:
+    async def prune_qdrant_vectors(self, dry_run: bool | None = None) -> int:  # type: ignore[func-returns-value]
         """
         Delete Qdrant vector entries older than config.qdrant_ttl_days.
         
@@ -173,9 +175,10 @@ class RetentionManager:
             Number of records pruned (or counted in dry-run mode)
         """
         use_dry_run = dry_run if dry_run is not None else self._config.dry_run
-        
+        count = 0
+
         # Call memory router with qdrant_prune operation - router handles dispatch
-        response = await self._memory_router.write({
+        response = await self._memory_router.write({  # type: ignore
             "op": "qdrant_prune",
             "older_than_days": self._config.qdrant_ttl_days,
             "dry_run": use_dry_run,
@@ -211,7 +214,7 @@ class RetentionManager:
 
         return count
 
-    async def archive_obsidian_notes(self, dry_run: bool | None = None) -> int:
+    async def archive_obsidian_notes(self, dry_run: bool | None = None) -> int:  # type: ignore
         """
         Move Obsidian daily note files older than config.obsidian_archive_ttl_days to /archive/ subfolder.
         Never delete — archive only.
@@ -223,9 +226,10 @@ class RetentionManager:
             Number of records archived (or counted in dry-run mode)
         """
         use_dry_run = dry_run if dry_run is not None else self._config.dry_run
-        
+        count = 0
+
         # Call memory router with obsidian_archive operation - router handles dispatch
-        response = await self._memory_router.write({
+        response = await self._memory_router.write({  # type: ignore
             "op": "obsidian_archive",
             "older_than_days": self._config.obsidian_archive_ttl_days,
             "dry_run": use_dry_run,

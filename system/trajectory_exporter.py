@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 import json
-import aiofiles
+import aiofiles  # type: ignore
 from pathlib import Path
 
 from core.observability import MemoryTraceEmitter, TraceEvent, TraceEventType, TraceComponent, TraceLevel
@@ -64,7 +64,6 @@ class TrajectoryExporter:
             # Use fetch_by_type to get all Task records, then filter for completed tasks with sufficient rating
             if min_rating > 0:
                 all_tasks = await self._router.fetch_by_type(
-                    record_type=dict,  # Tasks are stored as dicts in memory
                     filter_func=lambda task: (
                         task.get("current_state") == "complete" and
                         task.get("complexity_score", 0.0) >= min_rating
@@ -72,7 +71,6 @@ class TrajectoryExporter:
                 )
             else:
                 all_tasks = await self._router.fetch_by_type(
-                    record_type=dict,
                     filter_func=None
                 )
 

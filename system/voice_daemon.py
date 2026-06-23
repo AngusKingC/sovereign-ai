@@ -16,7 +16,7 @@ from core.observability import (
     MemoryTraceEmitter,
 )
 from core.voice_interface import VoiceInterface, VoiceCommand
-from core.schemas import Task
+from core.schemas import Task, TaskPriority, TaskStatus
 
 
 class VoiceDaemon:
@@ -135,9 +135,9 @@ class VoiceDaemon:
                 task_id=command.command_id,
                 intent=command.transcript,
                 complexity_score=0.5,
-                priority="normal",
-                status="received",
-                current_state="received",
+                priority=TaskPriority.NORMAL,
+                status=TaskStatus.RECEIVED,
+                current_state=TaskStatus.RECEIVED,
                 created_at=command.detected_at,
             )
 

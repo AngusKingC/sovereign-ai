@@ -19,7 +19,8 @@ from core.observability import (
     MemoryTraceEmitter,
     TraceEvent,
 )
-from core.schemas import TaskStatus
+from core.schemas import TaskStatus, TaskPriority
+from uuid import UUID
 
 if TYPE_CHECKING:
     from core.observability import TraceEmitter
@@ -259,10 +260,10 @@ class MonitorDaemon:
                     # Create a task to fetch the scheduled task data
                     from core.schemas import Task
                     task = Task(
-                        task_id=key.split(":")[1] if ":" in key else key,
+                        task_id=UUID(key.split(":")[1] if ":" in key else key),
                         intent=key,
                         complexity_score=0,
-                        priority="medium",
+                        priority=TaskPriority.NORMAL,
                         current_state=TaskStatus.RECEIVED,
                         created_at=datetime.now(timezone.utc),
                     )

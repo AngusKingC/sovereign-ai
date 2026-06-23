@@ -5,6 +5,8 @@ Single responsibility: Discover, evaluate, and download models autonomously
 with user approval, supporting multiple sources and quantisation variants.
 """
 
+from __future__ import annotations
+
 import os
 import time
 from typing import TYPE_CHECKING
@@ -33,7 +35,7 @@ from core.observability import (
 if TYPE_CHECKING:
     from core.memory_router import MemoryRouter
     from system.resource_manager import ResourceManager
-    from system.model_acquisition import ModelRegistry
+    from system.model_registry import ModelRegistry
 
 
 class ModelAcquisition:
@@ -72,7 +74,7 @@ class ModelAcquisition:
             if self.hf_token:
                 headers["Authorization"] = f"Bearer {self.hf_token}"
 
-            params = {"search": query, "limit": max_results}
+            params: dict[str, str] = {"search": query, "limit": str(max_results)}
             if task_tags:
                 params["pipeline_tag"] = task_tags[0]  # HuggingFace API supports one pipeline tag
 
@@ -253,7 +255,7 @@ class ModelAcquisition:
         self,
         model_id: str,
         quantisation: str | None,
-        resource_manager: "ResourceManager",
+        resource_manager: "ResourceManager" | None,
         registry: "ModelRegistry",
     ) -> tuple[bool, str]:
         """Check if a model will fit on the current system before downloading."""
@@ -279,6 +281,8 @@ class ModelAcquisition:
                 return False, "No quantisation variants available"
 
             # Check with resource manager
+            if resource_manager is None:
+                return True, "Resource manager not provided, assuming fit"
             can_load, reason = await resource_manager.can_load(model_id, variant.name, registry)
             return can_load, reason
         except Exception as e:
@@ -594,7 +598,7 @@ class ModelAcquisition:
                     response.raise_for_status()
                     total_size = int(response.headers.get("content-length", 0))
                     downloaded = 0
-                    last_progress = 0
+                    last_progress: float = 0.0
 
                     with open(output_path, "wb") as f:
                         async for chunk in response.aiter_bytes(chunk_size=8192):

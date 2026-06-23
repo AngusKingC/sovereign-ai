@@ -68,7 +68,7 @@ class ModelEvaluator:
         """
         self.model_registry = model_registry
         self.resource_manager = resource_manager
-        self.emitter = emitter if emitter is not None else NullTraceEmitter()
+        self._emitter = emitter if emitter is not None else NullTraceEmitter()
 
     async def evaluate(
         self,
@@ -88,7 +88,7 @@ class ModelEvaluator:
             EvaluationResult with ranked recommendations
         """
         try:
-            await self.emitter.emit(TraceEvent(
+            await self._emitter.emit(TraceEvent(
                 event_id=uuid4(),
                 timestamp=datetime.now(timezone.utc),
                 event_type=TraceEventType.OPERATION_START,
@@ -130,7 +130,7 @@ class ModelEvaluator:
             )
             
             try:
-                await self.emitter.emit(TraceEvent(
+                await self._emitter.emit(TraceEvent(
                     event_id=uuid4(),
                     timestamp=datetime.now(timezone.utc),
                     event_type=TraceEventType.OPERATION_COMPLETE,
@@ -249,7 +249,7 @@ class ModelEvaluator:
         )
 
         try:
-            await self.emitter.emit(TraceEvent(
+            await self._emitter.emit(TraceEvent(
                 event_id=uuid4(),
                 timestamp=datetime.now(timezone.utc),
                 event_type=TraceEventType.OPERATION_COMPLETE,
@@ -315,7 +315,7 @@ class ModelEvaluator:
             quantisation: Selected quantisation variant
         """
         try:
-            await self.emitter.emit(TraceEvent(
+            await self._emitter.emit(TraceEvent(
                 event_id=uuid4(),
                 timestamp=datetime.now(timezone.utc),
                 event_type=TraceEventType.OPERATION_COMPLETE,
