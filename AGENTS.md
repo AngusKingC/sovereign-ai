@@ -121,6 +121,9 @@ OR23. Cite rules by number when applying them. When executing a step that applie
 ### Test with new implementations
 OR24. Every new implementation (new module, new class, new public function) MUST have a corresponding test file with tests covering the key paths. No implementation is "complete" until its tests pass. (Source: GLM-direct, no landmine)
 
+### Type remediation discipline
+OR27. When fixing type errors requires interface changes that would break existing tests, add compatibility shims to maintain backward compatibility. The shim should delegate to the new implementation while accepting the old signature. Mark the shim as deprecated with a docstring noting the legacy status. This allows type fixes without test modifications, which are outside scope for type-remediation plans. (Source: L9)
+
 ---
 
 ## Landmines that have graduated to rules

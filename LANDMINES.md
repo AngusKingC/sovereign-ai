@@ -67,3 +67,11 @@ Append-only historical record of failure patterns. See AGENTS.md for guidance on
 **Impact**: Scope creep, untracked changes, makes it hard to isolate what a plan actually accomplished. Plan becomes a grab-bag of unrelated fixes.
 
 ---
+
+## L9 — Runtime type changes for mypy break test assertions
+
+**Trigger**: Plan 64, Devin changed runtime types (wrapping dicts as Message objects, changing string returns to enum values) to satisfy mypy. Tests asserting on dict-like access or string values broke.
+
+**Impact**: 2 failed test rounds, time lost reverting. Fix: per OR27, add compatibility shims that preserve old runtime behavior while satisfying type checker. Never change runtime types in type-remediation plans without verifying test assertions first.
+
+---
