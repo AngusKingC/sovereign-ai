@@ -1,6 +1,6 @@
 # PLANS.md — Sovereign AI Project State
 
-**Last updated**: Post-Plan 61 (2026-06-23)
+**Last updated**: Post-Plan 62 (2026-06-23)
 
 This document tracks the dynamic state of the Sovereign AI project: baselines, completed prompts, and the next-5-prompt queue. It is the canonical source for test counts, static analysis baselines, and which prompt is currently active.
 
@@ -8,8 +8,8 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Test Baseline
 
-**Current baseline**: **1170 passed, 67 skipped**  
-**Verified**: Plan 61, Step S5 (full test suite)  
+**Current baseline**: **1194 passed, 67 skipped**  
+**Verified**: Plan 62, Step S6 (full test suite)  
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)  
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -47,30 +47,13 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 59 | Ruff cleanup (110→0) + B108 suppression | 1166 | 104 ruff fixes (F541=14, F401=2, F811=3, F841=41, E402=21, F821=21, E731=1, E741=1). All 22 B108 scoped. |
 | 60 | 5-plan checkpoint (mypy 294, bandit clean, pip-audit 19) | 1167 | Full 5-plan scan. Mypy: 283→294 (+11, OUTSIDE tolerance — escalated). Bandit: 3179 low/0 medium/0 high. pip-audit: 19 CVEs (stable). Vulture: 23 findings. |
 | 61 | Trace Store Implementation (Postgres Backend) | 1170 | Postgres trace store backend with asyncpg. BackendRouter trace_store registration. TraceEmitter fire-and-forget persistence. 15 new tests (11 skip, 4 pass). |
+| 62 | Eval Harness Implementation | 1194 | Eval harness with metrics (exact_match, token_f1, bleu, cosine_similarity). Trace emitter integration. 24 new tests. |
 
 ---
 
 ## Next 5 Prompts Queue
 
-### Plan 62 — Eval Harness Implementation (Priority 3 — ACTIVE)
-
-**Scope**: Implement offline evaluation harness for improvement loop. Evals compare LLM outputs against gold-standard responses.
-
-**Expected impact**:
-- New files: `evals/harness.py` (~250 lines), `evals/metrics.py` (~150 lines)
-- Modified: `core/observability.py` (eval result recording)
-- Tests: `tests/test_eval_harness.py` (~200 lines)
-
-**Baseline changes**:
-- Tests: expect ~1400 (+100 for eval tests)
-- Mypy: expect +10-15 errors (metric typing, fuzzy matching)
-- Ruff: expect 0
-
-**Gate**: Eval harness runs on held-out validation set. Metrics (BLEU, cosine similarity) compute without errors.
-
----
-
-### Plan 62.5 — Eval Validation (Priority 3)
+### Plan 62.5 — Eval Validation (Priority 3 — ACTIVE)
 
 **Scope**: Validate eval harness with held-out task suite. Run sample tasks through the harness and verify metric output.
 
@@ -146,8 +129,9 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **Memory router** — All memory access routed through MemoryRouter; no direct imports; BackendRouter supports trace store registration
 - **Serialization** — Jsonify strict mode, circular ref detection, type coercion all working
 - **Datetime handling** — Zero naive/aware mixing; all core/system/skills using timezone-aware UTC
-- **Ruff baseline** — 0 errors (Plan 59 cleanup held through Plans 56-61)
-- **Test suite** — 1170 passed, 67 skipped (Plan 61 added 15 trace store tests)
+- **Ruff baseline** — 0 errors (Plan 59 cleanup held through Plans 56-62)
+- **Test suite** — 1194 passed, 67 skipped (Plan 62 added 24 eval tests)
+- **Eval harness** — Metrics (exact_match, token_f1, bleu, cosine_similarity) operational with trace emitter integration
 
 ### What's Broken Right Now
 
@@ -155,7 +139,6 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ### What's Built But Not Reachable
 
-- **Eval metrics** (evals/) — infrastructure exists for extensibility but no production integration. Plans 62+ wire this in.
 - **Improvement loop orchestrator** — Commands defined, but loop wiring incomplete. Plans 63a/b will complete.
 
 ### What's Deferred (Not Started)
@@ -175,6 +158,9 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **Plan 61 Delta (Tests)**: 1167 → 1170 (+3 passed, +12 skipped). Within tolerance. Added 15 trace store tests (11 Postgres-dependent skip, 4 pass). Actual: +4 passed, +11 skipped. Delta within ±5 tolerance.
 - **Plan 61 Delta (Ruff)**: 0 → 0. No change. File-scoped cleanup held.
 - **Plan 61 Delta (Mypy)**: 294 → 294 (file-scoped). No change. 2 pre-existing errors in memory/router.py (not introduced by this plan).
+- **Plan 62 Delta (Tests)**: 1170 → 1194 (+24 passed, 0 skipped). Within tolerance. Added 24 eval harness tests (all pass). Delta within ±5 tolerance.
+- **Plan 62 Delta (Ruff)**: 0 → 0. No change. File-scoped cleanup held.
+- **Plan 62 Delta (Mypy)**: 294 → 294 (file-scoped). No change. Type annotations fixed during implementation.
 - **Baseline expansion needed**: Mypy error count exceeded tolerance; requires dedicated fix plan (likely Plan 60.5 or fold into Plan 61).
 
 ---

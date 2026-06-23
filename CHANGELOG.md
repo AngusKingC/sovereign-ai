@@ -431,3 +431,20 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors (file-scoped cleanup)
 - Mypy: 2 pre-existing errors in memory/router.py (not introduced by this plan)
 - Tag: prompt-61 verified on origin
+
+## 2026-06-23 17:20 â€” prompt-62
+
+**Plan**: Eval Harness Implementation
+
+**Changed**:
+- evals/metrics.py: New metrics module with exact_match, token_f1, bleu, cosine_similarity functions
+- evals/__init__.py: Export metric functions
+- evals/harness.py: New EvalHarness class for offline evaluation with trace emitter integration
+- core/observability.py: Added EVAL_COMPLETE and EVAL_WARNING event types
+- tests/test_eval_harness.py: 24 unit tests for metrics and harness
+
+**Results**:
+- Tests: 1194 passed, 67 skipped (baseline 1170 â†’ 1194 passed, +24 new eval tests)
+- Ruff: 0 errors (file-scoped cleanup)
+- Mypy: 0 errors (file-scoped, type annotations fixed)
+- Tag: prompt-62 verified on origin
