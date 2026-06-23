@@ -87,7 +87,13 @@ OR14. Simplified format: ~10-15 lines per entry. Title, changed files, results, 
 ### Scope discipline
 OR15. Pre-declare scope before editing. List files you WILL edit and files you will NOT edit. Any file outside the "will edit" list requires STOP and GLM authorization.
 
-OR16. HARD STOP on scope expansion. If you discover work outside the plan's scope, STOP and report. Do not fix it unilaterally — even if it looks like a 1-line fix. (Source: L8)
+OR16. HARD STOP on scope expansion. If you discover work outside the plan's scope, 
+STOP and report using this format:
+  - Discovered: <what you found>
+  - Impact if deferred: <what breaks or blocks>
+  - Proposed addition: <specific files/steps needed>
+  - Estimated risk: <low/medium/high and why>
+Do not fix unilaterally — even a 1-line fix. (Source: L8)
 
 OR17. Baseline reconciliation. If S1 actual count ≠ plan's expected count, update PLANS.md baseline with actual number + reason. Don't let stale baselines propagate. (Source: L7)
 
