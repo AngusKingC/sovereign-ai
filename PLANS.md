@@ -1,6 +1,6 @@
 # PLANS.md — Sovereign AI Project State
 
-**Last updated**: Post-Plan 63b (2026-06-23)
+**Last updated**: Post-Plan 65 (2026-06-23)
 
 This document tracks the dynamic state of the Sovereign AI project: baselines, completed prompts, and the next-5-prompt queue. It is the canonical source for test counts, static analysis baselines, and which prompt is currently active.
 
@@ -9,7 +9,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 ## Test Baseline
 
 **Current baseline**: **1232 passed, 67 skipped**  
-**Verified**: Plan 63b, Step S5 (full test suite)  
+**Verified**: Plan 65, Step S6 (full test suite)  
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)  
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -52,22 +52,11 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 63a | Improvement Loop Wire | 1225 | Wire module connecting eval harness, trace store, and improvement loop. IMPROVE command with DI support. Orchestrator fire-and-forget integration. 12 new tests. |
 | 63b | Improvement Loop Validate + Restore Integration Tests | 1232 | Restored TestOrchestratorIntegration class with 2 integration tests (fixed mocking strategy). Added TestEndToEndValidation class with 5 E2E tests. Moved inline import asyncio to top-of-file in core/orchestrator.py. Added OR25 and OR26 to AGENTS.md. 7 new tests. |
 | 64 | Core Mypy Remediation | 1232 | Fixed 33 mypy errors across 14 core files. Added compatibility shims for backward compatibility with tests. Added OR27 to AGENTS.md. |
+| 65 | Mypy Remediation Phase 2 | 1232 | Fixed 16 mypy errors across 7 core files (session, task_state_machine, escalation, retention, worker_factory, orchestrator, rating_system). Enum replacements, UUID constructors, type annotations. Added L9 to LANDMINES. |
 
 ---
 
 ## Next 5 Prompts Queue
-
-### Plan 65 — [Open Slot] (Priority TBD)
-
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 64.
-
-**Expected impact**: TBD
-
-**Baseline changes**: TBD
-
-**Gate**: TBD
-
----
 
 ### Plan 66 — [Open Slot] (Priority TBD)
 
@@ -93,16 +82,40 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
-### Plan 68 — 5-Plan Milestone Full Scan (Priority 1 — tentative)
+### Plan 68 — [Open Slot] (Priority TBD)
 
-**Scope**: Post-Plans 64-67 full-repo scan and baseline refresh. Capture new baselines after core mypy remediation.
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 67.
+
+**Expected impact**: TBD
+
+**Baseline changes**: TBD
+
+**Gate**: TBD
+
+---
+
+### Plan 69 — [Open Slot] (Priority TBD)
+
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 68.
+
+**Expected impact**: TBD
+
+**Baseline changes**: TBD
+
+**Gate**: TBD
+
+---
+
+### Plan 70 — 5-Plan Milestone Full Scan (Priority 1 — tentative)
+
+**Scope**: Post-Plans 65-69 full-repo scan and baseline refresh. Capture new baselines after core mypy remediation.
 
 **Expected impact**: 
-- Scope TBD pending Plans 65-67 completion. This entry is a **placeholder**.
+- Scope TBD pending Plans 66-69 completion. This entry is a **placeholder**.
 - Expected updates: mypy baseline (±10), ruff (target: 0), bandit (target: 0 medium), pip-audit (target ≤20), vulture (target ≤25), test count (target ≈1245)
 
 **Baseline changes**:
-- Will be determined at Plan 67 scoping time (GLM inspects actual repo state)
+- Will be determined at Plan 69 scoping time (GLM inspects actual repo state)
 
 **Gate**: Full 6-tool scan passes (pytest + ruff + mypy . + bandit + pip-audit + vulture). All baselines recorded. Handoff status sections updated.
 
@@ -142,6 +155,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 - **Plan 60 Delta (Mypy)**: 283 → 294 (+11 errors). OUTSIDE tolerance — escalated for fix plan. Plans 56-59 introduced type errors beyond acceptable threshold.
 - **Plan 60 Delta (Vulture)**: 20 → 23 (+3 findings). Within tolerance. Minor code additions added unused vars. Acceptable given scope.
+- **Plan 65 Delta (Mypy)**: 16 errors fixed in 7 core files (session, task_state_machine, escalation, retention, worker_factory, orchestrator, rating_system). Enum replacements, UUID constructors, type annotations. File-scoped mypy now 0 errors on edited files.
 - **Plan 60 Delta (Tests)**: 1166 → 1167 (+1 passed, -1 skipped). Within tolerance. Test suite stable.
 - **Plan 61 Delta (Tests)**: 1167 → 1170 (+3 passed, +12 skipped). Within tolerance. Added 15 trace store tests (11 Postgres-dependent skip, 4 pass). Actual: +4 passed, +11 skipped. Delta within ±5 tolerance.
 - **Plan 61 Delta (Ruff)**: 0 → 0. No change. File-scoped cleanup held.

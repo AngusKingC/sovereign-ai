@@ -521,3 +521,22 @@ This changelog documents all implementations, changes, and decisions made during
 - Tests: 1232 passed, 67 skipped
 - Ruff: All checks passed
 - Tag: prompt-64 verified on origin
+
+## 2026-06-23 23:28 — prompt-65
+
+**Plan**: Mypy Remediation Phase 2
+
+**Changed**:
+- core/session.py: enum imports, TaskPriority.NORMAL, TaskStatus.RECEIVED
+- core/task_state_machine.py: enum import, TaskPriority.HIGH, UUID() constructor
+- core/escalation.py: ApprovalActionType import, ApprovalActionType.CLOUD_ESCALATION
+- core/retention.py: TaskPriority import, TaskPriority.NORMAL
+- core/worker_factory.py: UUID import, typing.cast for profile, UUID() constructor
+- core/orchestrator.py: return type WorkerOutput | Task | None
+- core/rating_system.py: default values for optional parameters
+
+**Results**:
+- Tests: 1232 passed, 67 skipped
+- Ruff: 0 errors
+- Mypy: 16 errors → 0 errors
+- Tag: prompt-65 verified on origin
