@@ -160,20 +160,16 @@ OR36. Minimize PowerShell output to reduce context token consumption:
 - For pytest: always use `-q --tb=short` flags. For targeted tests with `-v`, pipe through `Select-Object -Last 20`.
 - For ruff/mypy: pipe through `Select-Object -Last 3` — you only need the error count.
 
-### Todo list discipline (NEW — Governance Directive 01)
-OR37. Minimize todo list output to reduce context token consumption:
-- Print the full todo list ONCE at plan start.
-- After completing a task, print only: "Task N complete. Starting Task N+1: [name]" (one line).
-- Do NOT re-print the full todo list after each task completion.
-- Do NOT print the todo list before starting each task — you already know what's next from the previous completion message.
-- Exception: if the user asks to see the todo list, print it in full.
 
-### Batch verification (NEW — Governance Directive 01)
-OR38. Batch verification commands to reduce the number of separate command executions and output blocks:
+### Batch verification (RENUMBERED — Governance Patch 03)
+OR37. Batch verification commands to reduce the number of separate command executions and output blocks:
 - Instead of running 6 separate verification commands (syntax, ruff, mypy, detect-secrets, vulture, tests), chain them with `;` and capture only the final summary.
 - Example: `python -c "import ast; ast.parse(open('file.py').read())" ; ruff check file.py ; mypy file.py --ignore-missing-imports ; echo "---CHECKS DONE---" 2>&1 | Select-Object -Last 5`
 - If any check fails, the failure will appear in the last 5 lines. Then re-run the failing check individually for full output.
 - This reduces 6 Devin actions + 6 output blocks to 1 Devin action + 1 output block.
+
+### GLM Prompts directory hygiene (NEW — Governance Patch 03)
+OR38. At decade boundary tags (prompt-{N}0 where N > 0, e.g., prompt-70, prompt-80, prompt-90), delete the previous decade's plan files from `GLM Prompts/` directory. Delete files matching `plan-{previous_decade}*` (e.g., at prompt-70, delete plan-60* through plan-69*; at prompt-80, delete plan-70* through plan-79*). Commit the deletions as part of the decade boundary plan's docs commit. This prevents the directory from growing unbounded and avoids "deleted files reappear" cycles. Do NOT delete governance directives, governance patches, or the current decade's files. Additionally, if `GLM Prompts/` contains files from 2+ decades ago at any plan's opening (S0.1), delete them at that opening — don't wait for the next decade boundary. (Source: GLM observation — user manually deletes old plan files but they reappear in git status as untracked, causing noise and token waste)
 
 ---
 
