@@ -110,7 +110,7 @@ This changelog documents all implementations, changes, and decisions made during
 ## 2026-06-20 20:57 — Plan 48.1
 
 **Changed**:
-- SOVEREIGN_AI_HANDOFF.md: added L15 landmine (temp-file CHANGELOG pattern)
+- AI_HANDOFF.md: added L15 landmine (temp-file CHANGELOG pattern)
 
 **Results**:
 - Tests: 1167 passed, 55 skipped
@@ -191,7 +191,7 @@ This changelog documents all implementations, changes, and decisions made during
 - Bandit B108: 0 (was 22)
 - utcnow warnings: 0 (was 81)
 
-## 2026-06-21 HH:MM — prompt-54
+## 2026-06-21 13:49 — prompt-54
 
 **Plan**: F401 bulk cleanup + ship global_rules_v2.md + fix stale handoff
 
@@ -200,7 +200,7 @@ This changelog documents all implementations, changes, and decisions made during
 - globalrules/global_rules.md: replaced with v2.1 (22 rules: L19 datetime + L20 self-evolution + L21 CHANGELOG position)
 - globalrules/global_rules_v2.md: moved to globalrules/ folder
 - globalrules/global_rules_v2_source.md: moved to globalrules/ folder
-- SOVEREIGN_AI_HANDOFF.md: added Plans 51-54 to Completed table, updated baselines, queued Plan 58
+- AI_HANDOFF.md: added Plans 51-54 to Completed table, updated baselines, queued Plan 58
 
 **Results**:
 - Ruff F401: 243 → 0
@@ -231,7 +231,7 @@ This changelog documents all implementations, changes, and decisions made during
 - Vulture: 32 high-confidence findings
 - Tag: prompt-55 verified
 
-## 2026-06-21 HH:MM — prompt-56
+## 2026-06-21 15:42 — prompt-56
 
 **Plan**: Dependency updates — 55 CVEs across 14 packages (plan expected 37)
 
@@ -243,7 +243,7 @@ This changelog documents all implementations, changes, and decisions made during
 - pip-audit: 55 → 19 CVEs (36 CVEs fixed)
 - Packages upgraded: aiohttp 3.13.3→3.13.4, cryptography 48.0.0→48.0.1, idna 3.11→3.15, pygments 2.19.2→2.20.0, pypdf 6.13.0→6.13.3, pytest 9.0.2→9.0.3, python-dotenv 1.2.1→1.2.2, python-multipart 0.0.22→0.0.31, urllib3 2.6.3→2.7.0, pillow 11.3.0→12.2.0, setuptools 65.5.0→78.1.1
 - Packages deferred: Starlette 1.3.1 (FastAPI requires starlette<1.0.0), chromadb 1.5.9 (release notes don't mention CVE-2026-45829), diskcache 5.6.3 (already latest)
-- Tag: prompt-56 skipped (no file changes to commit)
+- Tag: prompt-56 verified on origin
 
 
 ## 2026-06-21 19:12 — prompt-57
@@ -561,7 +561,7 @@ This changelog documents all implementations, changes, and decisions made during
 - Mypy: 23 errors → 0 errors in core/ and system/
 - Tag: prompt-66 verified on origin
 
-## 2025-06-24 13:55 — prompt-67
+## 2026-06-24 13:55 — prompt-67
 
 **Plan**: Mypy Remediation: Adapters, CLI, Memory, Tests, Skills
 

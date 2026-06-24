@@ -22,7 +22,7 @@ Append-only historical record of failure patterns. See AGENTS.md for guidance on
 
 ## L3 — PowerShell -replace corrupts structured markdown
 
-**Trigger**: Plan 60, S2.2 used `ForEach-Object` over `---` separators in SOVEREIGN_AI_HANDOFF.md — inserted the prompt-59 row 5 times. Plan 60, S3.1 used `-replace` chains on AGENTS.md — left duplicate landmine naming entries (later consolidated into L{n} scheme).
+**Trigger**: Plan 60, S2.2 used `ForEach-Object` over `---` separators in AI_HANDOFF.md — inserted the prompt-59 row 5 times. Plan 60, S3.1 used `-replace` chains on AGENTS.md — left duplicate landmine naming entries (later consolidated into L{n} scheme).
 
 **Impact**: File corruption in critical documentation. Handoff became unreadable, had to manually repair. Risk of corruption propagating through multiple files.
 

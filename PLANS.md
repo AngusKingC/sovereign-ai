@@ -232,35 +232,6 @@ These features add defense, portability, and resilience:
 
 ---
 
-## Baseline Reconciliation Notes
-
-- **Plan 60 Delta (Mypy)**: 283 → 294 (+11 errors). OUTSIDE tolerance — escalated for fix plan. Plans 56-59 introduced type errors beyond acceptable threshold.
-- **Plan 60 Delta (Vulture)**: 20 → 23 (+3 findings). Within tolerance. Minor code additions added unused vars. Acceptable given scope.
-- **Plan 65 Delta (Mypy)**: 16 errors fixed in 7 core files (session, task_state_machine, escalation, retention, worker_factory, orchestrator, rating_system). Enum replacements, UUID constructors, type annotations. File-scoped mypy now 0 errors on edited files.
-- **Plan 60 Delta (Tests)**: 1166 → 1167 (+1 passed, -1 skipped). Within tolerance. Test suite stable.
-- **Plan 61 Delta (Tests)**: 1167 → 1170 (+3 passed, +12 skipped). Within tolerance. Added 15 trace store tests (11 Postgres-dependent skip, 4 pass). Actual: +4 passed, +11 skipped. Delta within ±5 tolerance.
-- **Plan 61 Delta (Ruff)**: 0 → 0. No change. File-scoped cleanup held.
-- **Plan 61 Delta (Mypy)**: 294 → 294 (file-scoped). No change. 2 pre-existing errors in memory/router.py (not introduced by this plan).
-- **Plan 62 Delta (Tests)**: 1170 → 1194 (+24 passed, 0 skipped). Within tolerance. Added 24 eval harness tests (all pass). Delta within ±5 tolerance.
-- **Plan 62 Delta (Ruff)**: 0 → 0. No change. File-scoped cleanup held.
-- **Plan 62 Delta (Mypy)**: 294 → 294 (file-scoped). No change. Type annotations fixed during implementation.
-- **Plan 62.5 Delta (Tests)**: 1194 → 1213 (+19 passed, 0 skipped). Within tolerance. Added 19 validation tests (all pass). Delta within ±5 tolerance.
-- **Plan 62.5 Delta (Ruff)**: 0 → 0. No change. File-scoped cleanup held.
-- **Plan 62.5 Delta (Mypy)**: 294 → 294 (file-scoped). No change. Metric refinements used stdlib only.
-- **Plan 63a Delta (Tests)**: 1213 → 1225 (+12 passed, 0 skipped). Within tolerance. Added 12 improvement loop wire tests (all pass). Delta within ±5 tolerance. Note: Plan expected ~1290 (+80), actual was +12 due to deferring complex orchestrator integration tests to future plan.
-- **Plan 63a Delta (Ruff)**: 0 → 0. No change. File-scoped cleanup held.
-- **Plan 63a Delta (Mypy)**: 294 → 294 (file-scoped). No change. Wire module clean; 19 pre-existing errors in core/ files unchanged.
-- **Plan 63b Delta (Tests)**: 1225 → 1232 (+7 passed, 0 skipped). Within tolerance. Added 7 tests: 2 restored orchestrator integration tests (fixed mocking strategy for TaskStateMachine and ScratchpadManager), 5 E2E validation tests. Expected 1247 (+22), actual 1232 (+7). Discrepancy: Plan 63a had deferred complex tests; this plan restored only the 2 integration tests + added 5 E2E tests per scope. Test count reconciliation: baseline updated to actual 1232.
-- **Plan 63b Delta (Ruff)**: 0 → 0. No change. File-scoped cleanup held.
-- **Plan 63b Delta (Mypy)**: 294 → 294 (file-scoped). No change. 19 pre-existing errors in core/ files unchanged. Inline import asyncio moved to top-of-file (cosmetic).
-- **Baseline expansion needed**: Mypy error count exceeded tolerance; requires dedicated fix plan (likely Plan 60.5 or fold into Plan 61).
-- **Plan 67 Delta (Mypy)**: Full mypy remediation across all remaining directories (adapters, CLI, memory, workers, skills, tests, scripts). Full-repo mypy clean: 294 → 0 errors (-294).
-- **Plan 67 Delta (Tests)**: 1231 → 1230 passed, 68 → 67 skipped (-1 each). Within tolerance (±5).
-- **Plan 67 Delta (AGENTS.md)**: Added OR28 (PowerShell session cleanup). Added L10 to LANDMINES.md (zombie PowerShell processes).
-- **Plan 68 Delta (Tests)**: 1230 → 1253 passed (+23), 67 skipped (no change). OUTSIDE tolerance (±5). Added 20 new tests (14 taxonomy + 6 context). Fixed 2 pre-existing test failures (notes delete, qdrant embedder fallback). Baseline updated to 1253.
-
----
-
 ## Key Document Cross-References
 
 - **Architecture rules** → `AGENTS.md` (always-on, every file edit MUST comply)

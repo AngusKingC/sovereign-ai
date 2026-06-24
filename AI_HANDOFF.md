@@ -104,6 +104,7 @@ Five documents govern this project. Each has a single responsibility — do not 
 | `LANDMINES.md` | Known failure patterns — trigger and impact only. **Append-only** — capture once at closing, never edit after. | Devin (at closing) | When a new pattern is captured (append-only) |
 | `CHANGELOG.md` | Chronological change log — one entry per plan, append-only | Devin (at closing) | Every plan |
 | `AGENTS.md` | Devin's always-on rules — environment, edit discipline, git discipline, scope discipline. Rules reference their source landmine (e.g., "Source: L{n}"). | Devin (at S0.3, when GLM proposes new rules) | When new rules are added |
+| `CONTEXT.md` | Shared vocabulary — domain terms, conventions, skill tier definitions, and decision framework. Referenced by all agents for consistent terminology. | GLM (creates), all agents (read) | When domain terms or conventions change |
 
 **Single source of truth**: each fact lives in exactly one document. Other documents reference it, don't copy it.
 - Environment details → `AGENTS.md` only (HANDOFF.md carries just the bootstrap minimum).
@@ -111,8 +112,9 @@ Five documents govern this project. Each has a single responsibility — do not 
 - Process/workflow/plan template → `AI_HANDOFF.md` only (PLANS.md doesn't carry process docs).
 - Known failure patterns → `LANDMINES.md` only (HANDOFF.md doesn't carry landmines).
 - Per-plan change record → `CHANGELOG.md` only (PLANS.md carries the summary row, not the full change log).
+- Shared vocabulary / domain terms → `CONTEXT.md` only (AGENTS.md carries rules, not vocabulary)
 
 **Read order**:
-- GLM (new chat): `AI_HANDOFF.md` → `PLANS.md` → `LANDMINES.md` → start workflow
-- GLM (Step 3 of workflow): re-read `AI_HANDOFF.md` + `LANDMINES.md`
-- Devin (S0.3): `AGENTS.md` (mandatory, always) — read `LANDMINES.md` on-demand if an AGENTS.md rule's application is ambiguous
+- GLM (new chat): `AI_HANDOFF.md` → `PLANS.md` → `LANDMINES.md` → `CONTEXT.md` → start workflow
+- GLM (Step 3 of workflow): re-read `AI_HANDOFF.md` + `LANDMINES.md` + `CONTEXT.md`
+- Devin (S0.2): `AGENTS.md` + `CONTEXT.md` (domain vocabulary for consistent naming)

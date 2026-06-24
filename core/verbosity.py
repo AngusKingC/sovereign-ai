@@ -34,7 +34,7 @@ class VerbosityManager:
     Manages verbosity level for trace event filtering.
 
     core/ layer: imports only from core/ (observability).
-    Constructor-injected emitter pattern per global_rules.md Rule 2.
+    Constructor-injected emitter pattern per AR11 (TraceEmitter via constructor injection only)
     """
 
     def __init__(

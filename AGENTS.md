@@ -4,7 +4,7 @@ Devin's always-on rules. Read before every coding session.
 
 **Rule naming**:
 - **AR{n}** = Architecture Rules (AR1-AR18)
-- **OR{n}** = Operational Rules (OR1-OR23)
+- **OR{n}** = Operational Rules (OR1-OR28)
 
 **If a rule's application is unclear or ambiguous**, read LANDMINES.md to find the source landmine and understand the diagnostic context behind the rule.
 
