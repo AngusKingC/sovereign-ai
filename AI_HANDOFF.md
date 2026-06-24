@@ -62,11 +62,79 @@ When the user pastes a Devin execution log, GLM follows these steps in order. Do
 
 4. **Create new AGENTS.md rules** if you spotted a recurring pattern across multiple execution logs that a rule could prevent. Put the rule in the new plan's opening Step 3 (not in the context brief). If no new patterns, the plan's opening Step 3 says "No new AGENTS.md rules this prompt."
 
-5. **Make the prompt + context brief.** Two files in `/home/z/my-project/download/`: `plan-{N}-Rev1.md` (the plan Devin executes) and `plan-{N}-Rev1-context-brief.md` (the review guide for Claude, ~30-50 lines, pointer-based). **Each iteration must use Rev{n} notation: Rev1, Rev2, Rev3, etc. Context brief is only created for Rev1. Rev2+ revisions do not need a context brief — Claude reviews the revised plan directly.**
+5. **Make the prompt + context brief.** Two files in `/home/z/my-project/download/`: `plan-{N}-Rev1.md` (the plan Devin executes) and `plan-{N}-Rev1-context-brief.md` (the review guide for Claude). **Each iteration must use Rev{n} notation: Rev1, Rev2, Rev3, etc. Context brief is only created for Rev1. Rev2+ revisions do not need a context brief — Claude reviews the revised plan directly.**
+
+   **Context brief structure** (per Plan 76 research — based on Ghosh et al. structured prompting study + Anthropic sycophancy research + PhotoStructure proof-before-reporting pattern):
+
+   The brief MUST use a 3-part scaffold (not a rigid box-grid, not unstructured prose):
+
+   **Part 1: Roles/Rules** (~5 lines)
+   - State the reviewer's role: "Your job is to find issues, not rewrite the plan"
+   - State adversarial framing: "Assume this plan will fail — identify how"
+   - State proof requirement: "Each issue must include a concrete failure scenario"
+
+   **Part 2: Context** (~30-40 lines)
+   - Plan scope summary (what files, what components)
+   - Key dependencies (what existing modules this builds on)
+   - **Author's reasoning (clearly labeled, to mitigate anchoring bias)**: "My reasoning for this design: [X]. Attack this reasoning — don't ratify the conclusion."
+   - 2-4 named open questions for the reviewer to engage with
+   - GLM's confidence level on key decisions (e.g., "65% confident on the debate pool filesystem layout")
+
+   **Part 3: Answer Format** (~5 lines)
+   - Specify the response structure (flexible, not rigid boxes)
+   - ALWAYS include an "other concerns" open field so unexpected issues can surface
+   - Permit "No issues found" — do not force the reviewer to invent problems
+
+   **Brief length**: 50-100 lines total. High-signal, no redundancy.
+
+   **Anti-sycophancy measures** (per Anthropic research — Claude sycophantic in 9-25% of reviews):
+   - Open with pre-mortem frame: "Assume this plan failed in 6 months. List the most plausible reasons."
+   - Explicitly permit "No issues found" — don't pad with false concerns
+   - Require proof before reporting: each issue must cite a concrete failure scenario and evidence from the codebase
+   - Ban style/formatting/speculative-future/feature-request comments — substance only
+
+   **Anchoring mitigation** (per LLM anchoring bias research):
+   - State GLM's reasoning in a clearly labeled block
+   - Instruct reviewer: "Criticize my reasoning, not my conclusion"
+   - Disclose GLM's confidence explicitly ("I'm 65% confident on step 3")
+   - This gives the reviewer a target without forcing agreement
 
 6. **Pause for Claude review.** The user bridges: they paste the plan + context brief (Rev 1 only) or just the revised plan (Rev 2+) to Claude in a separate chat, then paste Claude's findings back to you. Claude reviews only — does not create or edit plan files, visual diagrams, only identifies issues and improvements. Wait for the user's paste. Apply findings at GLM's discretion.
 
 7. **Deliver the final plan.** Tell the user: "Copy `plan-{N}-Rev{n}.md` to `c:\Jarvis\GLM Prompts\{decade}s\plan-{N}.md` and point Devin at it."
+
+## Tiered Review System (NEW — Plan 76)
+
+Not every plan needs the same review depth. GLM selects the review tier based on plan characteristics:
+
+### Tier 1: Claude only (default, ~80% of plans)
+- **Trigger**: Routine plans, single-subsystem, mechanical fixes, scan plans, plans where AR/OR rules determine the answer
+- **Process**: GLM drafts → Claude reviews → GLM revises → Devin executes
+- **Cost**: Low (1 AI review)
+
+### Tier 2: 5-AI panel (selective, ~20% of plans)
+- **Trigger ANY of**:
+  - Architectural decisions (new patterns, multi-subsystem integration, sequencing)
+  - GLM confidence <70% in the plan design
+  - Claude's review surfaces significant disagreement or open questions GLM can't resolve
+  - Novel territory (no precedent in the project — e.g., PEMADS Phase 1)
+  - Reversible-but-expensive decisions (wrong choice costs multiple plans to fix)
+- **Process**: GLM drafts strategy doc + plan → 5-AI panel reviews (Claude, Kimi, DeepSeek, Gemini, ChatGPT) → GLM judges responses on defined criteria → GLM adopts best-reasoned recommendation → Devin executes
+- **Cost**: High (5 AI reviews + GLM judgment)
+
+### Tier 3: 5-AI panel + user judgment (rare, ~2% of plans)
+- **Trigger**: Roadmap-level decisions, philosophy changes (local-first → cloud), feature arc launches
+- **Process**: 5-AI panel → GLM judges → user reviews GLM's judgment → final decision
+- **Cost**: Highest (5 AI reviews + GLM judgment + user review)
+
+### GLM's commitment
+When Tier 2 or Tier 3 is triggered, GLM commits to adopting the highest-scoring recommendation — even if it contradicts GLM's original position. This is what makes the pattern work: if GLM always overrode the panel, there'd be no point.
+
+### When to trigger Tier 2 for plan review specifically
+- A plan introduces a new architecture pattern (like AR19 sandbox, AR20 subprocess adapter)
+- A plan touches 3+ subsystems
+- Claude's review comes back with "REQUIRES CLARIFICATION" or >3 open questions
+- GLM revises a plan 3+ times (Rev3+) — signals iterating in a hole
 
 ---
 

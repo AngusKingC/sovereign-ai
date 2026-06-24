@@ -74,3 +74,18 @@ This file defines the domain terms, conventions, and shared vocabulary used acro
 | **Q1_0 Quantization** | The 1-bit/ternary quantization format added by PrismML's `llama.cpp` fork. Required to load models with ternary weights (e.g., Ternary Bonsai). NOT supported by stock `llama-cpp-python` from PyPI. |
 | **PrismLlamaAdapter** | The Sovereign AI adapter (`adapters/prism_llama.py`) that manages a modified `llama-server` subprocess and exposes it as an `LLMAdapter`. Single responsibility: binary lifecycle + HTTP translation. Does NOT download binaries or models. |
 | **Adapter-Managed Subprocess** | Pattern (AR20): adapter launches an external binary as a subprocess, health-checks it, and calls its API. Used when a custom C++ build is needed but a Python binding would be fragile. |
+
+## PEMADS Phase 1 Vocabulary (NEW — Plan 76)
+
+| Term | Definition |
+|---|---|
+| **PEMADS** | Pruned Expert Multi-Agent Debate System. Feature arc (Plans 76, 81-84) that creates specialized pruned-expert models, orchestrates turn-based debates between diverse architectures, and gates implementation on a quality threshold. |
+| **DebatePool** | Persistent filesystem storage (`memory/debate_pool.py`) for debate history across rounds — task, solutions, critiques, scores, feedback. No LLM calls; pure data structure. |
+| **TaskClassifier** | Module (`core/task_classifier.py`) that classifies coding tasks into types (game, ai_agent, data_pipeline, api_backend, script) via keyword heuristics. No LLM calls. |
+| **TestingBattery** | Skill (`skills/testing_battery/`) that orchestrates mypy, vulture, pytest, bandit, hypothesis runs against a solution in SandboxExecutor. Returns `TestBatteryResult` with per-tool scores. No LLM calls. |
+| **TaskType** | Classification of a coding task — determines quality threshold and scoring weights. Values: game (85% threshold), ai_agent (90%), data_pipeline (80%), api_backend (88%), script (75%). |
+| **TestBatteryResult** | Aggregated result of testing battery runs — per-tool `ToolResult` objects, weighted quality %, total duration. |
+| **Quality %** | Weighted score (0-100) from testing battery, calculated per task type weights. Must exceed task-specific threshold for implementation to proceed. |
+| **Phase 1** | PEMADS infrastructure — debate pool, task classifier, testing battery framework. No LLM calls, no debates, no safety risks. (Plan 76) |
+| **Phase 2** | PEMADS expert panel manager + VRAM hot-swap. Live debates. Requires Plan 77-79 prerequisites. (Plan 81) |
+| **Phase 3** | PEMADS judge + implementation gate + full testing battery. Autonomous decisions. Requires Plan 82 multi-channel approvals. (Plan 83) |

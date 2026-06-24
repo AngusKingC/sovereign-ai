@@ -74,63 +74,76 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Next 5 Prompts Queue
 
-### Plan 76 — Self-Healing / Auto-Correction (Kimi Critical #3)
+### Plan 76 — PEMADS Phase 1: Debate Pool + Task Classifier + Testing Battery Framework (Priority 1)
 
-**Scope**: AutoCorrector module (orchestrator/auto_corrector.py) that applies safe proposals from improvement_loop.py and escalates unsafe ones to approval gate. Safe proposal criteria (no external API calls, no file system writes, no subprocess execution, no state mutations beyond in-memory). Integration with ImprovementLoop and ApprovalGate. Comprehensive tests.
+**Scope**: PEMADS Phase 1 infrastructure (no LLM calls, no debates). New modules: `memory/debate_pool.py` (persistent debate history storage), `core/task_classifier.py` (keyword-based task type classification), `skills/testing_battery/` (orchestrates mypy/vulture/pytest/bandit/hypothesis in SandboxExecutor). Plus governance updates: AI_HANDOFF.md (tiered review system + context brief structure), PLANS.md (roadmap revision), CONTEXT.md (PEMADS vocabulary).
 
-**Expected impact**: Self-healing capability for safe code improvements, reduced manual intervention for routine fixes.
+**Expected impact**: User-visible PEMADS progress. Foundation for Phase 2-3. No safety risks (no LLM calls, no debates, no autonomous actions).
 
-**Baseline changes**: Test count increase (new AutoCorrector tests + integration tests). No tool count changes (file-scoped mypy/ruff on new files).
+**Baseline changes**: Test count +38 (10 debate_pool + 8 task_classifier + 20 testing_battery). Coverage maintained ≥83%.
 
-**Gate**: Full test suite pass, AutoCorrector correctly distinguishes safe/unsafe proposals.
+**Gate**: Full test suite pass, ruff 0 errors, mypy 0 errors, detect-secrets passes, vulture whitelist passes.
 
----
-
-### Plan 77 — Dependency Security + Parallel Tests (Priority 2)
-
-**Scope**: pip-audit continue-on-error flip (diskcache replacement + --ignore-vuln strategy), pytest-xdist parallel test execution, informational metrics (safety, interrogate, radon, hypothesis).
-
-**Expected impact**: Improved dependency security posture, faster test execution.
-
-**Baseline changes**: No test count change. pip-audit CVE count may change after diskcache replacement.
-
-**Gate**: Full test suite pass, pip-audit 0 actionable CVEs.
+**Kimi gap**: None (this is PEMADS infrastructure, not a Kimi gap).
 
 ---
 
-### Plan 78 — [Open Slot] (Priority TBD)
+### Plan 77 — Self-Healing / AutoCorrector (Priority 1 — Kimi Critical #3)
 
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 77.
+**Scope**: `AutoCorrector` module — applies safe proposals (instruction tweaks, routing weight adjustments) from `orchestrator/improvement_loop.py`, escalates unsafe proposals (code changes) to approval gate. Wire into improvement loop's `check_and_trigger_update()` path. Closes the "self-improving AI" promise.
 
-**Expected impact**: TBD
+**Expected impact**: Core promise delivered. Improvement loop no longer discards `VersionUpdateProposal`.
 
-**Baseline changes**: TBD
+**Baseline changes**: Test count may increase with AutoCorrector tests.
 
-**Gate**: TBD
-
----
-
-### Plan 79 — [Open Slot] (Priority TBD)
-
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 78.
-
-**Expected impact**: TBD
-
-**Baseline changes**: TBD
-
-**Gate**: TBD
+**Gate**: Full test suite pass, ruff 0, mypy 0.
 
 ---
 
-### Plan 80 — [Open Slot] (Priority TBD)
+### Plan 78 — Circuit Breaker at Orchestrator Level (Priority 2 — Kimi High)
 
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 79.
+**Scope**: Extend existing `core/adapter_fallback.py` circuit breaker to per-worker and orchestrator-level. Add degraded mode (queue tasks instead of failing). Required before PEMADS Phase 2 (live debates).
 
-**Expected impact**: TBD
+**Expected impact**: Cascade failure prevention. Prerequisite for PEMADS Phase 2 safety.
 
-**Baseline changes**: TBD
+**Baseline changes**: Test count may increase with circuit breaker tests.
 
-**Gate**: TBD
+**Gate**: Full test suite pass, ruff 0, mypy 0.
+
+---
+
+### Plan 79 — Model Routing / Tiered Selection (Priority 2 — Kimi High)
+
+**Scope**: `ModelTierRouter` — classifies tasks by complexity (simple/medium/complex), routes to cheapest capable model, integrates with CostTracker (Plan 74) for budget-aware fallback. Required before PEMADS Phase 2 (avoids running full debate on trivial tasks).
+
+**Expected impact**: 60-90% cost optimization potential. Prerequisite for PEMADS Phase 2 cost control.
+
+**Baseline changes**: Test count may increase with router tests.
+
+**Gate**: Full test suite pass, ruff 0, mypy 0.
+
+---
+
+### Plan 80 — 5-Plan Milestone Full Scan (Priority 1 — mandatory)
+
+**Scope**: Full 6-tool checkpoint scan (pytest, ruff, mypy, bandit, pip-audit, vulture) + coverage verification. Baseline reconciliation after Plans 76-79. Validates PEMADS Phase 1 + 3 Kimi gaps before Phase 2 begins.
+
+**Expected impact**: Baseline verification, trend analysis.
+
+**Baseline changes**: All baselines should hold within tolerance.
+
+**Gate**: All 6 tools pass, coverage ≥78% (83% baseline -5%).
+
+---
+
+**Plans 81-85 (post-scan)**:
+- **Plan 81**: PEMADS Phase 2 — Expert panel manager + hot-swap (now safe — circuit breaker, self-healing, routing in place)
+- **Plan 82**: Multi-channel approval gates (Kimi High — lands right before Phase 3, where implementation decisions need oversight)
+- **Plan 83**: PEMADS Phase 3 — Judge + implementation gate + full testing battery (now safe — multi-channel approvals in place)
+- **Plan 84**: PEMADS Phase 5 — Integration & hardening (Phase 4 cloud pruner stays deferred — local-first)
+- **Plan 85**: 5-plan milestone scan (mandatory)
+
+**Roadmap source**: Claude's Option C from the 5-AI panel review (2026-06-25). See `roadmap-sequencing-strategy-and-review-request.md` for the full review process and GLM's evaluation.
 
 ---
 
