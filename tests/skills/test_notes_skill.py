@@ -246,11 +246,12 @@ class TestNotesSkill:
         result = await self.skill.delete("1")
         
         assert result is True
-        # Verify scoped_delete was called
-        self.memory_router.scoped_delete.assert_called_once()
-        call_args = self.memory_router.scoped_delete.call_args
+        # Verify scoped_write was called with None (deletion pattern)
+        self.memory_router.scoped_write.assert_called_once()
+        call_args = self.memory_router.scoped_write.call_args
         assert call_args[0][0] == "notes"
         assert call_args[0][1] == "notes:1"
+        assert call_args[0][2] is None
 
     @pytest.mark.asyncio
     async def test_delete_returns_false_for_unknown_id(self):

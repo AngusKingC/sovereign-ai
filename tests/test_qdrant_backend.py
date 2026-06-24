@@ -195,15 +195,15 @@ class TestQdrantBackend:
             mock_client = Mock()
             mock_client_class.return_value = mock_client
             mock_client.get_collections.return_value = Mock(collections=[])
-            mock_client.search.return_value = []
+            mock_client.query_points.return_value = []
             
             # Mock emit_trace to avoid actual trace emission during test
             with patch('core.observability.emit_trace'):
                 await backend.fetch(task)
                 
-                # Verify search was called with zero vector (core behavior)
-                mock_client.search.assert_called_once()
-                search_call = mock_client.search.call_args
-                vector = search_call[1]["query_vector"]
+                # Verify query_points was called with zero vector (core behavior)
+                mock_client.query_points.assert_called_once()
+                search_call = mock_client.query_points.call_args
+                vector = search_call[1]["query"]
                 assert vector == [0.0] * 768
 
