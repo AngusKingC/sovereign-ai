@@ -7,15 +7,15 @@ Single responsibility: Execute Python code with approval gating and timeout hand
 import asyncio
 from typing import Any
 
+from core.approval_gate import ApprovalActionType, ApprovalGate, ApprovalRequest
 from core.observability import (
+    MemoryTraceEmitter,
     TraceComponent,
+    TraceEmitter,
+    TraceEvent,
     TraceEventType,
     TraceLevel,
-    TraceEvent,
-    TraceEmitter,
-    MemoryTraceEmitter,
 )
-from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType
 
 
 class CodeExecutionSkill:
@@ -26,6 +26,7 @@ class CodeExecutionSkill:
         approval_gate: ApprovalGate | None = None,
         emitter: TraceEmitter | None = None,
         timeout: int = 30,
+        sandbox_executor: Any = None,
     ) -> None:
         """Initialize the code execution skill.
 
@@ -33,12 +34,14 @@ class CodeExecutionSkill:
             approval_gate: Optional approval gate for code execution authorization
             emitter: Trace emitter for observability
             timeout: Code execution timeout in seconds (default 30)
+            sandbox_executor: Optional SandboxExecutor for DI (testing)
         """
         self._emitter = emitter or MemoryTraceEmitter()
         self._approval_gate = approval_gate
         self._timeout = timeout
+        self._sandbox_executor = sandbox_executor
 
-    async def execute(self, code: str, **kwargs) -> dict[str, Any]:
+    async def execute(self, code: str, **_kwargs) -> dict[str, Any]:
         """
         Execute Python code.
 
@@ -58,17 +61,19 @@ class CodeExecutionSkill:
         start_time = asyncio.get_event_loop().time()
 
         try:
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.COMPONENT_START,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                message="Code execution started",
-                data={
-                    "skill": "code_execution",
-                    "code_length": len(code),
-                },
-                duration_ms=0,
-            ))
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.COMPONENT_START,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="Code execution started",
+                    data={
+                        "skill": "code_execution",
+                        "code_length": len(code),
+                    },
+                    duration_ms=0,
+                )
+            )
         except Exception:
             # Trace emission failure - non-critical, continue
             pass
@@ -93,17 +98,22 @@ class CodeExecutionSkill:
                 response = await self._approval_gate.request_approval(request)
                 if not response.approved:
                     try:
-                        await self._emitter.emit(TraceEvent(
-                            event_type=TraceEventType.OPERATION_COMPLETE,
-                            component=TraceComponent.WORKER,
-                            level=TraceLevel.WARNING,
-                            message="Code execution denied by approval gate",
-                            data={
-                                "skill": "code_execution",
-                                "reason": response.decision_reason,
-                            },
-                            duration_ms=int((asyncio.get_event_loop().time() - start_time) * 1000),
-                        ))
+                        await self._emitter.emit(
+                            TraceEvent(
+                                event_type=TraceEventType.OPERATION_COMPLETE,
+                                component=TraceComponent.WORKER,
+                                level=TraceLevel.WARNING,
+                                message="Code execution denied by approval gate",
+                                data={
+                                    "skill": "code_execution",
+                                    "reason": response.decision_reason,
+                                },
+                                duration_ms=int(
+                                    (asyncio.get_event_loop().time() - start_time)
+                                    * 1000
+                                ),
+                            )
+                        )
                     except Exception:
                         # Trace emission failure - non-critical, continue
                         pass
@@ -117,16 +127,20 @@ class CodeExecutionSkill:
             except Exception:
                 # If approval request fails, deny execution
                 try:
-                    await self._emitter.emit(TraceEvent(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.WORKER,
-                        level=TraceLevel.ERROR,
-                        message="Code execution approval request failed",
-                        data={
-                            "skill": "code_execution",
-                        },
-                        duration_ms=int((asyncio.get_event_loop().time() - start_time) * 1000),
-                    ))
+                    await self._emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.WORKER,
+                            level=TraceLevel.ERROR,
+                            message="Code execution approval request failed",
+                            data={
+                                "skill": "code_execution",
+                            },
+                            duration_ms=int(
+                                (asyncio.get_event_loop().time() - start_time) * 1000
+                            ),
+                        )
+                    )
                 except Exception:
                     # Trace emission failure - non-critical, continue
                     pass
@@ -138,89 +152,74 @@ class CodeExecutionSkill:
                     "error": "Approval request failed",
                 }
 
-        # Execute code in subprocess
+        # Execute code in sandbox (AR19: no direct subprocess for code execution)
         try:
-            process = await asyncio.create_subprocess_shell(
-                "python -c \"" + code.replace('"', '\\"') + "\"",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
+            from core.sandbox import SandboxConfig, SandboxExecutor
 
-            try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(),
-                    timeout=self._timeout,
+            if self._sandbox_executor is None:
+                sandbox = SandboxExecutor(
+                    config=SandboxConfig(timeout=self._timeout),
+                    emitter=self._emitter,
+                    approval_gate=self._approval_gate,
                 )
-            except asyncio.TimeoutError:
-                process.kill()
-                try:
-                    await self._emitter.emit(TraceEvent(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.WORKER,
-                        level=TraceLevel.ERROR,
-                        message="Code execution timed out",
-                        data={
-                            "skill": "code_execution",
-                            "timeout": self._timeout,
-                        },
-                        duration_ms=int((asyncio.get_event_loop().time() - start_time) * 1000),
-                    ))
-                except Exception:
-                    # Trace emission failure - non-critical, continue
-                    pass
-                return {
-                    "success": False,
-                    "stdout": "",
-                    "stderr": "",
-                    "return_code": -1,
-                    "error": "Execution timed out",
-                }
+            else:
+                sandbox = self._sandbox_executor
 
-            stdout_text = stdout.decode("utf-8", errors="replace")
-            stderr_text = stderr.decode("utf-8", errors="replace")
-            return_code = process.returncode
+            result = await sandbox.execute_python(code)
 
             duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
 
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_COMPLETE,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.INFO,
-                    message="Code execution completed",
-                    data={
-                        "skill": "code_execution",
-                        "return_code": return_code,
-                        "stdout_length": len(stdout_text),
-                        "stderr_length": len(stderr_text),
-                    },
-                    duration_ms=duration_ms,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=(
+                            TraceEventType.OPERATION_COMPLETE
+                            if result.success
+                            else TraceEventType.OPERATION_ERROR
+                        ),
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.INFO if result.success else TraceLevel.ERROR,
+                        message="Code execution completed",
+                        data={
+                            "skill": "code_execution",
+                            "return_code": result.return_code,
+                            "stdout_length": len(result.stdout),
+                            "stderr_length": len(result.stderr),
+                            "sandboxed": result.sandboxed,
+                        },
+                        duration_ms=duration_ms,
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
 
             return {
-                "success": return_code == 0,
-                "stdout": stdout_text,
-                "stderr": stderr_text,
-                "return_code": return_code,
-                "error": None if return_code == 0 else f"Code failed with return code {return_code}",
+                "success": result.success,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "return_code": result.return_code,
+                "error": result.error,
+                "sandboxed": result.sandboxed,
             }
 
         except Exception as e:
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.ERROR,
-                    message="Code execution failed",
-                    data={
-                        "skill": "code_execution",
-                        "error": str(e),
-                    },
-                    duration_ms=int((asyncio.get_event_loop().time() - start_time) * 1000),
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.ERROR,
+                        message="Code execution failed",
+                        data={
+                            "skill": "code_execution",
+                            "error": str(e),
+                        },
+                        duration_ms=int(
+                            (asyncio.get_event_loop().time() - start_time) * 1000
+                        ),
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass

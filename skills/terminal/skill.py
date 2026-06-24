@@ -7,15 +7,15 @@ Single responsibility: Execute terminal commands with approval gating and timeou
 import asyncio
 from typing import Any
 
+from core.approval_gate import ApprovalActionType, ApprovalGate, ApprovalRequest
 from core.observability import (
+    MemoryTraceEmitter,
     TraceComponent,
+    TraceEmitter,
+    TraceEvent,
     TraceEventType,
     TraceLevel,
-    TraceEvent,
-    TraceEmitter,
-    MemoryTraceEmitter,
 )
-from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType
 
 
 class TerminalSkill:
@@ -27,6 +27,7 @@ class TerminalSkill:
         emitter: TraceEmitter | None = None,
         working_dir: str | None = None,
         timeout: int = 30,
+        sandbox_executor: Any = None,
     ) -> None:
         """Initialize the terminal skill.
 
@@ -35,13 +36,15 @@ class TerminalSkill:
             emitter: Trace emitter for observability
             working_dir: Optional working directory for command execution
             timeout: Command execution timeout in seconds (default 30)
+            sandbox_executor: Optional SandboxExecutor for DI (testing)
         """
         self._emitter = emitter or MemoryTraceEmitter()
         self._approval_gate = approval_gate
         self._working_dir = working_dir
         self._timeout = timeout
+        self._sandbox_executor = sandbox_executor
 
-    async def execute(self, command: str, **kwargs) -> dict[str, Any]:
+    async def execute(self, command: str, **_kwargs) -> dict[str, Any]:
         """
         Execute a terminal command.
 
@@ -61,18 +64,20 @@ class TerminalSkill:
         start_time = asyncio.get_event_loop().time()
 
         try:
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.COMPONENT_START,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                message="Terminal execution started",
-                data={
-                    "skill": "terminal",
-                    "command": command,
-                    "working_dir": self._working_dir,
-                },
-                duration_ms=0,
-            ))
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.COMPONENT_START,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="Terminal execution started",
+                    data={
+                        "skill": "terminal",
+                        "command": command,
+                        "working_dir": self._working_dir,
+                    },
+                    duration_ms=0,
+                )
+            )
         except Exception:
             # Trace emission failure - non-critical, continue
             pass
@@ -89,7 +94,10 @@ class TerminalSkill:
                     session_id="default",
                     action_type=ApprovalActionType.SHELL_COMMAND,
                     action_description=f"Execute command: {command}",
-                    action_parameters={"command": command, "working_dir": self._working_dir},
+                    action_parameters={
+                        "command": command,
+                        "working_dir": self._working_dir,
+                    },
                     risk_level="high",
                     reason_for_approval="Shell commands can modify system state",
                     expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
@@ -97,18 +105,23 @@ class TerminalSkill:
                 response = await self._approval_gate.request_approval(request)
                 if not response.approved:
                     try:
-                        await self._emitter.emit(TraceEvent(
-                            event_type=TraceEventType.OPERATION_COMPLETE,
-                            component=TraceComponent.WORKER,
-                            level=TraceLevel.WARNING,
-                            message="Terminal execution denied by approval gate",
-                            data={
-                                "skill": "terminal",
-                                "command": command,
-                                "reason": response.decision_reason,
-                            },
-                            duration_ms=int((asyncio.get_event_loop().time() - start_time) * 1000),
-                        ))
+                        await self._emitter.emit(
+                            TraceEvent(
+                                event_type=TraceEventType.OPERATION_COMPLETE,
+                                component=TraceComponent.WORKER,
+                                level=TraceLevel.WARNING,
+                                message="Terminal execution denied by approval gate",
+                                data={
+                                    "skill": "terminal",
+                                    "command": command,
+                                    "reason": response.decision_reason,
+                                },
+                                duration_ms=int(
+                                    (asyncio.get_event_loop().time() - start_time)
+                                    * 1000
+                                ),
+                            )
+                        )
                     except Exception:
                         # Trace emission failure - non-critical, continue
                         pass
@@ -123,17 +136,21 @@ class TerminalSkill:
                 # If approval request fails, log and proceed (or deny based on policy)
                 # For now, we'll deny on approval failure
                 try:
-                    await self._emitter.emit(TraceEvent(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.WORKER,
-                        level=TraceLevel.ERROR,
-                        message="Terminal execution approval request failed",
-                        data={
-                            "skill": "terminal",
-                            "command": command,
-                        },
-                        duration_ms=int((asyncio.get_event_loop().time() - start_time) * 1000),
-                    ))
+                    await self._emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.WORKER,
+                            level=TraceLevel.ERROR,
+                            message="Terminal execution approval request failed",
+                            data={
+                                "skill": "terminal",
+                                "command": command,
+                            },
+                            duration_ms=int(
+                                (asyncio.get_event_loop().time() - start_time) * 1000
+                            ),
+                        )
+                    )
                 except Exception:
                     # Trace emission failure - non-critical, continue
                     pass
@@ -145,93 +162,78 @@ class TerminalSkill:
                     "error": "Approval request failed",
                 }
 
-        # Execute command
+        # Execute command in sandbox (AR19: no direct subprocess for command execution)
         try:
-            process = await asyncio.create_subprocess_shell(
-                command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=self._working_dir,
-            )
+            from core.sandbox import SandboxConfig, SandboxExecutor
 
-            try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(),
-                    timeout=self._timeout,
+            if self._sandbox_executor is None:
+                sandbox = SandboxExecutor(
+                    config=SandboxConfig(timeout=self._timeout),
+                    emitter=self._emitter,
+                    approval_gate=self._approval_gate,
                 )
-            except asyncio.TimeoutError:
-                process.kill()
-                try:
-                    await self._emitter.emit(TraceEvent(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.WORKER,
-                        level=TraceLevel.ERROR,
-                        message="Terminal execution timed out",
-                        data={
-                            "skill": "terminal",
-                            "command": command,
-                            "timeout": self._timeout,
-                        },
-                        duration_ms=int((asyncio.get_event_loop().time() - start_time) * 1000),
-                    ))
-                except Exception:
-                    # Trace emission failure - non-critical, continue
-                    pass
-                return {
-                    "success": False,
-                    "stdout": "",
-                    "stderr": "",
-                    "return_code": -1,
-                    "error": "Command timed out",
-                }
+            else:
+                sandbox = self._sandbox_executor
 
-            stdout_text = stdout.decode("utf-8", errors="replace")
-            stderr_text = stderr.decode("utf-8", errors="replace")
-            return_code = process.returncode
+            result = await sandbox.execute_command(
+                command, working_dir=self._working_dir
+            )
 
             duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
 
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_COMPLETE,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.INFO,
-                    message="Terminal execution completed",
-                    data={
-                        "skill": "terminal",
-                        "command": command,
-                        "return_code": return_code,
-                        "stdout_length": len(stdout_text),
-                        "stderr_length": len(stderr_text),
-                    },
-                    duration_ms=duration_ms,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=(
+                            TraceEventType.OPERATION_COMPLETE
+                            if result.success
+                            else TraceEventType.OPERATION_ERROR
+                        ),
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.INFO if result.success else TraceLevel.ERROR,
+                        message="Terminal execution completed",
+                        data={
+                            "skill": "terminal",
+                            "command": command,
+                            "return_code": result.return_code,
+                            "stdout_length": len(result.stdout),
+                            "stderr_length": len(result.stderr),
+                            "sandboxed": result.sandboxed,
+                        },
+                        duration_ms=duration_ms,
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
 
             return {
-                "success": return_code == 0,
-                "stdout": stdout_text,
-                "stderr": stderr_text,
-                "return_code": return_code,
-                "error": None if return_code == 0 else f"Command failed with return code {return_code}",
+                "success": result.success,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "return_code": result.return_code,
+                "error": result.error,
+                "sandboxed": result.sandboxed,
             }
 
         except Exception as e:
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.ERROR,
-                    message="Terminal execution failed",
-                    data={
-                        "skill": "terminal",
-                        "command": command,
-                        "error": str(e),
-                    },
-                    duration_ms=int((asyncio.get_event_loop().time() - start_time) * 1000),
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.ERROR,
+                        message="Terminal execution failed",
+                        data={
+                            "skill": "terminal",
+                            "command": command,
+                            "error": str(e),
+                        },
+                        duration_ms=int(
+                            (asyncio.get_event_loop().time() - start_time) * 1000
+                        ),
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass

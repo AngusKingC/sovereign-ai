@@ -11,19 +11,21 @@ Architecture Compliance:
 - Typed interfaces
 """
 
-from enum import Enum
-from typing import Any, Dict, Optional
-from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict
-from uuid import UUID, uuid4
 import asyncio
 import logging
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, Optional
+from uuid import UUID, uuid4
+
+from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger(__name__)
 
 
 class TraceLevel(str, Enum):
     """Severity levels for trace events."""
+
     DEBUG = "debug"
     INFO = "info"
     WARNING = "warning"
@@ -33,6 +35,7 @@ class TraceLevel(str, Enum):
 
 class TraceComponent(str, Enum):
     """Components that can emit trace events."""
+
     # Core components
     MEMORY_ROUTER = "memory_router"
     ORCHESTRATOR = "orchestrator"
@@ -40,16 +43,16 @@ class TraceComponent(str, Enum):
     EMBEDDER = "embedder"
     SYSTEM = "system"
     RETENTION_DAEMON = "retention_daemon"
-    
+
     # Adapters
     ADAPTER = "adapter"
     ADAPTER_FALLBACK_CHAIN = "adapter_fallback_chain"
-    
+
     # Interfaces
     CLI = "cli"
     WEB_GUI = "web_gui"
     STANDALONE_GUI = "standalone_gui"
-    
+
     # Commands
     COMMAND_REGISTRY = "command_registry"
     COMMAND_HANDLER = "command_handler"
@@ -84,6 +87,9 @@ class TraceComponent(str, Enum):
     AUTH = "auth"
     SECURITY = "security"
 
+    # Sandbox
+    SANDBOX = "sandbox"
+
     # Web
     WEB = "web"
 
@@ -96,25 +102,26 @@ class TraceComponent(str, Enum):
 
 class TraceEventType(str, Enum):
     """Types of trace events."""
+
     # Lifecycle events
     COMPONENT_START = "component_start"
     COMPONENT_STOP = "component_stop"
-    
+
     # Operation events
     OPERATION_START = "operation_start"
     OPERATION_COMPLETE = "operation_complete"
     OPERATION_ERROR = "operation_error"
-    
+
     # Data events
     DATA_READ = "data_read"
     DATA_WRITE = "data_write"
     DATA_TRANSFORM = "data_transform"
-    
+
     # Command events
     COMMAND_RECEIVED = "command_received"
     COMMAND_EXECUTED = "command_executed"
     COMMAND_FAILED = "command_failed"
-    
+
     # Adapter events
     ADAPTER_CALL = "adapter_call"
     ADAPTER_RESPONSE = "adapter_response"
@@ -123,27 +130,29 @@ class TraceEventType(str, Enum):
     ADAPTER_UNAVAILABLE = "adapter_unavailable"
     CIRCUIT_BREAKER_OPEN = "circuit_breaker_open"
     CIRCUIT_BREAKER_RESET = "circuit_breaker_reset"
-    
+
     # Memory events
     MEMORY_ACCESS = "memory_access"
     MEMORY_WRITE = "memory_write"
     MEMORY_FETCH = "memory_fetch"
-    
+
     # Embedder events
     EMBEDDING_REQUEST = "embedding_request"
     EMBEDDING_COMPLETE = "embedding_complete"
     EMBEDDING_ERROR = "embedding_error"
-    
+
     # Approval trust events
     TRUST_GRANTED = "trust_granted"
     TRUST_REVOKED = "trust_revoked"
     TRUST_BLOCKED = "trust_blocked"
-    
+
     # Multi-worker events
     MULTI_WORKER_DISPATCH_STARTED = "multi_worker_dispatch_started"
-    MULTI_WORKER_ORCHESTRATOR_MODEL_RELEASED = "multi_worker_orchestrator_model_released"
+    MULTI_WORKER_ORCHESTRATOR_MODEL_RELEASED = (
+        "multi_worker_orchestrator_model_released"
+    )
     MULTI_WORKER_WORKER_FAILED = "multi_worker_worker_failed"
-    
+
     # Eval events
     EVAL_COMPLETE = "eval_complete"
     EVAL_WARNING = "eval_warning"
@@ -151,35 +160,35 @@ class TraceEventType(str, Enum):
     MULTI_WORKER_WORKER_MODEL_RELEASED = "multi_worker_worker_model_released"
     MULTI_WORKER_DISPATCH_COMPLETED = "multi_worker_dispatch_completed"
     MULTI_WORKER_WINNER_SELECTED = "multi_worker_winner_selected"
-    
+
     # Worker events
     WORKER_PROMPT_BUILD = "worker_prompt_build"
     WORKER_OUTPUT_PARSE = "worker_output_parse"
-    
+
     # Orchestrator events
     ORCHESTRATOR_ROUTING_START = "orchestrator_routing_start"
     ORCHESTRATOR_ROUTING_COMPLETE = "orchestrator_routing_complete"
     ORCHESTRATOR_WORKER_REGISTERED = "orchestrator_worker_registered"
     ORCHESTRATOR_WORKER_DEREGISTERED = "orchestrator_worker_deregistered"
-    
+
     # Scratchpad events
     SCRATCHPAD_CREATED = "scratchpad_created"
     SCRATCHPAD_ENTRY_ADDED = "scratchpad_entry_added"
     SCRATCHPAD_COMPACTED = "scratchpad_compacted"
     SCRATCHPAD_DELETED = "scratchpad_deleted"
-    
+
     # System events
     SYSTEM_PROFILING_START = "system_profiling_start"
     SYSTEM_PROFILING_COMPLETE = "system_profiling_complete"
     SYSTEM_PROFILING_ERROR = "system_profiling_error"
-    
+
     # Model registry events
     MODEL_REGISTRY_LOAD = "model_registry_load"
     MODEL_REGISTRY_LOAD_COMPLETE = "model_registry_load_complete"
     MODEL_REGISTRY_REGISTER = "model_registry_register"
     MODEL_REGISTRY_RECOMMEND = "model_registry_recommend"
     MODEL_REGISTRY_DOWNLOAD_UPDATE = "model_registry_download_update"
-    
+
     # Resource manager events
     RESOURCE_SNAPSHOT = "resource_snapshot"
     RESOURCE_LOAD_REQUEST = "resource_load_request"
@@ -189,7 +198,7 @@ class TraceEventType(str, Enum):
     RESOURCE_PIN = "resource_pin"
     RESOURCE_UNPIN = "resource_unpin"
     RESOURCE_APPROVAL_REQUESTED = "resource_approval_requested"
-    
+
     # Model acquisition events
     MODEL_SEARCH = "model_search"
     MODEL_METADATA_FETCH = "model_metadata_fetch"
@@ -199,7 +208,7 @@ class TraceEventType(str, Enum):
     MODEL_DOWNLOAD_FAILED = "model_download_failed"
     MODEL_DELETE = "model_delete"
     MODEL_ALTERNATIVES_LISTED = "model_alternatives_listed"
-    
+
     # System events
     SYSTEM_STATUS = "system_status"
     RESOURCE_USAGE = "resource_usage"
@@ -267,51 +276,71 @@ class TraceEventType(str, Enum):
 
 class TraceEvent(BaseModel):
     """A single trace event emitted by a component.
-    
+
     This model represents a structured event that can be emitted by any
     component in the system for observability purposes.
     """
-    
+
     # Event identification
     event_id: UUID = Field(default_factory=uuid4, description="Unique event identifier")
     event_type: TraceEventType = Field(description="Type of event")
     component: TraceComponent = Field(description="Component that emitted the event")
     level: TraceLevel = Field(default=TraceLevel.INFO, description="Severity level")
-    
+
     # Event metadata
-    timestamp: datetime = Field(default_factory=datetime.now, description="Event timestamp")
+    timestamp: datetime = Field(
+        default_factory=datetime.now, description="Event timestamp"
+    )
     session_id: Optional[str] = Field(default=None, description="Session identifier")
-    correlation_id: Optional[UUID] = Field(default=None, description="Correlation ID for related events")
-    
+    correlation_id: Optional[UUID] = Field(
+        default=None, description="Correlation ID for related events"
+    )
+
     # Event data
     message: str = Field(description="Human-readable event message")
-    data: Dict[str, Any] = Field(default_factory=dict, description="Structured event data")
-    tags: Dict[str, str] = Field(default_factory=dict, description="Event tags for filtering")
-    
+    data: Dict[str, Any] = Field(
+        default_factory=dict, description="Structured event data"
+    )
+    tags: Dict[str, str] = Field(
+        default_factory=dict, description="Event tags for filtering"
+    )
+
     # Performance tracking
-    duration_ms: Optional[int] = Field(default=None, description="Operation duration in milliseconds")
-    
+    duration_ms: Optional[int] = Field(
+        default=None, description="Operation duration in milliseconds"
+    )
+
     # Error information
-    error_type: Optional[str] = Field(default=None, description="Error type if this is an error event")
-    error_message: Optional[str] = Field(default=None, description="Error message if this is an error event")
-    error_stack: Optional[str] = Field(default=None, description="Error stack trace if available")
-    
+    error_type: Optional[str] = Field(
+        default=None, description="Error type if this is an error event"
+    )
+    error_message: Optional[str] = Field(
+        default=None, description="Error message if this is an error event"
+    )
+    error_stack: Optional[str] = Field(
+        default=None, description="Error stack trace if available"
+    )
+
     model_config = ConfigDict(use_enum_values=True)
 
 
 class TraceContext(BaseModel):
     """Context for trace events.
-    
+
     This context is passed to event emitters to provide consistent
     metadata across related events.
     """
-    
+
     session_id: Optional[str] = Field(default=None, description="Session identifier")
-    correlation_id: UUID = Field(default_factory=uuid4, description="Correlation ID for related events")
+    correlation_id: UUID = Field(
+        default_factory=uuid4, description="Correlation ID for related events"
+    )
     user_id: Optional[str] = Field(default=None, description="User identifier")
     component: TraceComponent = Field(description="Component emitting events")
-    tags: Dict[str, str] = Field(default_factory=dict, description="Default tags for all events")
-    
+    tags: Dict[str, str] = Field(
+        default_factory=dict, description="Default tags for all events"
+    )
+
     def create_event(
         self,
         event_type: TraceEventType,
@@ -324,7 +353,7 @@ class TraceContext(BaseModel):
         error_stack: Optional[str] = None,
     ) -> TraceEvent:
         """Create a TraceEvent with this context.
-        
+
         Args:
             event_type: Type of event
             message: Human-readable message
@@ -334,7 +363,7 @@ class TraceContext(BaseModel):
             error_type: Error type if error event
             error_message: Error message if error event
             error_stack: Error stack trace if available
-            
+
         Returns:
             Configured TraceEvent
         """
@@ -356,48 +385,54 @@ class TraceContext(BaseModel):
 
 class TraceEmitter:
     """Interface for trace event emitters.
-    
+
     Components implement this interface to emit trace events.
     """
-    
-    def __init__(self, trace_store: Optional[Any] = None, memory_router: Optional[Any] = None) -> None:
+
+    def __init__(
+        self, trace_store: Optional[Any] = None, memory_router: Optional[Any] = None
+    ) -> None:
         """Initialize the trace emitter.
-        
+
         Args:
             trace_store: Optional trace store backend for persistence
             memory_router: Optional memory router to obtain trace store from
         """
         # If memory_router is provided, get trace_store from it
-        if memory_router is not None and hasattr(memory_router, 'get_trace_store'):
+        if memory_router is not None and hasattr(memory_router, "get_trace_store"):
             self.trace_store = memory_router.get_trace_store()
         else:
             self.trace_store = trace_store
         self._last_trace_task: Optional[asyncio.Task] = None
-    
+
     async def emit(self, event: TraceEvent) -> None:
         """Emit a trace event.
-        
+
         Args:
             event: The trace event to emit
         """
         # Schedule trace storage as fire-and-forget background task
         if self.trace_store is not None:
             trace_event_dict = event.model_dump()
-            self._last_trace_task = asyncio.create_task(self._safe_store_trace(trace_event_dict))
+            self._last_trace_task = asyncio.create_task(
+                self._safe_store_trace(trace_event_dict)
+            )
         raise NotImplementedError
-    
+
     async def _safe_store_trace(self, trace_event: Dict[str, Any]) -> None:
         """Best-effort trace persistence. Failures here must never affect
         the emission path — trace storage is an optional backend.
-        
+
         Args:
             trace_event: Trace event dictionary to store
         """
         try:
             await self.trace_store.store_trace(trace_event)
         except Exception as exc:  # noqa: BLE001 — optional backend, swallow by design
-            logger.warning("Trace store write failed; continuing without persistence: %s", exc)
-    
+            logger.warning(
+                "Trace store write failed; continuing without persistence: %s", exc
+            )
+
     async def emit_with_context(
         self,
         context: TraceContext,
@@ -411,7 +446,7 @@ class TraceEmitter:
         error_stack: Optional[str] = None,
     ) -> None:
         """Emit a trace event with a context.
-        
+
         Args:
             context: Trace context
             event_type: Type of event
@@ -438,41 +473,45 @@ class TraceEmitter:
 
 class ConsoleTraceEmitter(TraceEmitter):
     """Console-based trace emitter for development and CLI.
-    
+
     This emitter writes trace events to stdout/stderr for immediate
     visibility in CLI environments.
     """
-    
-    def __init__(self, trace_store: Optional[Any] = None, memory_router: Optional[Any] = None) -> None:
+
+    def __init__(
+        self, trace_store: Optional[Any] = None, memory_router: Optional[Any] = None
+    ) -> None:
         """Initialize the console trace emitter.
-        
+
         Args:
             trace_store: Optional trace store backend for persistence
             memory_router: Optional memory router to obtain trace store from
         """
         super().__init__(trace_store=trace_store, memory_router=memory_router)
-    
+
     async def emit(self, event: TraceEvent) -> None:
         """Emit a trace event to console."""
         # Schedule trace storage as fire-and-forget background task
         if self.trace_store is not None:
             trace_event_dict = event.model_dump()
-            self._last_trace_task = asyncio.create_task(self._safe_store_trace(trace_event_dict))
-        
+            self._last_trace_task = asyncio.create_task(
+                self._safe_store_trace(trace_event_dict)
+            )
+
         # Format: [TIMESTAMP] [LEVEL] [COMPONENT] EVENT_TYPE: message
         timestamp = event.timestamp.isoformat()
         level = str(event.level).upper()
         component = str(event.component)
         event_type = str(event.event_type)
-        
+
         print(f"[{timestamp}] [{level}] [{component}] {event_type}: {event.message}")
-        
+
         if event.data:
             print(f"  Data: {event.data}")
-        
+
         if event.duration_ms:
             print(f"  Duration: {event.duration_ms}ms")
-        
+
         if event.error_type:
             print(f"  Error: {event.error_type}: {event.error_message}")
             if event.error_stack:
@@ -481,29 +520,33 @@ class ConsoleTraceEmitter(TraceEmitter):
 
 class MemoryTraceEmitter(TraceEmitter):
     """In-memory trace emitter for testing and short-lived sessions.
-    
+
     This emitter stores trace events in memory for programmatic access.
     """
-    
-    def __init__(self, trace_store: Optional[Any] = None, memory_router: Optional[Any] = None) -> None:
+
+    def __init__(
+        self, trace_store: Optional[Any] = None, memory_router: Optional[Any] = None
+    ) -> None:
         """Initialize the memory emitter.
-        
+
         Args:
             trace_store: Optional trace store backend for persistence
             memory_router: Optional memory router to obtain trace store from
         """
         super().__init__(trace_store=trace_store, memory_router=memory_router)
         self._events: list[TraceEvent] = []
-    
+
     async def emit(self, event: TraceEvent) -> None:
         """Emit a trace event to memory."""
         # Schedule trace storage as fire-and-forget background task
         if self.trace_store is not None:
             trace_event_dict = event.model_dump()
-            self._last_trace_task = asyncio.create_task(self._safe_store_trace(trace_event_dict))
-        
+            self._last_trace_task = asyncio.create_task(
+                self._safe_store_trace(trace_event_dict)
+            )
+
         self._events.append(event)
-    
+
     def get_events(
         self,
         component: Optional[TraceComponent] = None,
@@ -512,36 +555,36 @@ class MemoryTraceEmitter(TraceEmitter):
         limit: Optional[int] = None,
     ) -> list[TraceEvent]:
         """Get stored events with optional filtering.
-        
+
         Args:
             component: Filter by component
             event_type: Filter by event type
             level: Filter by level
             limit: Maximum number of events to return
-            
+
         Returns:
             Filtered list of events
         """
         events = self._events
-        
+
         if component:
             events = [e for e in events if e.component == component]
-        
+
         if event_type:
             events = [e for e in events if e.event_type == event_type]
-        
+
         if level:
             events = [e for e in events if e.level == level]
-        
+
         if limit:
             events = events[-limit:]
-        
+
         return events
-    
+
     def clear(self) -> None:
         """Clear all stored events."""
         self._events.clear()
-    
+
     def count(self) -> int:
         """Get the number of stored events."""
         return len(self._events)
@@ -549,26 +592,30 @@ class MemoryTraceEmitter(TraceEmitter):
 
 class NullTraceEmitter(TraceEmitter):
     """No-op trace emitter for components that don't need tracing.
-    
+
     This emitter silently absorbs all trace events without any side effects.
     Useful for testing or when tracing is disabled.
     """
-    
-    def __init__(self, trace_store: Optional[Any] = None, memory_router: Optional[Any] = None) -> None:
+
+    def __init__(
+        self, trace_store: Optional[Any] = None, memory_router: Optional[Any] = None
+    ) -> None:
         """Initialize the null trace emitter.
-        
+
         Args:
             trace_store: Optional trace store backend for persistence
             memory_router: Optional memory router to obtain trace store from
         """
         super().__init__(trace_store=trace_store, memory_router=memory_router)
-    
+
     async def emit(self, event: TraceEvent) -> None:
         """Silently absorb trace events (no-op)."""
         # Schedule trace storage as fire-and-forget background task
         if self.trace_store is not None:
             trace_event_dict = event.model_dump()
-            self._last_trace_task = asyncio.create_task(self._safe_store_trace(trace_event_dict))
+            self._last_trace_task = asyncio.create_task(
+                self._safe_store_trace(trace_event_dict)
+            )
         pass
 
 
@@ -581,7 +628,7 @@ _global_emitter: Optional[TraceEmitter] = None
 
 def get_trace_emitter() -> TraceEmitter:
     """Get the global trace emitter instance.
-    
+
     Returns:
         Global trace emitter (defaults to ConsoleTraceEmitter)
     """
@@ -593,7 +640,7 @@ def get_trace_emitter() -> TraceEmitter:
 
 def set_trace_emitter(emitter: TraceEmitter) -> None:
     """Set the global trace emitter instance.
-    
+
     Args:
         emitter: The trace emitter to use globally
     """
@@ -615,7 +662,7 @@ async def emit_trace(
     error_stack: Optional[str] = None,
 ) -> None:
     """Emit a trace event using the global emitter.
-    
+
     Args:
         event_type: Type of event
         component: Component emitting the event

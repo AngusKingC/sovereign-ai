@@ -2,18 +2,19 @@
 Tests for Terminal Skill.
 """
 
-import pytest
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
-from skills.terminal.skill import TerminalSkill
+import pytest
+
+from core.approval_gate import ApprovalGate, ApprovalResponse
 from core.observability import (
+    MemoryTraceEmitter,
+    TraceComponent,
     TraceEventType,
     TraceLevel,
-    TraceComponent,
-    MemoryTraceEmitter,
 )
-from core.approval_gate import ApprovalGate, ApprovalResponse
+from skills.terminal.skill import TerminalSkill
 
 
 class TestTerminalSkill:
@@ -28,21 +29,43 @@ class TestTerminalSkill:
     def mock_approval_gate(self):
         """Create a mock approval gate."""
         gate = AsyncMock(spec=ApprovalGate)
-        gate.request_approval = AsyncMock(return_value=ApprovalResponse(
-            request_id=str(uuid4()),
-            task_id=str(uuid4()),
-            approved=True,
-            approved_by="test_user",
-        ))
+        gate.request_approval = AsyncMock(
+            return_value=ApprovalResponse(
+                request_id=str(uuid4()),
+                task_id=str(uuid4()),
+                approved=True,
+                approved_by="test_user",
+            )
+        )
         return gate
 
     @pytest.fixture
-    def skill(self, emitter):
+    def mock_sandbox_executor(self):
+        """Create a mock SandboxExecutor for testing."""
+        from core.sandbox import SandboxResult
+
+        sandbox = AsyncMock()
+        sandbox.execute_command = AsyncMock(
+            return_value=SandboxResult(
+                success=True,
+                stdout="hello\n",
+                stderr="",
+                return_code=0,
+                error=None,
+                sandboxed=True,
+            )
+        )
+        return sandbox
+
+    @pytest.fixture
+    def skill(self, emitter, mock_sandbox_executor):
         """Create a TerminalSkill instance for testing."""
-        return TerminalSkill(emitter=emitter)
+        return TerminalSkill(emitter=emitter, sandbox_executor=mock_sandbox_executor)
 
     @pytest.mark.asyncio
-    async def test_successful_command_execution_captures_stdout_and_return_code(self, skill):
+    async def test_successful_command_execution_captures_stdout_and_return_code(
+        self, skill
+    ):
         """Test that successful command execution captures stdout and return code."""
         result = await skill.execute("echo hello")
 
@@ -50,10 +73,26 @@ class TestTerminalSkill:
         assert "hello" in result["stdout"]
         assert result["return_code"] == 0
         assert result["error"] is None
+        assert result["sandboxed"] is True
 
     @pytest.mark.asyncio
-    async def test_failed_command_captures_stderr_and_non_zero_return_code(self, skill):
+    async def test_failed_command_captures_stderr_and_non_zero_return_code(
+        self, mock_sandbox_executor
+    ):
         """Test that failed command captures stderr and non-zero return code."""
+        from core.sandbox import SandboxResult
+
+        mock_sandbox_executor.execute_command = AsyncMock(
+            return_value=SandboxResult(
+                success=False,
+                stdout="",
+                stderr="error",
+                return_code=1,
+                error="Command failed",
+                sandboxed=True,
+            )
+        )
+        skill = TerminalSkill(sandbox_executor=mock_sandbox_executor)
         result = await skill.execute("exit 1")
 
         assert result["success"] is False
@@ -61,9 +100,15 @@ class TestTerminalSkill:
         assert result["error"] is not None
 
     @pytest.mark.asyncio
-    async def test_approval_gate_called_before_execution(self, mock_approval_gate, emitter):
+    async def test_approval_gate_called_before_execution(
+        self, mock_approval_gate, emitter, mock_sandbox_executor
+    ):
         """Test that approval gate is called before execution."""
-        skill = TerminalSkill(approval_gate=mock_approval_gate, emitter=emitter)
+        skill = TerminalSkill(
+            approval_gate=mock_approval_gate,
+            emitter=emitter,
+            sandbox_executor=mock_sandbox_executor,
+        )
         await skill.execute("echo test")
 
         mock_approval_gate.request_approval.assert_called_once()
@@ -71,16 +116,24 @@ class TestTerminalSkill:
         assert call_args is not None
 
     @pytest.mark.asyncio
-    async def test_approval_denied_returns_success_false_without_executing(self, mock_approval_gate, emitter):
+    async def test_approval_denied_returns_success_false_without_executing(
+        self, mock_approval_gate, emitter, mock_sandbox_executor
+    ):
         """Test that approval denied returns success=False without executing."""
-        mock_approval_gate.request_approval = AsyncMock(return_value=ApprovalResponse(
-            request_id=str(uuid4()),
-            task_id=str(uuid4()),
-            approved=False,
-            decision_reason="Test denial",
-            approved_by="test_user",
-        ))
-        skill = TerminalSkill(approval_gate=mock_approval_gate, emitter=emitter)
+        mock_approval_gate.request_approval = AsyncMock(
+            return_value=ApprovalResponse(
+                request_id=str(uuid4()),
+                task_id=str(uuid4()),
+                approved=False,
+                decision_reason="Test denial",
+                approved_by="test_user",
+            )
+        )
+        skill = TerminalSkill(
+            approval_gate=mock_approval_gate,
+            emitter=emitter,
+            sandbox_executor=mock_sandbox_executor,
+        )
         result = await skill.execute("echo test")
 
         assert result["success"] is False
@@ -89,62 +142,96 @@ class TestTerminalSkill:
         assert result["stderr"] == ""
 
     @pytest.mark.asyncio
-    async def test_timeout_returns_success_false_with_timeout_error(self, emitter):
+    async def test_timeout_returns_success_false_with_timeout_error(
+        self, mock_sandbox_executor
+    ):
         """Test that timeout returns success=False with timeout error."""
-        skill = TerminalSkill(emitter=emitter, timeout=1)
-        result = await skill.execute("python -c \"import time; time.sleep(10)\"")
+        from core.sandbox import SandboxResult
+
+        mock_sandbox_executor.execute_command = AsyncMock(
+            return_value=SandboxResult(
+                success=False,
+                stdout="",
+                stderr="Execution timed out after 30s",
+                return_code=124,
+                error="timeout",
+                sandboxed=True,
+            )
+        )
+        skill = TerminalSkill(sandbox_executor=mock_sandbox_executor, timeout=1)
+        result = await skill.execute('python -c "import time; time.sleep(10)"')
 
         assert result["success"] is False
-        assert result["error"] == "Command timed out"
-        assert result["return_code"] == -1
-
-        # Give event loop time to clean up subprocess transports
-        import asyncio
-        await asyncio.sleep(0.1)
+        assert result["error"] == "timeout"
+        assert result["return_code"] == 124
 
     @pytest.mark.asyncio
-    async def test_working_directory_is_respected(self, emitter):
+    async def test_working_directory_is_respected(self, emitter, mock_sandbox_executor):
         """Test that working directory is respected."""
         import os
-        skill = TerminalSkill(emitter=emitter, working_dir=os.getcwd())
+
+        skill = TerminalSkill(
+            emitter=emitter,
+            working_dir=os.getcwd(),
+            sandbox_executor=mock_sandbox_executor,
+        )
         result = await skill.execute("echo test")
 
         assert result["success"] is True
 
     @pytest.mark.asyncio
-    async def test_trace_events_emitted_on_execution_start_and_complete(self, skill, emitter):
+    async def test_trace_events_emitted_on_execution_start_and_complete(
+        self, skill, emitter
+    ):
         """Test that trace events are emitted on execution start and complete."""
         await skill.execute("echo test")
 
         events = emitter.get_events()
         assert len(events) >= 2
 
-        start_events = [e for e in events if e.event_type == TraceEventType.COMPONENT_START]
+        start_events = [
+            e for e in events if e.event_type == TraceEventType.COMPONENT_START
+        ]
         assert len(start_events) >= 1
         assert start_events[0].component == TraceComponent.WORKER
         assert "Terminal execution started" in start_events[0].message
 
-        complete_events = [e for e in events if e.event_type == TraceEventType.OPERATION_COMPLETE]
+        complete_events = [
+            e for e in events if e.event_type == TraceEventType.OPERATION_COMPLETE
+        ]
         assert len(complete_events) >= 1
         assert complete_events[0].component == TraceComponent.WORKER
         assert "Terminal execution completed" in complete_events[0].message
 
     @pytest.mark.asyncio
-    async def test_trace_events_emitted_on_error(self, emitter):
+    async def test_trace_events_emitted_on_error(self, emitter, mock_sandbox_executor):
         """Test that trace events are emitted on error."""
-        skill = TerminalSkill(emitter=emitter, timeout=1)
-        await skill.execute("python -c \"import time; time.sleep(10)\"")
+        mock_sandbox_executor.execute_command = AsyncMock(
+            return_value={
+                "success": False,
+                "stdout": "",
+                "stderr": "Execution timed out after 30s",
+                "return_code": 124,
+                "error": "timeout",
+                "sandboxed": True,
+            }
+        )
+        skill = TerminalSkill(
+            emitter=emitter, sandbox_executor=mock_sandbox_executor, timeout=1
+        )
+        await skill.execute('python -c "import time; time.sleep(10)"')
 
         events = emitter.get_events()
-        error_events = [e for e in events if e.event_type == TraceEventType.OPERATION_ERROR]
+        error_events = [
+            e for e in events if e.event_type == TraceEventType.OPERATION_ERROR
+        ]
         assert len(error_events) >= 1
         assert error_events[0].component == TraceComponent.WORKER
-        assert "Terminal execution timed out" in error_events[0].message
+        assert (
+            "Terminal execution completed" in error_events[0].message
+            or "Terminal execution failed" in error_events[0].message
+        )
         assert error_events[0].level == TraceLevel.ERROR
-
-        # Give event loop time to clean up subprocess transports
-        import asyncio
-        await asyncio.sleep(0.1)
 
     @pytest.mark.asyncio
     async def test_empty_command_raises_value_error(self, skill):
@@ -175,3 +262,32 @@ class TestTerminalSkill:
             assert not hasattr(event, "layer")
             assert not hasattr(event, "payload")
             assert not hasattr(event, "success")
+
+    @pytest.mark.asyncio
+    async def test_sandbox_executor_used_for_execution(self, mock_sandbox_executor):
+        """Test that sandbox executor is used for command execution."""
+        skill = TerminalSkill(sandbox_executor=mock_sandbox_executor)
+        await skill.execute("echo test")
+
+        mock_sandbox_executor.execute_command.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_sandboxed_flag_in_result(self, mock_sandbox_executor):
+        """Test that sandboxed flag is present in result."""
+        from core.sandbox import SandboxResult
+
+        mock_sandbox_executor.execute_command = AsyncMock(
+            return_value=SandboxResult(
+                success=True,
+                stdout="test\n",
+                stderr="",
+                return_code=0,
+                error=None,
+                sandboxed=True,
+            )
+        )
+        skill = TerminalSkill(sandbox_executor=mock_sandbox_executor)
+        result = await skill.execute("echo test")
+
+        assert "sandboxed" in result
+        assert result["sandboxed"] is True
