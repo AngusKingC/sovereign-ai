@@ -1,6 +1,6 @@
 # PLANS.md — Sovereign AI Project State
 
-**Last updated**: Post-Plan 68 (2026-06-24)
+**Last updated**: Post-Plan 69 (2026-06-24)
 
 This document tracks the dynamic state of the Sovereign AI project: baselines, completed prompts, and the next-5-prompt queue. It is the canonical source for test counts, static analysis baselines, and which prompt is currently active.
 
@@ -8,16 +8,16 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Test Baseline
 
-**Current baseline**: **1253 passed, 67 skipped**  
-**Verified**: Plan 68, Step S4 (full test suite)  
-**Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)  
+**Current baseline**: **1253 passed, 67 skipped**
+**Verified**: Plan 69, Step S7 (full test suite)
+**Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
 ---
 
 ## Static Analysis Baseline
 
-**Captured**: Plan 60 (5-plan milestone full scan — 2026-06-23)
+**Captured**: Plan 60 (5-plan milestone full scan — 2026-06-23), verified Plan 69 (no changes)
 
 | Tool | Baseline | Source | Notes |
 |---|---|---|---|
@@ -57,22 +57,11 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 66 | System Cleanup and Final Core Hardening | 1231 | Fixed 23 mypy errors across 7 system files (model_acquisition, voice_daemon, trajectory_exporter, retention_manager, retention_daemon, monitor_daemon, model_evaluator). Added RETENTION_DAEMON to TraceComponent enum. Core mypy clean (0 errors). |
 | 67 | Mypy Remediation: Adapters, CLI, Memory, Tests, Skills | 1230 | Fixed 172 mypy errors across 45 files (adapters, CLI, memory, workers, skills, tests, scripts). Union types, None handling, enum values, API compatibility, type annotations. Full-repo mypy clean (0 errors, 181 source files). |
 | 68 | Phase 1 Foundation: Skill Taxonomy + CONTEXT.md | 1253 | SkillTier enum, SkillClassification dataclass, SkillTaxonomyRegistry. Default registry with 25 built-in skill classifications (15 user, 9 agent, 1 hybrid). CONTEXT.md project-level shared vocabulary. 20 new tests (14 taxonomy + 6 context). Fixed 2 pre-existing test failures (notes delete, qdrant embedder fallback). |
+| 69 | Repo Hygiene: Governance Doc Fixes + Stale File Cleanup | 1253 | CHANGELOG fixes (date, timestamps, tag note, filename references). PLANS.md duplicate section removed. AGENTS.md header updated. AI_HANDOFF.md CONTEXT.md governance added. core/verbosity.py stale reference fixed. 5 new __init__.py files. exports/trajectories.jsonl untracked. Stale temp file deleted. |
 
 ---
 
 ## Next 5 Prompts Queue
-
-### Plan 69 — [Open Slot] (Priority TBD)
-
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 68.
-
-**Expected impact**: TBD
-
-**Baseline changes**: TBD
-
-**Gate**: TBD
-
----
 
 ### Plan 70 — [Open Slot] (Priority TBD)
 
@@ -86,22 +75,34 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
-### Plan 71 — 5-Plan Milestone Full Scan (Priority 1 — tentative)
+### Plan 71 — [Open Slot] (Priority TBD)
 
-**Scope**: Post-Plans 66-70 full-repo scan and baseline refresh. Capture new baselines after skill taxonomy foundation.
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 69.
+
+**Expected impact**: TBD
+
+**Baseline changes**: TBD
+
+**Gate**: TBD
+
+---
+
+### Plan 72 — 5-Plan Milestone Full Scan (Priority 1 — tentative)
+
+**Scope**: Post-Plans 67-71 full-repo scan and baseline refresh. Capture new baselines after skill taxonomy foundation.
 
 **Expected impact**:
-- Scope TBD pending Plans 67-69 completion. This entry is a **placeholder**.
-- Expected updates: mypy baseline (core/system clean, full-repo TBD), ruff (target: 0), bandit (target: 0 medium), pip-audit (target ≤20), vulture (target ≤25), test count (target ≈1235)
+- Scope TBD pending Plans 67-71 completion. This entry is a **placeholder**.
+- Expected updates: mypy baseline (core/system clean, full-repo TBD), ruff (target: 0), bandit (target: 0 medium), pip-audit (target ≤20), vulture (target ≤25), test count (target ≈1253)
 
 **Baseline changes**:
-- Will be determined at Plan 70 scoping time (GLM inspects actual repo state)
+- Will be determined at Plan 72 scoping time (GLM inspects actual repo state)
 
 **Gate**: Full 6-tool scan passes (pytest + ruff + mypy . + bandit + pip-audit + vulture). All baselines recorded. Handoff status sections updated.
 
 ---
 
-### Plan 72 — [Open Slot] (Priority TBD)
+### Plan 73 — [Open Slot] (Priority TBD)
 
 **Scope**: TBD — to be defined by GLM based on project state post-Plan 71.
 
@@ -113,9 +114,21 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
-### Plan 73 — [Open Slot] (Priority TBD)
+### Plan 74 — [Open Slot] (Priority TBD)
 
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 72.
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 73.
+
+**Expected impact**: TBD
+
+**Baseline changes**: TBD
+
+**Gate**: TBD
+
+---
+
+### Plan 75 — [Open Slot] (Priority TBD)
+
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 74.
 
 **Expected impact**: TBD
 
@@ -127,9 +140,9 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Baseline Reconciliation Notes
 
-- **Test count delta**: 1230 → 1253 (+23). OUTSIDE tolerance (±5). Plan 68 added 20 new tests (14 taxonomy + 6 context) and fixed 2 pre-existing failures. Baseline updated to reflect new test count.
-- **Mypy delta**: Full-repo 294 → 0 errors (-294). Major cleanup achieved through Plan 67. All 181 source files (adapters, CLI, memory, workers, skills, tests, scripts) now mypy-clean.
-- **Ruff delta**: 0 → 0. No change. Baseline held.
+- **Test count delta**: 1253 → 1253 (no change). Docs-only plan, no test changes. Baseline held.
+- **Mypy delta**: 0 → 0 (no change). Docs-only plan, no code changes. Baseline held.
+- **Ruff delta**: 0 → 0 (no change). Docs-only plan baselines held.
 
 ---
 

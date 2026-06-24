@@ -598,3 +598,32 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors
 - Mypy: 0 errors (file-scoped)
 - Tag: prompt-68 verified on origin
+
+## 2026-06-24 16:36 — prompt-69
+
+**Plan**: Repo Hygiene: Governance Doc Fixes + Stale File Cleanup
+
+**Changed**:
+- CHANGELOG.md: Fixed prompt-67 date (2025→2026), placeholder timestamps, tag note, old filename references
+- PLANS.md: Removed duplicate Baseline Reconciliation Notes section
+- AGENTS.md: Updated header OR1-OR23 → OR1-OR28
+- AI_HANDOFF.md: Added CONTEXT.md to Document Relationships + read order
+- core/verbosity.py: Updated stale global_rules.md reference → AR11
+- .gitignore: Added exports/ to ignore runtime output
+- skills/file_reader/__init__.py: NEW (missing package init)
+- skills/file_writer/__init__.py: NEW (missing package init)
+- skills/web_scraper/__init__.py: NEW (missing package init)
+- skills/marine/__init__.py: NEW (missing package init)
+- gui/__init__.py: NEW (missing package init)
+
+**Untracked**:
+- exports/trajectories.jsonl: Added exports/ to .gitignore, untracked via git rm --cached (file still on disk for runtime use)
+
+**Deleted**:
+- temp/changelog-entry-prompt-58.7.md: Stale temp file
+
+**Results**:
+- Tests: 1253 passed, 67 skipped, 0 failed
+- Ruff: 0 errors
+- Mypy: 0 errors (file-scoped)
+- Tag: prompt-69 verified on origin
