@@ -414,7 +414,7 @@ This changelog documents all implementations, changes, and decisions made during
 - Vulture: 20 → 23 findings (+3, within tolerance)
 - Tag: prompt-60 verified on origin
 
-## 2026-06-23 16:51 â€” prompt-61
+## 2026-06-23 16:51 - prompt-61
 
 **Plan**: Trace Store Implementation (Postgres Backend)
 
@@ -432,7 +432,7 @@ This changelog documents all implementations, changes, and decisions made during
 - Mypy: 2 pre-existing errors in memory/router.py (not introduced by this plan)
 - Tag: prompt-61 verified on origin
 
-## 2026-06-23 17:20 â€” prompt-62
+## 2026-06-23 17:20 - prompt-62
 
 **Plan**: Eval Harness Implementation
 
@@ -675,7 +675,7 @@ This changelog documents all implementations, changes, and decisions made during
 - detect-secrets: 15 findings baseline established
 - Tag: prompt-71 verified locally
 
-## 2026-06-24 22:21 â€” prompt-72
+## 2026-06-24 22:21 - prompt-72
 
 **Plan**: Plan 71 Completion + Scope Violation Cleanup
 
@@ -828,13 +828,13 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: N/A (governance only)
 - Coverage: N/A (governance only)
 - Tag: governance-directive-01 verified on origin
-## <2025-06-25> 14:00 â€” governance-patch-02
+## <2025-06-25> 14:00 - governance-patch-02
 
-**Plan**: Governance Patch 02 â€” L17 Landmine + Vulture Whitelist Update
+**Plan**: Governance Patch 02 - L17 Landmine + Vulture Whitelist Update
 
 **Changed**:
 - LANDMINES.md: Added L17 landmine (task list discipline, missed by Plan 76.0)
-- vulture-whitelist.txt: Updated whitelist for Plan 76's new modules (debate_pool, task_classifier, testing_battery) â€” added 33 new findings
+- vulture-whitelist.txt: Updated whitelist for Plan 76's new modules (debate_pool, task_classifier, testing_battery) - added 33 new findings
 
 **Results**:
 - Tests: N/A (governance only, no code changes)
