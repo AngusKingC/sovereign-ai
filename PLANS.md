@@ -1,6 +1,6 @@
 # PLANS.md — Sovereign AI Project State
 
-**Last updated**: Post-Plan 69 (2026-06-24)
+**Last updated**: Post-Plan 70 (2026-06-24)
 
 This document tracks the dynamic state of the Sovereign AI project: baselines, completed prompts, and the next-5-prompt queue. It is the canonical source for test counts, static analysis baselines, and which prompt is currently active.
 
@@ -9,7 +9,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 ## Test Baseline
 
 **Current baseline**: **1253 passed, 67 skipped**
-**Verified**: Plan 69, Step S7 (full test suite)
+**Verified**: Plan 70, Step S1 (full test suite)
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -17,20 +17,20 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Static Analysis Baseline
 
-**Captured**: Plan 60 (5-plan milestone full scan — 2026-06-23), verified Plan 69 (no changes)
+**Captured**: Plan 70 (5-plan milestone full scan — 2026-06-24)
 
 | Tool | Baseline | Source | Notes |
 |---|---|---|---|
 | **Ruff** | 0 errors | Plan 60 S2 | No errors. Plan 59 cleanup fully held. |
 | **Mypy (core/system)** | 0 errors | Plan 66 S3 | Delta: -294 from Plan 60 baseline (294 → 0). Core and system directories fully clean. |
 | **Mypy (full-repo)** | 0 errors | Plan 67 S6 | Delta: -294 from Plan 60 baseline (294 → 0). Full remediation of adapters, CLI, memory, workers, skills, tests, scripts (181 source files). |
-| **Bandit** | 3,179 low, 0 medium, 0 high | Plan 60 S4 | Plan 59 suppressed all B108 findings. Zero medium, zero high. |
-| **pip-audit** | 19 CVEs across 4 packages | Plan 60 S5 | Stable across Plans 56-60. No actionable fixes (upstream only). |
-| **Vulture** | 23 high-confidence findings | Plan 60 S6 | Delta: +3 from Plan 55 baseline (20 → 23). Within tolerance. Dead code analysis only. |
+| **Bandit** | 3,384 low, 1 medium, 0 high | Plan 70 S4 | Delta: +205 low, +1 medium from Plan 60 baseline. New B608 finding in memory/postgres_trace_store.py:161 (false positive - asyncpg parameterized query). |
+| **pip-audit** | 19 CVEs across 4 packages | Plan 70 S5 | Stable across Plans 56-70. No actionable fixes (upstream only). |
+| **Vulture** | 23 high-confidence findings | Plan 70 S6 | Stable across Plans 60-70. Dead code analysis only. |
 
 **Per-plan verification cadence**:
 - **Every plan**: Ruff (file-scoped) + Mypy (file-scoped) + Pytest
-- **Every 5th plan** (55, 60, 65...): Full scan (all 6 tools + pytest)
+- **Every 5th plan** (55, 60, 65, 70, 75, 80): Full scan (all 6 tools + pytest)
 - **Security-sensitive plans**: Add bandit
 - **Dependency-touching plans**: Add pip-audit
 - **Docs-only plans**: Skip ruff, mypy (no code); test count + tag + push verification only
@@ -58,26 +58,15 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 67 | Mypy Remediation: Adapters, CLI, Memory, Tests, Skills | 1230 | Fixed 172 mypy errors across 45 files (adapters, CLI, memory, workers, skills, tests, scripts). Union types, None handling, enum values, API compatibility, type annotations. Full-repo mypy clean (0 errors, 181 source files). |
 | 68 | Phase 1 Foundation: Skill Taxonomy + CONTEXT.md | 1253 | SkillTier enum, SkillClassification dataclass, SkillTaxonomyRegistry. Default registry with 25 built-in skill classifications (15 user, 9 agent, 1 hybrid). CONTEXT.md project-level shared vocabulary. 20 new tests (14 taxonomy + 6 context). Fixed 2 pre-existing test failures (notes delete, qdrant embedder fallback). |
 | 69 | Repo Hygiene: Governance Doc Fixes + Stale File Cleanup | 1253 | CHANGELOG fixes (date, timestamps, tag note, filename references). PLANS.md duplicate section removed. AGENTS.md header updated. AI_HANDOFF.md CONTEXT.md governance added. core/verbosity.py stale reference fixed. 5 new __init__.py files. exports/trajectories.jsonl untracked. Stale temp file deleted. |
+| 70 | 5-Plan Milestone Full Scan (Priority 1) | 1253 | Full 6-tool checkpoint scan. Tests: 1253 passed, 67 skipped (baseline held). Ruff: 0 errors (baseline held). Mypy: 0 errors in 256 source files (baseline held). Bandit: 3384 low, 1 medium, 0 high (new B608 false positive). pip-audit: 19 CVEs (stable). Vulture: 23 findings (baseline held). |
 
 ---
 
 ## Next 5 Prompts Queue
 
-### Plan 70 — [Open Slot] (Priority TBD)
-
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 69.
-
-**Expected impact**: TBD
-
-**Baseline changes**: TBD
-
-**Gate**: TBD
-
----
-
 ### Plan 71 — [Open Slot] (Priority TBD)
 
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 69.
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 70.
 
 **Expected impact**: TBD
 
@@ -87,24 +76,21 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
-### Plan 72 — 5-Plan Milestone Full Scan (Priority 1 — tentative)
+### Plan 72 — [Open Slot] (Priority TBD)
 
-**Scope**: Post-Plans 67-71 full-repo scan and baseline refresh. Capture new baselines after skill taxonomy foundation.
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 71.
 
-**Expected impact**:
-- Scope TBD pending Plans 67-71 completion. This entry is a **placeholder**.
-- Expected updates: mypy baseline (core/system clean, full-repo TBD), ruff (target: 0), bandit (target: 0 medium), pip-audit (target ≤20), vulture (target ≤25), test count (target ≈1253)
+**Expected impact**: TBD
 
-**Baseline changes**:
-- Will be determined at Plan 72 scoping time (GLM inspects actual repo state)
+**Baseline changes**: TBD
 
-**Gate**: Full 6-tool scan passes (pytest + ruff + mypy . + bandit + pip-audit + vulture). All baselines recorded. Handoff status sections updated.
+**Gate**: TBD
 
 ---
 
 ### Plan 73 — [Open Slot] (Priority TBD)
 
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 71.
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 72.
 
 **Expected impact**: TBD
 
@@ -126,23 +112,29 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
-### Plan 75 — [Open Slot] (Priority TBD)
+### Plan 75 — 5-Plan Milestone Full Scan (Priority 1 — tentative)
 
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 74.
+**Scope**: Post-Plans 71-74 full-repo scan and baseline refresh.
 
-**Expected impact**: TBD
+**Expected impact**:
+- Scope TBD pending Plans 71-74 completion. This entry is a **placeholder**.
+- Expected updates: mypy baseline (target: 0 errors), ruff (target: 0), bandit (target: 0 medium), pip-audit (target ≤20), vulture (target ≤25), test count (target ≈1253)
 
-**Baseline changes**: TBD
+**Baseline changes**:
+- Will be determined at Plan 75 scoping time (GLM inspects actual repo state)
 
-**Gate**: TBD
+**Gate**: Full 6-tool scan passes (pytest + ruff + mypy . + bandit + pip-audit + vulture). All baselines recorded. Handoff status sections updated.
 
 ---
 
 ## Baseline Reconciliation Notes
 
-- **Test count delta**: 1253 → 1253 (no change). Docs-only plan, no test changes. Baseline held.
-- **Mypy delta**: 0 → 0 (no change). Docs-only plan, no code changes. Baseline held.
-- **Ruff delta**: 0 → 0 (no change). Docs-only plan baselines held.
+- **Test count delta**: 1253 → 1253 (no change). Scan-only plan, no test changes. Baseline held.
+- **Mypy delta**: 0 → 0 (no change). Scan-only plan, no code changes. Baseline held.
+- **Ruff delta**: 0 → 0 (no change). Scan-only plan baselines held.
+- **Bandit delta**: 3,179 low/0 medium/0 high → 3,384 low/1 medium/0 high. +205 low, +1 medium from Plan 60 baseline. New B608 finding in memory/postgres_trace_store.py:161 is a false positive (asyncpg uses parameterized queries with $param_idx syntax, not string concatenation). Bandit doesn't recognize asyncpg's parameterization pattern.
+- **pip-audit delta**: 19 CVEs → 19 CVEs (no change). Stable across Plans 60-70.
+- **Vulture delta**: 23 → 23 (no change). Stable across Plans 60-70.
 
 ---
 
@@ -182,7 +174,7 @@ None
 
 Source: Analysis of 5 GitHub projects (DeerFlow 2.0, codebase-memory-mcp, mattpocock/skills, g-stack, hermes-agent). 16 replicable features identified, organized by integration phase.
 
-### Phase 1 — Foundation (Plans 71–74, after Plan 70 milestone scan)
+### Phase 1 — Foundation (Plans 71–74, after Plan 70 milestone scan complete)
 
 These features are high-impact, high-feasibility, and require minimal architectural changes:
 
