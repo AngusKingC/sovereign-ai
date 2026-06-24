@@ -1,6 +1,6 @@
 # PLANS.md — Sovereign AI Project State
 
-**Last updated**: Post-Plan 65 (2026-06-23)
+**Last updated**: Post-Plan 67 (2026-06-24)
 
 This document tracks the dynamic state of the Sovereign AI project: baselines, completed prompts, and the next-5-prompt queue. It is the canonical source for test counts, static analysis baselines, and which prompt is currently active.
 
@@ -163,6 +163,73 @@ None
 
 ---
 
+## Research-Backed Feature Roadmap (Plan 67+)
+
+Source: Analysis of 5 GitHub projects (DeerFlow 2.0, codebase-memory-mcp, mattpocock/skills, g-stack, hermes-agent). 16 replicable features identified, organized by integration phase.
+
+### Phase 1 — Foundation (Plans 71–74, after Plan 70 milestone scan)
+
+These features are high-impact, high-feasibility, and require minimal architectural changes:
+
+| # | Feature | Source | Description |
+|---|---|---|---|
+| F1 | **Skill taxonomy** | mattpocock/skills | Classify skills as user-invoked (CLI triggers) vs agent-invoked (automatic). Enables skill discovery, routing, and permission scoping. |
+| F2 | **CONTEXT.md shared language** | mattpocock/skills | Project-level CONTEXT.md file defining domain terms, conventions, and shared vocabulary. Reduces ambiguity in multi-agent coordination. |
+| F3 | **Persist-nudge memory** | DeerFlow 2.0 | Persistent memory store with nudge-based retrieval. Agents store observations and are nudged when relevant context surfaces. Lightweight alternative to full RAG. |
+| F4 | **Trust tier system** | g-stack | Three-tier trust model (trusted internal / semi-trusted external / untrusted user input) with graduated validation and sandboxing. Strengthens prompt injection defense. |
+
+### Phase 2 — Intelligence (Plans 75–78)
+
+These features add code intelligence and learning loops:
+
+| # | Feature | Source | Description |
+|---|---|---|---|
+| F5 | **Code knowledge graph** | codebase-memory-mcp | SQLite-backed knowledge graph with sub-ms queries. Stores symbol definitions, call chains, and dependency edges. Replaces grep-based code search. |
+| F6 | **Closed learning loop** | hermes-agent | Automated cycle: execute → evaluate → store → retrieve. Session outcomes feed back into future decisions without manual intervention. |
+| F7 | **Session search (FTS5)** | hermes-agent | Full-text search over past session transcripts using SQLite FTS5. Enables "how did I solve X last time?" queries. |
+| F8 | **Taste memory with decay** | g-stack | Preference scoring with exponential decay. Recent successes weighted higher than old ones. Prevents stale preference drift. |
+
+### Phase 3 — Orchestration (Plans 79–82)
+
+These features enhance agent coordination and lifecycle management:
+
+| # | Feature | Source | Description |
+|---|---|---|---|
+| F9 | **SuperAgent harness** | DeerFlow 2.0 | Orchestrator that delegates to specialized sub-agents in Docker sandboxes. Isolates execution, enables parallel workstreams. |
+| F10 | **Sprint lifecycle pipeline** | g-stack | Structured sprint workflow: backlog → in-progress → review → done. Integrates with plan-based development for status tracking. |
+| F11 | **User modeling (Honcho)** | hermes-agent | Per-user behavioral modeling via Honcho. Adapts agent responses and priorities based on user interaction patterns. |
+| F12 | **Cron scheduler** | hermes-agent | Built-in cron system for scheduled tasks (health checks, data refresh, periodic evaluations). Replaces external cron dependencies. |
+
+### Phase 4 — Hardening (Plans 83–86)
+
+These features add defense, portability, and resilience:
+
+| # | Feature | Source | Description |
+|---|---|---|---|
+| F13 | **Docker sandbox execution** | DeerFlow 2.0 | Isolate agent code execution in Docker containers. Prevents runaway processes from affecting host. Complements OR28 zombie process prevention. |
+| F14 | **Markdown skill definitions** | DeerFlow 2.0 | Skills defined as structured Markdown files (purpose, inputs, outputs, examples). Human-readable, version-controllable, LLM-parseable. |
+| F15 | **Prompt injection defense** | g-stack | Multi-layer defense: input sanitization, output filtering, and trust-tier-based validation. Protects against adversarial prompts across trust boundaries. |
+| F16 | **Incremental knowledge sync** | codebase-memory-mcp | Watch filesystem for changes and incrementally update the code knowledge graph. Avoids full re-index on every code change. |
+
+### Integration Principles
+
+- **No external dependencies required** — All features implementable with Python stdlib + existing Sovereign AI stack (SQLite, async, etc.).
+- **Incremental adoption** — Each feature is self-contained; can be adopted independently without blocking others.
+- **Plan-scoped delivery** — Each plan delivers 1–2 features with full test coverage. No big-bang integrations.
+- **Baseline preservation** — Every feature plan must pass the same gates: pytest ±5, mypy file-scoped clean, ruff 0 errors.
+
+### Source Projects
+
+| Project | Key Insight |
+|---|---|
+| **DeerFlow 2.0** | SuperAgent orchestration with Docker isolation + Markdown-defined skills + persistent nudge memory |
+| **codebase-memory-mcp** | Sub-ms code intelligence via SQLite knowledge graph + incremental sync |
+| **mattpocock/skills** | Clean skill taxonomy (user/agent invocation) + CONTEXT.md shared vocabulary |
+| **g-stack** | Sprint lifecycle + taste memory decay + multi-layer prompt injection defense + trust tiers |
+| **hermes-agent** | Closed learning loop + FTS5 session search + Honcho user modeling + cron scheduler |
+
+---
+
 ## Baseline Reconciliation Notes
 
 - **Plan 60 Delta (Mypy)**: 283 → 294 (+11 errors). OUTSIDE tolerance — escalated for fix plan. Plans 56-59 introduced type errors beyond acceptable threshold.
@@ -185,6 +252,9 @@ None
 - **Plan 63b Delta (Ruff)**: 0 → 0. No change. File-scoped cleanup held.
 - **Plan 63b Delta (Mypy)**: 294 → 294 (file-scoped). No change. 19 pre-existing errors in core/ files unchanged. Inline import asyncio moved to top-of-file (cosmetic).
 - **Baseline expansion needed**: Mypy error count exceeded tolerance; requires dedicated fix plan (likely Plan 60.5 or fold into Plan 61).
+- **Plan 67 Delta (Mypy)**: Full mypy remediation across all remaining directories (adapters, CLI, memory, workers, skills, tests, scripts). Full-repo mypy clean: 294 → 0 errors (-294).
+- **Plan 67 Delta (Tests)**: 1231 → 1230 passed, 68 → 67 skipped (-1 each). Within tolerance (±5).
+- **Plan 67 Delta (AGENTS.md)**: Added OR28 (PowerShell session cleanup). Added L10 to LANDMINES.md (zombie PowerShell processes).
 
 ---
 
