@@ -3,8 +3,8 @@
 Devin's always-on rules. Read before every coding session.
 
 **Rule naming**:
-- **AR{n}** = Architecture Rules (AR1-AR18)
-- **OR{n}** = Operational Rules (OR1-OR28)
+- **AR{n}** = Architecture Rules (AR1-AR19)
+- **OR{n}** = Operational Rules (OR1-OR32)
 
 **If a rule's application is unclear or ambiguous**, read LANDMINES.md to find the source landmine and understand the diagnostic context behind the rule.
 
@@ -47,6 +47,8 @@ AR16. `ApprovalTrustRegistry` MUST be consulted by `ApprovalGate` before raising
 AR17. Auth middleware MUST wrap ALL FastAPI routes and WebSocket handshakes. No unauthenticated endpoints except `/health`.
 
 AR18. No broad `except Exception: pass` without inline comment + WARNING trace.
+
+AR19. All code execution and terminal command execution MUST go through `SandboxExecutor` (Docker-isolated). No direct `asyncio.create_subprocess_shell()` for code or command execution outside of: (a) `core/sandbox.py` itself, (b) `skills/docker/skill.py` (container management, not code execution), (c) test fixtures that mock subprocess. This prevents a malicious or buggy agent from damaging the host system. (Source: Kimi competition gap analysis #13 — CRITICAL security vulnerability; `skills/code_execution/skill.py:143` and `skills/terminal/skill.py:150` used `create_subprocess_shell` without isolation)
 
 ---
 

@@ -47,3 +47,12 @@ This file defines the domain terms, conventions, and shared vocabulary used acro
 - No raw LLM calls outside adapters/ (AR9)
 - No memory access outside MemoryRouter (AR10)
 - TraceEmitter via constructor injection only (AR11)
+
+## Sandbox Vocabulary (NEW — Plan 73)
+
+| Term | Definition |
+|---|---|
+| **SandboxExecutor** | The single entry point for all code and command execution. Runs code in a Docker container with resource limits (memory, CPU, network, timeout). Falls back to subprocess if Docker unavailable AND approval gate explicitly allows it. |
+| **Sandbox Image** | The Docker image used for execution. Default: `python:3.12-slim`. Configurable per-task via `image` parameter. |
+| **Sandbox Policy** | Configuration determining whether Docker is required (strict) or optional (fallback to subprocess with approval). Default: strict. |
+| **Sandbox Result** | Result dict from SandboxExecutor: `{success, stdout, stderr, return_code, error, sandboxed, container_id}`. `sandboxed: True` if Docker was used, `False` if subprocess fallback. |
