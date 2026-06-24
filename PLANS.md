@@ -8,8 +8,8 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Test Baseline
 
-**Current baseline**: **1308 passed, 67 skipped**
-**Verified**: Plan 74.5, Step S6 (full test suite with coverage)
+**Current baseline**: **1350 passed, 67 skipped**
+**Verified**: Plan 76, Step S10 (full test suite with coverage)
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -149,7 +149,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Baseline Reconciliation Notes
 
-- **Test count delta**: 1253 → 1257 (+4) at Plan 71 (AR18 compliance test). 1257 → 1257 (no change) at Plan 72 (no tests added). 1257 → 1269 (+12) at Plan 73 (sandbox tests + skill test updates). 1269 → 1289 (+20) at Plan 74 (cost tracker tests + orchestrator/resource_budget test updates). 1289 → 1308 (+19) at Plan 74.5 (17 PrismLlamaAdapter tests + 2 adapter_factory tests). 1308 → 1308 (no change) at Plan 75 (scan-only plan, no new tests). Baseline updated to 1308 passed, 67 skipped. Within ±5 tolerance (actual +19 at Plan 74.5, all new tests are in-scope).
+- **Test count delta**: 1253 → 1257 (+4) at Plan 71 (AR18 compliance test). 1257 → 1257 (no change) at Plan 72 (no tests added). 1257 → 1269 (+12) at Plan 73 (sandbox tests + skill test updates). 1269 → 1289 (+20) at Plan 74 (cost tracker tests + orchestrator/resource_budget test updates). 1289 → 1308 (+19) at Plan 74.5 (17 PrismLlamaAdapter tests + 2 adapter_factory tests). 1308 → 1308 (no change) at Plan 75 (scan-only plan, no new tests). 1308 → 1350 (+42) at Plan 76 (10 debate_pool + 12 task_classifier + 20 testing_battery). Baseline updated to 1350 passed, 67 skipped. Within ±5 tolerance (actual +42 vs expected +38, all new tests are in-scope).
 - **Mypy delta**: 0 → 0 (no change) at Plan 71. 0 → 0 (no change) at Plan 72. 0 → 0 (no change) at Plan 73. 0 → 0 (no change) at Plan 74 (file-scoped mypy on new files, all clean). 1 error → 0 at Plan 75 (fixed types-PyYAML regression - was missing from requirements-dev.txt after Plan 74 mypy hook removal). Baseline holds at 0 errors.
 - **Ruff delta**: 0 → 0 (no change) at Plan 71. 0 → 0 (no change) at Plan 72. 0 → 0 (no change) at Plan 73. 0 → 0 (no change) at Plan 74 (black/isort auto-fixed during pre-commit). Baseline holds at 0 errors.
 - **Bandit delta**: No change at Plan 71-73. No change at Plan 74 (no security-sensitive code added).
