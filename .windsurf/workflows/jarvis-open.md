@@ -23,6 +23,19 @@ Do NOT pull. Confirm branch is `master` and there are no uncommitted changes.
 
 **Note**: Changes to `GLM Prompts/` directory should be ignored for working copy cleanliness check — these are plan artifacts managed separately.
 
+## Step 3: Verify pre-commit hooks are installed (NEW — Plan 72)
+```powershell
+pre-commit install --check 2>&1
+```
+If output says "hooks are not installed", run `pre-commit install` and re-verify.
+If `pre-commit` command not found, STOP — dev deps not installed. Run `pip install -r requirements-dev.txt` and re-verify.
+
+## Step 4: Verify .secrets.baseline exists (NEW — Plan 72)
+```powershell
+Test-Path .secrets.baseline
+```
+If False, STOP — baseline file missing. Either clone fresh or restore from git: `git checkout origin/master -- .secrets.baseline`.
+
 ## Expected result
 
-Tag verified, working copy clean. Only then proceed to the plan's own S0.3 (AGENTS.md rules, if any — this is plan-specific and lives in the plan file itself, not in this skill) and the plan body.
+Tag verified, working copy clean. Pre-commit hooks verified active. .secrets.baseline present. Only then proceed to the plan's own S0.3 (AGENTS.md rules, if any — this is plan-specific and lives in the plan file itself, not in this skill) and the plan body.

@@ -45,6 +45,22 @@ ruff check <files_touched> 2>&1 | Select-Object -Last 3
 
 If ruff finds new errors introduced by your edits, fix them before proceeding.
 
+## Step 5: detect-secrets scan on touched files (NEW — Plan 72)
+```powershell
+detect-secrets scan --baseline .secrets.baseline
+```
+If exit code != 0, a new secret-like string was introduced. Either:
+- If false positive (e.g., test fixture with dummy API key string): update baseline with `detect-secrets scan > .secrets.baseline` and commit the change.
+- If real secret: REMOVE from source immediately. Consider rotating the secret if it was committed.
+
+## Step 6: Vulture check on touched files with whitelist (NEW — Plan 72)
+```powershell
+vulture <files_touched> --min-confidence 80 vulture-whitelist.txt
+```
+If new findings appear (not in whitelist), either:
+- Fix the dead code (preferred), OR
+- Add to `vulture-whitelist.txt` with an inline comment in the source file explaining why it's whitelisted (e.g., `# vulture-whitelist: required by ABC interface`).
+
 ## Expected result
 
-All syntax checks pass, diff shows only intended files, targeted tests pass (check PLANS.md for current baseline). If any step fails, STOP and fix before moving to the next file or the closing sequence.
+All syntax checks pass, diff shows only intended files, targeted tests pass (check PLANS.md for current baseline). detect-secrets baseline check passes. Vulture whitelist check passes (no new dead code). If any step fails, STOP and fix before moving to the next file or the closing sequence.

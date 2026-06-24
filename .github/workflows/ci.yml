@@ -64,7 +64,7 @@ jobs:
       - name: Run pip-audit
         run: pip-audit --strict
         # Will fail until diskcache CVE is fixed and pip is upgraded in CI image
-        continue-on-error: true  # TODO: change to false after Plan 56 (deps) lands
+        continue-on-error: true  # TODO: change to false after Plan 74 (diskcache replacement + --ignore-vuln strategy)
 
   dead-code:
     runs-on: ubuntu-latest
@@ -75,10 +75,10 @@ jobs:
           python-version: '3.12'
       - name: Install vulture
         run: pip install vulture
-      - name: Run vulture (min-confidence 80)
+      - name: Run vulture (min-confidence 80, whitelist existing findings)
         run: vulture . --min-confidence 80 --exclude .venv,venv,env,.git,node_modules,__pycache__,build,dist,.tox,.eggs,.pytest_cache,.mypy_cache,.ruff_cache,htmlcov
-        # Will fail — 47 findings exist. TODO: change to fail-build after Plan 57 (dead code cleanup) lands
-        continue-on-error: true
+        # 23 existing findings are whitelisted (accepted baseline from Plan 70). New dead code will fail CI.
+        continue-on-error: false
 
   detect-secrets:
     runs-on: ubuntu-latest

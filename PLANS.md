@@ -30,6 +30,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | **detect-secrets** | 15 findings (baseline) | Plan 71 S9 | Baseline established with .secrets.baseline. All findings are false positives (test fixtures, doc examples). |
 | **pre-commit** | Configured | Plan 71 S10 | Hooks installed: trailing-whitespace, end-of-file-fixer, check-yaml, check-json, check-toml, black, ruff, isort, mypy, detect-secrets. |
 | **pytest-cov** | Configured | Plan 71 S11 | Coverage reports: term-missing + HTML. No fail threshold (baseline: 1% coverage). |
+| **Coverage** | 82% (24,664 statements, 4,359 missing) | Plan 71 S16 | Informational only — does NOT gate CI. Baseline captured at Plan 71. Trend: should not drop >5% in future plans — document any drops in reconciliation notes. |
 
 **Per-plan verification cadence**:
 - **Every plan**: Ruff (file-scoped) + Mypy (file-scoped) + Pytest

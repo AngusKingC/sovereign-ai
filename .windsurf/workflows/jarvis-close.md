@@ -19,6 +19,24 @@ ruff check <files_touched> 2>&1 | Select-Object -Last 3
 ```
 Expected: zero errors.
 
+## Step 2.5: detect-secrets baseline check (NEW — Plan 72)
+```powershell
+detect-secrets scan --baseline .secrets.baseline
+```
+If exit code != 0, STOP — a new secret was introduced. Either update baseline (if false positive) or remove the secret. Do not commit until this passes.
+
+## Step 2.7: Vulture whitelist check (NEW — Plan 72)
+```powershell
+vulture . --min-confidence 80 --exclude .venv,venv,env,.git,node_modules,__pycache__,build,dist,.tox,.eggs,.pytest_cache vulture-whitelist.txt
+```
+If new findings appear (not in whitelist), STOP — either fix the dead code or add to whitelist with inline comment. Do not commit until this passes.
+
+## Step 2.8: Pre-commit run on staged files (NEW — Plan 72)
+```powershell
+pre-commit run --files <staged_files>
+```
+If any hook fails, STOP — fix the issue before committing. Pre-commit hooks are the last gate before `git commit`. Per OR32, NEVER use `git commit --no-verify` to bypass hooks.
+
 ## Step 3: File-scoped mypy on touched files
 ```powershell
 mypy <files_touched> --ignore-missing-imports 2>&1 | Select-Object -Last 3
@@ -63,6 +81,7 @@ $lines = @(
     "**Results**:",
     "- Tests: <count> passed, <count> skipped",
     "- Ruff: <before> → <after>",
+    "- Coverage: core <X>%, system <Y>%, memory <Z>%, adapters <A>%, skills <B>%",
     "- Tag: prompt-{N} verified on origin"
 )
 Set-Content -Path "C:\Jarvis\scan\logs\changelog-entry-prompt-{N}.md" -Value $lines -Encoding utf8
@@ -89,7 +108,7 @@ Include either Option A (propose a new rule) or Option B (explicit none with jus
 
 ## Step 10: Update PLANS.md
 
-`PLANS.md` (in repo root) is the dynamic project state. 
+`PLANS.md` (in repo root) is the dynamic project state.
 
 **IMPORTANT**: Use the Edit tool (AGENTS.md OR7) with exact `old_str`/`new_str` pairs. NEVER use PowerShell `-replace`, `ForEach-Object`, or `Set-Content`.
 
@@ -97,7 +116,7 @@ Update all 6 sections:
 
 - **(a) Completed prompts table**: add new row at the bottom with #, prompt name, test count, one-line notes.
 - **(b) Test baseline**: update "Current baseline:" line if test count changed. Include new count and source (Plan {N} S{step}).
-- **(c) Static analysis baseline**: update the 5-tool table if any tool count changed. Include source (Plan {N} S{step}) and delta notes.
+- **(c) Static analysis baseline**: update the 5-tool table if any tool count changed. Include source (Plan {N} S{step}) and delta notes. Also fill in Coverage row percentages (added at Plan 72 S10) with actual values from the test run.
 - **(d) Next 5 prompts queue**: shift the queue — Plan {N+1} becomes active, add a new open slot at the bottom. If the active plan changed scope, update its queue entry.
 - **(e) Status sections**: if any feature moved between sections (e.g., from "Built but not reachable" to "Works right now"), update the 4 status subsections.
 - **(f) Baseline reconciliation notes**: add explanation of any tool count deltas, with tolerance justification (within/outside acceptable range).
