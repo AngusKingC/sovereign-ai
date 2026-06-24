@@ -69,24 +69,11 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 74 | Cost Tracking & Spend Caps (Critical #2) | 1308 | CostTracker implementation (core/cost_tracker.py). Wired into Orchestrator (spend checks + cost recording) and ResourceBudget ($ cap delegation). New trace events (COST_RECORDED, COST_ALERT, COST_FALLBACK_TRIGGERED). Comprehensive tests (test_cost_tracker.py). OR33 added to AGENTS.md (no hook exclusions per L12). Cost tracking vocabulary added to CONTEXT.md. Pre-commit mypy hook removed (stall prevention). 39 new tests (15 cost_tracker + 24 existing tests from Plans 74.5, 73). |
 | 74.5 | PrismLlamaAdapter (Modified llama.cpp Integration) | 1308 | PrismLlamaAdapter implementation (adapters/prism_llama.py) following AR20 pattern (adapter-managed subprocess). Registered in cli/adapter_factory.py as prism_llama adapter type. User provides binary_path and model_path (no download logic). 17 unit tests + 2 adapter_factory tests. AR20 added to AGENTS.md. Modified llama.cpp vocabulary added to CONTEXT.md. 19 new tests. |
 | 75 | 5-Plan Milestone Full Scan + Vulture Whitelist Fix | 1308 | Full 6-tool checkpoint scan. Tests: 1308 passed, 67 skipped (baseline held). Ruff: 0 errors (baseline held). Mypy: 0 errors in 263 source files (baseline held - after fixing types-PyYAML regression). Bandit: 3420 low, 4 medium (B108 x3, B608), 0 high (baseline held). pip-audit: 10 CVEs (stable). Vulture: 33 findings (updated from 23, all whitelisted after UTF-8 encoding fix + CLI syntax fix). Coverage: 83% (baseline held). Fixed vulture whitelist bugs (UTF-16 → UTF-8, wrong CLI syntax → Python-based comparison). Fixed mypy regression (added types-PyYAML to requirements-dev.txt). |
+| 76 | PEMADS Phase 1: Debate Pool + Task Classifier + Testing Battery Framework | 1350 | PEMADS Phase 1 infrastructure (no LLM calls, no debates). New modules: memory/debate_pool.py (DebatePool class), core/task_classifier.py (TaskClassifier class), skills/testing_battery/ (TestingBatterySkill). Governance updates: AI_HANDOFF.md (tiered review system + context brief structure), PLANS.md (roadmap revision to Claude's Option C), CONTEXT.md (PEMADS vocabulary). 42 new tests (10 debate_pool + 12 task_classifier + 20 testing_battery). Coverage: 83% (baseline held). |
 
 ---
 
 ## Next 5 Prompts Queue
-
-### Plan 76 — PEMADS Phase 1: Debate Pool + Task Classifier + Testing Battery Framework (Priority 1)
-
-**Scope**: PEMADS Phase 1 infrastructure (no LLM calls, no debates). New modules: `memory/debate_pool.py` (persistent debate history storage), `core/task_classifier.py` (keyword-based task type classification), `skills/testing_battery/` (orchestrates mypy/vulture/pytest/bandit/hypothesis in SandboxExecutor). Plus governance updates: AI_HANDOFF.md (tiered review system + context brief structure), PLANS.md (roadmap revision), CONTEXT.md (PEMADS vocabulary).
-
-**Expected impact**: User-visible PEMADS progress. Foundation for Phase 2-3. No safety risks (no LLM calls, no debates, no autonomous actions).
-
-**Baseline changes**: Test count +38 (10 debate_pool + 8 task_classifier + 20 testing_battery). Coverage maintained ≥83%.
-
-**Gate**: Full test suite pass, ruff 0 errors, mypy 0 errors, detect-secrets passes, vulture whitelist passes.
-
-**Kimi gap**: None (this is PEMADS infrastructure, not a Kimi gap).
-
----
 
 ### Plan 77 — Self-Healing / AutoCorrector (Priority 1 — Kimi Critical #3)
 
@@ -136,12 +123,24 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
-**Plans 81-85 (post-scan)**:
-- **Plan 81**: PEMADS Phase 2 — Expert panel manager + hot-swap (now safe — circuit breaker, self-healing, routing in place)
+### Plan 81 — PEMADS Phase 2: Expert Panel Manager + Hot-Swap (Priority 1)
+
+**Scope**: Expert panel manager — creates pruned-expert models (via model pruning), orchestrates turn-based debates between diverse architectures, VRAM hot-swap to load/unload experts. Requires Plan 77-79 prerequisites (circuit breaker, self-healing, routing).
+
+**Expected impact**: Live debates between specialized experts. Foundation for Phase 3 judge.
+
+**Baseline changes**: Test count increase (expert panel manager + hot-swap tests).
+
+**Gate**: Full test suite pass, ruff 0, mypy 0.
+
+---
+
+**Plans 82-86 (post-scan)**:
 - **Plan 82**: Multi-channel approval gates (Kimi High — lands right before Phase 3, where implementation decisions need oversight)
 - **Plan 83**: PEMADS Phase 3 — Judge + implementation gate + full testing battery (now safe — multi-channel approvals in place)
 - **Plan 84**: PEMADS Phase 5 — Integration & hardening (Phase 4 cloud pruner stays deferred — local-first)
 - **Plan 85**: 5-plan milestone scan (mandatory)
+- **Plan 86**: [Open Slot] (Priority TBD)
 
 **Roadmap source**: Claude's Option C from the 5-AI panel review (2026-06-25). See `roadmap-sequencing-strategy-and-review-request.md` for the full review process and GLM's evaluation.
 
