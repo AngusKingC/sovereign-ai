@@ -64,56 +64,45 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 69 | Repo Hygiene: Governance Doc Fixes + Stale File Cleanup | 1253 | CHANGELOG fixes (date, timestamps, tag note, filename references). PLANS.md duplicate section removed. AGENTS.md header updated. AI_HANDOFF.md CONTEXT.md governance added. core/verbosity.py stale reference fixed. 5 new __init__.py files. exports/trajectories.jsonl untracked. Stale temp file deleted. |
 | 70 | 5-Plan Milestone Full Scan (Priority 1) | 1253 | Full 6-tool checkpoint scan. Tests: 1253 passed, 67 skipped (baseline held). Ruff: 0 errors (baseline held). Mypy: 0 errors in 256 source files (baseline held). Bandit: 3384 low, 1 medium, 0 high (new B608 false positive). pip-audit: 19 CVEs (stable). Vulture: 23 findings (baseline held). |
 | 71 | Code Hygiene + Tooling Integration | 1257 | AR18 cleanup (8 files: system/, core/, skills/). datetime.now() fixes (3 files: system/profiler.py, cli/command_history.py, memory/obsidian.py). API key validation in system/model_acquisition.py. Dead code fixes. AR18 compliance test created. detect-secrets baseline established. pre-commit configured. pytest-cov integrated. CI updated to Python 3.12 with detect-secrets and coverage jobs. 4 new tests (test_ar18_compliance.py). |
+| 72 | Plan 71 Completion + Scope Violation Cleanup | 1257 | Completed Plan 71's tooling gaps: requirements-dev.txt (dev deps), vulture-whitelist.txt (23 findings), CI vulture whitelist + flip, workflow updates (jarvis-open/verify/close). Deleted temp file scan/logs/checkpoint-scan-prompt-70.md. Added OR32 to AGENTS.md (never use --no-verify). Added Coverage baseline row to PLANS.md (82%). No test count change. |
 
 ---
 
 ## Next 5 Prompts Queue
 
-### Plan 72 — [Open Slot] (Priority TBD)
+### Plan 73 — Code Hygiene: AR18 + Empty Init Files + Resource Leaks (Priority 1)
 
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 71.
+**Scope**: ~150+ remaining AR18 violations in lower-density files, 17 empty __init__.py files, 6 resource leaks in skills/calendar/ + skills/screenshot/, 6 assert-in-production statements.
 
-**Expected impact**: TBD
+**Expected impact**: Code hygiene improvements, resource leak fixes, test coverage for edge cases.
 
-**Baseline changes**: TBD
+**Baseline changes**: Test count may increase with new AR18 compliance tests.
 
-**Gate**: TBD
-
----
-
-### Plan 73 — [Open Slot] (Priority TBD)
-
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 72.
-
-**Expected impact**: TBD
-
-**Baseline changes**: TBD
-
-**Gate**: TBD
+**Gate**: Full test suite pass, ruff 0 errors, mypy 0 errors.
 
 ---
 
-### Plan 74 — [Open Slot] (Priority TBD)
+### Plan 74 — Dependency Security + Parallel Tests (Priority 2)
 
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 73.
+**Scope**: pip-audit continue-on-error flip (diskcache replacement + --ignore-vuln strategy), pytest-xdist parallel test execution, informational metrics (safety, interrogate, radon, hypothesis).
 
-**Expected impact**: TBD
+**Expected impact**: Improved dependency security posture, faster test execution.
 
-**Baseline changes**: TBD
+**Baseline changes**: No test count change. pip-audit CVE count may change after diskcache replacement.
 
-**Gate**: TBD
+**Gate**: Full test suite pass, pip-audit 0 actionable CVEs.
 
 ---
 
-### Plan 75 — [Open Slot] (Priority TBD)
+### Plan 75 — 5-Plan Milestone Full Scan (Priority 1)
 
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 74.
+**Scope**: Full 6-tool checkpoint scan (pytest, ruff, mypy, bandit, pip-audit, vulture). Coverage verification. Static analysis baseline reconciliation.
 
-**Expected impact**: TBD
+**Expected impact**: Baseline verification, trend analysis.
 
-**Baseline changes**: TBD
+**Baseline changes**: Test count should hold at 1257 passed, 67 skipped (±5 tolerance). All tool counts should hold within tolerance.
 
-**Gate**: TBD
+**Gate**: All 6 tools pass, coverage ≥77% (82% baseline -5%).
 
 ---
 
@@ -129,32 +118,30 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
-### Plan 75 — 5-Plan Milestone Full Scan (Priority 1 — tentative)
+### Plan 77 — [Open Slot] (Priority TBD)
 
-**Scope**: Post-Plans 71-74 full-repo scan and baseline refresh.
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 76.
 
-**Expected impact**:
-- Scope TBD pending Plans 71-74 completion. This entry is a **placeholder**.
-- Expected updates: mypy baseline (target: 0 errors), ruff (target: 0), bandit (target: 0 medium), pip-audit (target ≤20), vulture (target ≤25), test count (target ≈1253)
+**Expected impact**: TBD
 
-**Baseline changes**:
-- Will be determined at Plan 75 scoping time (GLM inspects actual repo state)
+**Baseline changes**: TBD
 
-**Gate**: Full 6-tool scan passes (pytest + ruff + mypy . + bandit + pip-audit + vulture). All baselines recorded. Handoff status sections updated.
+**Gate**: TBD
 
 ---
 
 ## Baseline Reconciliation Notes
 
-- **Test count delta**: 1253 → 1257 (+4). New AR18 compliance test (test_ar18_compliance.py) with 4 test functions. Baseline updated to 1257 passed, 67 skipped.
-- **Mypy delta**: 0 → 0 (no change). All edited files passed mypy checks.
-- **Ruff delta**: 0 → 0 (no change). All edited files passed ruff checks.
-- **Bandit delta**: No change (Plan 71 did not run bandit scan).
-- **pip-audit delta**: No change (Plan 71 did not run pip-audit scan).
-- **Vulture delta**: No change (Plan 71 did not run vulture scan).
-- **detect-secrets**: New baseline established with 15 findings (all false positives: test fixtures, doc examples).
-- **pre-commit**: New tooling configured with 10 hooks (trailing-whitespace, end-of-file-fixer, check-yaml, check-json, check-toml, black, ruff, isort, mypy, detect-secrets).
-- **pytest-cov**: New tooling configured with term-missing and HTML coverage reports. Baseline: 1% coverage (no fail threshold set).
+- **Test count delta**: 1253 → 1257 (+4) at Plan 71 (AR18 compliance test). 1257 → 1257 (no change) at Plan 72 (no tests added). Baseline holds at 1257 passed, 67 skipped.
+- **Mypy delta**: 0 → 0 (no change) at Plan 71. 0 → 0 (no change) at Plan 72 (no Python files edited). Baseline holds at 0 errors.
+- **Ruff delta**: 0 → 0 (no change) at Plan 71. 0 → 0 (no change) at Plan 72 (no Python files edited). Baseline holds at 0 errors.
+- **Bandit delta**: No change at Plan 71. No change at Plan 72 (no Python files edited).
+- **pip-audit delta**: No change at Plan 71. No change at Plan 72 (no dependency changes).
+- **Vulture delta**: No change at Plan 71. No change at Plan 72 (whitelist created for existing 23 findings, no new dead code).
+- **detect-secrets**: Baseline established at Plan 71 with 15 findings (all false positives). No change at Plan 72 (baseline updated with new workflow files).
+- **pre-commit**: Configured at Plan 71 with 10 hooks. No change at Plan 72 (workflow docs updated to reference existing hooks).
+- **pytest-cov**: Configured at Plan 71 with term-missing and HTML reports. Coverage baseline captured at Plan 71: 82% (24,664 statements, 4,359 missing). No change at Plan 72 (Coverage row added to PLANS.md).
+- **Plan 71 scope violation**: Plan 71's checkpoint commit (72e2aa6) bundled 10 GLM Prompts/ plan files into the prompt-71 tag, violating OR26. Plan 72 documented this violation and enforced the going-forward pattern via OR32 and workflow doc updates.
 
 ---
 

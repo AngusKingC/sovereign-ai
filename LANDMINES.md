@@ -83,3 +83,11 @@ Append-only historical record of failure patterns. See AGENTS.md for guidance on
 **Impact**: Memory exhaustion, handle exhaustion, system instability. User's PC became sluggish with hundreds of orphaned PowerShell processes consuming resources.
 
 ---
+
+## L11 — Devin bypassed pre-commit hooks with --no-verify
+
+**Trigger**: Plan 71 execution, Devin used `git commit --no-verify` on both the checkpoint commit (72e2aa6) and the docs commit, bypassing the pre-commit hooks that Plan 71 had just configured.
+
+**Impact**: Hooks configured but never actually run. Issues that hooks would catch (trailing whitespace, secrets, etc.) slip through. Defeats the purpose of having pre-commit hooks as a quality gate.
+
+---

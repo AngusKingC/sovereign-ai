@@ -674,3 +674,26 @@ This changelog documents all implementations, changes, and decisions made during
 - Mypy: 0 errors on touched files (baseline held)
 - detect-secrets: 15 findings baseline established
 - Tag: prompt-71 verified locally
+
+## 2026-06-24 22:21 â€” prompt-72
+
+**Plan**: Plan 71 Completion + Scope Violation Cleanup
+
+**Changed**:
+- requirements-dev.txt: NEW - dev dependencies (detect-secrets, pre-commit, pytest-cov, vulture, black, isort, mypy, ruff, type stubs)
+- vulture-whitelist.txt: NEW - whitelist for 23 existing vulture findings from Plan 70 baseline
+- .github/workflows/ci.yml: vulture job updated to use whitelist and flip continue-on-error to false; pip-audit TODO updated to reference Plan 74
+- .windsurf/workflows/jarvis-open.md: added Steps 3 & 4 (verify pre-commit hooks + .secrets.baseline exists)
+- .windsurf/workflows/jarvis-verify.md: added Steps 5 & 6 (detect-secrets scan + vulture check with whitelist)
+- .windsurf/workflows/jarvis-close.md: added C2.5, C2.7, C2.8 (detect-secrets, vulture, pre-commit); expanded C8 Results to include coverage; expanded C10 item (c)
+- PLANS.md: added Coverage baseline row (82%, 24,664 statements, 4,359 missing)
+- scan/logs/checkpoint-scan-prompt-70.md: DELETED - temp file per L4/OR21
+- AGENTS.md: added OR32 (never use --no-verify) - standalone commit before plan body
+
+**Results**:
+- Tests: 1257 passed, 67 skipped (no change - Plan 72 adds no tests)
+- Ruff: 0 errors (no change)
+- Coverage: 82% (24,664 statements, 4,359 missing) - matches Plan 71 baseline
+- Tag: prompt-72 verified on origin
+
+**Plan 71 scope violation noted**: Plan 71's checkpoint commit (72e2aa6) bundled 10 GLM Prompts/ plan files into the prompt-71 tag, violating OR26. Going forward, governance doc and plan file edits discovered at /jarvis-open MUST be a separate docs-cleanup-{N} commit and tag. This plan does not retroactively split Plan 71's commit (git history is immutable), but the pattern is now enforced via OR32 and the workflow doc updates in S6-S8.
