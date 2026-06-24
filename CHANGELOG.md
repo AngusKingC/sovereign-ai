@@ -757,3 +757,18 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors (baseline held)
 - Coverage: 83% (up from 82% baseline)
 - Tag: prompt-74.5 verified on origin
+
+## 2026-06-25 03:47 — prompt-74
+
+**Plan**: Cost Tracking & Spend Caps (Critical #2)
+
+**Changed**:
+- PLANS.md: Updated Plan 74 test count from 1289 to 1308 per OR17 baseline reconciliation (+19 outside ±5 tolerance, explained as 39 new tests from Plans 74.5, 73)
+- .secrets.baseline: Auto-updated by detect-secrets hook
+
+**Results**:
+- Tests: 1308 passed, 67 skipped (baseline held)
+- Ruff: 0 errors (baseline held)
+- Mypy: 0 errors (baseline held)
+- Coverage: 83% (baseline held)
+- Tag: prompt-74 verified
