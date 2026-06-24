@@ -61,6 +61,8 @@ class OllamaWorker(WorkerBase):
                     return []
                 async def write(self, data: dict[str, Any]) -> None:
                     pass
+                async def list_keys(self, pattern: str | None = None) -> list[str]:
+                    return []
             
             memory_router = MemoryRouter(backends={"null": NullMemoryBackend()})
         
@@ -199,7 +201,7 @@ class OllamaWorker(WorkerBase):
 
             output = WorkerOutput(
                 worker_id=self.profile.worker_id,
-                task_id=task_id,
+                task_id=task_id,  # type: ignore[arg-type]
                 content=raw.content,
                 reasoning_steps=[],
                 confidence=0.9,

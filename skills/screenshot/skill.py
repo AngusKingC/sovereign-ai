@@ -10,7 +10,7 @@ from uuid import uuid4
 
 from PIL import ImageGrab
 
-from core.approval_gate import ApprovalRequest, ApprovalActionType
+from core.approval_gate import ApprovalRequest, ApprovalActionType, ApprovalGate
 from core.observability import (
     TraceComponent,
     TraceEventType,
@@ -25,9 +25,14 @@ from core.exceptions import SkillExecutionError, ApprovalDeniedError
 class ScreenshotSkill:
     """Skill for capturing screenshots."""
 
-    def __init__(self, emitter: TraceEmitter | None = None) -> None:
+    def __init__(
+        self,
+        emitter: TraceEmitter | None = None,
+        approval_gate: "ApprovalGate | None" = None,
+    ) -> None:
         """Initialize the screenshot skill."""
         self._emitter = emitter or MemoryTraceEmitter()
+        self._approval_gate = approval_gate
 
     async def capture(self, region: tuple | None = None) -> bytes:
         """
@@ -46,7 +51,10 @@ class ScreenshotSkill:
         from core.approval_gate import ApprovalGate
 
         # Request approval before capturing
-        approval_gate = ApprovalGate(emitter=self._emitter)
+        if self._approval_gate:
+            approval_gate = self._approval_gate
+        else:
+            approval_gate = ApprovalGate(emitter=self._emitter, state_machine=None, memory_router=None)  # type: ignore[arg-type]
         action_description = "Capture screenshot"
         try:
             request = ApprovalRequest(

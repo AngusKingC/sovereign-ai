@@ -66,9 +66,9 @@ class BackendRouter:
             for backend in backends:
                 await backend.write(data)
         else:
-            backend = self.get_backend_for_type(data_type)
-            if backend:
-                await backend.write(data)
+            selected_backend: MemoryBackend | None = self.get_backend_for_type(data_type)
+            if selected_backend:
+                await selected_backend.write(data)
 
     async def fetch(self, task: Task, data_type: DataType = DataType.ALL) -> list[dict[str, Any]]:
         """
@@ -84,9 +84,9 @@ class BackendRouter:
                 all_memory.extend(memory)
             return all_memory
         else:
-            backend = self.get_backend_for_type(data_type)
-            if backend:
-                return await backend.fetch(task)
+            selected_backend: MemoryBackend | None = self.get_backend_for_type(data_type)
+            if selected_backend:
+                return await selected_backend.fetch(task)
             return []
 
     def has_backend(self, data_type: DataType) -> bool:

@@ -96,8 +96,8 @@ class CommandHistory:
                     task_id=uuid4(),
                     intent=intent,
                     complexity_score=0.0,
-                    priority="normal",
-                    current_state="received",
+                    priority="normal",  # type: ignore[arg-type]
+                    current_state="received",  # type: ignore[arg-type]
                     created_at=datetime.now(),
                 )
                 results = await self.backend.fetch(task)

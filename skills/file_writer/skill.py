@@ -140,7 +140,7 @@ class FileWriterSkill:
                     return False, 0
 
         try:
-            import aiofiles
+            import aiofiles  # type: ignore[import-untyped]
 
             write_mode = "w" if mode == "write" else "a"
             async with aiofiles.open(path, mode=write_mode, encoding="utf-8") as file:

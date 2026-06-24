@@ -177,7 +177,7 @@ class EchoWorker(WorkerBase):
 
             output = WorkerOutput(
                 worker_id=self.profile.worker_id,
-                task_id=task_id,
+                task_id=task_id,  # type: ignore[arg-type]
                 content=raw.content,
                 reasoning_steps=["Echoed user input"],
                 confidence=1.0,

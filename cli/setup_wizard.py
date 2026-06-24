@@ -194,7 +194,7 @@ class SetupWizard:
         Args:
             config: Configuration dictionary
         """
-        import yaml
+        import yaml  # type: ignore[import-untyped]
 
         # Prepare non-secret config for YAML
         yaml_config = {

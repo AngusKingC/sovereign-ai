@@ -230,6 +230,10 @@ class NotesSkill:
         try:
             notes = await self._memory_router.scoped_read("notes", "notes:*")
             
+            # Narrow type: scoped_read returns dict | list | None, but list_all expects list
+            if not isinstance(notes, list):
+                notes = []
+            
             # Sort by updated_at descending
             notes.sort(key=lambda n: n["updated_at"], reverse=True)
             
@@ -314,6 +318,10 @@ class NotesSkill:
 
         try:
             note = await self._memory_router.scoped_read("notes", f"notes:{note_id}")
+            
+            # Narrow type: scoped_read returns dict | list | None, but get expects dict | None
+            if isinstance(note, list):
+                note = None
             
             duration_ms = 0
             try:
@@ -484,6 +492,10 @@ class NotesSkill:
                     pass
                 
                 return False
+            
+            # Ensure note is dict for dict-style access
+            if isinstance(note, list):
+                note = note[0] if note else {"id": note_id}
             
             if title is not None:
                 note["title"] = title
@@ -662,7 +674,8 @@ class NotesSkill:
                 
                 return False
             
-            await self._memory_router.scoped_delete("notes", f"notes:{note_id}")
+            # scoped_delete not available, use scoped_write with None
+            await self._memory_router.scoped_write("notes", f"notes:{note_id}", None)
             
             duration_ms = 0
             try:

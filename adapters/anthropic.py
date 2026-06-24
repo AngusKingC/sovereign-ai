@@ -110,13 +110,21 @@ class AnthropicAdapter(LLMAdapter):
 
             response = await self._client.messages.create(
                 model=self._model_name,
-                messages=anthropic_messages,
+                messages=anthropic_messages,  # type: ignore[arg-type]
                 temperature=temperature or self.temperature,
                 max_tokens=max_tokens,
             )
 
             duration_ms = int((time.perf_counter() - start_time) * 1000)
-            response_length = len(response.content[0].text)
+            
+            # Handle union type: content blocks can be different types
+            # Only TextBlock has .text attribute
+            text_content = ""
+            for block in response.content:
+                if hasattr(block, "text"):
+                    text_content = block.text  # type: ignore[union-attr]
+                    break
+            response_length = len(text_content)
 
             # Emit adapter response event
             try:
@@ -147,7 +155,7 @@ class AnthropicAdapter(LLMAdapter):
                 pass
 
             return LLMResponse(
-                content=response.content[0].text,
+                content=text_content,
                 raw={"model": self._model_name, "usage": response.usage.model_dump() if response.usage else {}},
                 model=self._model_name,
                 tokens_used=response.usage.input_tokens + response.usage.output_tokens if response.usage else 0,

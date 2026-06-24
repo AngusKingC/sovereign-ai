@@ -229,8 +229,12 @@ class ReminderSkill:
         try:
             reminders = await self._memory_router.scoped_read("reminders", "reminders:*")
             
+            # Narrow type: scoped_read returns dict | list | None, but list_pending expects list
+            if not isinstance(reminders, list):
+                reminders = []
+            
             # Filter to undelivered reminders
-            pending = [r for r in reminders if not r.get("delivered", False)]
+            pending = [r for r in reminders if isinstance(r, dict) and not r.get("delivered", False)]
             
             # Sort by due_at
             pending.sort(key=lambda r: r["due_at"])
@@ -317,6 +321,10 @@ class ReminderSkill:
         try:
             reminder = await self._memory_router.scoped_read("reminders", f"reminders:{reminder_id}")
             
+            # Narrow type: scoped_read returns dict | list | None, but mark_delivered expects dict | None
+            if isinstance(reminder, list):
+                reminder = None
+            
             if not reminder:
                 duration_ms = 0
                 try:
@@ -339,6 +347,10 @@ class ReminderSkill:
                     pass
                 
                 return False
+            
+            # Ensure reminder is dict for dict-style access
+            if isinstance(reminder, list):
+                reminder = reminder[0] if reminder else {"id": reminder_id}
             
             reminder["delivered"] = True
             await self._memory_router.scoped_write("reminders", f"reminders:{reminder_id}", reminder)

@@ -58,8 +58,8 @@ class TestOllamaWorker:
             task_id=uuid4(),
             intent="test query",
             complexity_score=0.5,
-            priority="normal",
-            status="received",
+            priority="normal",  # type: ignore[arg-type]
+            status="received",  # type: ignore[arg-type]
             created_at=datetime.now(timezone.utc),
         )
         
@@ -80,8 +80,8 @@ class TestOllamaWorker:
             task_id=uuid4(),
             intent="test query",
             complexity_score=0.5,
-            priority="normal",
-            status="received",
+            priority="normal",  # type: ignore[arg-type]
+            status="received",  # type: ignore[arg-type]
             created_at=datetime.now(timezone.utc),
         )
         
@@ -103,8 +103,8 @@ class TestOllamaWorker:
             task_id=uuid4(),
             intent="test query",
             complexity_score=0.5,
-            priority="normal",
-            status="received",
+            priority="normal",  # type: ignore[arg-type]
+            status="received",  # type: ignore[arg-type]
             created_at=datetime.now(timezone.utc),
         )
         
@@ -125,8 +125,8 @@ class TestOllamaWorker:
             task_id=uuid4(),
             intent="test query",
             complexity_score=0.5,
-            priority="normal",
-            status="received",
+            priority="normal",  # type: ignore[arg-type]
+            status="received",  # type: ignore[arg-type]
             created_at=datetime.now(timezone.utc),
         )
         
@@ -219,8 +219,8 @@ class TestOllamaWorker:
             task_id=uuid4(),
             intent="test query",
             complexity_score=0.5,
-            priority="normal",
-            status="received",
+            priority="normal",  # type: ignore[arg-type]
+            status="received",  # type: ignore[arg-type]
             created_at=datetime.now(timezone.utc),
         )
         

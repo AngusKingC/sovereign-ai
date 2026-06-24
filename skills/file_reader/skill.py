@@ -42,7 +42,7 @@ class FileReaderSkill:
             raise ValueError("Path must be a non-empty string")
 
         try:
-            import aiofiles
+            import aiofiles  # type: ignore[import-untyped]
 
             async with aiofiles.open(path, mode="r", encoding=encoding) as file:
                 content = await file.read()

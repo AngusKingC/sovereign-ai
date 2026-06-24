@@ -2,7 +2,7 @@
 
 import httpx
 
-from core.observability import MemoryTraceEmitter, TraceComponent, TraceEmitter, TraceEvent, TraceEventType
+from core.observability import MemoryTraceEmitter, TraceComponent, TraceEmitter, TraceEvent, TraceEventType, TraceLevel
 
 
 class MCPAdapter:
@@ -32,7 +32,7 @@ class MCPAdapter:
                 TraceEvent(
                     event_type=TraceEventType.OPERATION_COMPLETE,
                     component=TraceComponent.ADAPTER,
-                    level="info",
+                    level=TraceLevel.INFO,
                     message=f"Discovering tools from {self._server_url}",
                     data={"tool_count": len(tools)},
                     duration_ms=0,
@@ -44,7 +44,7 @@ class MCPAdapter:
                 TraceEvent(
                     event_type=TraceEventType.OPERATION_ERROR,
                     component=TraceComponent.ADAPTER,
-                    level="error",
+                    level=TraceLevel.ERROR,
                     message=str(e),
                     data={},
                     duration_ms=0,
@@ -66,7 +66,7 @@ class MCPAdapter:
                 TraceEvent(
                     event_type=TraceEventType.ADAPTER_CALL,
                     component=TraceComponent.ADAPTER,
-                    level="info",
+                    level=TraceLevel.INFO,
                     message=f"Calling MCP tool: {tool_name}",
                     data={"tool": tool_name},
                     duration_ms=0,
@@ -82,7 +82,7 @@ class MCPAdapter:
                 TraceEvent(
                     event_type=TraceEventType.ADAPTER_RESPONSE,
                     component=TraceComponent.ADAPTER,
-                    level="info",
+                    level=TraceLevel.INFO,
                     message=f"Called MCP tool: {tool_name}",
                     data={"tool": tool_name, "success": True},
                     duration_ms=0,
@@ -95,7 +95,7 @@ class MCPAdapter:
                 TraceEvent(
                     event_type=TraceEventType.ADAPTER_ERROR,
                     component=TraceComponent.ADAPTER,
-                    level="warning",
+                    level=TraceLevel.WARNING,
                     message=f"Failed to call MCP tool: {tool_name}",
                     data={"tool": tool_name, "success": False, "error": error_message},
                     duration_ms=0,

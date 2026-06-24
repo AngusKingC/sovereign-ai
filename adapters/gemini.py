@@ -109,7 +109,13 @@ class GeminiAdapter(LLMAdapter):
             )
 
             duration_ms = int((time.perf_counter() - start_time) * 1000)
-            response_length = len(response.text)
+            
+            # Handle None values
+            text = response.text if response.text is not None else ""
+            tokens_used = response.usage_metadata.total_token_count if response.usage_metadata else 0
+            if tokens_used is None:
+                tokens_used = 0
+            response_length = len(text)
 
             # Emit adapter response event
             await self._emitter.emit(TraceEvent(
@@ -122,16 +128,16 @@ class GeminiAdapter(LLMAdapter):
                     "model_name": self._model_name,
                     "prompt_length": prompt_length,
                     "response_length": response_length,
-                    "tokens_used": response.usage_metadata.total_token_count if response.usage_metadata else 0,
+                    "tokens_used": tokens_used,
                 },
                 duration_ms=duration_ms,
             ))
 
             return LLMResponse(
-                content=response.text,
+                content=text,
                 raw={"model": self._model_name, "usage": {}},
                 model=self._model_name,
-                tokens_used=response.usage_metadata.total_token_count if response.usage_metadata else 0,
+                tokens_used=tokens_used,
                 duration_ms=duration_ms,
             )
         except Exception as e:

@@ -76,6 +76,9 @@ class CalendarSkill:
 
         if not self._calendar_path:
             raise SkillExecutionError("CALENDAR_ICS_PATH environment variable not set")
+        
+        calendar_path = self._calendar_path
+        assert calendar_path is not None
 
         try:
             import asyncio
@@ -86,7 +89,7 @@ class CalendarSkill:
             # Read ICS file
             ics_content = await loop.run_in_executor(
                 None,
-                lambda: open(self._calendar_path, "rb").read()
+                lambda: open(calendar_path, "rb").read()
             )
             
             # Parse ICS
@@ -298,6 +301,9 @@ class CalendarSkill:
 
         if not self._calendar_path:
             raise SkillExecutionError("CALENDAR_ICS_PATH environment variable not set")
+        
+        calendar_path = self._calendar_path
+        assert calendar_path is not None
 
         try:
             import asyncio
@@ -309,7 +315,7 @@ class CalendarSkill:
             try:
                 ics_content = await loop.run_in_executor(
                     None,
-                    lambda: open(self._calendar_path, "rb").read()
+                    lambda: open(calendar_path, "rb").read()
                 )
                 calendar = await loop.run_in_executor(
                     None,
@@ -339,7 +345,7 @@ class CalendarSkill:
             ics_content = calendar.to_ical()
             await loop.run_in_executor(
                 None,
-                lambda: open(self._calendar_path, "wb").write(ics_content)
+                lambda: open(calendar_path, "wb").write(ics_content)
             )
             
             duration_ms = 0
@@ -488,6 +494,9 @@ class CalendarSkill:
 
         if not self._calendar_path:
             raise SkillExecutionError("CALENDAR_ICS_PATH environment variable not set")
+        
+        calendar_path = self._calendar_path
+        assert calendar_path is not None
 
         try:
             import asyncio
@@ -498,7 +507,7 @@ class CalendarSkill:
             # Read ICS file
             ics_content = await loop.run_in_executor(
                 None,
-                lambda: open(self._calendar_path, "rb").read()
+                lambda: open(calendar_path, "rb").read()
             )
             
             calendar = await loop.run_in_executor(
@@ -542,7 +551,7 @@ class CalendarSkill:
             ics_content = calendar.to_ical()
             await loop.run_in_executor(
                 None,
-                lambda: open(self._calendar_path, "wb").write(ics_content)
+                lambda: open(calendar_path, "wb").write(ics_content)
             )
             
             duration_ms = 0

@@ -119,6 +119,14 @@ class CohereAdapter(LLMAdapter):
 
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             response_length = len(response.text)
+            
+            # Handle None values for billed_units
+            if response.meta and response.meta.billed_units:
+                input_tokens = response.meta.billed_units.input_tokens or 0
+                output_tokens = response.meta.billed_units.output_tokens or 0
+                tokens_used = int(input_tokens + output_tokens)
+            else:
+                tokens_used = 0
 
             # Emit adapter response event
             try:
@@ -132,7 +140,7 @@ class CohereAdapter(LLMAdapter):
                         "model_name": self._model_name,
                         "prompt_length": prompt_length,
                         "response_length": response_length,
-                        "tokens_used": response.meta.billed_units.input_tokens + response.meta.billed_units.output_tokens if response.meta else 0,
+                        "tokens_used": tokens_used,
                     },
                     duration_ms=duration_ms,
                 )
@@ -152,7 +160,7 @@ class CohereAdapter(LLMAdapter):
                 content=response.text,
                 raw={"model": self._model_name, "usage": response.meta.model_dump() if response.meta else {}},
                 model=self._model_name,
-                tokens_used=response.meta.billed_units.input_tokens + response.meta.billed_units.output_tokens if response.meta else 0,
+                tokens_used=tokens_used,
                 duration_ms=duration_ms,
             )
         except Exception as e:
@@ -210,7 +218,8 @@ class CohereAdapter(LLMAdapter):
     async def close(self) -> None:
         """Close the Cohere client."""
         if self._client:
-            await self._client.close()
+            # AsyncClient doesn't have close(), it's a context manager
+            # Just clear the reference
             self._client = None
 
     @property

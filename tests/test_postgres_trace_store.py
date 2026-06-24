@@ -5,7 +5,7 @@ Tests 12-13 are backend-independent and always run.
 """
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import AsyncGenerator, Optional
 from unittest.mock import AsyncMock
 import asyncio
 import pytest
@@ -25,7 +25,7 @@ def postgres_dsn() -> str:
 
 
 @pytest.fixture
-async def trace_store(postgres_dsn: str) -> Optional[PostgresTraceStore]:
+async def trace_store(postgres_dsn: str) -> AsyncGenerator[Optional[PostgresTraceStore], None]:
     """Create and initialize PostgresTraceStore for tests.
     
     For Postgres-dependent tests, this fixture is skipped via skipif decorator.
@@ -78,6 +78,9 @@ async def test_initialize_creates_pool(postgres_dsn: str):
 async def test_store_trace_returns_id(trace_store: Optional[PostgresTraceStore], sample_trace_event: dict):
     """Test that store_trace returns a trace ID."""
     
+    if trace_store is None:
+        pytest.skip("Postgres trace store not available")
+    
     trace_id = await trace_store.store_trace(sample_trace_event)
     assert trace_id is not None
     assert isinstance(trace_id, str)
@@ -88,6 +91,9 @@ async def test_store_trace_returns_id(trace_store: Optional[PostgresTraceStore],
 @pytest.mark.skipif(not POSTGRES_AVAILABLE, reason="Postgres test fixture not available in CI environment")
 async def test_store_trace_inserts_data(trace_store: Optional[PostgresTraceStore], sample_trace_event: dict):
     """Test that store_trace actually inserts data into the database."""
+    
+    if trace_store is None:
+        pytest.skip("Postgres trace store not available")
     
     trace_id = await trace_store.store_trace(sample_trace_event)
     
@@ -103,6 +109,9 @@ async def test_store_trace_inserts_data(trace_store: Optional[PostgresTraceStore
 async def test_query_traces_empty(trace_store: Optional[PostgresTraceStore]):
     """Test that query_traces returns empty list when table is empty."""
     
+    if trace_store is None:
+        pytest.skip("Postgres trace store not available")
+    
     # Query with no filters
     traces = await trace_store.query_traces({})
     assert isinstance(traces, list)
@@ -112,6 +121,9 @@ async def test_query_traces_empty(trace_store: Optional[PostgresTraceStore]):
 @pytest.mark.skipif(not POSTGRES_AVAILABLE, reason="Postgres test fixture not available in CI environment")
 async def test_query_traces_with_filters(trace_store: Optional[PostgresTraceStore], sample_trace_event: dict):
     """Test that query_traces filters work correctly."""
+    
+    if trace_store is None:
+        pytest.skip("Postgres trace store not available")
     
     # Store two events with different components
     event1 = sample_trace_event.copy()
@@ -139,6 +151,9 @@ async def test_query_traces_with_filters(trace_store: Optional[PostgresTraceStor
 async def test_get_trace_by_id_found(trace_store: Optional[PostgresTraceStore], sample_trace_event: dict):
     """Test that get_trace_by_id returns the trace when found."""
     
+    if trace_store is None:
+        pytest.skip("Postgres trace store not available")
+    
     trace_id = await trace_store.store_trace(sample_trace_event)
     
     retrieved = await trace_store.get_trace_by_id(trace_id)
@@ -151,6 +166,9 @@ async def test_get_trace_by_id_found(trace_store: Optional[PostgresTraceStore], 
 async def test_get_trace_by_id_not_found(trace_store: Optional[PostgresTraceStore]):
     """Test that get_trace_by_id returns None when not found."""
     
+    if trace_store is None:
+        pytest.skip("Postgres trace store not available")
+    
     retrieved = await trace_store.get_trace_by_id("00000000-0000-0000-0000-000000000000")
     assert retrieved is None
 
@@ -159,6 +177,9 @@ async def test_get_trace_by_id_not_found(trace_store: Optional[PostgresTraceStor
 @pytest.mark.skipif(not POSTGRES_AVAILABLE, reason="Postgres test fixture not available in CI environment")
 async def test_async_concurrent_stores(trace_store: Optional[PostgresTraceStore], sample_trace_event: dict):
     """Test that concurrent store calls don't corrupt data."""
+    
+    if trace_store is None:
+        pytest.skip("Postgres trace store not available")
     
     # Store 10 events concurrently
     tasks = []
@@ -180,6 +201,9 @@ async def test_async_concurrent_stores(trace_store: Optional[PostgresTraceStore]
 @pytest.mark.skipif(not POSTGRES_AVAILABLE, reason="Postgres test fixture not available in CI environment")
 async def test_jsonb_metadata_round_trip(trace_store: Optional[PostgresTraceStore]):
     """Test that metadata survives jsonb serialization."""
+    
+    if trace_store is None:
+        pytest.skip("Postgres trace store not available")
     
     event = {
         "event_type": "test",

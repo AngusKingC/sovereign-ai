@@ -70,7 +70,7 @@ class HttpClientSkill:
             pass
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.get(url, headers=headers, params=params)
+            http_response = await client.get(url, headers=headers, params=params)
 
         duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
 
@@ -80,7 +80,7 @@ class HttpClientSkill:
                 component=TraceComponent.HTTP_CLIENT_SKILL,
                 level=TraceLevel.INFO,
                 message="HTTP GET completed",
-                data={"method": "GET", "url": url, "status_code": response.status_code},
+                data={"method": "GET", "url": url, "status_code": http_response.status_code},
                 duration_ms=duration_ms,
             )
             await self._emitter.emit(event)
@@ -89,9 +89,9 @@ class HttpClientSkill:
             pass
 
         return {
-            "status_code": response.status_code,
-            "body": response.text,
-            "headers": dict(response.headers),
+            "status_code": http_response.status_code,
+            "body": http_response.text,
+            "headers": dict(http_response.headers),
         }
 
     async def post(
@@ -148,7 +148,7 @@ class HttpClientSkill:
             pass
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.post(url, json=body, headers=headers)
+            http_response = await client.post(url, json=body, headers=headers)
 
         duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
 
@@ -158,7 +158,7 @@ class HttpClientSkill:
                 component=TraceComponent.HTTP_CLIENT_SKILL,
                 level=TraceLevel.INFO,
                 message="HTTP POST completed",
-                data={"method": "POST", "url": url, "status_code": response.status_code},
+                data={"method": "POST", "url": url, "status_code": http_response.status_code},
                 duration_ms=duration_ms,
             )
             await self._emitter.emit(event)
@@ -167,9 +167,9 @@ class HttpClientSkill:
             pass
 
         return {
-            "status_code": response.status_code,
-            "body": response.text,
-            "headers": dict(response.headers),
+            "status_code": http_response.status_code,
+            "body": http_response.text,
+            "headers": dict(http_response.headers),
         }
 
     async def put(
@@ -226,7 +226,7 @@ class HttpClientSkill:
             pass
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.put(url, json=body, headers=headers)
+            http_response = await client.put(url, json=body, headers=headers)
 
         duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
 
@@ -236,7 +236,7 @@ class HttpClientSkill:
                 component=TraceComponent.HTTP_CLIENT_SKILL,
                 level=TraceLevel.INFO,
                 message="HTTP PUT completed",
-                data={"method": "PUT", "url": url, "status_code": response.status_code},
+                data={"method": "PUT", "url": url, "status_code": http_response.status_code},
                 duration_ms=duration_ms,
             )
             await self._emitter.emit(event)
@@ -245,9 +245,9 @@ class HttpClientSkill:
             pass
 
         return {
-            "status_code": response.status_code,
-            "body": response.text,
-            "headers": dict(response.headers),
+            "status_code": http_response.status_code,
+            "body": http_response.text,
+            "headers": dict(http_response.headers),
         }
 
     async def delete(
@@ -302,7 +302,7 @@ class HttpClientSkill:
             pass
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.delete(url, headers=headers)
+            http_response = await client.delete(url, headers=headers)
 
         duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
 
@@ -312,7 +312,7 @@ class HttpClientSkill:
                 component=TraceComponent.HTTP_CLIENT_SKILL,
                 level=TraceLevel.INFO,
                 message="HTTP DELETE completed",
-                data={"method": "DELETE", "url": url, "status_code": response.status_code},
+                data={"method": "DELETE", "url": url, "status_code": http_response.status_code},
                 duration_ms=duration_ms,
             )
             await self._emitter.emit(event)
@@ -321,7 +321,7 @@ class HttpClientSkill:
             pass
 
         return {
-            "status_code": response.status_code,
-            "body": response.text,
-            "headers": dict(response.headers),
+            "status_code": http_response.status_code,
+            "body": http_response.text,
+            "headers": dict(http_response.headers),
         }

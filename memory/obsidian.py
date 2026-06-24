@@ -40,7 +40,7 @@ class ObsidianBackend(MemoryBackend):
         Simple implementation: reads all .md files and returns their content.
         """
         start_time = time.perf_counter()
-        memory = []
+        memory: list[dict[str, Any]] = []
 
         try:
             # Emit fetch start event

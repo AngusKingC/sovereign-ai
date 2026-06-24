@@ -133,18 +133,18 @@ class QdrantBackend(MemoryBackend):
                     pass
                 query_vector = [0.0] * self.vector_size
 
-            search_result = self.client.search(
+            search_result = self.client.query_points(
                 collection_name=self.collection_name,
-                query_vector=query_vector,
+                query=query_vector,
                 limit=10,
-            )
+            )  # type: ignore[attr-defined]
 
             result = [
                 {
                     "source": "qdrant",
-                    "content": hit.payload.get("content", {}),
-                    "score": hit.score,
-                    "id": str(hit.id),
+                    "content": hit.payload.get("content", {}),  # type: ignore[attr-defined]
+                    "score": hit.score,  # type: ignore[attr-defined]
+                    "id": str(hit.id),  # type: ignore[attr-defined]
                 }
                 for hit in search_result
             ]

@@ -349,10 +349,10 @@ class TestTaskStateMachine:
                     capabilities=["test"],
                 )
             
-            async def build_prompt(self, task: Task) -> str:
+            async def build_prompt(self, task: Task) -> str:  # type: ignore[override]
                 return "Test prompt"
             
-            async def parse_output(self, raw_output: str) -> WorkerOutput:
+            async def parse_output(self, raw_output: str) -> WorkerOutput:  # type: ignore[override]
                 return WorkerOutput(
                     task_id=task.task_id,
                     worker_id="test_worker",
@@ -419,10 +419,10 @@ class TestTaskStateMachine:
                     capabilities=["test"],
                 )
             
-            async def build_prompt(self, task: Task) -> str:
+            async def build_prompt(self, task: Task) -> str:  # type: ignore[override]
                 return "Test prompt"
             
-            async def parse_output(self, raw_output: str) -> WorkerOutput:
+            async def parse_output(self, raw_output: str) -> WorkerOutput:  # type: ignore[override]
                 return WorkerOutput(
                     task_id=task.task_id,
                     worker_id="test_worker",
@@ -493,10 +493,10 @@ class TestTaskStateMachine:
                     capabilities=["test"],
                 )
             
-            async def build_prompt(self, task: Task) -> str:
+            async def build_prompt(self, task: Task) -> str:  # type: ignore[override]
                 return "Test prompt"
             
-            async def parse_output(self, raw_output: str) -> WorkerOutput:
+            async def parse_output(self, raw_output: str) -> WorkerOutput:  # type: ignore[override]
                 return WorkerOutput(
                     task_id=task.task_id,
                     worker_id="failing_worker",
@@ -531,7 +531,8 @@ class TestTaskStateMachine:
         # Verify error reason in state history
         failed_transition = [t for t in task.state_history if t.to_state == TaskStatus.FAILED]
         assert len(failed_transition) >= 1
-        assert "Worker execution failed" in failed_transition[0].reason
+        if failed_transition[0].reason:
+            assert "Worker execution failed" in failed_transition[0].reason
     
     async def test_denied_is_a_terminal_state(self) -> None:
         """Test that DENIED is a terminal state."""

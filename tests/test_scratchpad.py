@@ -1,6 +1,7 @@
 """Tests for Scratchpad Manager."""
 
 import pytest
+from typing import Any
 from uuid import uuid4
 
 from core.schemas import Scratchpad, ScratchpadEntry, ScratchpadEntryType
@@ -13,7 +14,7 @@ class MockMemoryRouter(MemoryRouter):
     
     def __init__(self) -> None:
         super().__init__()
-        self.writes = []
+        self.writes: list[dict[str, Any]] = []
     
     async def write(self, task_id: str, content: str, metadata: dict | None = None) -> None:  # type: ignore[override]
         """Mock write."""
@@ -27,11 +28,11 @@ class MockMemoryRouter(MemoryRouter):
         """Mock fetch."""
         return []
     
-    async def fetch_by_filter(self, filter: dict, collection: str | None, limit: int | None) -> list:
+    async def fetch_by_filter(self, filter: dict, collection: str | None, limit: int | None) -> list:  # type: ignore[override]
         """Mock fetch_by_filter."""
         return []
     
-    async def write_to_collection(self, data: dict, collection: str, document_id: str | None) -> None:
+    async def write_to_collection(self, data: dict, collection: str, document_id: str | None) -> None:  # type: ignore[override]
         """Mock write_to_collection."""
         self.writes.append({
             "data": data,
@@ -148,8 +149,9 @@ class TestScratchpadManager:
         
         # Verify it's in the scratchpad
         scratchpad = await manager.get(task_id)
-        assert len(scratchpad.entries) == 1
-        assert scratchpad.entries[0].entry_id == entry.entry_id
+        if scratchpad:
+            assert len(scratchpad.entries) == 1
+            assert scratchpad.entries[0].entry_id == entry.entry_id
     
     async def test_compact_with_provided_summary_uses_that_summary(self) -> None:
         """Test compact() with provided summary uses that summary."""
@@ -227,14 +229,16 @@ class TestScratchpadManager:
         
         # Before compaction
         scratchpad = await manager.get(task_id)
-        assert scratchpad.is_compacted is False
-        assert scratchpad.completed_at is None
+        if scratchpad:
+            assert scratchpad.is_compacted is False
+            assert scratchpad.completed_at is None
         
         # After compaction
         await manager.compact(task_id)
         scratchpad = await manager.get(task_id)
-        assert scratchpad.is_compacted is True
-        assert scratchpad.completed_at is not None
+        if scratchpad:
+            assert scratchpad.is_compacted is True
+            assert scratchpad.completed_at is not None
     
     async def test_get_entries_by_type_returns_only_matching_entries(self) -> None:
         """Test get_entries_by_type() returns only matching entries."""

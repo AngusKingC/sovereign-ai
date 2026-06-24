@@ -28,6 +28,7 @@ import os
 import sys
 from contextlib import redirect_stdout
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch, AsyncMock, MagicMock
 
 # Add project root to sys.path so imports work
@@ -184,7 +185,10 @@ async def verify_tui_e2e() -> None:
         # This replaces the `tui` object from the original Plan 38.6 script.
         class CognitionStack:
             """Holds references to the constructed cognition stack."""
-            pass
+            memory_router: Any
+            orchestrator: Any
+            worker: Any
+            emitter: Any
 
         stack = CognitionStack()
         stack.memory_router = memory_router

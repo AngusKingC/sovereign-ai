@@ -94,7 +94,7 @@ class SelectionScreen(ModalScreen):
     def compose(self) -> ComposeResult:
         """Compose the selection screen."""
         yield Container(
-            Label(self.title, id="selection-title"),
+            Label(self.title or "", id="selection-title"),
             ListView(id="selection-list"),
             Container(
                 Button("Cancel", id="cancel-btn"),
@@ -108,7 +108,7 @@ class SelectionScreen(ModalScreen):
         list_view = self.query_one("#selection-list", ListView)
         for option in self.options:
             list_item = ListItem(Label(option))
-            list_item.option_value = option
+            list_item.option_value = option  # type: ignore[attr-defined]
             list_view.append(list_item)
     
     def on_list_view_selected(self, event: ListView.Selected) -> None:
@@ -156,7 +156,7 @@ class CommandMenu(ListView):
                     label += f" ({item['shortcut']})"
                 list_item = ListItem(Label(label, id=f"cmd-{item['command_type']}"))
                 # Store command type as metadata
-                list_item.command_type = item['command_type']
+                list_item.command_type = item['command_type']  # type: ignore[attr-defined]
                 self.append(list_item)
 
 
@@ -286,7 +286,7 @@ class JarvisTUI(App):
                 obsidian_vault_path=os.getenv("OBSIDIAN_VAULT_PATH"),
             )
         else:
-            self.worker_persistence = None
+            self.worker_persistence = None  # type: ignore[assignment]
         
         # Create base dependencies
         skill_registry = SkillRegistry(emitter=self.emitter)
@@ -487,7 +487,7 @@ class JarvisTUI(App):
                     )
                 elif command_type == "model":
                     from core.handlers import ModelHandler
-                    handler = ModelHandler()
+                    handler = ModelHandler()  # type: ignore[assignment]
                     # For now, show message about adapter selection
                     asyncio.create_task(self.process_command("/model"))
                 else:

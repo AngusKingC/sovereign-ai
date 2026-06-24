@@ -107,7 +107,19 @@ class LlamaCppAdapter(LLMAdapter):
             )
 
             duration_ms = int((time.perf_counter() - start_time) * 1000)
-            response_length = len(output["choices"][0]["text"])
+            
+            # Handle union type: output can be dict or iterator
+            if hasattr(output, "__iter__") and not isinstance(output, dict):
+                # Iterator case - consume it
+                output_list = list(output)
+                if output_list:
+                    output = output_list[0]  # type: ignore[assignment]
+                else:
+                    output = {"choices": [{"text": ""}], "usage": {"total_tokens": 0}}  # type: ignore[assignment]
+            else:
+                output = output  # type: ignore[assignment]
+            
+            response_length = len(output["choices"][0]["text"])  # type: ignore[index]
 
             # Emit adapter response event
             await self.emitter.emit(TraceEvent(
@@ -120,16 +132,16 @@ class LlamaCppAdapter(LLMAdapter):
                     "model_name": self._model_name,
                     "prompt_length": prompt_length,
                     "response_length": response_length,
-                    "tokens_used": output.get("usage", {}).get("total_tokens", 0),
+                    "tokens_used": output.get("usage", {}).get("total_tokens", 0),  # type: ignore[union-attr]
                 },
                 duration_ms=duration_ms,
             ))
 
             return LLMResponse(
-                content=output["choices"][0]["text"],
-                raw={"model": self._model_name, "usage": output.get("usage", {})},
+                content=output["choices"][0]["text"],  # type: ignore[index]
+                raw={"model": self._model_name, "usage": output.get("usage", {})},  # type: ignore[union-attr]
                 model=self._model_name,
-                tokens_used=output.get("usage", {}).get("total_tokens", 0),
+                tokens_used=output.get("usage", {}).get("total_tokens", 0),  # type: ignore[union-attr]
                 duration_ms=duration_ms,
             )
         except Exception as e:

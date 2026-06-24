@@ -216,7 +216,8 @@ class TestRetentionManager:
             call_count[0] += 1
             return await original_run_all(*args, **kwargs)
         
-        manager.run_all = mock_run_all
+        # Use setattr to replace the method
+        setattr(manager, 'run_all', mock_run_all)
         
         await manager.schedule_hook()
         

@@ -514,4 +514,4 @@ class GitSkill:
         stdout_str = stdout.decode("utf-8", errors="replace")
         stderr_str = stderr.decode("utf-8", errors="replace")
 
-        return stdout_str, stderr_str, process.returncode
+        return stdout_str, stderr_str, process.returncode or 0

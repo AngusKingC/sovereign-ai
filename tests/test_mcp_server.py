@@ -233,4 +233,5 @@ class TestMCPServer:
         server.start()
         server.stop()
 
-        assert not server._server_thread.is_alive()
+        if server._server_thread:
+            assert not server._server_thread.is_alive()

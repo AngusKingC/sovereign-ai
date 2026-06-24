@@ -9,6 +9,7 @@ import smtplib
 import os
 from email import message_from_bytes
 from email.header import decode_header
+from typing import cast
 
 from core.observability import (
     TraceComponent,
@@ -104,12 +105,15 @@ class EmailSkill:
             pass
 
         # Check credentials
-        if not self._imap_host:
+        if self._imap_host is None:
             raise SkillExecutionError("EMAIL_IMAP_HOST environment variable not set")
-        if not self._username:
+        if self._username is None:
             raise SkillExecutionError("EMAIL_USERNAME environment variable not set")
-        if not self._password:
+        if self._password is None:
             raise SkillExecutionError("EMAIL_PASSWORD environment variable not set")
+        imap_host = cast(str, self._imap_host)
+        username = cast(str, self._username)
+        password = cast(str, self._password)
 
         try:
             # Connect to IMAP server
@@ -118,13 +122,13 @@ class EmailSkill:
             
             mail = await loop.run_in_executor(
                 None,
-                lambda: imaplib.IMAP4_SSL(self._imap_host, self._imap_port)
+                lambda: imaplib.IMAP4_SSL(imap_host, self._imap_port)
             )
             
             # Login
             await loop.run_in_executor(
                 None,
-                lambda: mail.login(self._username, self._password)
+                lambda: mail.login(username, password)
             )
             
             # Select inbox
@@ -159,7 +163,9 @@ class EmailSkill:
                 )
                 
                 # Parse message
-                raw_email = msg_data[0][1]
+                raw_email = msg_data[0][1] if isinstance(msg_data[0], tuple) else msg_data[0]
+                if not isinstance(raw_email, bytes):
+                    raise SkillExecutionError("Failed to parse email: invalid message format")
                 email_message = message_from_bytes(raw_email)
                 
                 # Extract fields
@@ -172,15 +178,23 @@ class EmailSkill:
                 if email_message.is_multipart():
                     for part in email_message.walk():
                         if part.get_content_type() == "text/plain":
-                            body = part.get_payload(decode=True).decode("utf-8", errors="replace")
+                            payload = part.get_payload(decode=True)
+                            if isinstance(payload, bytes):
+                                body = payload.decode("utf-8", errors="replace")
                             break
                 else:
-                    body = email_message.get_payload(decode=True).decode("utf-8", errors="replace")
+                    payload = email_message.get_payload(decode=True)
+                    if isinstance(payload, bytes):
+                        body = payload.decode("utf-8", errors="replace")
                 
                 body_preview = body[:200] if body else ""
                 
                 # Check if unread
-                unread = "\\Seen" not in mail.fetch(email_id, "(FLAGS)")[1][0].decode()
+                flags_response = mail.fetch(email_id, "(FLAGS)")[1]
+                if flags_response and isinstance(flags_response[0], bytes):
+                    unread = b"\\Seen" not in flags_response[0]
+                else:
+                    unread = False
                 
                 messages_data.append({
                     "uid": email_id.decode(),
@@ -345,12 +359,15 @@ class EmailSkill:
             raise SkillExecutionError(f"Approval request failed: {str(e)}")
 
         # Check credentials
-        if not self._smtp_host:
+        if self._smtp_host is None:
             raise SkillExecutionError("EMAIL_SMTP_HOST environment variable not set")
-        if not self._username:
+        if self._username is None:
             raise SkillExecutionError("EMAIL_USERNAME environment variable not set")
-        if not self._password:
+        if self._password is None:
             raise SkillExecutionError("EMAIL_PASSWORD environment variable not set")
+        smtp_host = cast(str, self._smtp_host)
+        username = cast(str, self._username)
+        password = cast(str, self._password)
 
         try:
             import asyncio
@@ -359,7 +376,7 @@ class EmailSkill:
             # Connect to SMTP server
             server = await loop.run_in_executor(
                 None,
-                lambda: smtplib.SMTP(self._smtp_host, self._smtp_port)
+                lambda: smtplib.SMTP(smtp_host, self._smtp_port)
             )
             
             # Start TLS
@@ -368,7 +385,7 @@ class EmailSkill:
             # Login
             await loop.run_in_executor(
                 None,
-                lambda: server.login(self._username, self._password)
+                lambda: server.login(username, password)
             )
             
             # Send email

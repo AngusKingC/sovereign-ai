@@ -87,14 +87,14 @@ class JarvisRichCLI:
                 obsidian_vault_path=os.getenv("OBSIDIAN_VAULT_PATH"),
             )
         else:
-            self.worker_persistence = None
+            self.worker_persistence = None  # type: ignore[assignment]
         
         # Create InputSanitiser
         input_sanitiser = InputSanitiser(emitter=None)
 
         # Create orchestrator
         self.orchestrator = Orchestrator(
-            memory_router=None,
+            memory_router=None,  # type: ignore[arg-type]
             input_sanitiser=input_sanitiser,
         )
 

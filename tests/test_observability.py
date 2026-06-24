@@ -193,7 +193,7 @@ class TestGlobalEmitter:
         """Test getting default global emitter."""
         # Reset global emitter to None to ensure default behavior
         from core.observability import set_trace_emitter
-        set_trace_emitter(None)
+        set_trace_emitter(None)  # type: ignore[arg-type]
         
         emitter = get_trace_emitter()
         assert isinstance(emitter, ConsoleTraceEmitter)

@@ -11,7 +11,7 @@ from uuid import uuid4
 
 import httpx
 
-from core.approval_gate import ApprovalRequest, ApprovalActionType
+from core.approval_gate import ApprovalRequest, ApprovalActionType, ApprovalGate
 from core.observability import (
     TraceComponent,
     TraceEventType,
@@ -26,9 +26,14 @@ from core.exceptions import SkillExecutionError, ApprovalDeniedError
 class HomeAssistantSkill:
     """Skill for interacting with Home Assistant."""
 
-    def __init__(self, emitter: TraceEmitter | None = None) -> None:
+    def __init__(
+        self,
+        emitter: TraceEmitter | None = None,
+        approval_gate: "ApprovalGate | None" = None,
+    ) -> None:
         """Initialize the Home Assistant skill."""
         self._emitter = emitter or MemoryTraceEmitter()
+        self._approval_gate = approval_gate
         self._base_url = os.getenv("HA_BASE_URL")
         self._token = os.getenv("HA_TOKEN")
 
@@ -207,7 +212,11 @@ class HomeAssistantSkill:
             )
 
         # Request approval before executing service
-        approval_gate = ApprovalGate(emitter=self._emitter)
+        if self._approval_gate:
+            approval_gate = self._approval_gate
+        else:
+            from core.approval_gate import ApprovalGate
+            approval_gate = ApprovalGate(emitter=self._emitter, state_machine=None, memory_router=None)  # type: ignore[arg-type]
         action_description = f"Call Home Assistant service {domain}.{service} on {entity_id}"
         try:
             request = ApprovalRequest(
@@ -234,12 +243,12 @@ class HomeAssistantSkill:
             }
             service_data = {"entity_id": entity_id, **kwargs}
             async with httpx.AsyncClient() as client:
-                response = await client.post(
+                http_response = await client.post(
                     f"{self._base_url}/api/services/{domain}/{service}",
                     headers=headers,
                     json=service_data,
                 )
-                response.raise_for_status()
+                http_response.raise_for_status()
 
             try:
                 event = TraceEvent(

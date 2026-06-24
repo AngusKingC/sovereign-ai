@@ -124,13 +124,13 @@ class TestHomeAssistantSkill:
 
             with patch("core.approval_gate.ApprovalGate") as mock_gate_class:
                 mock_gate = AsyncMock()
-                mock_response = ApprovalResponse(
+                approval_response = ApprovalResponse(
                     request_id="test-request-id",
                     task_id="test-task-id",
                     approved=True,
                     approved_by="test-user",
                 )
-                mock_gate.request_approval = AsyncMock(return_value=mock_response)
+                mock_gate.request_approval = AsyncMock(return_value=approval_response)
                 mock_gate_class.return_value = mock_gate
 
                 result = await skill.call_service("light", "turn_on", "light.living_room")
@@ -166,13 +166,13 @@ class TestHomeAssistantSkill:
 
             with patch("core.approval_gate.ApprovalGate") as mock_gate_class:
                 mock_gate = AsyncMock()
-                mock_response = ApprovalResponse(
+                approval_response = ApprovalResponse(
                     request_id="test-request-id",
                     task_id="test-task-id",
                     approved=True,
                     approved_by="test-user",
                 )
-                mock_gate.request_approval = AsyncMock(return_value=mock_response)
+                mock_gate.request_approval = AsyncMock(return_value=approval_response)
                 mock_gate_class.return_value = mock_gate
 
                 await skill.call_service("light", "turn_on", "light.living_room")

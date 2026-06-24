@@ -107,13 +107,16 @@ class GroqAdapter(LLMAdapter):
 
             response = await self._client.chat.completions.create(
                 model=self._model_name,
-                messages=groq_messages,
+                messages=groq_messages,  # type: ignore[arg-type]
                 temperature=temperature or self.temperature,
                 max_tokens=max_tokens,
             )
 
             duration_ms = int((time.perf_counter() - start_time) * 1000)
-            response_length = len(response.choices[0].message.content)
+            
+            # Handle None content
+            content = response.choices[0].message.content if response.choices[0].message.content is not None else ""
+            response_length = len(content)
 
             # Emit adapter response event
             try:
@@ -144,7 +147,7 @@ class GroqAdapter(LLMAdapter):
                 pass
 
             return LLMResponse(
-                content=response.choices[0].message.content,
+                content=content,
                 raw={"model": self._model_name, "usage": response.usage.model_dump() if response.usage else {}},
                 model=self._model_name,
                 tokens_used=response.usage.total_tokens if response.usage else 0,

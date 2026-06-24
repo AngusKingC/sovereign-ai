@@ -4,7 +4,7 @@ import asyncio
 import ast
 import math
 import operator
-from typing import Any
+from typing import Any, Callable, cast
 
 from core.observability import (
     TraceEventType,
@@ -20,7 +20,7 @@ class CalculatorSkill:
     """Calculator skill for mathematical operations and unit conversions."""
 
     # Safe operators for expression evaluation
-    _SAFE_OPERATORS = {
+    _SAFE_OPERATORS: dict[type[ast.AST], Callable[..., Any]] = {
         ast.Add: operator.add,
         ast.Sub: operator.sub,
         ast.Mult: operator.mul,
@@ -197,16 +197,18 @@ class CalculatorSkill:
                 raise ValueError(f"Operator not allowed: {op_type}")
         elif isinstance(node, ast.UnaryOp):
             operand = self._eval_node(node.operand)
-            op_type = type(node.op)
+            op_type = type(node.op)  # type: ignore[assignment]
             if op_type in self._SAFE_OPERATORS:
-                return self._SAFE_OPERATORS[op_type](operand)
+                op_func = cast(Callable[..., Any], self._SAFE_OPERATORS[op_type])
+                return op_func(operand)
             else:
                 raise ValueError(f"Operator not allowed: {op_type}")
         elif isinstance(node, ast.Call):
             func_name = node.func.id if isinstance(node.func, ast.Name) else None
             if func_name in self._SAFE_FUNCTIONS:
                 args = [self._eval_node(arg) for arg in node.args]
-                return self._SAFE_FUNCTIONS[func_name](*args)
+                func = cast(Callable[..., Any], self._SAFE_FUNCTIONS[func_name])
+                return func(*args)
             else:
                 raise ValueError(f"Function not allowed: {func_name}")
         elif isinstance(node, ast.Name):
@@ -279,8 +281,8 @@ class CalculatorSkill:
             result = self._convert_temperature(value, from_unit, to_unit)
         else:
             # Linear conversion using base unit
-            from_factor = self._UNIT_CONVERSIONS[from_unit]
-            to_factor = self._UNIT_CONVERSIONS[to_unit]
+            from_factor = cast(float, self._UNIT_CONVERSIONS[from_unit])
+            to_factor = cast(float, self._UNIT_CONVERSIONS[to_unit])
             base_value = value * from_factor
             result = base_value / to_factor
 
