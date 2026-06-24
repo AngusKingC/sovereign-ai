@@ -6,9 +6,11 @@ without holding opinions or writing beliefs. Pure analysis and dispatch.
 """
 
 import asyncio
+import logging
 import time
 from typing import TYPE_CHECKING, Any
 
+from core.input_sanitiser import InputSanitiser
 from core.observability import (
     MemoryTraceEmitter,
     TraceComponent,
@@ -19,19 +21,20 @@ from core.observability import (
 )
 from core.schemas import StrategicContext, Task, TaskStatus, WorkerOutput, WorkerStatus
 
-if TYPE_CHECKING:
-    from core.memory_router import MemoryRouter
-    from core.worker_base import WorkerBase
-    from core.orchestrator_improvement import OrchestratorImprovementLoop
-    from core.approval_gate import ApprovalGate
-    from core.escalation import EscalationEngine
-    from core.adapter_fallback import AdapterFallbackChain
-    from core.evaluator import OutputEvaluator
-    from core.trace_optimiser import TraceOptimiser
-    from core.a2a_protocol import A2ARouter, A2ARequest, A2AResponse
-    from orchestrator.improvement_loop import ImprovementLoopOrchestrator
+logger = logging.getLogger(__name__)
 
-from core.input_sanitiser import InputSanitiser
+if TYPE_CHECKING:
+    from core.a2a_protocol import A2ARequest, A2AResponse, A2ARouter
+    from core.adapter_fallback import AdapterFallbackChain
+    from core.approval_gate import ApprovalGate
+    from core.cost_tracker import CostTracker
+    from core.escalation import EscalationEngine
+    from core.evaluator import OutputEvaluator
+    from core.memory_router import MemoryRouter
+    from core.orchestrator_improvement import OrchestratorImprovementLoop
+    from core.trace_optimiser import TraceOptimiser
+    from core.worker_base import WorkerBase
+    from orchestrator.improvement_loop import ImprovementLoopOrchestrator
 
 
 class Orchestrator:
@@ -50,6 +53,7 @@ class Orchestrator:
         input_sanitiser: InputSanitiser | None = None,
         output_evaluator: "OutputEvaluator | None" = None,
         emitter: TraceEmitter | None = None,
+        cost_tracker: "CostTracker | None" = None,
     ) -> None:
         """Initialize the orchestrator with dependencies.
 
@@ -65,6 +69,7 @@ class Orchestrator:
             input_sanitiser: InputSanitiser for input validation
             output_evaluator: OutputEvaluator for output evaluation
             emitter: TraceEmitter for observability
+            cost_tracker: CostTracker for spend cap enforcement
         """
         self.memory_router = memory_router
         self.improvement_loop = (
@@ -82,6 +87,7 @@ class Orchestrator:
         self.pending_approval_queue: list[Task] = []
         self._emitter = emitter or MemoryTraceEmitter()
         self._input_sanitiser = input_sanitiser or InputSanitiser(emitter=emitter)
+        self._cost_tracker = cost_tracker
 
         # Import TaskStateMachine lazily to avoid circular imports
         from core.task_state_machine import TaskStateMachine
@@ -234,6 +240,47 @@ class Orchestrator:
 
         worker = self.workers[worker_id]
 
+        # Check spend cap before execution if cost_tracker is configured
+        if self._cost_tracker is not None:
+            try:
+                # Rough estimate: cost_per_token * max_tokens (default 4096)
+                max_tokens = getattr(worker, "max_tokens", 4096)
+                cost_per_token = getattr(worker, "cost_per_token", 0.00001)
+                estimated_cost = cost_per_token * max_tokens
+                cost_decision = await self._cost_tracker.check_spend(
+                    estimated_cost_usd=estimated_cost
+                )
+                if not cost_decision.approved:
+                    # Per AR20: spend cap exceeded — fail task gracefully
+                    return WorkerOutput(
+                        task_id=task.task_id,
+                        worker_id=worker_id,
+                        content="",
+                        confidence=0.0,
+                        model_used="none",
+                        metadata={
+                            "error": f"Cost cap exceeded: {cost_decision.reason}"
+                        },
+                    )
+                if cost_decision.fallback_model is not None:
+                    # Route to fallback model (will be wired in Plan 78 — Model Routing)
+                    logger.warning(
+                        f"Cost fallback triggered: routing to {cost_decision.fallback_model}"
+                    )
+            except Exception as e:
+                # Cost check failure should not crash task processing
+                # Per AR18: broad except requires inline comment + WARNING trace
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        message=f"Cost check failed: {type(e).__name__}: {e}",
+                        level=TraceLevel.WARNING,
+                        data={"error": str(e)},
+                        duration_ms=0,
+                    )
+                )
+
         # Transition to EXECUTING before worker execution
         try:
             task = await self.state_machine.transition(
@@ -333,6 +380,29 @@ class Orchestrator:
                     reason="Validation passed",
                     actor="orchestrator",
                 )
+                # Record cost after task completion if cost_tracker is configured
+                if self._cost_tracker is not None and hasattr(worker, "cost_per_token"):
+                    try:
+                        await self._cost_tracker.record_usage(
+                            model=getattr(worker, "model_name", "unknown"),
+                            tokens_in=getattr(output, "tokens_used", 0),
+                            tokens_out=getattr(output, "tokens_used", 0),
+                            cost_usd=getattr(output, "estimated_cost", 0.0),
+                            task_id=str(task.task_id),
+                        )
+                    except Exception as e:
+                        # Cost recording failure should not crash task completion
+                        # Per AR18: broad except requires inline comment + WARNING trace
+                        await self._emitter.emit(
+                            TraceEvent(
+                                event_type=TraceEventType.OPERATION_ERROR,
+                                component=TraceComponent.ORCHESTRATOR,
+                                message=f"Cost recording failed: {type(e).__name__}: {e}",
+                                level=TraceLevel.WARNING,
+                                data={"error": str(e)},
+                                duration_ms=0,
+                            )
+                        )
                 # Compact scratchpad when task transitions to COMPLETE
                 try:
                     await self.scratchpad_manager.compact(task.task_id)

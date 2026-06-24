@@ -30,15 +30,10 @@ repos:
       - id: isort
         args: ['--profile', 'black']
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.9.0
-    hooks:
-      - id: mypy
-        args: [--ignore-missing-imports]
-        additional_dependencies:
-          - types-requests
-          - types-pyyaml
-          - pydantic>=2.0.0
+  # mypy hook REMOVED in Plan 74 — caused Plan 73 stall (follows imports into
+  # out-of-scope files, surfaces pre-existing errors). CI runs full-repo mypy.
+  # Pre-commit is for fast feedback (ruff, black, isort, detect-secrets) only.
+  # See stall-root-cause-and-fixes.md Fix 1.
 
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0

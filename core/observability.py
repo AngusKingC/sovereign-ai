@@ -273,6 +273,11 @@ class TraceEventType(str, Enum):
     # Model thinking events
     MODEL_THINKING_CAPTURED = "model_thinking_captured"
 
+    # Cost tracking events (NEW — Plan 74)
+    COST_RECORDED = "cost_recorded"
+    COST_ALERT = "cost_alert"
+    COST_FALLBACK_TRIGGERED = "cost_fallback_triggered"
+
 
 class TraceEvent(BaseModel):
     """A single trace event emitted by a component.

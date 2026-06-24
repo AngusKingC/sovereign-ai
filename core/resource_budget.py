@@ -9,21 +9,23 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from core.observability import (
+    MemoryTraceEmitter,
     TraceComponent,
+    TraceEmitter,
+    TraceEvent,
     TraceEventType,
     TraceLevel,
-    TraceEvent,
-    TraceEmitter,
-    MemoryTraceEmitter,
 )
 
 if TYPE_CHECKING:
+    from core.cost_tracker import CostTracker
     from system.resource_manager import ResourceManager
 
 
 @dataclass
 class BudgetCheckResult:
     """Result of a budget check."""
+
     approved: bool
     reason: str
     tokens_available: int = 0
@@ -40,6 +42,7 @@ class ResourceBudget:
         max_task_duration_seconds: int = 300,
         resource_manager: "ResourceManager | None" = None,
         emitter: TraceEmitter | None = None,
+        cost_tracker: "CostTracker | None" = None,
     ) -> None:
         """Initialize the resource budget manager.
 
@@ -50,6 +53,7 @@ class ResourceBudget:
             max_task_duration_seconds: Maximum task duration in seconds
             resource_manager: Optional resource manager for VRAM enforcement
             emitter: Trace emitter for observability
+            cost_tracker: Optional cost tracker for spend cap enforcement
         """
         self._max_tokens_per_task = max_tokens_per_task
         self._max_tokens_per_session = max_tokens_per_session
@@ -57,6 +61,7 @@ class ResourceBudget:
         self._max_task_duration_seconds = max_task_duration_seconds
         self._resource_manager = resource_manager
         self._emitter = emitter or MemoryTraceEmitter()
+        self._cost_tracker = cost_tracker
         self._session_token_usage: dict[str, int] = {}
 
     async def check_token_budget(
@@ -78,18 +83,20 @@ class ResourceBudget:
         # Check per-task limit
         if tokens_requested > self._max_tokens_per_task:
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_COMPLETE,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.WARNING,
-                    message="Token budget denied - exceeds per-task limit",
-                    data={
-                        "task_id": task_id,
-                        "tokens_requested": tokens_requested,
-                        "max_tokens_per_task": self._max_tokens_per_task,
-                    },
-                    duration_ms=0,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_COMPLETE,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.WARNING,
+                        message="Token budget denied - exceeds per-task limit",
+                        data={
+                            "task_id": task_id,
+                            "tokens_requested": tokens_requested,
+                            "max_tokens_per_task": self._max_tokens_per_task,
+                        },
+                        duration_ms=0,
+                    )
+                )
             except Exception:
                 pass
             return BudgetCheckResult(
@@ -103,41 +110,96 @@ class ResourceBudget:
             session_used = self._session_token_usage.get(session_id, 0)
             if session_used + tokens_requested > self._max_tokens_per_session:
                 try:
-                    await self._emitter.emit(TraceEvent(
-                        event_type=TraceEventType.OPERATION_COMPLETE,
-                        component=TraceComponent.WORKER,
-                        level=TraceLevel.WARNING,
-                        message="Token budget denied - exceeds per-session limit",
-                        data={
-                            "task_id": task_id,
-                            "session_id": session_id,
-                            "tokens_requested": tokens_requested,
-                            "session_used": session_used,
-                            "max_tokens_per_session": self._max_tokens_per_session,
-                        },
-                        duration_ms=0,
-                    ))
+                    await self._emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_COMPLETE,
+                            component=TraceComponent.WORKER,
+                            level=TraceLevel.WARNING,
+                            message="Token budget denied - exceeds per-session limit",
+                            data={
+                                "task_id": task_id,
+                                "session_id": session_id,
+                                "tokens_requested": tokens_requested,
+                                "session_used": session_used,
+                                "max_tokens_per_session": self._max_tokens_per_session,
+                            },
+                            duration_ms=0,
+                        )
+                    )
                 except Exception:
                     pass
                 return BudgetCheckResult(
                     approved=False,
                     reason=f"Token request {tokens_requested} would exceed per-session limit {self._max_tokens_per_session} (already used {session_used})",
-                    tokens_available=max(0, self._max_tokens_per_session - session_used),
+                    tokens_available=max(
+                        0, self._max_tokens_per_session - session_used
+                    ),
                 )
+
+        # Check cost cap if cost_tracker is configured
+        if self._cost_tracker is not None:
+            try:
+                # Rough estimate: tokens * 0.00001 (refined by CostTracker)
+                estimated_cost = tokens_requested * 0.00001
+                cost_decision = await self._cost_tracker.check_spend(
+                    estimated_cost_usd=estimated_cost
+                )
+                if not cost_decision.approved:
+                    try:
+                        await self._emitter.emit(
+                            TraceEvent(
+                                event_type=TraceEventType.OPERATION_COMPLETE,
+                                component=TraceComponent.WORKER,
+                                level=TraceLevel.WARNING,
+                                message="Cost cap exceeded",
+                                data={
+                                    "task_id": task_id,
+                                    "tokens_requested": tokens_requested,
+                                    "estimated_cost_usd": estimated_cost,
+                                    "reason": cost_decision.reason,
+                                },
+                                duration_ms=0,
+                            )
+                        )
+                    except Exception:
+                        pass
+                    return BudgetCheckResult(
+                        approved=False,
+                        reason=f"Cost cap exceeded: {cost_decision.reason}",
+                        tokens_available=self._max_tokens_per_task,
+                    )
+            except Exception as e:
+                # Cost check failure should not crash budget check
+                # Per AR18: broad except requires inline comment + WARNING trace
+                try:
+                    await self._emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.WORKER,
+                            message=f"Cost check failed: {type(e).__name__}: {e}",
+                            level=TraceLevel.WARNING,
+                            data={"error": str(e)},
+                            duration_ms=0,
+                        )
+                    )
+                except Exception:
+                    pass
 
         # Budget approved
         try:
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                message="Token budget approved",
-                data={
-                    "task_id": task_id,
-                    "tokens_requested": tokens_requested,
-                },
-                duration_ms=0,
-            ))
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="Token budget approved",
+                    data={
+                        "task_id": task_id,
+                        "tokens_requested": tokens_requested,
+                    },
+                    duration_ms=0,
+                )
+            )
         except Exception:
             pass
 
@@ -145,7 +207,8 @@ class ResourceBudget:
         if session_id:
             tokens_available = min(
                 tokens_available,
-                self._max_tokens_per_session - self._session_token_usage.get(session_id, 0),
+                self._max_tokens_per_session
+                - self._session_token_usage.get(session_id, 0),
             )
 
         return BudgetCheckResult(
@@ -168,17 +231,19 @@ class ResourceBudget:
         """
         if current_concurrent >= self._max_concurrent_workers:
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_COMPLETE,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.WARNING,
-                    message="Worker budget denied - exceeds max concurrent workers",
-                    data={
-                        "current_concurrent": current_concurrent,
-                        "max_concurrent_workers": self._max_concurrent_workers,
-                    },
-                    duration_ms=0,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_COMPLETE,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.WARNING,
+                        message="Worker budget denied - exceeds max concurrent workers",
+                        data={
+                            "current_concurrent": current_concurrent,
+                            "max_concurrent_workers": self._max_concurrent_workers,
+                        },
+                        duration_ms=0,
+                    )
+                )
             except Exception:
                 pass
             return BudgetCheckResult(
@@ -188,17 +253,19 @@ class ResourceBudget:
             )
 
         try:
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                message="Worker budget approved",
-                data={
-                    "current_concurrent": current_concurrent,
-                    "max_concurrent_workers": self._max_concurrent_workers,
-                },
-                duration_ms=0,
-            ))
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="Worker budget approved",
+                    data={
+                        "current_concurrent": current_concurrent,
+                        "max_concurrent_workers": self._max_concurrent_workers,
+                    },
+                    duration_ms=0,
+                )
+            )
         except Exception:
             pass
 
@@ -222,16 +289,18 @@ class ResourceBudget:
         """
         if self._resource_manager is None:
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_COMPLETE,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.INFO,
-                    message="VRAM budget check skipped - no resource manager",
-                    data={
-                        "model_vram_mb": model_vram_mb,
-                    },
-                    duration_ms=0,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_COMPLETE,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.INFO,
+                        message="VRAM budget check skipped - no resource manager",
+                        data={
+                            "model_vram_mb": model_vram_mb,
+                        },
+                        duration_ms=0,
+                    )
+                )
             except Exception:
                 pass
             return BudgetCheckResult(
@@ -244,16 +313,18 @@ class ResourceBudget:
         # This requires system profile and loaded model info
         # For now, we'll approve and let ResourceManager handle the actual check during load
         try:
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                message="VRAM budget approved - delegated to ResourceManager",
-                data={
-                    "model_vram_mb": model_vram_mb,
-                },
-                duration_ms=0,
-            ))
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="VRAM budget approved - delegated to ResourceManager",
+                    data={
+                        "model_vram_mb": model_vram_mb,
+                    },
+                    duration_ms=0,
+                )
+            )
         except Exception:
             pass
 
@@ -284,7 +355,9 @@ class ResourceBudget:
             BudgetCheckResult indicating approval status and reason
         """
         # Check token budget first
-        token_result = await self.check_token_budget(task_id, tokens_requested, session_id)
+        token_result = await self.check_token_budget(
+            task_id, tokens_requested, session_id
+        )
         if not token_result.approved:
             return token_result
 
@@ -300,19 +373,21 @@ class ResourceBudget:
 
         # All checks passed
         try:
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                message="All budget checks approved",
-                data={
-                    "task_id": task_id,
-                    "tokens_requested": tokens_requested,
-                    "model_vram_mb": model_vram_mb,
-                    "current_concurrent": current_concurrent,
-                },
-                duration_ms=0,
-            ))
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="All budget checks approved",
+                    data={
+                        "task_id": task_id,
+                        "tokens_requested": tokens_requested,
+                        "model_vram_mb": model_vram_mb,
+                        "current_concurrent": current_concurrent,
+                    },
+                    duration_ms=0,
+                )
+            )
         except Exception:
             pass
 
@@ -324,7 +399,7 @@ class ResourceBudget:
 
     async def check_all_budgets(self, worker_id: str) -> bool:
         """Legacy method for backward compatibility with tests.
-        
+
         Deprecated: Use check_worker_budget instead.
         This method is kept for backward compatibility with existing tests.
         """
@@ -346,20 +421,24 @@ class ResourceBudget:
             session_id: Optional session identifier for session-level tracking
         """
         if session_id:
-            self._session_token_usage[session_id] = self._session_token_usage.get(session_id, 0) + tokens_used
+            self._session_token_usage[session_id] = (
+                self._session_token_usage.get(session_id, 0) + tokens_used
+            )
 
         try:
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                message="Token usage recorded",
-                data={
-                    "task_id": task_id,
-                    "tokens_used": tokens_used,
-                    "session_id": session_id if session_id else "none",
-                },
-                duration_ms=0,
-            ))
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="Token usage recorded",
+                    data={
+                        "task_id": task_id,
+                        "tokens_used": tokens_used,
+                        "session_id": session_id if session_id else "none",
+                    },
+                    duration_ms=0,
+                )
+            )
         except Exception:
             pass
