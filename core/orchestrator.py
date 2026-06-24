@@ -9,15 +9,15 @@ import asyncio
 import time
 from typing import TYPE_CHECKING, Any
 
-from core.schemas import Task, WorkerOutput, TaskStatus, WorkerStatus, StrategicContext
 from core.observability import (
+    MemoryTraceEmitter,
     TraceComponent,
+    TraceEmitter,
+    TraceEvent,
     TraceEventType,
     TraceLevel,
-    TraceEvent,
-    TraceEmitter,
-    MemoryTraceEmitter,
 )
+from core.schemas import StrategicContext, Task, TaskStatus, WorkerOutput, WorkerStatus
 
 if TYPE_CHECKING:
     from core.memory_router import MemoryRouter
@@ -67,7 +67,9 @@ class Orchestrator:
             emitter: TraceEmitter for observability
         """
         self.memory_router = memory_router
-        self.improvement_loop = improvement_loop  # Deprecated: use improvement_loop_orchestrator
+        self.improvement_loop = (
+            improvement_loop  # Deprecated: use improvement_loop_orchestrator
+        )
         self.improvement_loop_orchestrator = improvement_loop_orchestrator
         self.cloud_fallback_model = cloud_fallback_model
         self.approval_gate = approval_gate
@@ -80,74 +82,98 @@ class Orchestrator:
         self.pending_approval_queue: list[Task] = []
         self._emitter = emitter or MemoryTraceEmitter()
         self._input_sanitiser = input_sanitiser or InputSanitiser(emitter=emitter)
-        
+
         # Import TaskStateMachine lazily to avoid circular imports
         from core.task_state_machine import TaskStateMachine
+
         self.state_machine = TaskStateMachine(memory_router)
-        
+
         # Import ScratchpadManager lazily to avoid circular imports
         from core.scratchpad import ScratchpadManager
+
         self.scratchpad_manager = ScratchpadManager(memory_router)
 
     def register_worker(self, worker_id: str, worker: "WorkerBase") -> None:
         """Register a worker with the orchestrator."""
         self.workers[worker_id] = worker
-        
+
         # Inject fallback chain into worker if available
         if self.fallback_chain is not None and hasattr(worker, "fallback_chain"):
             worker.fallback_chain = self.fallback_chain
-        
+
         # Emit worker registration event (wrapped to avoid crashing main path)
         try:
             import asyncio
+
             loop = asyncio.get_event_loop()
             # Safely extract profile data if available
-            worker_type = getattr(worker.profile, "worker_type", "unknown") if hasattr(worker, "profile") else "unknown"
-            capabilities = getattr(worker.profile, "capabilities", []) if hasattr(worker, "profile") else []
-            
-            loop.create_task(self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.ORCHESTRATOR_WORKER_REGISTERED,
-                component=TraceComponent.ORCHESTRATOR,
-                message="Worker registered",
-                level=TraceLevel.INFO,
-                data={
-                    "worker_id": worker_id,
-                    "worker_type": worker_type,
-                    "capabilities": capabilities,
-                },
-                duration_ms=0,
-            )))
+            worker_type = (
+                getattr(worker.profile, "worker_type", "unknown")
+                if hasattr(worker, "profile")
+                else "unknown"
+            )
+            capabilities = (
+                getattr(worker.profile, "capabilities", [])
+                if hasattr(worker, "profile")
+                else []
+            )
+
+            loop.create_task(
+                self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.ORCHESTRATOR_WORKER_REGISTERED,
+                        component=TraceComponent.ORCHESTRATOR,
+                        message="Worker registered",
+                        level=TraceLevel.INFO,
+                        data={
+                            "worker_id": worker_id,
+                            "worker_type": worker_type,
+                            "capabilities": capabilities,
+                        },
+                        duration_ms=0,
+                    )
+                )
+            )
         except Exception as e:
             # Cleanup path — trace failure should not crash main path
             # Per Rule 17: broad except requires inline comment + WARNING trace
             try:
                 import asyncio
+
                 loop = asyncio.get_event_loop()
-                loop.create_task(self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.ORCHESTRATOR,
-                    level=TraceLevel.WARNING,
-                    message=f"Worker registration trace failed: {type(e).__name__}: {e}",
-                    data={"exception_type": type(e).__name__, "exception_message": str(e)},
-                    duration_ms=0,
-                )))
+                loop.create_task(
+                    self._emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.ORCHESTRATOR,
+                            level=TraceLevel.WARNING,
+                            message=f"Worker registration trace failed: {type(e).__name__}: {e}",
+                            data={
+                                "exception_type": type(e).__name__,
+                                "exception_message": str(e),
+                            },
+                            duration_ms=0,
+                        )
+                    )
+                )
             except Exception:
                 pass  # Avoid infinite recursion if trace emit fails
 
     async def get_top_candidates(self, task: str, n: int) -> list[str]:
         """Returns IDs of the top n registered workers ordered by routing score for this task.
-        
+
         Args:
             task: The task string to score workers against
             n: Maximum number of worker IDs to return
-            
+
         Returns:
             List of worker IDs ordered by routing score (highest first)
         """
-        from core.schemas import Task, TaskPriority, WorkerStatus
         from datetime import datetime, timezone
         from uuid import uuid4
-        
+
+        from core.schemas import Task, TaskPriority, WorkerStatus
+
         # Create a minimal task object for scoring
         # Use a simple complexity score of 0.5 for all tasks when called with a string
         task_obj = Task(
@@ -157,23 +183,26 @@ class Orchestrator:
             priority=TaskPriority.NORMAL,
             created_at=datetime.now(timezone.utc),
         )
-        
+
         # Score each worker using the existing algorithm
         scored_workers = []
         intent_words = set(word.lower() for word in task.lower().split())
-        
+
         for worker_id, worker in self.workers.items():
             # Skip workers that are not ACTIVE (if they have a status attribute)
-            if hasattr(worker.profile, 'status'):
+            if hasattr(worker.profile, "status"):
                 if worker.profile.status != WorkerStatus.ACTIVE:
                     continue
-            
+
             score = 0
-            
+
             # +2 points for complexity match (within 0.1 tolerance)
-            if abs(task_obj.complexity_score - worker.profile.preferred_complexity) < 0.1:
+            if (
+                abs(task_obj.complexity_score - worker.profile.preferred_complexity)
+                < 0.1
+            ):
                 score += 2
-            
+
             # +1 point for each matching capability keyword
             capabilities_lower = [cap.lower() for cap in worker.profile.capabilities]
             for word in intent_words:
@@ -181,31 +210,37 @@ class Orchestrator:
                     if word in capability or capability in word:
                         score += 1
                         break  # Count each word only once per worker
-            
+
             scored_workers.append((score, worker_id))
-        
+
         # Sort by score descending, then by registration order
-        scored_workers.sort(key=lambda x: (-x[0], list(self.workers.keys()).index(x[1])))
-        
+        scored_workers.sort(
+            key=lambda x: (-x[0], list(self.workers.keys()).index(x[1]))
+        )
+
         # Return top n worker IDs
         return [worker_id for _, worker_id in scored_workers[:n]]
 
     async def process_task(self, task: Task, worker_id: str) -> WorkerOutput:
         """
         Process a task by routing it to the specified worker.
-        
+
         This is a minimal implementation for testing.
         """
         if worker_id not in self.workers:
             from core.exceptions import WorkerNotFoundError
+
             raise WorkerNotFoundError(worker_id)
 
         worker = self.workers[worker_id]
-        
+
         # Transition to EXECUTING before worker execution
         try:
             task = await self.state_machine.transition(
-                task, TaskStatus.EXECUTING, reason="Worker execution starting", actor="orchestrator"
+                task,
+                TaskStatus.EXECUTING,
+                reason="Worker execution starting",
+                actor="orchestrator",
             )
             # Create scratchpad when task transitions to EXECUTING
             await self.scratchpad_manager.create(task.task_id)
@@ -220,10 +255,10 @@ class Orchestrator:
                 model_used="none",
                 metadata={"error": str(e)},
             )
-        
+
         try:
             output = await worker.run(task)
-            
+
             # Evaluate output quality if evaluator is available
             if self.output_evaluator:
                 try:
@@ -231,52 +266,72 @@ class Orchestrator:
                         task_id=str(task.task_id),
                         worker_id=worker_id,
                         task_description=task.intent,
-                        worker_output=output.content
+                        worker_output=output.content,
                     )
                     # Store evaluation in metrics
                     # The evaluation result feeds into the improvement loop
                 except Exception as inner_e:
                     # Don't crash the request if evaluation fails
-                    await self._emitter.emit(TraceEvent(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.ORCHESTRATOR,
-                        message="Output evaluation failed",
-                        level=TraceLevel.WARNING,
-                        data={"error": str(inner_e)},
-                        duration_ms=0,
-                    ))
-            
+                    await self._emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.ORCHESTRATOR,
+                            message="Output evaluation failed",
+                            level=TraceLevel.WARNING,
+                            data={"error": str(inner_e)},
+                            duration_ms=0,
+                        )
+                    )
+
             # Escalation check if escalation_engine is configured
             if self.escalation_engine:
                 try:
-                    decision = await self.escalation_engine.evaluate(task, output, [self.cloud_fallback_model])
+                    decision = await self.escalation_engine.evaluate(
+                        task, output, [self.cloud_fallback_model]
+                    )
                     if decision.should_escalate:
                         # Request approval for escalation
                         if self.approval_gate:
-                            approved = await self.escalation_engine.request_approval(task, decision)
+                            approved = await self.escalation_engine.request_approval(
+                                task, decision
+                            )
                             if approved:
                                 # Execute escalation
-                                output = await self.escalation_engine.execute_escalation(task, decision)
+                                output = (
+                                    await self.escalation_engine.execute_escalation(
+                                        task, decision
+                                    )
+                                )
                             else:
                                 # Escalation denied
                                 output.metadata["escalation_denied"] = True
-                                output.metadata["denied_reason"] = "User denied escalation"
+                                output.metadata["denied_reason"] = (
+                                    "User denied escalation"
+                                )
                         else:
                             # No approval gate - escalate automatically
-                            output = await self.escalation_engine.execute_escalation(task, decision)
+                            output = await self.escalation_engine.execute_escalation(
+                                task, decision
+                            )
                 except Exception:
                     # Escalation error should not crash task processing
                     pass
-            
+
             # Transition to VALIDATING after worker execution
             task = await self.state_machine.transition(
-                task, TaskStatus.VALIDATING, reason="Worker execution complete, validating output", actor="orchestrator"
+                task,
+                TaskStatus.VALIDATING,
+                reason="Worker execution complete, validating output",
+                actor="orchestrator",
             )
-            
+
             # Simple validation - if output has content, transition to COMPLETE
             if output.content:
                 task = await self.state_machine.transition(
-                    task, TaskStatus.COMPLETE, reason="Validation passed", actor="orchestrator"
+                    task,
+                    TaskStatus.COMPLETE,
+                    reason="Validation passed",
+                    actor="orchestrator",
                 )
                 # Compact scratchpad when task transitions to COMPLETE
                 try:
@@ -295,7 +350,9 @@ class Orchestrator:
                             )
                         )
                         # Suppress "Task exception was never retrieved" warning
-                        improvement_task.add_done_callback(lambda t: t.exception() if t.exception() else None)
+                        improvement_task.add_done_callback(
+                            lambda t: t.exception() if t.exception() else None
+                        )
                     except Exception:
                         # Per AR18: improvement loop failure should not crash task processing
                         pass
@@ -303,21 +360,31 @@ class Orchestrator:
                 # Mark task as completed in orchestrator metrics
                 if self.improvement_loop:
                     try:
-                        await self.improvement_loop.mark_task_completed(str(task.task_id))
+                        await self.improvement_loop.mark_task_completed(
+                            str(task.task_id)
+                        )
                     except Exception as e:
                         # Cleanup path — metrics update failure should not crash task completion
                         # Per Rule 17: broad except requires inline comment + WARNING trace
-                        await self._emitter.emit(TraceEvent(
-                            event_type=TraceEventType.OPERATION_ERROR,
-                            component=TraceComponent.ORCHESTRATOR,
-                            level=TraceLevel.WARNING,
-                            message=f"Metrics update failed: {type(e).__name__}: {e}",
-                            data={"exception_type": type(e).__name__, "exception_message": str(e)},
-                            duration_ms=0,
-                        ))
+                        await self._emitter.emit(
+                            TraceEvent(
+                                event_type=TraceEventType.OPERATION_ERROR,
+                                component=TraceComponent.ORCHESTRATOR,
+                                level=TraceLevel.WARNING,
+                                message=f"Metrics update failed: {type(e).__name__}: {e}",
+                                data={
+                                    "exception_type": type(e).__name__,
+                                    "exception_message": str(e),
+                                },
+                                duration_ms=0,
+                            )
+                        )
             else:
                 task = await self.state_machine.transition(
-                    task, TaskStatus.FAILED, reason="Validation failed: empty output", actor="orchestrator"
+                    task,
+                    TaskStatus.FAILED,
+                    reason="Validation failed: empty output",
+                    actor="orchestrator",
                 )
                 # Preserve scratchpad on FAILED - log task_id for debugging
                 try:
@@ -333,21 +400,29 @@ class Orchestrator:
                 except Exception as e:
                     # Cleanup path — trace emit failure should not crash task processing
                     # Per Rule 17: broad except requires inline comment + WARNING trace
-                    await self._emitter.emit(TraceEvent(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.ORCHESTRATOR,
-                        level=TraceLevel.WARNING,
-                        message=f"Trace emit failed: {type(e).__name__}: {e}",
-                        data={"exception_type": type(e).__name__, "exception_message": str(e)},
-                        duration_ms=0,
-                    ))
+                    await self._emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.ORCHESTRATOR,
+                            level=TraceLevel.WARNING,
+                            message=f"Trace emit failed: {type(e).__name__}: {e}",
+                            data={
+                                "exception_type": type(e).__name__,
+                                "exception_message": str(e),
+                            },
+                            duration_ms=0,
+                        )
+                    )
 
             return output
         except Exception as e:
             # On any failure, transition to FAILED if possible
             if self.state_machine.can_transition(task, TaskStatus.FAILED):
                 task = await self.state_machine.transition(
-                    task, TaskStatus.FAILED, reason=f"Worker execution failed: {str(e)}", actor="orchestrator"
+                    task,
+                    TaskStatus.FAILED,
+                    reason=f"Worker execution failed: {str(e)}",
+                    actor="orchestrator",
                 )
                 # Preserve scratchpad on FAILED - log task_id for debugging
                 try:
@@ -363,14 +438,19 @@ class Orchestrator:
                 except Exception as e:
                     # Cleanup path — trace emit failure should not crash task processing
                     # Per Rule 17: broad except requires inline comment + WARNING trace
-                    await self._emitter.emit(TraceEvent(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.ORCHESTRATOR,
-                        level=TraceLevel.WARNING,
-                        message=f"Trace emit failed: {type(e).__name__}: {e}",
-                        data={"exception_type": type(e).__name__, "exception_message": str(e)},
-                        duration_ms=0,
-                    ))
+                    await self._emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.ORCHESTRATOR,
+                            level=TraceLevel.WARNING,
+                            message=f"Trace emit failed: {type(e).__name__}: {e}",
+                            data={
+                                "exception_type": type(e).__name__,
+                                "exception_message": str(e),
+                            },
+                            duration_ms=0,
+                        )
+                    )
             raise
 
     async def route_task(self, task: Task) -> WorkerOutput:
@@ -387,12 +467,16 @@ class Orchestrator:
 
         if not self.workers:
             from core.exceptions import WorkerNotFoundError
+
             raise WorkerNotFoundError("any", "No workers registered")
 
         # Transition to RECEIVED on task receipt
         try:
             task = await self.state_machine.transition(
-                task, TaskStatus.RECEIVED, reason="Task received by orchestrator", actor="orchestrator"
+                task,
+                TaskStatus.RECEIVED,
+                reason="Task received by orchestrator",
+                actor="orchestrator",
             )
         except Exception as e:
             # If transition fails, return error output
@@ -424,19 +508,27 @@ class Orchestrator:
         except Exception as e:
             # Cleanup path — trace emit failure should not crash routing
             # Per Rule 17: broad except requires inline comment + WARNING trace
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.OPERATION_ERROR,
-                component=TraceComponent.ORCHESTRATOR,
-                level=TraceLevel.WARNING,
-                message=f"Trace emit failed: {type(e).__name__}: {e}",
-                data={"exception_type": type(e).__name__, "exception_message": str(e)},
-                duration_ms=0,
-            ))
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.ORCHESTRATOR,
+                    level=TraceLevel.WARNING,
+                    message=f"Trace emit failed: {type(e).__name__}: {e}",
+                    data={
+                        "exception_type": type(e).__name__,
+                        "exception_message": str(e),
+                    },
+                    duration_ms=0,
+                )
+            )
 
         # Transition to PLANNED before routing
         try:
             task = await self.state_machine.transition(
-                task, TaskStatus.PLANNED, reason="Planning worker selection", actor="orchestrator"
+                task,
+                TaskStatus.PLANNED,
+                reason="Planning worker selection",
+                actor="orchestrator",
             )
         except Exception as e:
             # If transition fails, return error output
@@ -453,39 +545,46 @@ class Orchestrator:
         if len(self.workers) == 1:
             worker_id = next(iter(self.workers.keys()))
             worker = self.workers[worker_id]
-            
+
             # Skip workers that are not ACTIVE (if they have a status attribute)
-            if hasattr(worker.profile, 'status'):
+            if hasattr(worker.profile, "status"):
                 if worker.profile.status != WorkerStatus.ACTIVE:
                     from core.exceptions import WorkerNotFoundError
+
                     raise WorkerNotFoundError(worker_id, "No workers registered")
-            
+
             duration_ms = int((time.perf_counter() - start_time) * 1000)
-            
+
             # Emit routing metrics if improvement loop is available
             if self.improvement_loop:
                 from core.schemas import OrchestratorMetrics
+
                 metrics = OrchestratorMetrics(
                     task_id=str(task.task_id),
                     routed_to_worker_id=worker_id,
                     routing_score=1.0,
                     task_completed=False,  # Will be updated later
-                    user_rating=None
+                    user_rating=None,
                 )
                 try:
                     await self.improvement_loop.record_routing_decision(metrics)
                 except Exception as e:
                     # Cleanup path — metrics recording failure should not crash routing
                     # Per Rule 17: broad except requires inline comment + WARNING trace
-                    await self._emitter.emit(TraceEvent(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.ORCHESTRATOR,
-                        level=TraceLevel.WARNING,
-                        message=f"Metrics recording failed: {type(e).__name__}: {e}",
-                        data={"exception_type": type(e).__name__, "exception_message": str(e)},
-                        duration_ms=0,
-                    ))
-            
+                    await self._emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.ORCHESTRATOR,
+                            level=TraceLevel.WARNING,
+                            message=f"Metrics recording failed: {type(e).__name__}: {e}",
+                            data={
+                                "exception_type": type(e).__name__,
+                                "exception_message": str(e),
+                            },
+                            duration_ms=0,
+                        )
+                    )
+
             try:
                 event = TraceEvent(
                     event_type=TraceEventType.ORCHESTRATOR_ROUTING_COMPLETE,
@@ -494,7 +593,13 @@ class Orchestrator:
                     level=TraceLevel.INFO,
                     data={
                         "selected_worker": worker_id,
-                        "scoring_breakdown": [{"worker_id": worker_id, "score": 1, "reason": "only worker"}],
+                        "scoring_breakdown": [
+                            {
+                                "worker_id": worker_id,
+                                "score": 1,
+                                "reason": "only worker",
+                            }
+                        ],
                     },
                     duration_ms=duration_ms,
                 )
@@ -502,66 +607,86 @@ class Orchestrator:
             except Exception as e:
                 # Cleanup path — trace emit failure should not crash routing
                 # Per Rule 17: broad except requires inline comment + WARNING trace
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.ORCHESTRATOR,
-                    level=TraceLevel.WARNING,
-                    message=f"Trace emit failed: {type(e).__name__}: {e}",
-                    data={"exception_type": type(e).__name__, "exception_message": str(e)},
-                    duration_ms=0,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.WARNING,
+                        message=f"Trace emit failed: {type(e).__name__}: {e}",
+                        data={
+                            "exception_type": type(e).__name__,
+                            "exception_message": str(e),
+                        },
+                        duration_ms=0,
+                    )
+                )
 
             # Update StrategicContext after successful routing decision
             try:
-                current_context = await self.memory_router.get_global_context(caller_id="orchestrator")
+                current_context = await self.memory_router.get_global_context(
+                    caller_id="orchestrator"
+                )
                 if current_context is None:
                     from datetime import datetime, timezone
-                    current_context = StrategicContext(last_updated=datetime.now(timezone.utc))
-                
+
+                    current_context = StrategicContext(
+                        last_updated=datetime.now(timezone.utc)
+                    )
+
                 # Update active goals with recent task
-                current_context.active_goals.append(f"Task {task.task_id}: {task.intent} routed to {worker_id}")
-                
+                current_context.active_goals.append(
+                    f"Task {task.task_id}: {task.intent} routed to {worker_id}"
+                )
+
                 # Update pending tasks with active workers
                 current_context.pending_tasks = list(self.workers.keys())
-                
+
                 # Update timestamp
                 from datetime import datetime, timezone
+
                 current_context.last_updated = datetime.now(timezone.utc)
-                
-                await self.memory_router.set_global_context(current_context, caller_id="orchestrator")
+
+                await self.memory_router.set_global_context(
+                    current_context, caller_id="orchestrator"
+                )
             except Exception as e:
                 # Cleanup path — context update failure should not crash routing
                 # Per Rule 17: broad except requires inline comment + WARNING trace
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.ORCHESTRATOR,
-                    level=TraceLevel.WARNING,
-                    message=f"Context update failed: {type(e).__name__}: {e}",
-                    data={"exception_type": type(e).__name__, "exception_message": str(e)},
-                    duration_ms=0,
-                ))
-            
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.WARNING,
+                        message=f"Context update failed: {type(e).__name__}: {e}",
+                        data={
+                            "exception_type": type(e).__name__,
+                            "exception_message": str(e),
+                        },
+                        duration_ms=0,
+                    )
+                )
+
             return await self.process_task(task, worker_id)
 
         # Score each worker
         scored_workers = []
         intent_words = set(word.lower() for word in task.intent.lower().split())
         scoring_breakdown = []
-        
+
         for worker_id, worker in self.workers.items():
             # Skip workers that are not ACTIVE (if they have a status attribute)
-            if hasattr(worker.profile, 'status'):
+            if hasattr(worker.profile, "status"):
                 if worker.profile.status != WorkerStatus.ACTIVE:
                     continue
-            
+
             score = 0
             reasons = []
-            
+
             # +2 points for complexity match (within 0.1 tolerance)
             if abs(task.complexity_score - worker.profile.preferred_complexity) < 0.1:
                 score += 2
                 reasons.append("complexity_match")
-            
+
             # +1 point for each matching capability keyword
             capabilities_lower = [cap.lower() for cap in worker.profile.capabilities]
             for word in intent_words:
@@ -570,46 +695,56 @@ class Orchestrator:
                         score += 1
                         reasons.append(f"capability_match:{word}")
                         break  # Count each word only once per worker
-            
+
             scored_workers.append((score, worker_id, worker))
-            scoring_breakdown.append({
-                "worker_id": worker_id,
-                "score": score,
-                "reasons": reasons,
-            })
-        
+            scoring_breakdown.append(
+                {
+                    "worker_id": worker_id,
+                    "score": score,
+                    "reasons": reasons,
+                }
+            )
+
         # Sort by score descending, then by registration order (maintained by dict iteration order)
-        scored_workers.sort(key=lambda x: (-x[0], list(self.workers.keys()).index(x[1])))
-        
+        scored_workers.sort(
+            key=lambda x: (-x[0], list(self.workers.keys()).index(x[1]))
+        )
+
         # Select highest-scoring worker
         selected_worker_id = scored_workers[0][1]
-        
+
         duration_ms = int((time.perf_counter() - start_time) * 1000)
-        
+
         # Emit routing metrics if improvement loop is available
         if self.improvement_loop:
             from core.schemas import OrchestratorMetrics
+
             metrics = OrchestratorMetrics(
                 task_id=str(task.task_id),
                 routed_to_worker_id=selected_worker_id,
                 routing_score=scored_workers[0][0],
                 task_completed=False,  # Will be updated later
-                user_rating=None
+                user_rating=None,
             )
             try:
                 await self.improvement_loop.record_routing_decision(metrics)
             except Exception as e:
                 # Cleanup path — metrics recording failure should not crash routing
                 # Per Rule 17: broad except requires inline comment + WARNING trace
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.ORCHESTRATOR,
-                    level=TraceLevel.WARNING,
-                    message=f"Metrics recording failed: {type(e).__name__}: {e}",
-                    data={"exception_type": type(e).__name__, "exception_message": str(e)},
-                    duration_ms=0,
-                ))
-        
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.WARNING,
+                        message=f"Metrics recording failed: {type(e).__name__}: {e}",
+                        data={
+                            "exception_type": type(e).__name__,
+                            "exception_message": str(e),
+                        },
+                        duration_ms=0,
+                    )
+                )
+
         try:
             event = TraceEvent(
                 event_type=TraceEventType.ORCHESTRATOR_ROUTING_COMPLETE,
@@ -626,79 +761,101 @@ class Orchestrator:
         except Exception as e:
             # Cleanup path — trace emit failure should not crash routing
             # Per Rule 17: broad except requires inline comment + WARNING trace
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.OPERATION_ERROR,
-                component=TraceComponent.ORCHESTRATOR,
-                level=TraceLevel.WARNING,
-                message=f"Trace emit failed: {type(e).__name__}: {e}",
-                data={"exception_type": type(e).__name__, "exception_message": str(e)},
-                duration_ms=0,
-            ))
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.ORCHESTRATOR,
+                    level=TraceLevel.WARNING,
+                    message=f"Trace emit failed: {type(e).__name__}: {e}",
+                    data={
+                        "exception_type": type(e).__name__,
+                        "exception_message": str(e),
+                    },
+                    duration_ms=0,
+                )
+            )
 
         # Update StrategicContext after successful routing decision
         try:
-            current_context = await self.memory_router.get_global_context(caller_id="orchestrator")
+            current_context = await self.memory_router.get_global_context(
+                caller_id="orchestrator"
+            )
             if current_context is None:
                 from datetime import datetime, timezone
-                current_context = StrategicContext(last_updated=datetime.now(timezone.utc))
-            
+
+                current_context = StrategicContext(
+                    last_updated=datetime.now(timezone.utc)
+                )
+
             # Update active goals with recent task
-            current_context.active_goals.append(f"Task {task.task_id}: {task.intent} routed to {selected_worker_id}")
-            
+            current_context.active_goals.append(
+                f"Task {task.task_id}: {task.intent} routed to {selected_worker_id}"
+            )
+
             # Update pending tasks with active workers
             current_context.pending_tasks = list(self.workers.keys())
-            
+
             # Update timestamp
             from datetime import datetime, timezone
+
             current_context.last_updated = datetime.now(timezone.utc)
-            
-            await self.memory_router.set_global_context(current_context, caller_id="orchestrator")
+
+            await self.memory_router.set_global_context(
+                current_context, caller_id="orchestrator"
+            )
         except Exception as e:
             # Cleanup path — context update failure should not crash routing
             # Per Rule 17: broad except requires inline comment + WARNING trace
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.OPERATION_ERROR,
-                component=TraceComponent.ORCHESTRATOR,
-                level=TraceLevel.WARNING,
-                message=f"Context update failed: {type(e).__name__}: {e}",
-                data={"exception_type": type(e).__name__, "exception_message": str(e)},
-                duration_ms=0,
-            ))
-        
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.OPERATION_ERROR,
+                    component=TraceComponent.ORCHESTRATOR,
+                    level=TraceLevel.WARNING,
+                    message=f"Context update failed: {type(e).__name__}: {e}",
+                    data={
+                        "exception_type": type(e).__name__,
+                        "exception_message": str(e),
+                    },
+                    duration_ms=0,
+                )
+            )
+
         return await self.process_task(task, selected_worker_id)
 
     async def cancel_task(self, task: Task, reason: str = "Cancelled by user") -> Task:
         """
         Cancel a task by transitioning it to CANCELLED state.
-        
+
         Args:
             task: The task to cancel
             reason: Reason for cancellation
-            
+
         Returns:
             The updated task in CANCELLED state
         """
         task = await self.state_machine.transition(
             task, TaskStatus.CANCELLED, reason=reason, actor="user"
         )
-        
+
         # Delete scratchpad when task is cancelled
         try:
             await self.scratchpad_manager.delete(task.task_id)
         except Exception:
             # Silently fail if scratchpad deletion fails
             pass
-        
+
         return task
 
-    async def process_pending_approval(self, task_id: str, approved: bool) -> WorkerOutput | Task | None:
+    async def process_pending_approval(
+        self, task_id: str, approved: bool
+    ) -> WorkerOutput | Task | None:
         """
         Process a task that was awaiting approval.
-        
+
         Args:
             task_id: The task identifier
             approved: Whether approval was granted
-            
+
         Returns:
             The updated task if found, None otherwise
         """
@@ -708,10 +865,10 @@ class Orchestrator:
             if str(pending_task.task_id) == task_id:
                 task = self.pending_approval_queue.pop(i)
                 break
-        
+
         if not task:
             return None
-        
+
         if approved:
             # Transition back to EXECUTING
             task = await self.state_machine.transition(
@@ -729,55 +886,76 @@ class Orchestrator:
     def deregister_worker(self, worker_id: str) -> None:
         """
         Remove a worker from the orchestrator registry.
-        
+
         Args:
             worker_id: The worker ID to deregister
-            
+
         Raises:
             WorkerNotFoundError: If worker_id is not found in registry
         """
         from core.exceptions import WorkerNotFoundError
-        
+
         if worker_id not in self.workers:
             raise WorkerNotFoundError(worker_id)
-        
+
         worker = self.workers[worker_id]
         del self.workers[worker_id]
-        
+
         # Emit worker deregistration event (wrapped to avoid crashing main path)
         try:
             import asyncio
+
             loop = asyncio.get_event_loop()
             # Safely extract profile data if available
-            worker_type = getattr(worker.profile, "worker_type", "unknown") if hasattr(worker, "profile") else "unknown"
-            capabilities = getattr(worker.profile, "capabilities", []) if hasattr(worker, "profile") else []
-            
-            loop.create_task(self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.ORCHESTRATOR_WORKER_DEREGISTERED,
-                component=TraceComponent.ORCHESTRATOR,
-                message="Worker deregistered",
-                level=TraceLevel.INFO,
-                data={
-                    "worker_id": worker_id,
-                    "worker_type": worker_type,
-                    "capabilities": capabilities,
-                },
-                duration_ms=0,
-            )))
+            worker_type = (
+                getattr(worker.profile, "worker_type", "unknown")
+                if hasattr(worker, "profile")
+                else "unknown"
+            )
+            capabilities = (
+                getattr(worker.profile, "capabilities", [])
+                if hasattr(worker, "profile")
+                else []
+            )
+
+            loop.create_task(
+                self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.ORCHESTRATOR_WORKER_DEREGISTERED,
+                        component=TraceComponent.ORCHESTRATOR,
+                        message="Worker deregistered",
+                        level=TraceLevel.INFO,
+                        data={
+                            "worker_id": worker_id,
+                            "worker_type": worker_type,
+                            "capabilities": capabilities,
+                        },
+                        duration_ms=0,
+                    )
+                )
+            )
         except Exception as e:
             # Cleanup path — trace failure should not crash main path
             # Per Rule 17: broad except requires inline comment + WARNING trace
             try:
                 import asyncio
+
                 loop = asyncio.get_event_loop()
-                loop.create_task(self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.ORCHESTRATOR,
-                    level=TraceLevel.WARNING,
-                    message=f"Worker deregistration trace failed: {type(e).__name__}: {e}",
-                    data={"exception_type": type(e).__name__, "exception_message": str(e)},
-                    duration_ms=0,
-                )))
+                loop.create_task(
+                    self._emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.ORCHESTRATOR,
+                            level=TraceLevel.WARNING,
+                            message=f"Worker deregistration trace failed: {type(e).__name__}: {e}",
+                            data={
+                                "exception_type": type(e).__name__,
+                                "exception_message": str(e),
+                            },
+                            duration_ms=0,
+                        )
+                    )
+                )
             except Exception:
                 pass  # Avoid infinite recursion if trace emit fails
 
@@ -813,15 +991,18 @@ class Orchestrator:
         Raises:
             ValueError: If priority is not a valid TaskPriority value
         """
-        from uuid import uuid4
         from datetime import datetime, timezone
+        from uuid import uuid4
+
         from core.schemas import TaskPriority
 
         # Validate and convert priority string to enum
         try:
             priority_enum = TaskPriority(priority.lower())
         except ValueError:
-            raise ValueError(f"Invalid priority: {priority}. Must be one of: normal, high, critical")
+            raise ValueError(
+                f"Invalid priority: {priority}. Must be one of: normal, high, critical"
+            )
 
         # Sanitise external input before it enters LLM context (Rule 14)
         # Defense-in-depth: callers may also sanitise at boundary, but the sink
@@ -871,13 +1052,17 @@ class Orchestrator:
             if profile is None:
                 result.append({"worker_id": worker_id})
                 continue
-            result.append({
-                "worker_id": worker_id,
-                "worker_type": getattr(profile, "worker_type", "unknown"),
-                "capabilities": getattr(profile, "capabilities", []),
-                "preferred_model": getattr(profile, "preferred_model", None),
-                "preferred_complexity": getattr(profile, "preferred_complexity", 0.5),
-                "tasks_completed": getattr(profile, "tasks_completed", 0),
-                "avg_confidence": getattr(profile, "avg_confidence", 0.0),
-            })
+            result.append(
+                {
+                    "worker_id": worker_id,
+                    "worker_type": getattr(profile, "worker_type", "unknown"),
+                    "capabilities": getattr(profile, "capabilities", []),
+                    "preferred_model": getattr(profile, "preferred_model", None),
+                    "preferred_complexity": getattr(
+                        profile, "preferred_complexity", 0.5
+                    ),
+                    "tasks_completed": getattr(profile, "tasks_completed", 0),
+                    "avg_confidence": getattr(profile, "avg_confidence", 0.0),
+                }
+            )
         return result
