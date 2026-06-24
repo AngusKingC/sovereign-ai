@@ -1,6 +1,6 @@
 # PLANS.md — Sovereign AI Project State
 
-**Last updated**: Post-Plan 71 (2026-06-24)
+**Last updated**: Post-Plan 73 (2026-06-24)
 
 This document tracks the dynamic state of the Sovereign AI project: baselines, completed prompts, and the next-5-prompt queue. It is the canonical source for test counts, static analysis baselines, and which prompt is currently active.
 
@@ -65,12 +65,13 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 70 | 5-Plan Milestone Full Scan (Priority 1) | 1253 | Full 6-tool checkpoint scan. Tests: 1253 passed, 67 skipped (baseline held). Ruff: 0 errors (baseline held). Mypy: 0 errors in 256 source files (baseline held). Bandit: 3384 low, 1 medium, 0 high (new B608 false positive). pip-audit: 19 CVEs (stable). Vulture: 23 findings (baseline held). |
 | 71 | Code Hygiene + Tooling Integration | 1257 | AR18 cleanup (8 files: system/, core/, skills/). datetime.now() fixes (3 files: system/profiler.py, cli/command_history.py, memory/obsidian.py). API key validation in system/model_acquisition.py. Dead code fixes. AR18 compliance test created. detect-secrets baseline established. pre-commit configured. pytest-cov integrated. CI updated to Python 3.12 with detect-secrets and coverage jobs. 4 new tests (test_ar18_compliance.py). |
 | 72 | Plan 71 Completion + Scope Violation Cleanup | 1257 | Completed Plan 71's tooling gaps: requirements-dev.txt (dev deps), vulture-whitelist.txt (23 findings), CI vulture whitelist + flip, workflow updates (jarvis-open/verify/close). Deleted temp file scan/logs/checkpoint-scan-prompt-70.md. Added OR32 to AGENTS.md (never use --no-verify). Added Coverage baseline row to PLANS.md (82%). No test count change. |
+| 73 | Sandboxed Code Execution (AR19) | 1269 | SandboxExecutor implementation (core/sandbox.py). Skills updated to use SandboxExecutor (code_execution, terminal). Tests updated with mock sandbox_executor. New sandbox tests (test_sandbox.py). AR19 added to AGENTS.md. Sandbox vocabulary added to CONTEXT.md. SANDBOX component added to TraceComponent enum. 12 new tests (sandbox + skill test updates). |
 
 ---
 
 ## Next 5 Prompts Queue
 
-### Plan 73 — Code Hygiene: AR18 + Empty Init Files + Resource Leaks (Priority 1)
+### Plan 74 — Code Hygiene: AR18 + Empty Init Files + Resource Leaks (Priority 1)
 
 **Scope**: ~150+ remaining AR18 violations in lower-density files, 17 empty __init__.py files, 6 resource leaks in skills/calendar/ + skills/screenshot/, 6 assert-in-production statements.
 
@@ -82,7 +83,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
-### Plan 74 — Dependency Security + Parallel Tests (Priority 2)
+### Plan 75 — Dependency Security + Parallel Tests (Priority 2)
 
 **Scope**: pip-audit continue-on-error flip (diskcache replacement + --ignore-vuln strategy), pytest-xdist parallel test execution, informational metrics (safety, interrogate, radon, hypothesis).
 
@@ -94,7 +95,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
-### Plan 75 — 5-Plan Milestone Full Scan (Priority 1)
+### Plan 76 — 5-Plan Milestone Full Scan (Priority 1)
 
 **Scope**: Full 6-tool checkpoint scan (pytest, ruff, mypy, bandit, pip-audit, vulture). Coverage verification. Static analysis baseline reconciliation.
 
@@ -103,18 +104,6 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 **Baseline changes**: Test count should hold at 1257 passed, 67 skipped (±5 tolerance). All tool counts should hold within tolerance.
 
 **Gate**: All 6 tools pass, coverage ≥77% (82% baseline -5%).
-
----
-
-### Plan 76 — [Open Slot] (Priority TBD)
-
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 75.
-
-**Expected impact**: TBD
-
-**Baseline changes**: TBD
-
-**Gate**: TBD
 
 ---
 
@@ -130,9 +119,21 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
+### Plan 78 — [Open Slot] (Priority TBD)
+
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 77.
+
+**Expected impact**: TBD
+
+**Baseline changes**: TBD
+
+**Gate**: TBD
+
+---
+
 ## Baseline Reconciliation Notes
 
-- **Test count delta**: 1253 → 1257 (+4) at Plan 71 (AR18 compliance test). 1257 → 1257 (no change) at Plan 72 (no tests added). Baseline holds at 1257 passed, 67 skipped.
+- **Test count delta**: 1253 → 1257 (+4) at Plan 71 (AR18 compliance test). 1257 → 1257 (no change) at Plan 72 (no tests added). 1257 → 1269 (+12) at Plan 73 (sandbox tests + skill test updates). Baseline updated to 1269 passed, 67 skipped.
 - **Mypy delta**: 0 → 0 (no change) at Plan 71. 0 → 0 (no change) at Plan 72 (no Python files edited). Baseline holds at 0 errors.
 - **Ruff delta**: 0 → 0 (no change) at Plan 71. 0 → 0 (no change) at Plan 72 (no Python files edited). Baseline holds at 0 errors.
 - **Bandit delta**: No change at Plan 71. No change at Plan 72 (no Python files edited).
