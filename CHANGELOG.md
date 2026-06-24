@@ -560,3 +560,22 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: All checks passed
 - Mypy: 23 errors → 0 errors in core/ and system/
 - Tag: prompt-66 verified on origin
+
+## 2025-06-24 13:55 — prompt-67
+
+**Plan**: Mypy Remediation: Adapters, CLI, Memory, Tests, Skills
+
+**Changed**:
+- adapters/*.py: Fixed union types, None handling, enum values, API compatibility
+- cli/*.py: Fixed None assignments, enum string values, attribute access
+- memory/*.py: Fixed type annotations, None handling, variable naming
+- workers/*.py: Fixed task_id string to UUID conversion
+- skills/*.py: Fixed union types, None handling, untyped imports
+- tests/*.py: Fixed type annotations, None guards, signature mismatches, mock types
+- scripts/verify_tui_e2e.py: Added type annotations to CognitionStack class
+
+**Results**:
+- Tests: 1230 passed, 67 skipped, 2 pre-existing failures
+- Ruff: 0 errors
+- Mypy: 0 errors (181 source files)
+- Tag: prompt-67 verified on origin

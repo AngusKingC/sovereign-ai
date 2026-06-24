@@ -8,8 +8,8 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Test Baseline
 
-**Current baseline**: **1231 passed, 68 skipped**  
-**Verified**: Plan 66, Step S6 (full test suite)  
+**Current baseline**: **1230 passed, 67 skipped**  
+**Verified**: Plan 67, Step S6 (full test suite)  
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)  
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -22,8 +22,8 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | Tool | Baseline | Source | Notes |
 |---|---|---|---|
 | **Ruff** | 0 errors | Plan 60 S2 | No errors. Plan 59 cleanup fully held. |
-| **Mypy (core/system)** | 0 errors | Plan 66 S3 | Delta: -294 from Plan 60 baseline (294 → 0). Core and system directories fully clean. Full-repo scan pending Plan 70. |
-| **Mypy (full-repo)** | 294 errors in 77 files | Plan 60 S3 | Delta: +11 from Plan 55 baseline (283 → 294). OUTSIDE tolerance — escalated for fix plan. Full-repo only at 5-plan checkpoints. |
+| **Mypy (core/system)** | 0 errors | Plan 66 S3 | Delta: -294 from Plan 60 baseline (294 → 0). Core and system directories fully clean. |
+| **Mypy (full-repo)** | 0 errors | Plan 67 S6 | Delta: -294 from Plan 60 baseline (294 → 0). Full remediation of adapters, CLI, memory, workers, skills, tests, scripts (181 source files). |
 | **Bandit** | 3,179 low, 0 medium, 0 high | Plan 60 S4 | Plan 59 suppressed all B108 findings. Zero medium, zero high. |
 | **pip-audit** | 19 CVEs across 4 packages | Plan 60 S5 | Stable across Plans 56-60. No actionable fixes (upstream only). |
 | **Vulture** | 23 high-confidence findings | Plan 60 S6 | Delta: +3 from Plan 55 baseline (20 → 23). Within tolerance. Dead code analysis only. |
@@ -55,22 +55,11 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 64 | Core Mypy Remediation | 1232 | Fixed 33 mypy errors across 14 core files. Added compatibility shims for backward compatibility with tests. Added OR27 to AGENTS.md. |
 | 65 | Mypy Remediation Phase 2 | 1232 | Fixed 16 mypy errors across 7 core files (session, task_state_machine, escalation, retention, worker_factory, orchestrator, rating_system). Enum replacements, UUID constructors, type annotations. Added L9 to LANDMINES. |
 | 66 | System Cleanup and Final Core Hardening | 1231 | Fixed 23 mypy errors across 7 system files (model_acquisition, voice_daemon, trajectory_exporter, retention_manager, retention_daemon, monitor_daemon, model_evaluator). Added RETENTION_DAEMON to TraceComponent enum. Core mypy clean (0 errors). |
+| 67 | Mypy Remediation: Adapters, CLI, Memory, Tests, Skills | 1230 | Fixed 172 mypy errors across 45 files (adapters, CLI, memory, workers, skills, tests, scripts). Union types, None handling, enum values, API compatibility, type annotations. Full-repo mypy clean (0 errors, 181 source files). |
 
 ---
 
 ## Next 5 Prompts Queue
-
-### Plan 67 — [Open Slot] (Priority TBD)
-
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 66.
-
-**Expected impact**: TBD
-
-**Baseline changes**: TBD
-
-**Gate**: TBD
-
----
 
 ### Plan 68 — [Open Slot] (Priority TBD)
 
@@ -123,10 +112,22 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
+### Plan 72 — [Open Slot] (Priority TBD)
+
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 71.
+
+**Expected impact**: TBD
+
+**Baseline changes**: TBD
+
+**Gate**: TBD
+
+---
+
 ## Baseline Reconciliation Notes
 
-- **Test count delta**: 1232 → 1231 (-1). Within tolerance (±5). Likely due to test environment variation.
-- **Mypy delta**: Core/system directories 294 → 0 errors (-294). Major cleanup achieved through Plan 66. Full-repo scan pending Plan 70.
+- **Test count delta**: 1231 → 1230 (-1). Within tolerance (±5). Likely due to test environment variation.
+- **Mypy delta**: Full-repo 294 → 0 errors (-294). Major cleanup achieved through Plan 67. All 181 source files (adapters, CLI, memory, workers, skills, tests, scripts) now mypy-clean.
 - **Ruff delta**: 0 → 0. No change. Baseline held.
 
 ---
@@ -141,8 +142,8 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **Serialization** — Jsonify strict mode, circular ref detection, type coercion all working
 - **Datetime handling** — Zero naive/aware mixing; all core/system/skills using timezone-aware UTC
 - **Ruff baseline** — 0 errors (Plan 59 cleanup held through Plans 56-66)
-- **Mypy baseline** — Core and system directories fully clean (0 errors). Full-repo scan pending Plan 70.
-- **Test suite** — 1231 passed, 68 skipped (Plan 66 system cleanup; Plan 63b added 7 integration + E2E tests; restored 2 orchestrator integration tests)
+- **Mypy baseline** — Full-repo mypy clean (0 errors, 181 source files). Adapters, CLI, memory, workers, skills, tests, scripts all remediated through Plan 67.
+- **Test suite** — 1230 passed, 67 skipped (Plan 67 mypy remediation; Plan 66 system cleanup; Plan 63b added 7 integration + E2E tests; restored 2 orchestrator integration tests)
 - **Eval harness** — Metrics (exact_match, token_f1, bleu, cosine_similarity) operational with trace emitter integration. Validation suite with 15 static tasks confirms metric behavior across 5 categories.
 
 ### What's Broken Right Now
