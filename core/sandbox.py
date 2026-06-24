@@ -485,13 +485,15 @@ class SandboxExecutor:
         try:
             # This is a placeholder - actual approval gate interface may differ
             if hasattr(self._approval_gate, "request_approval"):
-                approval_granted = await self._approval_gate.request_approval(
+                response = await self._approval_gate.request_approval(
                     action="execute_unsandboxed",
                     details={
                         "code_or_command": code_or_command[:100],
                         "is_python": is_python,
                     },
                 )
+                # Check the approved field of the response
+                approval_granted = getattr(response, "approved", False)
             else:
                 # If approval gate doesn't have request_approval, deny by default
                 approval_granted = False

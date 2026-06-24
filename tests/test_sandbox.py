@@ -2,7 +2,7 @@
 Tests for SandboxExecutor.
 """
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -156,3 +156,109 @@ class TestSandboxExecutor:
         assert hasattr(config, "read_only_fs")
         assert hasattr(config, "timeout")
         assert hasattr(config, "sandbox_policy")
+
+    @pytest.mark.asyncio
+    async def test_check_docker_available_returns_true_when_docker_running(
+        self, sandbox
+    ):
+        """Test that Docker availability check returns True when Docker is running."""
+        with patch("asyncio.create_subprocess_exec") as mock_subprocess:
+            mock_process = AsyncMock()
+            mock_process.returncode = 0
+            mock_process.communicate = AsyncMock(return_value=(b"", b""))
+            mock_subprocess.return_value = mock_process
+
+            is_available = await sandbox._check_docker_available()
+            assert is_available is True
+
+    @pytest.mark.asyncio
+    async def test_check_docker_available_returns_false_when_docker_missing(
+        self, sandbox
+    ):
+        """Test that Docker availability check returns False when Docker is missing."""
+        with patch("asyncio.create_subprocess_exec") as mock_subprocess:
+            mock_process = AsyncMock()
+            mock_process.returncode = 1
+            mock_process.communicate = AsyncMock(return_value=(b"", b""))
+            mock_subprocess.return_value = mock_process
+
+            is_available = await sandbox._check_docker_available()
+            assert is_available is False
+
+    @pytest.mark.asyncio
+    async def test_strict_policy_returns_failure_when_docker_unavailable(self, emitter):
+        """Test that strict policy returns failure result when Docker unavailable."""
+        config = SandboxConfig(timeout=5, sandbox_policy="strict")
+        sandbox = SandboxExecutor(config=config, emitter=emitter, approval_gate=None)
+
+        with patch("asyncio.create_subprocess_exec") as mock_subprocess:
+            mock_process = AsyncMock()
+            mock_process.returncode = 1
+            mock_process.communicate = AsyncMock(return_value=(b"", b""))
+            mock_subprocess.return_value = mock_process
+
+            result = await sandbox.execute_python("print('test')")
+
+            assert result.success is False
+            assert "Docker unavailable" in result.stderr
+            assert result.sandboxed is False
+
+    @pytest.mark.asyncio
+    async def test_fallback_subprocess_requests_approval_when_opted_in(
+        self, emitter, mock_approval_gate
+    ):
+        """Test that fallback policy requests approval when Docker unavailable."""
+        config = SandboxConfig(timeout=5, sandbox_policy="fallback")
+        sandbox = SandboxExecutor(
+            config=config, emitter=emitter, approval_gate=mock_approval_gate
+        )
+
+        with patch("asyncio.create_subprocess_exec") as mock_subprocess:
+            mock_process = AsyncMock()
+            mock_process.returncode = 1
+            mock_process.communicate = AsyncMock(return_value=(b"", b""))
+            mock_subprocess.return_value = mock_process
+
+            with patch("asyncio.create_subprocess_shell") as mock_shell:
+                mock_shell_process = AsyncMock()
+                mock_shell_process.returncode = 0
+                mock_shell_process.communicate = AsyncMock(
+                    return_value=(b"hello\n", b"")
+                )
+                mock_shell.return_value = mock_shell_process
+
+                await sandbox.execute_python("print('hello')")
+
+                # Approval gate should have been called
+                mock_approval_gate.request_approval.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_fallback_subprocess_denies_when_not_approved(
+        self, emitter, mock_approval_gate
+    ):
+        """Test that fallback subprocess denies when approval not granted."""
+        mock_approval_gate.request_approval = AsyncMock(
+            return_value=ApprovalResponse(
+                request_id="test-id",
+                task_id="task-id",
+                approved=False,
+                decision_reason="Test denial",
+                approved_by="test_user",
+            )
+        )
+        config = SandboxConfig(timeout=5, sandbox_policy="fallback")
+        sandbox = SandboxExecutor(
+            config=config, emitter=emitter, approval_gate=mock_approval_gate
+        )
+
+        with patch("asyncio.create_subprocess_exec") as mock_subprocess:
+            mock_process = AsyncMock()
+            mock_process.returncode = 1
+            mock_process.communicate = AsyncMock(return_value=(b"", b""))
+            mock_subprocess.return_value = mock_process
+
+            result = await sandbox.execute_python("print('test')")
+
+            # When approval is denied, should return failure
+            assert result.success is False
+            assert result.sandboxed is False

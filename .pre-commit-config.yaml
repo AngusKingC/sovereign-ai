@@ -35,7 +35,6 @@ repos:
     hooks:
       - id: mypy
         args: [--ignore-missing-imports]
-        exclude: ^core/task_state_machine\.py$
         additional_dependencies:
           - types-requests
           - types-pyyaml

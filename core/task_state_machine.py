@@ -6,19 +6,19 @@ history tracking, and observability.
 """
 
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from uuid import UUID
 
-from core.schemas import Task, TaskStatus, TaskPriority, TaskStateTransition
+from core.exceptions import InvalidStateTransitionError
 from core.observability import (
+    MemoryTraceEmitter,
     TraceComponent,
+    TraceEmitter,
+    TraceEvent,
     TraceEventType,
     TraceLevel,
-    TraceEvent,
-    TraceEmitter,
-    MemoryTraceEmitter,
 )
-from core.exceptions import InvalidStateTransitionError
+from core.schemas import Task, TaskPriority, TaskStateTransition, TaskStatus
 
 if TYPE_CHECKING:
     from core.memory_router import MemoryRouter
@@ -27,19 +27,44 @@ if TYPE_CHECKING:
 class TaskStateMachine:
     """Manages task state transitions with validation and history tracking."""
 
-    VALID_TRANSITIONS = {
-        TaskStatus.RECEIVED: [TaskStatus.PLANNED, TaskStatus.FAILED, TaskStatus.CANCELLED],
-        TaskStatus.PLANNED: [TaskStatus.EXECUTING, TaskStatus.FAILED, TaskStatus.CANCELLED],
-        TaskStatus.EXECUTING: [TaskStatus.VALIDATING, TaskStatus.AWAITING_APPROVAL, TaskStatus.FAILED, TaskStatus.CANCELLED],
-        TaskStatus.VALIDATING: [TaskStatus.COMPLETE, TaskStatus.EXECUTING, TaskStatus.FAILED, TaskStatus.CANCELLED],
-        TaskStatus.AWAITING_APPROVAL: [TaskStatus.EXECUTING, TaskStatus.DENIED, TaskStatus.FAILED, TaskStatus.CANCELLED],
+    VALID_TRANSITIONS: dict[TaskStatus, list[TaskStatus]] = {
+        TaskStatus.RECEIVED: [
+            TaskStatus.PLANNED,
+            TaskStatus.FAILED,
+            TaskStatus.CANCELLED,
+        ],
+        TaskStatus.PLANNED: [
+            TaskStatus.EXECUTING,
+            TaskStatus.FAILED,
+            TaskStatus.CANCELLED,
+        ],
+        TaskStatus.EXECUTING: [
+            TaskStatus.VALIDATING,
+            TaskStatus.AWAITING_APPROVAL,
+            TaskStatus.FAILED,
+            TaskStatus.CANCELLED,
+        ],
+        TaskStatus.VALIDATING: [
+            TaskStatus.COMPLETE,
+            TaskStatus.EXECUTING,
+            TaskStatus.FAILED,
+            TaskStatus.CANCELLED,
+        ],
+        TaskStatus.AWAITING_APPROVAL: [
+            TaskStatus.EXECUTING,
+            TaskStatus.DENIED,
+            TaskStatus.FAILED,
+            TaskStatus.CANCELLED,
+        ],
         TaskStatus.COMPLETE: [],  # Terminal state
         TaskStatus.FAILED: [],  # Terminal state
         TaskStatus.CANCELLED: [],  # Terminal state
         TaskStatus.DENIED: [],  # Terminal state
     }
 
-    def __init__(self, memory_router: "MemoryRouter", emitter: TraceEmitter | None = None) -> None:
+    def __init__(
+        self, memory_router: "MemoryRouter", emitter: TraceEmitter | None = None
+    ) -> None:
         """Initialize the task state machine with memory router for persistence."""
         self.memory_router = memory_router
         self._emitter = emitter or MemoryTraceEmitter()
@@ -52,16 +77,16 @@ class TaskStateMachine:
         actor: str = "system",
     ) -> Task:
         """Attempt a state transition.
-        
+
         Args:
             task: The task to transition
             to_state: The target state
             reason: Optional reason for the transition
             actor: Which component triggered the transition
-            
+
         Returns:
             The updated task with new state and transition history
-            
+
         Raises:
             InvalidStateTransitionError: If the transition is not valid
         """
@@ -172,11 +197,11 @@ class TaskStateMachine:
 
     def can_transition(self, task: Task, to_state: TaskStatus) -> bool:
         """Check if a transition is valid without performing it.
-        
+
         Args:
             task: The task to check
             to_state: The target state
-            
+
         Returns:
             True if the transition is valid, False otherwise
         """
@@ -186,34 +211,41 @@ class TaskStateMachine:
 
     def is_terminal(self, task: Task) -> bool:
         """Return True if task is in a terminal state.
-        
+
         Args:
             task: The task to check
-            
+
         Returns:
             True if the task is in a terminal state (COMPLETE, FAILED, CANCELLED, DENIED)
         """
-        return task.current_state in [TaskStatus.COMPLETE, TaskStatus.FAILED, TaskStatus.CANCELLED, TaskStatus.DENIED]
+        return task.current_state in [
+            TaskStatus.COMPLETE,
+            TaskStatus.FAILED,
+            TaskStatus.CANCELLED,
+            TaskStatus.DENIED,
+        ]
 
     def get_valid_next_states(self, task: Task) -> list[TaskStatus]:
         """Return list of valid next states for the current task state.
-        
+
         Args:
             task: The task to query
-            
+
         Returns:
             List of valid next states
         """
-        return self.VALID_TRANSITIONS.get(task.current_state, []).copy()
+        return cast(
+            list[TaskStatus], self.VALID_TRANSITIONS.get(task.current_state, [])
+        ).copy()
 
     async def checkpoint(self, task_id: str, step: str, state: TaskStatus) -> None:
         """Checkpoint task state and step for resume after daemon restart.
-        
+
         Args:
             task_id: The task ID to checkpoint
             step: The last completed step name
             state: The current task state
-            
+
         Wrapped in try-except — checkpoint failure must never crash the task.
         """
         try:
@@ -223,7 +255,7 @@ class TaskStateMachine:
                 "state": state.value,
                 "checkpointed_at": datetime.now(timezone.utc).isoformat(),
             }
-            
+
             await self.memory_router.write(
                 {
                     "content": checkpoint_data,
@@ -234,7 +266,7 @@ class TaskStateMachine:
                     },
                 }
             )
-            
+
             # Emit trace event
             try:
                 event = TraceEvent(
