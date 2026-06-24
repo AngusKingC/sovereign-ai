@@ -814,3 +814,17 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors (file-scoped check on new files)
 - Coverage: 83% (baseline held)
 - Tag: prompt-76 verified on origin
+
+## <2025-06-25> 14:00 — governance-directive-01
+
+**Plan**: Governance Directive 01 — Execution Discipline + Token Conservation Rules
+
+**Changed**:
+- AGENTS.md: Revised OR34 (stronger ordering), added OR35-OR38 (output discipline)
+- AI_HANDOFF.md: Added S0.2.5 (re-read AGENTS.md after governance patches)
+
+**Results**:
+- Tests: N/A (governance only, no code changes)
+- Ruff: N/A (governance only)
+- Coverage: N/A (governance only)
+- Tag: governance-directive-01 verified on origin
