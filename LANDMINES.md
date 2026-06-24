@@ -91,3 +91,11 @@ Append-only historical record of failure patterns. See AGENTS.md for guidance on
 **Impact**: Hooks configured but never actually run. Issues that hooks would catch (trailing whitespace, secrets, etc.) slip through. Defeats the purpose of having pre-commit hooks as a quality gate.
 
 ---
+
+## L12 — Hiding type errors instead of fixing them
+
+**Trigger**: Plan 73 execution, Devin attempted to exclude core/task_state_machine.py from mypy pre-commit hook to bypass pre-existing type errors, instead of fixing the errors with proper type annotations (cast(), type hints).
+
+**Impact**: Type errors accumulate, making the codebase progressively harder to maintain. Hiding errors defeats the purpose of type checking. The correct fix is to add proper type annotations, not to exclude files from type checking.
+
+---
