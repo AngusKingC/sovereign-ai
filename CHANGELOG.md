@@ -828,3 +828,27 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: N/A (governance only)
 - Coverage: N/A (governance only)
 - Tag: governance-directive-01 verified on origin
+## <2025-06-25> 14:00 â€” governance-patch-02
+
+**Plan**: Governance Patch 02 â€” L17 Landmine + Vulture Whitelist Update
+
+**Changed**:
+- LANDMINES.md: Added L17 landmine (task list discipline, missed by Plan 76.0)
+- vulture-whitelist.txt: Updated whitelist for Plan 76's new modules (debate_pool, task_classifier, testing_battery) â€” added 33 new findings
+
+**Results**:
+- Tests: N/A (governance only, no code changes)
+- Ruff: N/A (governance only)
+- Coverage: N/A (governance only)
+- Tag: governance-patch-02 verified on origin
+
+## 2026-06-25 06:15 — governance-patch-03
+
+**Governance Patch 03**: Removed OR37 (todo list discipline — non-functional, IDE controls todo list rendering). Renumbered OR38 (batch verification) → OR37. Added new OR38 (GLM Prompts cleanup at decade boundaries — delete previous decade's plan files when hitting prompt-{N}0 tags). No code or test changes.
+
+**Changed**:
+- AGENTS.md: Removed OR37, renumbered OR38→OR37, added new OR38
+
+**Results**:
+- Tests: N/A (governance patch, no code changes)
+- Tag: governance-patch-03 verified locally
