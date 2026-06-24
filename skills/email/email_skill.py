@@ -5,22 +5,25 @@ Single responsibility: Read email via IMAP and send email via SMTP with approval
 """
 
 import imaplib
-import smtplib
+import logging
 import os
+import smtplib
 from email import message_from_bytes
 from email.header import decode_header
 from typing import cast
 
+from core.approval_gate import ApprovalActionType, ApprovalGate, ApprovalRequest
+from core.exceptions import SkillExecutionError
 from core.observability import (
+    MemoryTraceEmitter,
     TraceComponent,
+    TraceEmitter,
+    TraceEvent,
     TraceEventType,
     TraceLevel,
-    TraceEvent,
-    TraceEmitter,
-    MemoryTraceEmitter,
 )
-from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType
-from core.exceptions import SkillExecutionError
+
+logger = logging.getLogger(__name__)
 
 
 class EmailSkill:
@@ -86,23 +89,26 @@ class EmailSkill:
         start_time = 0.0
         try:
             import asyncio
+
             start_time = asyncio.get_event_loop().time()
-        except Exception:
+        except Exception as e:
             # Trace emission failure - non-critical, continue
-            pass
+            logger.warning("AR18: trace emission failed: %s", e, exc_info=True)
 
         try:
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.COMPONENT_START,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                message="Email inbox read started",
-                data={"limit": limit, "unread_only": unread_only},
-                duration_ms=0,
-            ))
-        except Exception:
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.COMPONENT_START,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="Email inbox read started",
+                    data={"limit": limit, "unread_only": unread_only},
+                    duration_ms=0,
+                )
+            )
+        except Exception as e:
             # Trace emission failure - non-critical, continue
-            pass
+            logger.warning("AR18: trace emission failed: %s", e, exc_info=True)
 
         # Check credentials
         if self._imap_host is None:
@@ -118,61 +124,56 @@ class EmailSkill:
         try:
             # Connect to IMAP server
             import asyncio
+
             loop = asyncio.get_event_loop()
-            
+
             mail = await loop.run_in_executor(
-                None,
-                lambda: imaplib.IMAP4_SSL(imap_host, self._imap_port)
+                None, lambda: imaplib.IMAP4_SSL(imap_host, self._imap_port)
             )
-            
+
             # Login
-            await loop.run_in_executor(
-                None,
-                lambda: mail.login(username, password)
-            )
-            
+            await loop.run_in_executor(None, lambda: mail.login(username, password))
+
             # Select inbox
-            await loop.run_in_executor(
-                None,
-                lambda: mail.select("INBOX")
-            )
-            
+            await loop.run_in_executor(None, lambda: mail.select("INBOX"))
+
             # Search for messages
             if unread_only:
                 status, messages = await loop.run_in_executor(
-                    None,
-                    lambda: mail.search(None, "UNSEEN")
+                    None, lambda: mail.search(None, "UNSEEN")
                 )
             else:
                 status, messages = await loop.run_in_executor(
-                    None,
-                    lambda: mail.search(None, "ALL")
+                    None, lambda: mail.search(None, "ALL")
                 )
-            
+
             email_ids = messages[0].split()
-            
+
             # Limit to most recent messages
             email_ids = email_ids[-limit:] if len(email_ids) > limit else email_ids
-            
+
             messages_data = []
             for email_id in reversed(email_ids):
                 # Fetch message
                 status, msg_data = await loop.run_in_executor(
-                    None,
-                    lambda: mail.fetch(email_id, "(RFC822)")
+                    None, lambda: mail.fetch(email_id, "(RFC822)")
                 )
-                
+
                 # Parse message
-                raw_email = msg_data[0][1] if isinstance(msg_data[0], tuple) else msg_data[0]
+                raw_email = (
+                    msg_data[0][1] if isinstance(msg_data[0], tuple) else msg_data[0]
+                )
                 if not isinstance(raw_email, bytes):
-                    raise SkillExecutionError("Failed to parse email: invalid message format")
+                    raise SkillExecutionError(
+                        "Failed to parse email: invalid message format"
+                    )
                 email_message = message_from_bytes(raw_email)
-                
+
                 # Extract fields
                 subject = self._decode_header(email_message.get("Subject", ""))
                 sender = self._decode_header(email_message.get("From", ""))
                 date = email_message.get("Date", "")
-                
+
                 # Get body preview
                 body = ""
                 if email_message.is_multipart():
@@ -186,51 +187,58 @@ class EmailSkill:
                     payload = email_message.get_payload(decode=True)
                     if isinstance(payload, bytes):
                         body = payload.decode("utf-8", errors="replace")
-                
+
                 body_preview = body[:200] if body else ""
-                
+
                 # Check if unread
                 flags_response = mail.fetch(email_id, "(FLAGS)")[1]
                 if flags_response and isinstance(flags_response[0], bytes):
                     unread = b"\\Seen" not in flags_response[0]
                 else:
                     unread = False
-                
-                messages_data.append({
-                    "uid": email_id.decode(),
-                    "subject": subject,
-                    "sender": sender,
-                    "date": date,
-                    "body_preview": body_preview,
-                    "unread": unread,
-                })
-            
+
+                messages_data.append(
+                    {
+                        "uid": email_id.decode(),
+                        "subject": subject,
+                        "sender": sender,
+                        "date": date,
+                        "body_preview": body_preview,
+                        "unread": unread,
+                    }
+                )
+
             # Close connection
             await loop.run_in_executor(None, lambda: mail.close())
             await loop.run_in_executor(None, lambda: mail.logout())
-            
+
             duration_ms = 0
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_COMPLETE,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.INFO,
-                    message="Email inbox read completed",
-                    data={"message_count": len(messages_data), "unread_only": unread_only},
-                    duration_ms=duration_ms,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_COMPLETE,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.INFO,
+                        message="Email inbox read completed",
+                        data={
+                            "message_count": len(messages_data),
+                            "unread_only": unread_only,
+                        },
+                        duration_ms=duration_ms,
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             return messages_data
-            
+
         except Exception as e:
             duration_ms = 0
             try:
@@ -238,20 +246,22 @@ class EmailSkill:
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.ERROR,
-                    message="Email inbox read failed",
-                    data={"error": str(e)},
-                    duration_ms=duration_ms,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.ERROR,
+                        message="Email inbox read failed",
+                        data={"error": str(e)},
+                        duration_ms=duration_ms,
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             raise SkillExecutionError(f"Failed to read inbox: {str(e)}")
 
     async def send(self, to: str, subject: str, body: str) -> bool:
@@ -272,33 +282,38 @@ class EmailSkill:
         start_time = 0.0
         try:
             import asyncio
+
             start_time = asyncio.get_event_loop().time()
-        except Exception:
+        except Exception as e:
             # Trace emission failure - non-critical, continue
-            pass
+            logger.warning("AR18: trace emission failed: %s", e, exc_info=True)
 
         try:
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.COMPONENT_START,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                message="Email send started",
-                data={"to": to, "subject_length": len(subject)},
-                duration_ms=0,
-            ))
-        except Exception:
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.COMPONENT_START,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="Email send started",
+                    data={"to": to, "subject_length": len(subject)},
+                    duration_ms=0,
+                )
+            )
+        except Exception as e:
             # Trace emission failure - non-critical, continue
-            pass
+            logger.warning("AR18: trace emission failed: %s", e, exc_info=True)
 
         # Check approval gate
         if self._approval_gate is None:
-            raise SkillExecutionError("Approval gate not injected — sending without approval is not permitted")
-        
+            raise SkillExecutionError(
+                "Approval gate not injected — sending without approval is not permitted"
+            )
+
         # Request approval
         try:
             from datetime import datetime, timedelta, timezone
             from uuid import uuid4
-            
+
             request = ApprovalRequest(
                 request_id=str(uuid4()),
                 task_id=str(uuid4()),
@@ -314,25 +329,31 @@ class EmailSkill:
             if not response.approved:
                 duration_ms = 0
                 try:
-                    duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
+                    duration_ms = int(
+                        (asyncio.get_event_loop().time() - start_time) * 1000
+                    )
                 except Exception:
                     # Trace emission failure - non-critical, continue
                     pass
-                
+
                 try:
-                    await self._emitter.emit(TraceEvent(
-                        event_type=TraceEventType.OPERATION_COMPLETE,
-                        component=TraceComponent.WORKER,
-                        level=TraceLevel.WARNING,
-                        message="Email send denied by approval gate",
-                        data={"to": to, "reason": response.decision_reason},
-                        duration_ms=duration_ms,
-                    ))
+                    await self._emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_COMPLETE,
+                            component=TraceComponent.WORKER,
+                            level=TraceLevel.WARNING,
+                            message="Email send denied by approval gate",
+                            data={"to": to, "reason": response.decision_reason},
+                            duration_ms=duration_ms,
+                        )
+                    )
                 except Exception:
                     # Trace emission failure - non-critical, continue
                     pass
-                
-                raise SkillExecutionError(f"Approval denied: {response.decision_reason}")
+
+                raise SkillExecutionError(
+                    f"Approval denied: {response.decision_reason}"
+                )
         except SkillExecutionError:
             raise
         except Exception as e:
@@ -342,20 +363,22 @@ class EmailSkill:
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.ERROR,
-                    message="Email send approval request failed",
-                    data={"error": str(e)},
-                    duration_ms=duration_ms,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.ERROR,
+                        message="Email send approval request failed",
+                        data={"error": str(e)},
+                        duration_ms=duration_ms,
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             raise SkillExecutionError(f"Approval request failed: {str(e)}")
 
         # Check credentials
@@ -371,61 +394,58 @@ class EmailSkill:
 
         try:
             import asyncio
+
             loop = asyncio.get_event_loop()
-            
+
             # Connect to SMTP server
             server = await loop.run_in_executor(
-                None,
-                lambda: smtplib.SMTP(smtp_host, self._smtp_port)
+                None, lambda: smtplib.SMTP(smtp_host, self._smtp_port)
             )
-            
+
             # Start TLS
             await loop.run_in_executor(None, lambda: server.starttls())
-            
+
             # Login
-            await loop.run_in_executor(
-                None,
-                lambda: server.login(username, password)
-            )
-            
+            await loop.run_in_executor(None, lambda: server.login(username, password))
+
             # Send email
             from email.message import EmailMessage
+
             msg = EmailMessage()
             msg.set_content(body)
             msg["Subject"] = subject
             msg["From"] = self._username
             msg["To"] = to
-            
-            await loop.run_in_executor(
-                None,
-                lambda: server.send_message(msg)
-            )
-            
+
+            await loop.run_in_executor(None, lambda: server.send_message(msg))
+
             # Close connection
             await loop.run_in_executor(None, lambda: server.quit())
-            
+
             duration_ms = 0
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_COMPLETE,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.INFO,
-                    message="Email send completed",
-                    data={"to": to, "subject_length": len(subject)},
-                    duration_ms=duration_ms,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_COMPLETE,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.INFO,
+                        message="Email send completed",
+                        data={"to": to, "subject_length": len(subject)},
+                        duration_ms=duration_ms,
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             return True
-            
+
         except Exception as e:
             duration_ms = 0
             try:
@@ -433,18 +453,20 @@ class EmailSkill:
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.ERROR,
-                    message="Email send failed",
-                    data={"error": str(e)},
-                    duration_ms=duration_ms,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.ERROR,
+                        message="Email send failed",
+                        data={"error": str(e)},
+                        duration_ms=duration_ms,
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             raise SkillExecutionError(f"Failed to send email: {str(e)}")

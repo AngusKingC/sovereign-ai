@@ -1,6 +1,6 @@
 # PLANS.md — Sovereign AI Project State
 
-**Last updated**: Post-Plan 70 (2026-06-24)
+**Last updated**: Post-Plan 71 (2026-06-24)
 
 This document tracks the dynamic state of the Sovereign AI project: baselines, completed prompts, and the next-5-prompt queue. It is the canonical source for test counts, static analysis baselines, and which prompt is currently active.
 
@@ -8,8 +8,8 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Test Baseline
 
-**Current baseline**: **1253 passed, 67 skipped**
-**Verified**: Plan 70, Step S1 (full test suite)
+**Current baseline**: **1257 passed, 67 skipped**
+**Verified**: Plan 71, Step S16 (full test suite with coverage)
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -17,7 +17,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Static Analysis Baseline
 
-**Captured**: Plan 70 (5-plan milestone full scan — 2026-06-24)
+**Captured**: Plan 71 (tooling integration — 2026-06-24)
 
 | Tool | Baseline | Source | Notes |
 |---|---|---|---|
@@ -27,6 +27,9 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | **Bandit** | 3,384 low, 1 medium, 0 high | Plan 70 S4 | Delta: +205 low, +1 medium from Plan 60 baseline. New B608 finding in memory/postgres_trace_store.py:161 (false positive - asyncpg parameterized query). |
 | **pip-audit** | 19 CVEs across 4 packages | Plan 70 S5 | Stable across Plans 56-70. No actionable fixes (upstream only). |
 | **Vulture** | 23 high-confidence findings | Plan 70 S6 | Stable across Plans 60-70. Dead code analysis only. |
+| **detect-secrets** | 15 findings (baseline) | Plan 71 S9 | Baseline established with .secrets.baseline. All findings are false positives (test fixtures, doc examples). |
+| **pre-commit** | Configured | Plan 71 S10 | Hooks installed: trailing-whitespace, end-of-file-fixer, check-yaml, check-json, check-toml, black, ruff, isort, mypy, detect-secrets. |
+| **pytest-cov** | Configured | Plan 71 S11 | Coverage reports: term-missing + HTML. No fail threshold (baseline: 1% coverage). |
 
 **Per-plan verification cadence**:
 - **Every plan**: Ruff (file-scoped) + Mypy (file-scoped) + Pytest
@@ -59,22 +62,11 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 68 | Phase 1 Foundation: Skill Taxonomy + CONTEXT.md | 1253 | SkillTier enum, SkillClassification dataclass, SkillTaxonomyRegistry. Default registry with 25 built-in skill classifications (15 user, 9 agent, 1 hybrid). CONTEXT.md project-level shared vocabulary. 20 new tests (14 taxonomy + 6 context). Fixed 2 pre-existing test failures (notes delete, qdrant embedder fallback). |
 | 69 | Repo Hygiene: Governance Doc Fixes + Stale File Cleanup | 1253 | CHANGELOG fixes (date, timestamps, tag note, filename references). PLANS.md duplicate section removed. AGENTS.md header updated. AI_HANDOFF.md CONTEXT.md governance added. core/verbosity.py stale reference fixed. 5 new __init__.py files. exports/trajectories.jsonl untracked. Stale temp file deleted. |
 | 70 | 5-Plan Milestone Full Scan (Priority 1) | 1253 | Full 6-tool checkpoint scan. Tests: 1253 passed, 67 skipped (baseline held). Ruff: 0 errors (baseline held). Mypy: 0 errors in 256 source files (baseline held). Bandit: 3384 low, 1 medium, 0 high (new B608 false positive). pip-audit: 19 CVEs (stable). Vulture: 23 findings (baseline held). |
+| 71 | Code Hygiene + Tooling Integration | 1257 | AR18 cleanup (8 files: system/, core/, skills/). datetime.now() fixes (3 files: system/profiler.py, cli/command_history.py, memory/obsidian.py). API key validation in system/model_acquisition.py. Dead code fixes. AR18 compliance test created. detect-secrets baseline established. pre-commit configured. pytest-cov integrated. CI updated to Python 3.12 with detect-secrets and coverage jobs. 4 new tests (test_ar18_compliance.py). |
 
 ---
 
 ## Next 5 Prompts Queue
-
-### Plan 71 — [Open Slot] (Priority TBD)
-
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 70.
-
-**Expected impact**: TBD
-
-**Baseline changes**: TBD
-
-**Gate**: TBD
-
----
 
 ### Plan 72 — [Open Slot] (Priority TBD)
 
@@ -112,6 +104,30 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
+### Plan 75 — [Open Slot] (Priority TBD)
+
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 74.
+
+**Expected impact**: TBD
+
+**Baseline changes**: TBD
+
+**Gate**: TBD
+
+---
+
+### Plan 76 — [Open Slot] (Priority TBD)
+
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 75.
+
+**Expected impact**: TBD
+
+**Baseline changes**: TBD
+
+**Gate**: TBD
+
+---
+
 ### Plan 75 — 5-Plan Milestone Full Scan (Priority 1 — tentative)
 
 **Scope**: Post-Plans 71-74 full-repo scan and baseline refresh.
@@ -129,12 +145,15 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Baseline Reconciliation Notes
 
-- **Test count delta**: 1253 → 1253 (no change). Scan-only plan, no test changes. Baseline held.
-- **Mypy delta**: 0 → 0 (no change). Scan-only plan, no code changes. Baseline held.
-- **Ruff delta**: 0 → 0 (no change). Scan-only plan baselines held.
-- **Bandit delta**: 3,179 low/0 medium/0 high → 3,384 low/1 medium/0 high. +205 low, +1 medium from Plan 60 baseline. New B608 finding in memory/postgres_trace_store.py:161 is a false positive (asyncpg uses parameterized queries with $param_idx syntax, not string concatenation). Bandit doesn't recognize asyncpg's parameterization pattern.
-- **pip-audit delta**: 19 CVEs → 19 CVEs (no change). Stable across Plans 60-70.
-- **Vulture delta**: 23 → 23 (no change). Stable across Plans 60-70.
+- **Test count delta**: 1253 → 1257 (+4). New AR18 compliance test (test_ar18_compliance.py) with 4 test functions. Baseline updated to 1257 passed, 67 skipped.
+- **Mypy delta**: 0 → 0 (no change). All edited files passed mypy checks.
+- **Ruff delta**: 0 → 0 (no change). All edited files passed ruff checks.
+- **Bandit delta**: No change (Plan 71 did not run bandit scan).
+- **pip-audit delta**: No change (Plan 71 did not run pip-audit scan).
+- **Vulture delta**: No change (Plan 71 did not run vulture scan).
+- **detect-secrets**: New baseline established with 15 findings (all false positives: test fixtures, doc examples).
+- **pre-commit**: New tooling configured with 10 hooks (trailing-whitespace, end-of-file-fixer, check-yaml, check-json, check-toml, black, ruff, isort, mypy, detect-secrets).
+- **pytest-cov**: New tooling configured with term-missing and HTML coverage reports. Baseline: 1% coverage (no fail threshold set).
 
 ---
 
@@ -258,6 +277,6 @@ These features add defense, portability, and resilience:
 
 ---
 
-**Maintained by**: Devin (at plan closing), GLM (review only, does not edit directly)  
-**Format**: Markdown, append-only where applicable (completed prompts, queue shift)  
+**Maintained by**: Devin (at plan closing), GLM (review only, does not edit directly)
+**Format**: Markdown, append-only where applicable (completed prompts, queue shift)
 **Governance**: Source of truth for baselines and queue. All references to test counts point here.

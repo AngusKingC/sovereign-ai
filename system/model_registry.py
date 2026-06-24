@@ -5,9 +5,18 @@ Single responsibility: Track all known models with their resource requirements,
 adapter compatibility, and download status for intelligent model selection.
 """
 
-from datetime import datetime
+import logging
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
+from core.observability import (
+    MemoryTraceEmitter,
+    TraceComponent,
+    TraceEmitter,
+    TraceEvent,
+    TraceEventType,
+    TraceLevel,
+)
 from core.schemas import (
     DownloadStatus,
     ModelEntry,
@@ -15,23 +24,19 @@ from core.schemas import (
     QuantisationVariant,
     SystemProfile,
 )
-from core.observability import (
-    TraceComponent,
-    TraceEventType,
-    TraceLevel,
-    TraceEvent,
-    TraceEmitter,
-    MemoryTraceEmitter,
-)
 
 if TYPE_CHECKING:
     from core.memory_router import MemoryRouter
+
+logger = logging.getLogger(__name__)
 
 
 class ModelRegistry:
     """Registry for tracking model information and compatibility."""
 
-    def __init__(self, memory_router: "MemoryRouter", emitter: TraceEmitter | None = None) -> None:
+    def __init__(
+        self, memory_router: "MemoryRouter", emitter: TraceEmitter | None = None
+    ) -> None:
         """Initialize the model registry with memory router for persistence."""
         self.memory_router = memory_router
         self._models: dict[str, ModelEntry] = {}
@@ -51,18 +56,19 @@ class ModelRegistry:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
 
             # Try to load from Postgres
             try:
                 results = await self.memory_router.fetch_by_filter(
                     filter={"task_id": "model_registry", "query": "model_registry"},
-                    collection="model_registry"
+                    collection="model_registry",
                 )
-                
+
                 if results:
                     for item in results:
                         if isinstance(item, dict):
@@ -94,10 +100,11 @@ class ModelRegistry:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
         except Exception as e:
             try:
                 event = TraceEvent(
@@ -111,10 +118,11 @@ class ModelRegistry:
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
 
     async def _save_to_storage(self, entry: ModelEntry) -> None:
         """Save a model entry to storage."""
@@ -125,7 +133,7 @@ class ModelRegistry:
                     "task_id": "model_registry",
                     "metadata": {"model_id": entry.model_id, "type": "model_entry"},
                 },
-                collection="model_registry"
+                collection="model_registry",
             )
         except Exception as e:
             try:
@@ -138,10 +146,11 @@ class ModelRegistry:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
 
     async def register(self, entry: ModelEntry) -> None:
         """Add or update a model entry."""
@@ -156,12 +165,13 @@ class ModelRegistry:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
 
-            entry.last_updated = datetime.now()
+            entry.last_updated = datetime.now(timezone.utc)
             self._models[entry.model_id] = entry
             await self._save_to_storage(entry)
         except Exception as e:
@@ -177,10 +187,11 @@ class ModelRegistry:
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
             raise
 
     async def get(self, model_id: str) -> ModelEntry | None:
@@ -197,11 +208,17 @@ class ModelRegistry:
 
     async def list_by_adapter(self, adapter_name: str) -> list[ModelEntry]:
         """Filter by adapter compatibility."""
-        return [m for m in self._models.values() if adapter_name in m.adapter_compatibility]
+        return [
+            m for m in self._models.values() if adapter_name in m.adapter_compatibility
+        ]
 
     async def list_downloaded(self) -> list[ModelEntry]:
         """List only downloaded models."""
-        return [m for m in self._models.values() if m.download_status == DownloadStatus.DOWNLOADED]
+        return [
+            m
+            for m in self._models.values()
+            if m.download_status == DownloadStatus.DOWNLOADED
+        ]
 
     async def recommend(
         self, task_tags: list[str], system_profile: SystemProfile
@@ -214,19 +231,27 @@ class ModelRegistry:
                     component=TraceComponent.SYSTEM,
                     message="Generating model recommendations",
                     level=TraceLevel.INFO,
-                    data={"task_tags": task_tags, "vram_available_mb": system_profile.gpu.available_vram_mb},
+                    data={
+                        "task_tags": task_tags,
+                        "vram_available_mb": system_profile.gpu.available_vram_mb,
+                    },
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
 
             # Filter by task tag match
             matching_models = []
             for model in self._models.values():
-                tag_match_score = len(set(task_tags) & set(model.task_tags)) / len(task_tags) if task_tags else 0.0
+                tag_match_score = (
+                    len(set(task_tags) & set(model.task_tags)) / len(task_tags)
+                    if task_tags
+                    else 0.0
+                )
                 if tag_match_score > 0:
                     matching_models.append((model, tag_match_score))
 
@@ -239,18 +264,27 @@ class ModelRegistry:
                 # Find the best quantisation that fits
                 best_variant = None
                 for variant in model.quantisation_variants:
-                    if variant.vram_required_gb <= available_vram_gb or variant.ram_required_gb <= available_ram_gb:
+                    if (
+                        variant.vram_required_gb <= available_vram_gb
+                        or variant.ram_required_gb <= available_ram_gb
+                    ):
                         best_variant = variant
                         break
 
                 if best_variant:
                     # Calculate hardware fit score (higher is better)
                     if best_variant.vram_required_gb <= available_vram_gb:
-                        hardware_fit = 1.0 - (best_variant.vram_required_gb / available_vram_gb)
+                        hardware_fit = 1.0 - (
+                            best_variant.vram_required_gb / available_vram_gb
+                        )
                     else:
-                        hardware_fit = 1.0 - (best_variant.ram_required_gb / available_ram_gb)
+                        hardware_fit = 1.0 - (
+                            best_variant.ram_required_gb / available_ram_gb
+                        )
 
-                    viable_models.append((model, tag_match_score, hardware_fit, best_variant))
+                    viable_models.append(
+                        (model, tag_match_score, hardware_fit, best_variant)
+                    )
 
             # Sort by: (1) hardware fit, (2) tag match score, (3) quality score
             viable_models.sort(
@@ -269,10 +303,11 @@ class ModelRegistry:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
 
             return result
         except Exception as e:
@@ -288,10 +323,11 @@ class ModelRegistry:
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
             raise
 
     async def update_download_status(
@@ -305,20 +341,25 @@ class ModelRegistry:
                     component=TraceComponent.SYSTEM,
                     message=f"Updating download status for {model_id}",
                     level=TraceLevel.INFO,
-                    data={"model_id": model_id, "status": status.value, "quantisation": quantisation},
+                    data={
+                        "model_id": model_id,
+                        "status": status.value,
+                        "quantisation": quantisation,
+                    },
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
 
             if model_id in self._models:
                 entry = self._models[model_id]
                 entry.download_status = status
                 entry.downloaded_quantisation = quantisation
-                entry.last_updated = datetime.now()
+                entry.last_updated = datetime.now(timezone.utc)
                 await self._save_to_storage(entry)
         except Exception as e:
             try:
@@ -333,10 +374,11 @@ class ModelRegistry:
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
             raise
 
     async def initialize(self, system_profile: SystemProfile | None = None) -> None:
@@ -532,7 +574,9 @@ class ModelRegistry:
                 self._models[model.model_id] = model
                 await self._save_to_storage(model)
 
-    async def _cross_reference_with_profile(self, system_profile: SystemProfile) -> None:
+    async def _cross_reference_with_profile(
+        self, system_profile: SystemProfile
+    ) -> None:
         """Cross-reference seed data with SystemProfile to set download status."""
         if not system_profile.ollama.running:
             return
@@ -545,7 +589,7 @@ class ModelRegistry:
             if entry.source == ModelSource.OLLAMA:
                 # Extract model name from model_id (e.g., "ollama/qwen2.5-coder:7b" -> "qwen2.5-coder:7b")
                 model_name = model_id.split("/", 1)[1] if "/" in model_id else model_id
-                
+
                 # Check if this model is downloaded
                 for downloaded_name in downloaded_model_names:
                     if downloaded_name in model_name or model_name in downloaded_name:
@@ -553,4 +597,3 @@ class ModelRegistry:
                             model_id, DownloadStatus.DOWNLOADED
                         )
                         break
-

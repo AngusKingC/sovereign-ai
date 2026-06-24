@@ -7,12 +7,21 @@ with user approval, supporting multiple sources and quantisation variants.
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from typing import TYPE_CHECKING
 
 import httpx
 
+from core.observability import (
+    NullTraceEmitter,
+    TraceComponent,
+    TraceEmitter,
+    TraceEvent,
+    TraceEventType,
+    TraceLevel,
+)
 from core.schemas import (
     ApprovalCallback,
     DownloadRequest,
@@ -23,19 +32,13 @@ from core.schemas import (
     QuantisationVariant,
     SystemProfile,
 )
-from core.observability import (
-    TraceComponent,
-    TraceEventType,
-    TraceLevel,
-    TraceEmitter,
-    NullTraceEmitter,
-    TraceEvent,
-)
 
 if TYPE_CHECKING:
     from core.memory_router import MemoryRouter
-    from system.resource_manager import ResourceManager
     from system.model_registry import ModelRegistry
+    from system.resource_manager import ResourceManager
+
+logger = logging.getLogger(__name__)
 
 
 class ModelAcquisition:
@@ -53,6 +56,11 @@ class ModelAcquisition:
         self.emitter = emitter or NullTraceEmitter()
         self.hf_api_url = "https://huggingface.co/api/models"
         self.hf_token = os.environ.get("HF_TOKEN")
+        if not self.hf_token:
+            logger.warning(
+                "HF_TOKEN not set — HuggingFace model acquisition will be skipped. "
+                "Set HF_TOKEN environment variable to enable."
+            )
         self.ollama_api_url = "http://localhost:11434"
 
     async def search(
@@ -66,7 +74,11 @@ class ModelAcquisition:
                     component=TraceComponent.SYSTEM,
                     message=f"Searching HuggingFace for: {query}",
                     level=TraceLevel.INFO,
-                    data={"query": query, "task_tags": task_tags, "max_results": max_results},
+                    data={
+                        "query": query,
+                        "task_tags": task_tags,
+                        "max_results": max_results,
+                    },
                 )
             )
 
@@ -76,10 +88,14 @@ class ModelAcquisition:
 
             params: dict[str, str] = {"search": query, "limit": str(max_results)}
             if task_tags:
-                params["pipeline_tag"] = task_tags[0]  # HuggingFace API supports one pipeline tag
+                params["pipeline_tag"] = task_tags[
+                    0
+                ]  # HuggingFace API supports one pipeline tag
 
             async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(self.hf_api_url, headers=headers, params=params)
+                response = await client.get(
+                    self.hf_api_url, headers=headers, params=params
+                )
                 response.raise_for_status()
                 models_data = response.json()
 
@@ -112,10 +128,11 @@ class ModelAcquisition:
                         error_message=str(e),
                     )
                 )
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
             return []
 
     async def fetch_metadata(self, model_id: str) -> ModelEntry | None:
@@ -136,7 +153,9 @@ class ModelAcquisition:
                 headers["Authorization"] = f"Bearer {self.hf_token}"
 
             async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(f"{self.hf_api_url}/{model_id}", headers=headers)
+                response = await client.get(
+                    f"{self.hf_api_url}/{model_id}", headers=headers
+                )
                 response.raise_for_status()
                 model_data = response.json()
 
@@ -164,10 +183,11 @@ class ModelAcquisition:
                         error_message=str(e),
                     )
                 )
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
             return None
 
     async def _hf_data_to_entry(self, model_data: dict) -> ModelEntry | None:
@@ -181,30 +201,39 @@ class ModelAcquisition:
             tags = model_data.get("tags", [])
             pipeline_tag = model_data.get("pipeline_tag", "")
             task_tags = [pipeline_tag] if pipeline_tag else []
-            task_tags.extend([tag for tag in tags if tag in ["text-generation", "text-classification", "embeddings", "code"]])
+            task_tags.extend(
+                [
+                    tag
+                    for tag in tags
+                    if tag
+                    in ["text-generation", "text-classification", "embeddings", "code"]
+                ]
+            )
 
             # Estimate quantisation variants based on common patterns
             quantisation_variants = []
             if "gguf" in tags or "ggml" in tags:
                 # GGUF models typically have Q4, Q5, Q8 variants
-                quantisation_variants.extend([
-                    QuantisationVariant(
-                        name="Q4_K_M",
-                        size_on_disk_gb=4.0,
-                        vram_required_gb=5.0,
-                        ram_required_gb=8.0,
-                        quality_score=0.85,
-                        speed_score=0.90,
-                    ),
-                    QuantisationVariant(
-                        name="Q8_0",
-                        size_on_disk_gb=7.0,
-                        vram_required_gb=8.0,
-                        ram_required_gb=12.0,
-                        quality_score=0.95,
-                        speed_score=0.75,
-                    ),
-                ])
+                quantisation_variants.extend(
+                    [
+                        QuantisationVariant(
+                            name="Q4_K_M",
+                            size_on_disk_gb=4.0,
+                            vram_required_gb=5.0,
+                            ram_required_gb=8.0,
+                            quality_score=0.85,
+                            speed_score=0.90,
+                        ),
+                        QuantisationVariant(
+                            name="Q8_0",
+                            size_on_disk_gb=7.0,
+                            vram_required_gb=8.0,
+                            ram_required_gb=12.0,
+                            quality_score=0.95,
+                            speed_score=0.75,
+                        ),
+                    ]
+                )
             else:
                 # Default quantisation for non-GGUF models
                 quantisation_variants.append(
@@ -218,10 +247,7 @@ class ModelAcquisition:
                     )
                 )
 
-            # Calculate quality score based on likes and downloads
-            likes = model_data.get("likes", 0)
-            downloads = model_data.get("downloads", 0)
-            min(1.0, (likes / 1000.0) + (downloads / 100000.0))
+            # TODO: use likes/downloads for popularity scoring in future
 
             return ModelEntry(
                 model_id=f"huggingface/{model_id}",
@@ -245,10 +271,11 @@ class ModelAcquisition:
                         data={"error": str(e)},
                     )
                 )
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
             return None
 
     async def check_fit(
@@ -276,14 +303,18 @@ class ModelAcquisition:
                     return False, f"Quantisation variant {quantisation} not found"
             elif entry.quantisation_variants:
                 # Use highest quality variant
-                variant = max(entry.quantisation_variants, key=lambda v: v.quality_score)
+                variant = max(
+                    entry.quantisation_variants, key=lambda v: v.quality_score
+                )
             else:
                 return False, "No quantisation variants available"
 
             # Check with resource manager
             if resource_manager is None:
                 return True, "Resource manager not provided, assuming fit"
-            can_load, reason = await resource_manager.can_load(model_id, variant.name, registry)
+            can_load, reason = await resource_manager.can_load(
+                model_id, variant.name, registry
+            )
             return can_load, reason
         except Exception as e:
             try:
@@ -297,10 +328,11 @@ class ModelAcquisition:
                         error_message=str(e),
                     )
                 )
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
             return False, f"Error checking fit: {str(e)}"
 
     async def request_download(
@@ -319,7 +351,11 @@ class ModelAcquisition:
                     component=TraceComponent.SYSTEM,
                     message=f"Download request for {request.model_id}",
                     level=TraceLevel.INFO,
-                    data={"model_id": request.model_id, "source": request.source.value, "quantisation": request.quantisation},
+                    data={
+                        "model_id": request.model_id,
+                        "source": request.source.value,
+                        "quantisation": request.quantisation,
+                    },
                 )
             )
 
@@ -344,12 +380,12 @@ class ModelAcquisition:
 
             # Check disk space
             from system.profiler import SystemProfiler
+
             profiler = SystemProfiler(self.memory_router)
             system_profile = await profiler.get_cached()
             if system_profile and system_profile.storage:
-                sum(s.total_mb for s in system_profile.storage)
                 available_disk_mb = sum(s.available_mb for s in system_profile.storage)
-                
+
                 # Estimate model size (default to 10GB if unknown)
                 estimated_size_gb = 10.0
                 if entry and entry.quantisation_variants:
@@ -359,7 +395,9 @@ class ModelAcquisition:
                                 estimated_size_gb = v.size_on_disk_gb
                                 break
                     else:
-                        estimated_size_gb = entry.quantisation_variants[0].size_on_disk_gb
+                        estimated_size_gb = entry.quantisation_variants[
+                            0
+                        ].size_on_disk_gb
 
                 estimated_size_mb = estimated_size_gb * 1024
                 if available_disk_mb < estimated_size_mb * 1.2:  # Require 20% buffer
@@ -369,7 +407,10 @@ class ModelAcquisition:
                             component=TraceComponent.SYSTEM,
                             message="Insufficient disk space",
                             level=TraceLevel.WARNING,
-                            data={"available_mb": available_disk_mb, "required_mb": estimated_size_mb * 1.2},
+                            data={
+                                "available_mb": available_disk_mb,
+                                "required_mb": estimated_size_mb * 1.2,
+                            },
                         )
                     )
                     return DownloadResult(
@@ -398,10 +439,12 @@ class ModelAcquisition:
                                 component=TraceComponent.SYSTEM,
                                 message=f"Found {len(alternatives)} alternative models",
                                 level=TraceLevel.INFO,
-                                data={"alternatives": [m.model_id for m in alternatives]},
+                                data={
+                                    "alternatives": [m.model_id for m in alternatives]
+                                },
                             )
                         )
-                
+
                 await self.emitter.emit(
                     TraceEvent(
                         event_type=TraceEventType.MODEL_DOWNLOAD_FAILED,
@@ -422,7 +465,9 @@ class ModelAcquisition:
 
             # Execute download based on source
             if request.source == ModelSource.OLLAMA:
-                result = await self.download_ollama(request.model_id, request.quantisation)
+                result = await self.download_ollama(
+                    request.model_id, request.quantisation
+                )
             elif request.source == ModelSource.HUGGINGFACE:
                 result = await self.download_huggingface(
                     request.model_id, request.quantisation or "Q4_K_M", "./models"
@@ -459,10 +504,11 @@ class ModelAcquisition:
                         error_message=str(e),
                     )
                 )
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
             return DownloadResult(
                 success=False,
                 model_id=request.model_id,
@@ -477,7 +523,7 @@ class ModelAcquisition:
     ) -> DownloadResult:
         """Download via Ollama pull API with progress tracking."""
         start_time = time.time()
-        
+
         try:
             # Extract model name from model_id (e.g., "ollama/qwen2.5-coder:7b" -> "qwen2.5-coder:7b")
             model_name = model_id.split("/", 1)[1] if "/" in model_id else model_id
@@ -507,12 +553,13 @@ class ModelAcquisition:
                     if line:
                         try:
                             import json
+
                             data = json.loads(line)
                             if "total" in data and "completed" in data:
                                 total = data["total"]
                                 completed = data["completed"]
                                 progress = (completed / total) * 100 if total > 0 else 0
-                                
+
                                 # Emit progress every 10%
                                 if progress - last_progress >= 10:
                                     await self.emitter.emit(
@@ -521,7 +568,11 @@ class ModelAcquisition:
                                             component=TraceComponent.SYSTEM,
                                             message=f"Download progress: {progress:.1f}%",
                                             level=TraceLevel.INFO,
-                                            data={"progress": progress, "completed": completed, "total": total},
+                                            data={
+                                                "progress": progress,
+                                                "completed": completed,
+                                                "total": total,
+                                            },
                                         )
                                     )
                                     last_progress = progress
@@ -556,10 +607,11 @@ class ModelAcquisition:
                         error_message=str(e),
                     )
                 )
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
             return DownloadResult(
                 success=False,
                 model_id=model_id,
@@ -574,11 +626,13 @@ class ModelAcquisition:
     ) -> DownloadResult:
         """Download GGUF file directly from HuggingFace with progress tracking."""
         start_time = time.time()
-        
+
         try:
             # Construct download URL
             model_name = model_id.split("/", 1)[1] if "/" in model_id else model_id
-            download_url = f"https://huggingface.co/{model_name}/resolve/main/{quantisation}.gguf"
+            download_url = (
+                f"https://huggingface.co/{model_name}/resolve/main/{quantisation}.gguf"
+            )
 
             await self.emitter.emit(
                 TraceEvent(
@@ -586,7 +640,11 @@ class ModelAcquisition:
                     component=TraceComponent.SYSTEM,
                     message=f"Downloading {quantisation}.gguf from HuggingFace",
                     level=TraceLevel.INFO,
-                    data={"model_id": model_id, "quantisation": quantisation, "url": download_url},
+                    data={
+                        "model_id": model_id,
+                        "quantisation": quantisation,
+                        "url": download_url,
+                    },
                 )
             )
 
@@ -604,7 +662,7 @@ class ModelAcquisition:
                         async for chunk in response.aiter_bytes(chunk_size=8192):
                             f.write(chunk)
                             downloaded += len(chunk)
-                            
+
                             if total_size > 0:
                                 progress = (downloaded / total_size) * 100
                                 if progress - last_progress >= 10:
@@ -614,7 +672,11 @@ class ModelAcquisition:
                                             component=TraceComponent.SYSTEM,
                                             message=f"Download progress: {progress:.1f}%",
                                             level=TraceLevel.INFO,
-                                            data={"progress": progress, "downloaded": downloaded, "total": total_size},
+                                            data={
+                                                "progress": progress,
+                                                "downloaded": downloaded,
+                                                "total": total_size,
+                                            },
                                         )
                                     )
                                     last_progress = progress
@@ -647,10 +709,11 @@ class ModelAcquisition:
                         error_message=str(e),
                     )
                 )
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
             return DownloadResult(
                 success=False,
                 model_id=model_id,
@@ -663,20 +726,35 @@ class ModelAcquisition:
     async def _validate_api_model(self, model_id: str) -> DownloadResult:
         """Validate API model by checking API key availability."""
         start_time = time.time()
-        
+
         try:
             # Extract provider from model_id (e.g., "anthropic/claude-sonnet-4" -> "anthropic")
             provider = model_id.split("/", 1)[0] if "/" in model_id else model_id
-            
+
             # Check for API key
             api_key = None
             if provider == "anthropic":
                 api_key = os.environ.get("ANTHROPIC_API_KEY")
+                if not api_key:
+                    raise ValueError(
+                        "ANTHROPIC_API_KEY environment variable not set. "
+                        "Set it to use Anthropic API models."
+                    )
             elif provider == "openai":
                 api_key = os.environ.get("OPENAI_API_KEY")
+                if not api_key:
+                    raise ValueError(
+                        "OPENAI_API_KEY environment variable not set. "
+                        "Set it to use OpenAI API models."
+                    )
             elif provider == "google":
                 api_key = os.environ.get("GOOGLE_API_KEY")
-            
+                if not api_key:
+                    raise ValueError(
+                        "GOOGLE_API_KEY environment variable not set. "
+                        "Set it to use Google API models."
+                    )
+
             if api_key:
                 await self.emitter.emit(
                     TraceEvent(
@@ -722,10 +800,11 @@ class ModelAcquisition:
                         error_message=str(e),
                     )
                 )
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
             return DownloadResult(
                 success=False,
                 model_id=model_id,
@@ -735,9 +814,7 @@ class ModelAcquisition:
                 error=str(e),
             )
 
-    async def delete_model(
-        self, model_id: str, registry: "ModelRegistry"
-    ) -> bool:
+    async def delete_model(self, model_id: str, registry: "ModelRegistry") -> bool:
         """Delete a downloaded model after user approval."""
         try:
             await self.emitter.emit(
@@ -757,7 +834,7 @@ class ModelAcquisition:
                     new_model_requesting="",
                     memory_impact=f"Free disk space used by {model_id}",
                 )
-                
+
                 if not approved:
                     await self.emitter.emit(
                         TraceEvent(
@@ -781,7 +858,9 @@ class ModelAcquisition:
                 return False
 
             # Update registry
-            await registry.update_download_status(model_id, DownloadStatus.NOT_DOWNLOADED, None)
+            await registry.update_download_status(
+                model_id, DownloadStatus.NOT_DOWNLOADED, None
+            )
 
             await self.emitter.emit(
                 TraceEvent(
@@ -805,10 +884,11 @@ class ModelAcquisition:
                         error_message=str(e),
                     )
                 )
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
             return False
 
     async def list_alternatives(
@@ -818,17 +898,17 @@ class ModelAcquisition:
         try:
             # Get all models from registry
             all_models = await registry.list_all()
-            
+
             # Filter by task tags of the original model
             original = await registry.get(model_id)
             if not original:
                 return []
-            
+
             alternatives = []
             for model in all_models:
                 if model.model_id == model_id:
                     continue
-                
+
                 # Check for task tag overlap
                 tag_overlap = set(original.task_tags) & set(model.task_tags)
                 if tag_overlap:
@@ -838,7 +918,7 @@ class ModelAcquisition:
                     )
                     if can_fit:
                         alternatives.append(model)
-            
+
             await self.emitter.emit(
                 TraceEvent(
                     event_type=TraceEventType.MODEL_ALTERNATIVES_LISTED,
@@ -848,7 +928,7 @@ class ModelAcquisition:
                     data={"alternatives": [m.model_id for m in alternatives]},
                 )
             )
-            
+
             return alternatives
         except Exception as e:
             try:
@@ -862,30 +942,34 @@ class ModelAcquisition:
                         error_message=str(e),
                     )
                 )
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
             return []
 
     async def get_storage_summary(self) -> dict:
         """Returns total models downloaded, total disk used, available disk space."""
         try:
             from system.profiler import SystemProfiler
+
             profiler = SystemProfiler(self.memory_router)
             system_profile = await profiler.get_cached()
-            
+
             if not system_profile or not system_profile.storage:
                 return {
                     "total_models": 0,
                     "total_disk_used_gb": 0.0,
                     "available_disk_gb": 0.0,
                 }
-            
+
             # Convert MB to GB
-            total_disk_used_mb = sum(s.total_mb - s.available_mb for s in system_profile.storage)
+            total_disk_used_mb = sum(
+                s.total_mb - s.available_mb for s in system_profile.storage
+            )
             available_disk_mb = sum(s.available_mb for s in system_profile.storage)
-            
+
             return {
                 "total_models": 0,  # Would need to track this separately
                 "total_disk_used_gb": total_disk_used_mb / 1024,
@@ -904,13 +988,13 @@ class ModelAcquisition:
                     error_message=str(e),
                 )
                 await self.emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
             return {
                 "total_models": 0,
                 "total_disk_used_gb": 0.0,
                 "available_disk_gb": 0.0,
             }
-

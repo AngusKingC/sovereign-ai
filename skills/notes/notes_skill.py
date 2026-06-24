@@ -4,20 +4,23 @@ Notes Skill - Postgres-backed notes via MemoryRouter.
 Single responsibility: Manage notes stored in MemoryRouter with approval gating.
 """
 
+import logging
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
+from core.approval_gate import ApprovalActionType, ApprovalGate, ApprovalRequest
+from core.exceptions import SkillExecutionError
+from core.memory_router import MemoryRouter
 from core.observability import (
+    MemoryTraceEmitter,
     TraceComponent,
+    TraceEmitter,
+    TraceEvent,
     TraceEventType,
     TraceLevel,
-    TraceEvent,
-    TraceEmitter,
-    MemoryTraceEmitter,
 )
-from core.approval_gate import ApprovalGate, ApprovalRequest, ApprovalActionType
-from core.memory_router import MemoryRouter
-from core.exceptions import SkillExecutionError
+
+logger = logging.getLogger(__name__)
 
 
 class NotesSkill:
@@ -40,7 +43,9 @@ class NotesSkill:
         self._approval_gate = approval_gate
         self._memory_router = memory_router
 
-    async def create(self, title: str, content: str, tags: list[str] | None = None) -> str:
+    async def create(
+        self, title: str, content: str, tags: list[str] | None = None
+    ) -> str:
         """
         Create a new note.
 
@@ -58,23 +63,26 @@ class NotesSkill:
         start_time = 0.0
         try:
             import asyncio
+
             start_time = asyncio.get_event_loop().time()
-        except Exception:
+        except Exception as e:
             # Event loop timing failure - non-critical, continue
-            pass
+            logger.warning("AR18: event loop timing failed: %s", e, exc_info=True)
 
         try:
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.COMPONENT_START,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                message="Notes create started",
-                data={"title": title, "tags": tags or []},
-                duration_ms=0,
-            ))
-        except Exception:
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.COMPONENT_START,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="Notes create started",
+                    data={"title": title, "tags": tags or []},
+                    duration_ms=0,
+                )
+            )
+        except Exception as e:
             # Trace emission failure - non-critical, continue
-            pass
+            logger.warning("AR18: trace emission failed: %s", e, exc_info=True)
 
         # Request approval if gate is present
         if self._approval_gate is not None:
@@ -94,48 +102,61 @@ class NotesSkill:
                 if not response.approved:
                     duration_ms = 0
                     try:
-                        duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
+                        duration_ms = int(
+                            (asyncio.get_event_loop().time() - start_time) * 1000
+                        )
                     except Exception:
                         # Event loop timing failure - non-critical, continue
                         pass
-                    
+
                     try:
-                        await self._emitter.emit(TraceEvent(
-                            event_type=TraceEventType.OPERATION_COMPLETE,
-                            component=TraceComponent.WORKER,
-                            level=TraceLevel.WARNING,
-                            message="Notes create denied by approval gate",
-                            data={"title": title, "reason": response.decision_reason},
-                            duration_ms=duration_ms,
-                        ))
+                        await self._emitter.emit(
+                            TraceEvent(
+                                event_type=TraceEventType.OPERATION_COMPLETE,
+                                component=TraceComponent.WORKER,
+                                level=TraceLevel.WARNING,
+                                message="Notes create denied by approval gate",
+                                data={
+                                    "title": title,
+                                    "reason": response.decision_reason,
+                                },
+                                duration_ms=duration_ms,
+                            )
+                        )
                     except Exception:
                         # Trace emission failure - non-critical, continue
                         pass
-                    
-                    raise SkillExecutionError(f"Approval denied: {response.decision_reason}")
+
+                    raise SkillExecutionError(
+                        f"Approval denied: {response.decision_reason}"
+                    )
             except SkillExecutionError:
                 raise
             except Exception as e:
                 duration_ms = 0
                 try:
-                    duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
+                    duration_ms = int(
+                        (asyncio.get_event_loop().time() - start_time) * 1000
+                    )
                 except Exception:
                     # Event loop timing failure - non-critical, continue
                     pass
-                
+
                 try:
-                    await self._emitter.emit(TraceEvent(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.WORKER,
-                        level=TraceLevel.ERROR,
-                        message="Notes create approval request failed",
-                        data={"error": str(e)},
-                        duration_ms=duration_ms,
-                    ))
+                    await self._emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.WORKER,
+                            level=TraceLevel.ERROR,
+                            message="Notes create approval request failed",
+                            data={"error": str(e)},
+                            duration_ms=duration_ms,
+                        )
+                    )
                 except Exception:
                     # Trace emission failure - non-critical, continue
                     pass
-                
+
                 raise SkillExecutionError(f"Approval request failed: {str(e)}")
 
         try:
@@ -148,31 +169,33 @@ class NotesSkill:
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             }
-            
+
             await self._memory_router.scoped_write("notes", f"notes:{note_id}", note)
-            
+
             duration_ms = 0
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
                 # Event loop timing failure - non-critical, continue
                 pass
-            
+
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_COMPLETE,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.INFO,
-                    message="Notes create completed",
-                    data={"title": title},
-                    duration_ms=duration_ms,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_COMPLETE,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.INFO,
+                        message="Notes create completed",
+                        data={"title": title},
+                        duration_ms=duration_ms,
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             return note_id
-            
+
         except Exception as e:
             duration_ms = 0
             try:
@@ -180,20 +203,22 @@ class NotesSkill:
             except Exception:
                 # Event loop timing failure - non-critical, continue
                 pass
-            
+
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.ERROR,
-                    message="Notes create failed",
-                    data={"error": str(e)},
-                    duration_ms=duration_ms,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.ERROR,
+                        message="Notes create failed",
+                        data={"error": str(e)},
+                        duration_ms=duration_ms,
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             raise SkillExecutionError(f"Failed to create note: {str(e)}")
 
     async def list_all(self) -> list[dict]:
@@ -209,56 +234,61 @@ class NotesSkill:
         start_time = 0.0
         try:
             import asyncio
+
             start_time = asyncio.get_event_loop().time()
-        except Exception:
+        except Exception as e:
             # Event loop timing failure - non-critical, continue
-            pass
+            logger.warning("AR18: event loop timing failed: %s", e, exc_info=True)
 
         try:
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.COMPONENT_START,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                message="Notes list_all started",
-                data={},
-                duration_ms=0,
-            ))
-        except Exception:
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.COMPONENT_START,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="Notes list_all started",
+                    data={},
+                    duration_ms=0,
+                )
+            )
+        except Exception as e:
             # Trace emission failure - non-critical, continue
-            pass
+            logger.warning("AR18: trace emission failed: %s", e, exc_info=True)
 
         try:
             notes = await self._memory_router.scoped_read("notes", "notes:*")
-            
+
             # Narrow type: scoped_read returns dict | list | None, but list_all expects list
             if not isinstance(notes, list):
                 notes = []
-            
+
             # Sort by updated_at descending
             notes.sort(key=lambda n: n["updated_at"], reverse=True)
-            
+
             duration_ms = 0
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
                 # Event loop timing failure - non-critical, continue
                 pass
-            
+
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_COMPLETE,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.INFO,
-                    message="Notes list_all completed",
-                    data={"note_count": len(notes)},
-                    duration_ms=duration_ms,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_COMPLETE,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.INFO,
+                        message="Notes list_all completed",
+                        data={"note_count": len(notes)},
+                        duration_ms=duration_ms,
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             return notes
-            
+
         except Exception as e:
             duration_ms = 0
             try:
@@ -266,20 +296,22 @@ class NotesSkill:
             except Exception:
                 # Event loop timing failure - non-critical, continue
                 pass
-            
+
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.ERROR,
-                    message="Notes list_all failed",
-                    data={"error": str(e)},
-                    duration_ms=duration_ms,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.ERROR,
+                        message="Notes list_all failed",
+                        data={"error": str(e)},
+                        duration_ms=duration_ms,
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             raise SkillExecutionError(f"Failed to list notes: {str(e)}")
 
     async def get(self, note_id: str) -> dict | None:
@@ -298,53 +330,58 @@ class NotesSkill:
         start_time = 0.0
         try:
             import asyncio
+
             start_time = asyncio.get_event_loop().time()
-        except Exception:
+        except Exception as e:
             # Event loop timing failure - non-critical, continue
-            pass
+            logger.warning("AR18: event loop timing failed: %s", e, exc_info=True)
 
         try:
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.COMPONENT_START,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                message="Notes get started",
-                data={"note_id": note_id},
-                duration_ms=0,
-            ))
-        except Exception:
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.COMPONENT_START,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="Notes get started",
+                    data={"note_id": note_id},
+                    duration_ms=0,
+                )
+            )
+        except Exception as e:
             # Trace emission failure - non-critical, continue
-            pass
+            logger.warning("AR18: trace emission failed: %s", e, exc_info=True)
 
         try:
             note = await self._memory_router.scoped_read("notes", f"notes:{note_id}")
-            
+
             # Narrow type: scoped_read returns dict | list | None, but get expects dict | None
             if isinstance(note, list):
                 note = None
-            
+
             duration_ms = 0
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
                 # Event loop timing failure - non-critical, continue
                 pass
-            
+
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_COMPLETE,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.INFO,
-                    message="Notes get completed",
-                    data={"note_id": note_id, "found": note is not None},
-                    duration_ms=duration_ms,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_COMPLETE,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.INFO,
+                        message="Notes get completed",
+                        data={"note_id": note_id, "found": note is not None},
+                        duration_ms=duration_ms,
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             return note
-            
+
         except Exception as e:
             duration_ms = 0
             try:
@@ -352,23 +389,31 @@ class NotesSkill:
             except Exception:
                 # Event loop timing failure - non-critical, continue
                 pass
-            
+
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.ERROR,
-                    message="Notes get failed",
-                    data={"error": str(e)},
-                    duration_ms=duration_ms,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.ERROR,
+                        message="Notes get failed",
+                        data={"error": str(e)},
+                        duration_ms=duration_ms,
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             raise SkillExecutionError(f"Failed to get note: {str(e)}")
 
-    async def update(self, note_id: str, title: str | None = None, content: str | None = None, tags: list[str] | None = None) -> bool:
+    async def update(
+        self,
+        note_id: str,
+        title: str | None = None,
+        content: str | None = None,
+        tags: list[str] | None = None,
+    ) -> bool:
         """
         Update a note.
 
@@ -387,23 +432,26 @@ class NotesSkill:
         start_time = 0.0
         try:
             import asyncio
+
             start_time = asyncio.get_event_loop().time()
-        except Exception:
+        except Exception as e:
             # Event loop timing failure - non-critical, continue
-            pass
+            logger.warning("AR18: event loop timing failed: %s", e, exc_info=True)
 
         try:
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.COMPONENT_START,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                message="Notes update started",
-                data={"note_id": note_id},
-                duration_ms=0,
-            ))
-        except Exception:
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.COMPONENT_START,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="Notes update started",
+                    data={"note_id": note_id},
+                    duration_ms=0,
+                )
+            )
+        except Exception as e:
             # Trace emission failure - non-critical, continue
-            pass
+            logger.warning("AR18: trace emission failed: %s", e, exc_info=True)
 
         # Request approval if gate is present
         if self._approval_gate is not None:
@@ -414,7 +462,11 @@ class NotesSkill:
                     session_id="default",
                     action_type=ApprovalActionType.FILE_WRITE,
                     action_description=f"Update note: {note_id}",
-                    action_parameters={"note_id": note_id, "title": title, "tags": tags},
+                    action_parameters={
+                        "note_id": note_id,
+                        "title": title,
+                        "tags": tags,
+                    },
                     risk_level="low",
                     reason_for_approval="Note update is low-risk but requires tracking",
                     expires_at=datetime.now(timezone.utc) + timedelta(seconds=300),
@@ -423,80 +475,97 @@ class NotesSkill:
                 if not response.approved:
                     duration_ms = 0
                     try:
-                        duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
+                        duration_ms = int(
+                            (asyncio.get_event_loop().time() - start_time) * 1000
+                        )
                     except Exception:
                         # Event loop timing failure - non-critical, continue
                         pass
-                    
+
                     try:
-                        await self._emitter.emit(TraceEvent(
-                            event_type=TraceEventType.OPERATION_COMPLETE,
-                            component=TraceComponent.WORKER,
-                            level=TraceLevel.WARNING,
-                            message="Notes update denied by approval gate",
-                            data={"note_id": note_id, "reason": response.decision_reason},
-                            duration_ms=duration_ms,
-                        ))
+                        await self._emitter.emit(
+                            TraceEvent(
+                                event_type=TraceEventType.OPERATION_COMPLETE,
+                                component=TraceComponent.WORKER,
+                                level=TraceLevel.WARNING,
+                                message="Notes update denied by approval gate",
+                                data={
+                                    "note_id": note_id,
+                                    "reason": response.decision_reason,
+                                },
+                                duration_ms=duration_ms,
+                            )
+                        )
                     except Exception:
                         # Trace emission failure - non-critical, continue
                         pass
-                    
-                    raise SkillExecutionError(f"Approval denied: {response.decision_reason}")
+
+                    raise SkillExecutionError(
+                        f"Approval denied: {response.decision_reason}"
+                    )
             except SkillExecutionError:
                 raise
             except Exception as e:
                 duration_ms = 0
                 try:
-                    duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
+                    duration_ms = int(
+                        (asyncio.get_event_loop().time() - start_time) * 1000
+                    )
                 except Exception:
                     # Event loop timing failure - non-critical, continue
                     pass
-                
+
                 try:
-                    await self._emitter.emit(TraceEvent(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.WORKER,
-                        level=TraceLevel.ERROR,
-                        message="Notes update approval request failed",
-                        data={"error": str(e)},
-                        duration_ms=duration_ms,
-                    ))
+                    await self._emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.WORKER,
+                            level=TraceLevel.ERROR,
+                            message="Notes update approval request failed",
+                            data={"error": str(e)},
+                            duration_ms=duration_ms,
+                        )
+                    )
                 except Exception:
                     # Trace emission failure - non-critical, continue
                     pass
-                
+
                 raise SkillExecutionError(f"Approval request failed: {str(e)}")
 
         try:
             note = await self._memory_router.scoped_read("notes", f"notes:{note_id}")
-            
+
             if not note:
                 duration_ms = 0
                 try:
-                    duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
+                    duration_ms = int(
+                        (asyncio.get_event_loop().time() - start_time) * 1000
+                    )
                 except Exception:
                     # Event loop timing failure - non-critical, continue
                     pass
-                
+
                 try:
-                    await self._emitter.emit(TraceEvent(
-                        event_type=TraceEventType.OPERATION_COMPLETE,
-                        component=TraceComponent.WORKER,
-                        level=TraceLevel.INFO,
-                        message="Notes update completed",
-                        data={"note_id": note_id, "found": False},
-                        duration_ms=duration_ms,
-                    ))
+                    await self._emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_COMPLETE,
+                            component=TraceComponent.WORKER,
+                            level=TraceLevel.INFO,
+                            message="Notes update completed",
+                            data={"note_id": note_id, "found": False},
+                            duration_ms=duration_ms,
+                        )
+                    )
                 except Exception:
                     # Trace emission failure - non-critical, continue
                     pass
-                
+
                 return False
-            
+
             # Ensure note is dict for dict-style access
             if isinstance(note, list):
                 note = note[0] if note else {"id": note_id}
-            
+
             if title is not None:
                 note["title"] = title
             if content is not None:
@@ -504,31 +573,33 @@ class NotesSkill:
             if tags is not None:
                 note["tags"] = tags
             note["updated_at"] = datetime.now(timezone.utc).isoformat()
-            
+
             await self._memory_router.scoped_write("notes", f"notes:{note_id}", note)
-            
+
             duration_ms = 0
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
                 # Event loop timing failure - non-critical, continue
                 pass
-            
+
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_COMPLETE,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.INFO,
-                    message="Notes update completed",
-                    data={"note_id": note_id, "found": True},
-                    duration_ms=duration_ms,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_COMPLETE,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.INFO,
+                        message="Notes update completed",
+                        data={"note_id": note_id, "found": True},
+                        duration_ms=duration_ms,
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             return True
-            
+
         except Exception as e:
             duration_ms = 0
             try:
@@ -536,20 +607,22 @@ class NotesSkill:
             except Exception:
                 # Event loop timing failure - non-critical, continue
                 pass
-            
+
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.ERROR,
-                    message="Notes update failed",
-                    data={"error": str(e)},
-                    duration_ms=duration_ms,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.ERROR,
+                        message="Notes update failed",
+                        data={"error": str(e)},
+                        duration_ms=duration_ms,
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             raise SkillExecutionError(f"Failed to update note: {str(e)}")
 
     async def delete(self, note_id: str) -> bool:
@@ -568,23 +641,26 @@ class NotesSkill:
         start_time = 0.0
         try:
             import asyncio
+
             start_time = asyncio.get_event_loop().time()
-        except Exception:
+        except Exception as e:
             # Event loop timing failure - non-critical, continue
-            pass
+            logger.warning("AR18: event loop timing failed: %s", e, exc_info=True)
 
         try:
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.COMPONENT_START,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                message="Notes delete started",
-                data={"note_id": note_id},
-                duration_ms=0,
-            ))
-        except Exception:
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.COMPONENT_START,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="Notes delete started",
+                    data={"note_id": note_id},
+                    duration_ms=0,
+                )
+            )
+        except Exception as e:
             # Trace emission failure - non-critical, continue
-            pass
+            logger.warning("AR18: trace emission failed: %s", e, exc_info=True)
 
         # Request approval if gate is present
         if self._approval_gate is not None:
@@ -604,101 +680,120 @@ class NotesSkill:
                 if not response.approved:
                     duration_ms = 0
                     try:
-                        duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
+                        duration_ms = int(
+                            (asyncio.get_event_loop().time() - start_time) * 1000
+                        )
                     except Exception:
                         # Event loop timing failure - non-critical, continue
                         pass
-                    
+
                     try:
-                        await self._emitter.emit(TraceEvent(
-                            event_type=TraceEventType.OPERATION_COMPLETE,
-                            component=TraceComponent.WORKER,
-                            level=TraceLevel.WARNING,
-                            message="Notes delete denied by approval gate",
-                            data={"note_id": note_id, "reason": response.decision_reason},
-                            duration_ms=duration_ms,
-                        ))
+                        await self._emitter.emit(
+                            TraceEvent(
+                                event_type=TraceEventType.OPERATION_COMPLETE,
+                                component=TraceComponent.WORKER,
+                                level=TraceLevel.WARNING,
+                                message="Notes delete denied by approval gate",
+                                data={
+                                    "note_id": note_id,
+                                    "reason": response.decision_reason,
+                                },
+                                duration_ms=duration_ms,
+                            )
+                        )
                     except Exception:
                         # Trace emission failure - non-critical, continue
                         pass
-                    
-                    raise SkillExecutionError(f"Approval denied: {response.decision_reason}")
+
+                    raise SkillExecutionError(
+                        f"Approval denied: {response.decision_reason}"
+                    )
             except SkillExecutionError:
                 raise
             except Exception as e:
                 duration_ms = 0
                 try:
-                    duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
+                    duration_ms = int(
+                        (asyncio.get_event_loop().time() - start_time) * 1000
+                    )
                 except Exception:
                     # Event loop timing failure - non-critical, continue
                     pass
-                
+
                 try:
-                    await self._emitter.emit(TraceEvent(
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.WORKER,
-                        level=TraceLevel.ERROR,
-                        message="Notes delete approval request failed",
-                        data={"error": str(e)},
-                        duration_ms=duration_ms,
-                    ))
+                    await self._emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.WORKER,
+                            level=TraceLevel.ERROR,
+                            message="Notes delete approval request failed",
+                            data={"error": str(e)},
+                            duration_ms=duration_ms,
+                        )
+                    )
                 except Exception:
                     # Trace emission failure - non-critical, continue
                     pass
-                
+
                 raise SkillExecutionError(f"Approval request failed: {str(e)}")
 
         try:
             note = await self._memory_router.scoped_read("notes", f"notes:{note_id}")
-            
+
             if not note:
                 duration_ms = 0
                 try:
-                    duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
+                    duration_ms = int(
+                        (asyncio.get_event_loop().time() - start_time) * 1000
+                    )
                 except Exception:
                     # Event loop timing failure - non-critical, continue
                     pass
-                
+
                 try:
-                    await self._emitter.emit(TraceEvent(
-                        event_type=TraceEventType.OPERATION_COMPLETE,
-                        component=TraceComponent.WORKER,
-                        level=TraceLevel.INFO,
-                        message="Notes delete completed",
-                        data={"note_id": note_id, "found": False},
-                        duration_ms=duration_ms,
-                    ))
+                    await self._emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_COMPLETE,
+                            component=TraceComponent.WORKER,
+                            level=TraceLevel.INFO,
+                            message="Notes delete completed",
+                            data={"note_id": note_id, "found": False},
+                            duration_ms=duration_ms,
+                        )
+                    )
                 except Exception:
                     # Trace emission failure - non-critical, continue
                     pass
-                
+
                 return False
-            
+
             # scoped_delete not available, use scoped_write with None
             await self._memory_router.scoped_write("notes", f"notes:{note_id}", None)
-            
+
             duration_ms = 0
             try:
                 duration_ms = int((asyncio.get_event_loop().time() - start_time) * 1000)
             except Exception:
                 # Event loop timing failure - non-critical, continue
                 pass
-            
+
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_COMPLETE,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.INFO,
-                    message="Notes delete completed",
-                    data={"note_id": note_id, "found": True},
-                    duration_ms=duration_ms,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_COMPLETE,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.INFO,
+                        message="Notes delete completed",
+                        data={"note_id": note_id, "found": True},
+                        duration_ms=duration_ms,
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             return True
-            
+
         except Exception as e:
             duration_ms = 0
             try:
@@ -706,20 +801,22 @@ class NotesSkill:
             except Exception:
                 # Event loop timing failure - non-critical, continue
                 pass
-            
+
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.ERROR,
-                    message="Notes delete failed",
-                    data={"error": str(e)},
-                    duration_ms=duration_ms,
-                ))
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.ERROR,
+                        message="Notes delete failed",
+                        data={"error": str(e)},
+                        duration_ms=duration_ms,
+                    )
+                )
             except Exception:
                 # Trace emission failure - non-critical, continue
                 pass
-            
+
             raise SkillExecutionError(f"Failed to delete note: {str(e)}")
 
     async def search_by_tag(self, tag: str) -> list[dict]:
@@ -737,10 +834,10 @@ class NotesSkill:
         """
         try:
             notes = await self.list_all()
-            
+
             matching = [n for n in notes if tag in n.get("tags", [])]
-            
+
             return matching
-            
+
         except Exception as e:
             raise SkillExecutionError(f"Failed to search notes by tag: {str(e)}")

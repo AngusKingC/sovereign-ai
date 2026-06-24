@@ -7,21 +7,21 @@ providing persistent, human-readable memory storage.
 
 import asyncio
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 from core.memory_router import MemoryBackend
-from core.schemas import Task
 from core.observability import (
-    TraceEventType,
-    TraceComponent,
-    TraceLevel,
-    TraceEvent,
-    TraceEmitter,
     MemoryTraceEmitter,
+    TraceComponent,
+    TraceEmitter,
+    TraceEvent,
+    TraceEventType,
+    TraceLevel,
 )
+from core.schemas import Task
 
 
 class ObsidianBackend(MemoryBackend):
@@ -85,13 +85,17 @@ class ObsidianBackend(MemoryBackend):
             loop = asyncio.get_event_loop()
             for md_file in self.vault_path.glob("*.md"):
                 try:
-                    content = await loop.run_in_executor(None, md_file.read_text, "utf-8")
-                    memory.append({
-                        "source": "obsidian",
-                        "file": md_file.name,
-                        "content": content,
-                        "path": str(md_file),
-                    })
+                    content = await loop.run_in_executor(
+                        None, md_file.read_text, "utf-8"
+                    )
+                    memory.append(
+                        {
+                            "source": "obsidian",
+                            "file": md_file.name,
+                            "content": content,
+                            "path": str(md_file),
+                        }
+                    )
                 except Exception:
                     # Skip files that can't be read
                     continue
@@ -165,7 +169,7 @@ class ObsidianBackend(MemoryBackend):
             except Exception:
                 pass
 
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
             unique_id = str(uuid4())[:8]
             filename = f"{timestamp}_{unique_id}.md"
             filepath = self.vault_path / filename
@@ -234,4 +238,3 @@ class ObsidianBackend(MemoryBackend):
                 lines.append(f"\n**{key}**: {value}")
 
         return "\n".join(lines)
-

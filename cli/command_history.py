@@ -6,12 +6,12 @@ Provides PostgreSQL persistence via PostgresBackend when configured,
 with in-memory fallback when no DB is available.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-from core.memory_router import MemoryBackend
 from core.commands import CommandType
+from core.memory_router import MemoryBackend
 
 
 class CommandHistory:
@@ -47,7 +47,7 @@ class CommandHistory:
         Args:
             command: The command string to add.
         """
-        timestamp = datetime.now()
+        timestamp = datetime.now(timezone.utc)
         entry = {
             "command": command,
             "timestamp": timestamp.isoformat(),
@@ -57,19 +57,21 @@ class CommandHistory:
 
         if self.backend:
             # Store in backend
-            await self.backend.write({
-                "type": "command_history",
-                "session_id": self.session_id,
-                "user_id": self.user_id,
-                "command": command,
-                "timestamp": timestamp.isoformat(),
-            })
+            await self.backend.write(
+                {
+                    "type": "command_history",
+                    "session_id": self.session_id,
+                    "user_id": self.user_id,
+                    "command": command,
+                    "timestamp": timestamp.isoformat(),
+                }
+            )
         else:
             # Store in memory
             self._in_memory.append(entry)
             # Trim to max_history
             if len(self._in_memory) > self.max_history:
-                self._in_memory = self._in_memory[-self.max_history:]
+                self._in_memory = self._in_memory[-self.max_history :]
 
         # Reset navigation index
         self._history_index = -1
@@ -85,20 +87,21 @@ class CommandHistory:
             try:
                 # Fetch from backend
                 from core.schemas import Task
+
                 intent_parts = ["command_history"]
                 if self.session_id:
                     intent_parts.append(f"session:{self.session_id}")
                 if self.user_id:
                     intent_parts.append(f"user:{self.user_id}")
                 intent = ":".join(intent_parts)
-                
+
                 task = Task(
                     task_id=uuid4(),
                     intent=intent,
                     complexity_score=0.0,
                     priority="normal",  # type: ignore[arg-type]
                     current_state="received",  # type: ignore[arg-type]
-                    created_at=datetime.now(),
+                    created_at=datetime.now(timezone.utc),
                 )
                 results = await self.backend.fetch(task)
                 # Sort by timestamp
@@ -222,7 +225,11 @@ class CommandHistory:
             command_types = list(CommandType)
 
         for cmd_type in command_types:
-            cmd_name = cmd_type.value if isinstance(cmd_type.value, str) else str(cmd_type.value)
+            cmd_name = (
+                cmd_type.value
+                if isinstance(cmd_type.value, str)
+                else str(cmd_type.value)
+            )
             if cmd_name.startswith(prefix) or prefix.startswith(cmd_name):
                 completions.append(f"/{cmd_name}")
 
@@ -250,7 +257,6 @@ class CommandHistory:
 
     async def close(self) -> None:
         """Close the command history manager and backend."""
-        if self.backend and hasattr(self.backend, 'close'):
+        if self.backend and hasattr(self.backend, "close"):
             await self.backend.close()
         self._in_memory.clear()
-

@@ -7,11 +7,19 @@ including GPU, CPU, RAM, storage, OS, network, and Ollama service status.
 
 import asyncio
 import platform
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import httpx
 
+from core.observability import (
+    NullTraceEmitter,
+    TraceComponent,
+    TraceEmitter,
+    TraceEvent,
+    TraceEventType,
+    TraceLevel,
+)
 from core.schemas import (
     CPUInfo,
     GPUInfo,
@@ -23,14 +31,6 @@ from core.schemas import (
     StorageInfo,
     SystemProfile,
 )
-from core.observability import (
-    TraceComponent,
-    TraceEventType,
-    TraceLevel,
-    TraceEmitter,
-    NullTraceEmitter,
-    TraceEvent,
-)
 
 if TYPE_CHECKING:
     from core.memory_router import MemoryRouter
@@ -39,7 +39,9 @@ if TYPE_CHECKING:
 class SystemProfiler:
     """Persistent system profiler for hardware and software environment detection."""
 
-    def __init__(self, memory_router: "MemoryRouter", emitter: TraceEmitter | None = None) -> None:
+    def __init__(
+        self, memory_router: "MemoryRouter", emitter: TraceEmitter | None = None
+    ) -> None:
         """Initialize the system profiler with memory router for persistence."""
         self.memory_router = memory_router
         self.emitter = emitter or NullTraceEmitter()
@@ -56,15 +58,15 @@ class SystemProfiler:
                 pynvml.nvmlInit()
                 handle = pynvml.nvmlDeviceGetHandleByIndex(0)
                 name = pynvml.nvmlDeviceGetName(handle)
-                
+
                 memory_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
                 total_vram_mb = int(memory_info.total / 1024 / 1024)
                 available_vram_mb = int(memory_info.free / 1024 / 1024)
-                
+
                 driver_version = pynvml.nvmlSystemGetDriverVersion()
-                
+
                 pynvml.nvmlShutdown()
-                
+
                 return (
                     name,
                     total_vram_mb,
@@ -72,7 +74,9 @@ class SystemProfiler:
                     driver_version,
                 )
 
-            name, total_vram_mb, available_vram_mb, driver_version = await loop.run_in_executor(None, get_gpu_info)
+            name, total_vram_mb, available_vram_mb, driver_version = (
+                await loop.run_in_executor(None, get_gpu_info)
+            )
 
             return GPUInfo(
                 model_name=name,
@@ -120,7 +124,13 @@ class SystemProfiler:
                     psutil.cpu_freq().max if psutil.cpu_freq() else 0.0,
                 )
 
-            model_name, physical_cores, logical_threads, architecture, base_clock_ghz = await loop.run_in_executor(None, get_cpu_info)
+            (
+                model_name,
+                physical_cores,
+                logical_threads,
+                architecture,
+                base_clock_ghz,
+            ) = await loop.run_in_executor(None, get_cpu_info)
 
             return CPUInfo(
                 model_name=model_name,
@@ -163,7 +173,9 @@ class SystemProfiler:
                     mem.percent,
                 )
 
-            total_mb, available_mb, usage_percent = await loop.run_in_executor(None, get_ram_info)
+            total_mb, available_mb, usage_percent = await loop.run_in_executor(
+                None, get_ram_info
+            )
 
             return RAMInfo(
                 total_mb=total_mb,
@@ -204,6 +216,7 @@ class SystemProfiler:
 
             for partition in partitions:
                 try:
+
                     def get_usage(mountpoint: str) -> tuple:
                         usage = psutil.disk_usage(mountpoint)
                         return (
@@ -211,7 +224,9 @@ class SystemProfiler:
                             int(usage.free / 1024 / 1024),
                         )
 
-                    total_mb, available_mb = await loop.run_in_executor(None, get_usage, partition.mountpoint)
+                    total_mb, available_mb = await loop.run_in_executor(
+                        None, get_usage, partition.mountpoint
+                    )
 
                     storage_info.append(
                         StorageInfo(
@@ -262,7 +277,14 @@ class SystemProfiler:
                     nvidia_drivers_present,
                 )
 
-            name, version, kernel_build, python_version, docker_available, nvidia_drivers_present = await loop.run_in_executor(None, get_os_info)
+            (
+                name,
+                version,
+                kernel_build,
+                python_version,
+                docker_available,
+                nvidia_drivers_present,
+            ) = await loop.run_in_executor(None, get_os_info)
 
             return OSInfo(
                 name=name,
@@ -314,7 +336,9 @@ class SystemProfiler:
                         bandwidth = "medium"
                     else:
                         bandwidth = "low"
-                    return NetworkInfo(internet_available=True, bandwidth_category=bandwidth)
+                    return NetworkInfo(
+                        internet_available=True, bandwidth_category=bandwidth
+                    )
         except Exception:
             # Cleanup path: network detection failed, return default
             # Per Rule 17: broad except requires inline comment
@@ -330,18 +354,18 @@ class SystemProfiler:
                 if response.status_code == 200:
                     data = response.json()
                     models = data.get("models", [])
-                    
+
                     model_infos = []
                     models_loaded = []
-                    
+
                     for model in models:
                         model_name = model.get("name", "unknown")
                         size_mb = model.get("size", 0) // (1024 * 1024)
-                        
+
                         # Check if model is loaded (has details field)
                         if "details" in model:
                             models_loaded.append(model_name)
-                        
+
                         model_infos.append(
                             OllamaModelInfo(
                                 name=model_name,
@@ -349,7 +373,7 @@ class SystemProfiler:
                                 loaded_in_vram=model_name in models_loaded,
                             )
                         )
-                    
+
                     return OllamaInfo(
                         running=True,
                         models_downloaded=model_infos,
@@ -402,7 +426,7 @@ class SystemProfiler:
                 os=os,
                 network=network,
                 ollama=ollama,
-                profiled_at=datetime.now(),
+                profiled_at=datetime.now(timezone.utc),
             )
 
             self._cached_profile = profile

@@ -5,11 +5,20 @@ Single responsibility: Monitor loaded models, enforce resource budgets,
 and manage model loading/unloading with intelligent eviction policies.
 """
 
-from datetime import datetime
+import logging
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import httpx
 
+from core.observability import (
+    MemoryTraceEmitter,
+    TraceComponent,
+    TraceEmitter,
+    TraceEvent,
+    TraceEventType,
+    TraceLevel,
+)
 from core.schemas import (
     ApprovalCallback,
     LoadDecision,
@@ -17,18 +26,12 @@ from core.schemas import (
     ResourceSnapshot,
     SystemProfile,
 )
-from core.observability import (
-    TraceComponent,
-    TraceEventType,
-    TraceLevel,
-    TraceEvent,
-    TraceEmitter,
-    MemoryTraceEmitter,
-)
 
 if TYPE_CHECKING:
     from core.memory_router import MemoryRouter
     from system.model_acquisition import ModelRegistry
+
+logger = logging.getLogger(__name__)
 
 
 class ResourceManager:
@@ -56,7 +59,9 @@ class ResourceManager:
         self._ollama_api_url = "http://localhost:11434"
         self._emitter = emitter or MemoryTraceEmitter()
 
-    async def available_vram_mb(self, total_vram_mb: int, loaded_model_vram_mb: float) -> int:
+    async def available_vram_mb(
+        self, total_vram_mb: int, loaded_model_vram_mb: float
+    ) -> int:
         """Calculate available VRAM after accounting for loaded models and KV cache budget.
 
         Args:
@@ -66,7 +71,9 @@ class ResourceManager:
         Returns:
             Available VRAM in MB, floored at 0
         """
-        available = total_vram_mb - int(loaded_model_vram_mb * 1024) - self._kv_cache_budget_mb
+        available = (
+            total_vram_mb - int(loaded_model_vram_mb * 1024) - self._kv_cache_budget_mb
+        )
         result = max(0, available)
 
         # Emit warning if available VRAM is critically low
@@ -85,10 +92,11 @@ class ResourceManager:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
 
         return result
 
@@ -105,10 +113,11 @@ class ResourceManager:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
 
             # Get resource info from system profile
             vram_total_gb = system_profile.gpu.total_vram_mb / 1024
@@ -154,13 +163,14 @@ class ResourceManager:
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    # Cleanup path: trace event emission failed, don't crash the application
-                    # Per Rule 17: broad except requires inline comment
-                    pass
+                except Exception as e2:
+                    # Trace emission is fire-and-forget; never block caller
+                    logger.warning(
+                        "AR18: trace event emission failed: %s", e2, exc_info=True
+                    )
 
             snapshot = ResourceSnapshot(
-                timestamp=datetime.now(),
+                timestamp=datetime.now(timezone.utc),
                 vram_total_gb=vram_total_gb,
                 vram_used_gb=vram_used_gb,
                 vram_available_gb=vram_available_gb,
@@ -187,10 +197,11 @@ class ResourceManager:
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
             raise
 
     async def _store_snapshot(self, snapshot: ResourceSnapshot) -> None:
@@ -202,7 +213,7 @@ class ResourceManager:
                     "task_id": "resource_snapshot",
                     "metadata": {"type": "resource_snapshot"},
                 },
-                collection="resource_snapshots"
+                collection="resource_snapshots",
             )
         except Exception as e:
             try:
@@ -215,10 +226,11 @@ class ResourceManager:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
 
     async def can_load(
         self, model_id: str, quantisation: str, registry: "ModelRegistry"
@@ -238,10 +250,14 @@ class ResourceManager:
                     break
 
             if not variant:
-                return False, f"Quantisation variant {quantisation} not found for model {model_id}"
+                return (
+                    False,
+                    f"Quantisation variant {quantisation} not found for model {model_id}",
+                )
 
             # Get current snapshot
             from system.profiler import SystemProfiler
+
             profiler = SystemProfiler(self.memory_router)
             system_profile = await profiler.get_cached()
             if not system_profile:
@@ -252,18 +268,29 @@ class ResourceManager:
             # Calculate available VRAM accounting for KV cache budget
             total_vram_mb = int(system_profile.gpu.total_vram_mb)
             loaded_model_vram_mb = snapshot.vram_used_gb
-            available_vram_mb = await self.available_vram_mb(total_vram_mb, loaded_model_vram_mb)
+            available_vram_mb = await self.available_vram_mb(
+                total_vram_mb, loaded_model_vram_mb
+            )
             available_vram_gb = available_vram_mb / 1024
 
             # Check VRAM first
             if variant.vram_required_gb <= available_vram_gb:
-                return True, f"Model fits in available VRAM ({variant.vram_required_gb}GB <= {available_vram_gb}GB)"
+                return (
+                    True,
+                    f"Model fits in available VRAM ({variant.vram_required_gb}GB <= {available_vram_gb}GB)",
+                )
 
             # Check RAM fallback
             if variant.ram_required_gb <= snapshot.ram_available_gb:
-                return True, f"Model fits in available RAM ({variant.ram_required_gb}GB <= {snapshot.ram_available_gb}GB)"
+                return (
+                    True,
+                    f"Model fits in available RAM ({variant.ram_required_gb}GB <= {snapshot.ram_available_gb}GB)",
+                )
 
-            return False, f"Model does not fit in available VRAM ({variant.vram_required_gb}GB > {available_vram_gb}GB) or RAM ({variant.ram_required_gb}GB > {snapshot.ram_available_gb}GB)"
+            return (
+                False,
+                f"Model does not fit in available VRAM ({variant.vram_required_gb}GB > {available_vram_gb}GB) or RAM ({variant.ram_required_gb}GB > {snapshot.ram_available_gb}GB)",
+            )
         except Exception as e:
             try:
                 event = TraceEvent(
@@ -277,10 +304,11 @@ class ResourceManager:
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
             return False, f"Error checking load capability: {str(e)}"
 
     async def request_load(
@@ -298,10 +326,11 @@ class ResourceManager:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
 
             # Check if already loaded
             if model_id in self._loaded_models:
@@ -315,10 +344,11 @@ class ResourceManager:
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    # Cleanup path: trace event emission failed, don't crash the application
-                    # Per Rule 17: broad except requires inline comment
-                    pass
+                except Exception as e:
+                    # Trace emission is fire-and-forget; never block caller
+                    logger.warning(
+                        "AR18: trace event emission failed: %s", e, exc_info=True
+                    )
                 return LoadDecision(
                     approved=True,
                     model_id=model_id,
@@ -341,10 +371,11 @@ class ResourceManager:
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    # Cleanup path: trace event emission failed, don't crash the application
-                    # Per Rule 17: broad except requires inline comment
-                    pass
+                except Exception as e:
+                    # Trace emission is fire-and-forget; never block caller
+                    logger.warning(
+                        "AR18: trace event emission failed: %s", e, exc_info=True
+                    )
                 return LoadDecision(
                     approved=False,
                     model_id=model_id,
@@ -372,10 +403,11 @@ class ResourceManager:
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    # Cleanup path: trace event emission failed, don't crash the application
-                    # Per Rule 17: broad except requires inline comment
-                    pass
+                except Exception as e:
+                    # Trace emission is fire-and-forget; never block caller
+                    logger.warning(
+                        "AR18: trace event emission failed: %s", e, exc_info=True
+                    )
                 return LoadDecision(
                     approved=False,
                     model_id=model_id,
@@ -387,6 +419,7 @@ class ResourceManager:
 
             # Get current snapshot
             from system.profiler import SystemProfiler
+
             profiler = SystemProfiler(self.memory_router)
             system_profile = await profiler.get_cached()
             if not system_profile:
@@ -400,10 +433,11 @@ class ResourceManager:
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    # Cleanup path: trace event emission failed, don't crash the application
-                    # Per Rule 17: broad except requires inline comment
-                    pass
+                except Exception as e:
+                    # Trace emission is fire-and-forget; never block caller
+                    logger.warning(
+                        "AR18: trace event emission failed: %s", e, exc_info=True
+                    )
                 return LoadDecision(
                     approved=False,
                     model_id=model_id,
@@ -418,7 +452,9 @@ class ResourceManager:
             # Calculate available VRAM accounting for KV cache budget
             total_vram_mb = int(system_profile.gpu.total_vram_mb)
             loaded_model_vram_mb = snapshot.vram_used_gb
-            available_vram_mb = await self.available_vram_mb(total_vram_mb, loaded_model_vram_mb)
+            available_vram_mb = await self.available_vram_mb(
+                total_vram_mb, loaded_model_vram_mb
+            )
             available_vram_gb = available_vram_mb / 1024
 
             # Check if fits without eviction
@@ -433,10 +469,11 @@ class ResourceManager:
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    # Cleanup path: trace event emission failed, don't crash the application
-                    # Per Rule 17: broad except requires inline comment
-                    pass
+                except Exception as e:
+                    # Trace emission is fire-and-forget; never block caller
+                    logger.warning(
+                        "AR18: trace event emission failed: %s", e, exc_info=True
+                    )
                 return LoadDecision(
                     approved=True,
                     model_id=model_id,
@@ -478,10 +515,13 @@ class ResourceManager:
                                 duration_ms=0,
                             )
                             await self._emitter.emit(event)
-                        except Exception:
-                            # Cleanup path: trace event emission failed, don't crash the application
-                            # Per Rule 17: broad except requires inline comment
-                            pass
+                        except Exception as e:
+                            # Trace emission is fire-and-forget; never block caller
+                            logger.warning(
+                                "AR18: trace event emission failed: %s",
+                                e,
+                                exc_info=True,
+                            )
 
                         approved = await self.approval_callback.request_approval(
                             action_description=f"Evict pinned model {model.model_id} to load {model_id}",
@@ -504,10 +544,13 @@ class ResourceManager:
                                     duration_ms=0,
                                 )
                                 await self._emitter.emit(event)
-                            except Exception:
-                                # Cleanup path: trace event emission failed, don't crash the application
-                                # Per Rule 17: broad except requires inline comment
-                                pass
+                            except Exception as e:
+                                # Trace emission is fire-and-forget; never block caller
+                                logger.warning(
+                                    "AR18: trace event emission failed: %s",
+                                    e,
+                                    exc_info=True,
+                                )
                             return LoadDecision(
                                 approved=False,
                                 model_id=model_id,
@@ -528,10 +571,13 @@ class ResourceManager:
                                 duration_ms=0,
                             )
                             await self._emitter.emit(event)
-                        except Exception:
-                            # Cleanup path: trace event emission failed, don't crash the application
-                            # Per Rule 17: broad except requires inline comment
-                            pass
+                        except Exception as e:
+                            # Trace emission is fire-and-forget; never block caller
+                            logger.warning(
+                                "AR18: trace event emission failed: %s",
+                                e,
+                                exc_info=True,
+                            )
                         return LoadDecision(
                             approved=False,
                             model_id=model_id,
@@ -555,10 +601,11 @@ class ResourceManager:
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    # Cleanup path: trace event emission failed, don't crash the application
-                    # Per Rule 17: broad except requires inline comment
-                    pass
+                except Exception as e:
+                    # Trace emission is fire-and-forget; never block caller
+                    logger.warning(
+                        "AR18: trace event emission failed: %s", e, exc_info=True
+                    )
                 return LoadDecision(
                     approved=True,
                     model_id=model_id,
@@ -578,10 +625,11 @@ class ResourceManager:
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    # Cleanup path: trace event emission failed, don't crash the application
-                    # Per Rule 17: broad except requires inline comment
-                    pass
+                except Exception as e:
+                    # Trace emission is fire-and-forget; never block caller
+                    logger.warning(
+                        "AR18: trace event emission failed: %s", e, exc_info=True
+                    )
                 return LoadDecision(
                     approved=False,
                     model_id=model_id,
@@ -603,10 +651,11 @@ class ResourceManager:
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
             return LoadDecision(
                 approved=False,
                 model_id=model_id,
@@ -632,8 +681,8 @@ class ResourceManager:
                 quantisation=quantisation,
                 vram_used_gb=vram_used_gb,
                 ram_used_gb=ram_used_gb,
-                loaded_at=datetime.now(),
-                last_used_at=datetime.now(),
+                loaded_at=datetime.now(timezone.utc),
+                last_used_at=datetime.now(timezone.utc),
             )
             self._loaded_models[model_id] = loaded_model
             await self._persist_loaded_state()
@@ -650,10 +699,11 @@ class ResourceManager:
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
 
     async def record_unload(self, model_id: str) -> None:
         """Record that a model has been unloaded."""
@@ -674,16 +724,17 @@ class ResourceManager:
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
 
     async def record_usage(self, model_id: str) -> None:
         """Update last_used_at for a model."""
         try:
             if model_id in self._loaded_models:
-                self._loaded_models[model_id].last_used_at = datetime.now()
+                self._loaded_models[model_id].last_used_at = datetime.now(timezone.utc)
                 await self._persist_loaded_state()
         except Exception as e:
             try:
@@ -698,10 +749,11 @@ class ResourceManager:
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
 
     async def pin_model(self, model_id: str) -> None:
         """Pin a model so it is never auto-evicted."""
@@ -716,10 +768,11 @@ class ResourceManager:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
             if model_id in self._loaded_models:
                 self._loaded_models[model_id].is_pinned = True
                 await self._persist_loaded_state()
@@ -736,10 +789,11 @@ class ResourceManager:
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
 
     async def unpin_model(self, model_id: str) -> None:
         """Unpin a model."""
@@ -754,10 +808,11 @@ class ResourceManager:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
             if model_id in self._loaded_models:
                 self._loaded_models[model_id].is_pinned = False
                 await self._persist_loaded_state()
@@ -774,10 +829,11 @@ class ResourceManager:
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
 
     async def get_loaded_models(self) -> list[LoadedModel]:
         """List currently loaded models."""
@@ -802,10 +858,11 @@ class ResourceManager:
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    # Cleanup path: trace event emission failed, don't crash the application
-                    # Per Rule 17: broad except requires inline comment
-                    pass
+                except Exception as e:
+                    # Trace emission is fire-and-forget; never block caller
+                    logger.warning(
+                        "AR18: trace event emission failed: %s", e, exc_info=True
+                    )
                 return False
 
             try:
@@ -818,10 +875,11 @@ class ResourceManager:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
 
             # Send unload signal to Ollama API
             try:
@@ -841,10 +899,11 @@ class ResourceManager:
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    # Cleanup path: trace event emission failed, don't crash the application
-                    # Per Rule 17: broad except requires inline comment
-                    pass
+                except Exception as e2:
+                    # Trace emission is fire-and-forget; never block caller
+                    logger.warning(
+                        "AR18: trace event emission failed: %s", e2, exc_info=True
+                    )
 
             await self.record_unload(model_id)
             return True
@@ -861,18 +920,19 @@ class ResourceManager:
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
             return False
 
     async def release_model(self, adapter) -> None:
         """Marks the adapter's model as lowest eviction priority — first candidate if VRAM is needed.
-        
+
         Args:
             adapter: The adapter whose model should be marked as evictable
-            
+
         No-op if adapter is not tracked.
         """
         try:
@@ -881,17 +941,17 @@ class ResourceManager:
             if model_id is None:
                 # Adapter might not have model_id attribute, try other common attributes
                 model_id = getattr(adapter, "model_name", None)
-            
+
             if model_id is None or model_id not in self._loaded_models:
                 # No-op if adapter is not tracked
                 return
-            
+
             # Mark model as lowest eviction priority by setting is_pinned=False
             # and updating last_used_at to a very old time
             self._loaded_models[model_id].is_pinned = False
             self._loaded_models[model_id].last_used_at = datetime.min
             await self._persist_loaded_state()
-            
+
             # Emit trace event
             try:
                 event = TraceEvent(
@@ -903,10 +963,11 @@ class ResourceManager:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
         except Exception as e:
             # Release failure should not crash
             try:
@@ -919,17 +980,18 @@ class ResourceManager:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
 
     async def ensure_model(self, adapter) -> None:
         """Restores adapter's model to normal eviction priority.
-        
+
         Args:
             adapter: The adapter whose model should be ensured
-            
+
         If model has been evicted, attempt reload (best-effort). If reload not supported,
         emit warning trace event and return without error.
         """
@@ -939,7 +1001,7 @@ class ResourceManager:
             if model_id is None:
                 # Adapter might not have model_id attribute, try other common attributes
                 model_id = getattr(adapter, "model_name", None)
-            
+
             if model_id is None:
                 # No model_id available, emit warning and return
                 try:
@@ -952,16 +1014,17 @@ class ResourceManager:
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    # Cleanup path: trace event emission failed, don't crash the application
-                    # Per Rule 17: broad except requires inline comment
-                    pass
+                except Exception as e:
+                    # Trace emission is fire-and-forget; never block caller
+                    logger.warning(
+                        "AR18: trace event emission failed: %s", e, exc_info=True
+                    )
                 return
-            
+
             if model_id in self._loaded_models:
                 # Model is tracked, restore normal priority
                 self._loaded_models[model_id].is_pinned = False
-                self._loaded_models[model_id].last_used_at = datetime.now()
+                self._loaded_models[model_id].last_used_at = datetime.now(timezone.utc)
                 await self._persist_loaded_state()
             else:
                 # Model has been evicted or not tracked, attempt reload if supported
@@ -974,7 +1037,7 @@ class ResourceManager:
                         ram_used_gb = getattr(adapter, "ram_used_gb", 0.0)
                         adapter_name = getattr(adapter, "__class__.__name__", "unknown")
                         quantisation = getattr(adapter, "quantisation", "unknown")
-                        
+
                         await self.record_load(
                             model_id,
                             adapter_name,
@@ -994,10 +1057,13 @@ class ResourceManager:
                                 duration_ms=0,
                             )
                             await self._emitter.emit(event)
-                        except Exception:
-                            # Cleanup path: trace event emission failed, don't crash the application
-                            # Per Rule 17: broad except requires inline comment
-                            pass
+                        except Exception as e2:
+                            # Trace emission is fire-and-forget; never block caller
+                            logger.warning(
+                                "AR18: trace event emission failed: %s",
+                                e2,
+                                exc_info=True,
+                            )
                 else:
                     # Reload not supported, emit warning and return
                     try:
@@ -1010,11 +1076,12 @@ class ResourceManager:
                             duration_ms=0,
                         )
                         await self._emitter.emit(event)
-                    except Exception:
-                        # Cleanup path: trace event emission failed, don't crash the application
-                        # Per Rule 17: broad except requires inline comment
-                        pass
-            
+                    except Exception as e:
+                        # Trace emission is fire-and-forget; never block caller
+                        logger.warning(
+                            "AR18: trace event emission failed: %s", e, exc_info=True
+                        )
+
             # Emit trace event
             try:
                 event = TraceEvent(
@@ -1026,10 +1093,11 @@ class ResourceManager:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e, exc_info=True
+                )
         except Exception as e:
             # Ensure failure should not crash
             try:
@@ -1042,17 +1110,18 @@ class ResourceManager:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
 
     async def _persist_loaded_state(self) -> None:
         """Persist loaded model state to storage."""
         try:
             state = {
                 "loaded_models": [m.model_dump() for m in self._loaded_models.values()],
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
             await self.memory_router.write_to_collection(
                 data={
@@ -1060,7 +1129,7 @@ class ResourceManager:
                     "task_id": "resource_manager_state",
                     "metadata": {"type": "loaded_models_state"},
                 },
-                collection="resource_manager_state"
+                collection="resource_manager_state",
             )
         except Exception as e:
             try:
@@ -1073,10 +1142,11 @@ class ResourceManager:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
 
     async def initialize(self, system_profile: SystemProfile) -> None:
         """Initialize resource manager and reconcile with actual state."""
@@ -1084,8 +1154,11 @@ class ResourceManager:
             # Load persisted state
             try:
                 results = await self.memory_router.fetch_by_filter(
-                    filter={"task_id": "resource_manager_state", "query": "loaded_models_state"},
-                    collection="resource_manager_state"
+                    filter={
+                        "task_id": "resource_manager_state",
+                        "query": "loaded_models_state",
+                    },
+                    collection="resource_manager_state",
                 )
                 if results:
                     # Reconstruct loaded models from persisted state
@@ -1093,7 +1166,9 @@ class ResourceManager:
                         if isinstance(item, dict) and "loaded_models" in item:
                             for model_data in item["loaded_models"]:
                                 loaded_model = LoadedModel.model_validate(model_data)
-                                self._loaded_models[loaded_model.model_id] = loaded_model
+                                self._loaded_models[loaded_model.model_id] = (
+                                    loaded_model
+                                )
             except Exception as e:
                 try:
                     event = TraceEvent(
@@ -1105,10 +1180,11 @@ class ResourceManager:
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    # Cleanup path: trace event emission failed, don't crash the application
-                    # Per Rule 17: broad except requires inline comment
-                    pass
+                except Exception as e2:
+                    # Trace emission is fire-and-forget; never block caller
+                    logger.warning(
+                        "AR18: trace event emission failed: %s", e2, exc_info=True
+                    )
 
             # Reconcile with actual Ollama state
             snapshot = await self.snapshot(system_profile)
@@ -1145,7 +1221,8 @@ class ResourceManager:
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                # Cleanup path: trace event emission failed, don't crash the application
-                # Per Rule 17: broad except requires inline comment
-                pass
+            except Exception as e2:
+                # Trace emission is fire-and-forget; never block caller
+                logger.warning(
+                    "AR18: trace event emission failed: %s", e2, exc_info=True
+                )
