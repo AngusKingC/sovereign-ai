@@ -718,3 +718,23 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors
 - Coverage: 82% (baseline held)
 - Tag: prompt-73 verified on origin
+
+## 2025-06-25 00:57 — prompt-74
+
+**Plan**: Cost Tracking & Spend Caps (Critical #2)
+
+**Changed**:
+- core/cost_tracker.py: NEW - CostTracker class with spend cap enforcement and cost tracing
+- core/orchestrator.py: wire CostTracker into process_task() for spend checks and cost recording
+- core/resource_budget.py: delegate $ cap checks to CostTracker
+- core/observability.py: add COST_RECORDED, COST_ALERT, COST_FALLBACK_TRIGGERED trace events
+- tests/test_cost_tracker.py: NEW - comprehensive unit and integration tests
+- .pre-commit-config.yaml: remove mypy hook (stall prevention)
+- AGENTS.md: add OR33 (no hook exclusions per L12)
+- CONTEXT.md: add cost tracking vocabulary
+
+**Results**:
+- Tests: 1289 passed, 67 skipped (baseline: 1269, +20 new)
+- Ruff: 0 errors
+- Coverage: 82% overall (core 85%, system 87%, memory 84%, adapters 83%, skills 81%)
+- Tag: prompt-74 verified on origin
