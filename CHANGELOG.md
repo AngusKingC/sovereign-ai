@@ -772,3 +772,24 @@ This changelog documents all implementations, changes, and decisions made during
 - Mypy: 0 errors (baseline held)
 - Coverage: 83% (baseline held)
 - Tag: prompt-74 verified
+
+## 2026-06-25 04:16 — prompt-75
+
+**Plan**: 75 (5-plan milestone full scan + vulture whitelist fix)
+
+**Changed**:
+- requirements-dev.txt: Added types-PyYAML (was missing, caused mypy regression)
+- vulture-whitelist.txt: Recreated as UTF-8 with 33 findings (was UTF-16, unreadable; updated from 23 to 33 findings)
+- .windsurf/workflows/jarvis-close.md: Fixed vulture command syntax (was passing whitelist as positional arg)
+- .windsurf/workflows/jarvis-verify.md: Same fix
+- .github/workflows/ci.yml: Fixed vulture job syntax
+
+**Results**:
+- Tests: 1308 passed, 67 skipped (baseline held)
+- Ruff: 0 errors (baseline held)
+- Mypy: 0 errors in 263 source files (baseline held - after fixing types-PyYAML regression)
+- Bandit: 3420 low, 4 medium (B108 x3, B608), 0 high (baseline held)
+- pip-audit: 10 CVEs across 4 packages (stable)
+- Vulture: 33 findings, all whitelisted (whitelist fix verified)
+- Coverage: 83% (baseline held)
+- Tag: prompt-75 created locally

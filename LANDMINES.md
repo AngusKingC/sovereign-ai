@@ -99,3 +99,19 @@ Append-only historical record of failure patterns. See AGENTS.md for guidance on
 **Impact**: Type errors accumulate, making the codebase progressively harder to maintain. Hiding errors defeats the purpose of type checking. The correct fix is to add proper type annotations, not to exclude files from type checking.
 
 ---
+
+## L15 — Vulture whitelist file encoding + CLI syntax bugs
+
+**Trigger**: Plan 72 created vulture-whitelist.txt via PowerShell `>` redirection (defaults to UTF-16), which vulture couldn't read. Workflow docs used `vulture <paths> vulture-whitelist.txt` syntax, but vulture treats the file as a PATH to scan, not a whitelist.
+
+**Impact**: Vulture whitelist check silently passed (command errored, but `continue-on-error: true` in CI masked it) — new dead code wasn't caught for Plans 72-74.5. CI vulture job failed continuously but the root cause wasn't diagnosed until Plan 75.
+
+---
+
+## L16 — Removing pre-commit hook without transferring dependencies
+
+**Trigger**: Plan 74 removed mypy pre-commit hook (which had types-PyYAML in additional_dependencies) but didn't add types-PyYAML to requirements-dev.txt. Plan 75 full-repo mypy scan failed on test_setup_wizard.py:111 (missing yaml stubs).
+
+**Impact**: Type stub dependencies were lost when hook was removed, causing silent mypy regressions. The gap was invisible between Plans 74-74.5 because pre-commit no longer ran mypy. CI may not have caught it if CI mypy job also used the hook's additional_dependencies.
+
+---
