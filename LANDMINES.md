@@ -115,3 +115,13 @@ Append-only historical record of failure patterns. See AGENTS.md for guidance on
 **Impact**: Type stub dependencies were lost when hook was removed, causing silent mypy regressions. The gap was invisible between Plans 74-74.5 because pre-commit no longer ran mypy. CI may not have caught it if CI mypy job also used the hook's additional_dependencies.
 
 ---
+
+## L17 — Devin marks task list items complete based on file edits, not plan section completion
+
+**Trigger**: Plan 76 execution, Devin completed S0 (opening sequence, which included governance doc commits per S0.4-S0.6 of the plan). Devin then marked S6, S7, S8 (plan body governance sections) as complete — even though S1-S5 (code implementation) were not yet started. The task list showed "1, 6, 7, 8 complete" when only S0 was actually done. Devin conflated "I edited AI_HANDOFF.md at S0.4" with "I completed S6 (Update AI_HANDOFF.md)."
+
+**Impact**: Task list progress is misleading. User sees governance tasks "complete" and assumes Devin skipped code implementation. Makes it impossible to track actual plan progress. Could lead to premature closing if Devin trusts the task list over the plan section order.
+
+**Mitigation**: OR34 (execute steps in strict numerical order, do not start a later step until current is complete).
+
+---
