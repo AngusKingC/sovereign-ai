@@ -76,8 +76,21 @@ jobs:
       - name: Install vulture
         run: pip install vulture
       - name: Run vulture (min-confidence 80, whitelist existing findings)
-        run: vulture . --min-confidence 80 --exclude .venv,venv,env,.git,node_modules,__pycache__,build,dist,.tox,.eggs,.pytest_cache,.mypy_cache,.ruff_cache,htmlcov
-        # 23 existing findings are whitelisted (accepted baseline from Plan 70). New dead code will fail CI.
+        run: |
+          python -c "
+          import subprocess, sys
+          result = subprocess.run(['vulture', '.', '--min-confidence', '80', '--exclude', '.venv,venv,env,.git,node_modules,__pycache__,build,dist,.tox,.eggs,.pytest_cache,.mypy_cache,.ruff_cache,htmlcov'], capture_output=True, text=True)
+          findings = [l for l in result.stdout.splitlines() if 'confidence' in l]
+          with open('vulture-whitelist.txt', encoding='utf-8') as f:
+              whitelist = set(l.strip() for l in f if l.strip())
+          new_findings = [f for f in findings if f not in whitelist]
+          if new_findings:
+              print('NEW vulture findings (not in whitelist):')
+              for f in new_findings:
+                  print(f'  {f}')
+              sys.exit(1)
+          print(f'All {len(findings)} findings are whitelisted.')
+          "
         continue-on-error: false
 
   detect-secrets:

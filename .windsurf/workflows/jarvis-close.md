@@ -25,11 +25,25 @@ detect-secrets scan --baseline .secrets.baseline
 ```
 If exit code != 0, STOP — a new secret was introduced. Either update baseline (if false positive) or remove the secret. Do not commit until this passes.
 
-## Step 2.7: Vulture whitelist check (NEW — Plan 72)
+## Step 2.7: Vulture whitelist check (FIXED — Plan 75)
 ```powershell
-vulture . --min-confidence 80 --exclude .venv,venv,env,.git,node_modules,__pycache__,build,dist,.tox,.eggs,.pytest_cache vulture-whitelist.txt
+# Run vulture and compare to whitelist (vulture doesn't accept whitelist files as args)
+python -c "
+import subprocess, sys
+result = subprocess.run(['vulture', '.', '--min-confidence', '80', '--exclude', '.venv,venv,env,.git,node_modules,__pycache__,build,dist,.tox,.eggs,.pytest_cache'], capture_output=True, text=True)
+findings = [l for l in result.stdout.splitlines() if 'confidence' in l]
+with open('vulture-whitelist.txt', encoding='utf-8') as f:
+    whitelist = set(l.strip() for l in f if l.strip())
+new_findings = [f for f in findings if f not in whitelist]
+if new_findings:
+    print('NEW vulture findings (not in whitelist):')
+    for f in new_findings:
+        print(f'  {f}')
+    sys.exit(1)
+print(f'All {len(findings)} findings are whitelisted.')
+"
 ```
-If new findings appear (not in whitelist), STOP — either fix the dead code or add to whitelist with inline comment. Do not commit until this passes.
+If new findings appear (not in whitelist), STOP — either fix the dead code or add to `vulture-whitelist.txt` (UTF-8 encoded). Do not commit until this passes.
 
 ## Step 2.8: Pre-commit run on staged files (NEW — Plan 72)
 ```powershell

@@ -53,13 +53,34 @@ If exit code != 0, a new secret-like string was introduced. Either:
 - If false positive (e.g., test fixture with dummy API key string): update baseline with `detect-secrets scan > .secrets.baseline` and commit the change.
 - If real secret: REMOVE from source immediately. Consider rotating the secret if it was committed.
 
-## Step 6: Vulture check on touched files with whitelist (NEW — Plan 72)
+## Step 6: Vulture check on touched files with whitelist (FIXED — Plan 75)
 ```powershell
-vulture <files_touched> --min-confidence 80 vulture-whitelist.txt
+# Run vulture on touched files and check for new findings vs whitelist
+python -c "
+import subprocess, sys
+files = sys.argv[1:]
+if not files:
+    print('No files to check')
+    sys.exit(0)
+result = subprocess.run(['vulture'] + files + ['--min-confidence', '80'], capture_output=True, text=True)
+findings = [l for l in result.stdout.splitlines() if 'confidence' in l]
+if not findings:
+    print('No vulture findings.')
+    sys.exit(0)
+with open('vulture-whitelist.txt', encoding='utf-8') as f:
+    whitelist = set(l.strip() for l in f if l.strip())
+new_findings = [f for f in findings if f not in whitelist]
+if new_findings:
+    print('NEW vulture findings (not in whitelist):')
+    for f in new_findings:
+        print(f'  {f}')
+    sys.exit(1)
+print(f'All {len(findings)} findings are whitelisted.')
+" <files_touched>
 ```
 If new findings appear (not in whitelist), either:
 - Fix the dead code (preferred), OR
-- Add to `vulture-whitelist.txt` with an inline comment in the source file explaining why it's whitelisted (e.g., `# vulture-whitelist: required by ABC interface`).
+- Add to `vulture-whitelist.txt` (UTF-8 encoded) with an inline comment in the source file explaining why it's whitelisted (e.g., `# vulture-whitelist: required by ABC interface`).
 
 ## Expected result
 
