@@ -66,12 +66,11 @@ This file defines the domain terms, conventions, and shared vocabulary used acro
 | **Cost Trace** | Trace event emitted by CostTracker with `model`, `tokens_in`, `tokens_out`, `cost_usd`, `cumulative_daily`, `cumulative_monthly` fields. |
 | **Cost Policy** | Configuration determining cap amounts, fallback behavior, and alert thresholds. Default: $10/day, $100/month, alert at 80%, fallback to cheapest model at 90%. |
 
-## Ternary Bonsai Vocabulary (NEW — Plan 74.5)
+## Modified llama.cpp Vocabulary (NEW — Plan 74.5)
 
 | Term | Definition |
 |---|---|
-| **Ternary Bonsai** | PrismML's 1.58-bit language model family (8B, 4B, 1.7B params). Weights constrained to {-s, 0, +s}, encoded as (-1, 0, +1) using ~1.58 bits/weight. 9x smaller than 16-bit equivalents. Apache 2.0 license. |
-| **Q1_0 Quantization** | The 1-bit/ternary quantization format added by PrismML's `llama.cpp` fork. Required to load Ternary Bonsai GGUF files. NOT supported by stock `llama-cpp-python` from PyPI. |
-| **PrismML llama-server** | The `llama-server` binary from PrismML's forked `llama.cpp` release. OpenAI-compatible HTTP API on configurable port. Sovereign AI's `PrismBonsaiAdapter` manages its lifecycle. |
-| **PrismBonsaiAdapter** | The Sovereign AI adapter (`adapters/prism_bonsai.py`) that manages the PrismML `llama-server` subprocess and exposes it as an `LLMAdapter`. Single responsibility: binary lifecycle + HTTP translation. |
+| **Modified llama.cpp** | A fork of `llama.cpp` that adds quantization formats not in the upstream release (e.g., PrismML's Q1_0 ternary weight support). The user installs the binary externally; Sovereign AI does not download it. |
+| **Q1_0 Quantization** | The 1-bit/ternary quantization format added by PrismML's `llama.cpp` fork. Required to load models with ternary weights (e.g., Ternary Bonsai). NOT supported by stock `llama-cpp-python` from PyPI. |
+| **PrismLlamaAdapter** | The Sovereign AI adapter (`adapters/prism_llama.py`) that manages a modified `llama-server` subprocess and exposes it as an `LLMAdapter`. Single responsibility: binary lifecycle + HTTP translation. Does NOT download binaries or models. |
 | **Adapter-Managed Subprocess** | Pattern (AR20): adapter launches an external binary as a subprocess, health-checks it, and calls its API. Used when a custom C++ build is needed but a Python binding would be fragile. |
