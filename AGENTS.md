@@ -135,6 +135,9 @@ OR28. PowerShell session cleanup: After each command execution block, Devin MUST
 - **On Linux/macOS**: `ps aux | grep -c powershell` or skip this check (Devin runs on Windows; this fallback is for local verification only).
 (Source: L10 — Devin leaves zombie PowerShell processes after execution)
 
+### Hook discipline (NEW — Plan 74)
+OR33. Never exclude files from pre-commit hooks (mypy, ruff, black, etc.) to bypass errors. If a hook fails on a file outside the plan's scope, STOP and report per OR16 — do not edit `.pre-commit-config.yaml` to exclude the file. The correct response is either: (a) fix the error if it's in-scope, (b) STOP and report if it's out-of-scope, or (c) use `$env:SKIP="<hook_id>"; git commit` (PowerShell syntax) for a single commit if the hook itself is broken. Never edit hook config to permanently exclude files. (Source: landmine L12 — Plan 73 execution, Devin attempted to exclude core/task_state_machine.py from mypy hook instead of fixing the type errors)
+
 ---
 
 ## Landmines that have graduated to rules
@@ -153,6 +156,7 @@ This section maps landmines to their corresponding rules.
 | L8 | OR16, OR22 | Scope drift: editing files outside declared scope |
 | L10 | OR28 | Devin leaves zombie PowerShell processes after execution |
 | L11 | OR32 | Devin bypassed pre-commit hooks with --no-verify |
+| L12 | OR33 | Hiding type errors by excluding files from hooks |
 
 ---
 

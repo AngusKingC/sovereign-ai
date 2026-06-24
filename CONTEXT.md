@@ -56,3 +56,12 @@ This file defines the domain terms, conventions, and shared vocabulary used acro
 | **Sandbox Image** | The Docker image used for execution. Default: `python:3.12-slim`. Configurable per-task via `image` parameter. |
 | **Sandbox Policy** | Configuration determining whether Docker is required (strict) or optional (fallback to subprocess with approval). Default: strict. |
 | **Sandbox Result** | Result dict from SandboxExecutor: `{success, stdout, stderr, return_code, error, sandboxed, container_id}`. `sandboxed: True` if Docker was used, `False` if subprocess fallback. |
+
+## Cost Tracking Vocabulary (NEW — Plan 74)
+
+| Term | Definition |
+|---|---|
+| **CostTracker** | The central module that aggregates token usage × cost_per_token per model, enforces daily/monthly $ caps, and emits cost traces. Single source of truth for spend. |
+| **Spend Cap** | Configurable $ limit (daily or monthly). When hit, CostTracker blocks further execution and triggers fallback to cheaper model (if configured) or hard-fail. |
+| **Cost Trace** | Trace event emitted by CostTracker with `model`, `tokens_in`, `tokens_out`, `cost_usd`, `cumulative_daily`, `cumulative_monthly` fields. |
+| **Cost Policy** | Configuration determining cap amounts, fallback behavior, and alert thresholds. Default: $10/day, $100/month, alert at 80%, fallback to cheapest model at 90%. |
