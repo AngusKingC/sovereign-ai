@@ -1,6 +1,6 @@
 # PLANS.md — Sovereign AI Project State
 
-**Last updated**: Post-Plan 67 (2026-06-24)
+**Last updated**: Post-Plan 68 (2026-06-24)
 
 This document tracks the dynamic state of the Sovereign AI project: baselines, completed prompts, and the next-5-prompt queue. It is the canonical source for test counts, static analysis baselines, and which prompt is currently active.
 
@@ -8,8 +8,8 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Test Baseline
 
-**Current baseline**: **1230 passed, 67 skipped**  
-**Verified**: Plan 67, Step S6 (full test suite)  
+**Current baseline**: **1253 passed, 67 skipped**  
+**Verified**: Plan 68, Step S4 (full test suite)  
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)  
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -56,22 +56,11 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 65 | Mypy Remediation Phase 2 | 1232 | Fixed 16 mypy errors across 7 core files (session, task_state_machine, escalation, retention, worker_factory, orchestrator, rating_system). Enum replacements, UUID constructors, type annotations. Added L9 to LANDMINES. |
 | 66 | System Cleanup and Final Core Hardening | 1231 | Fixed 23 mypy errors across 7 system files (model_acquisition, voice_daemon, trajectory_exporter, retention_manager, retention_daemon, monitor_daemon, model_evaluator). Added RETENTION_DAEMON to TraceComponent enum. Core mypy clean (0 errors). |
 | 67 | Mypy Remediation: Adapters, CLI, Memory, Tests, Skills | 1230 | Fixed 172 mypy errors across 45 files (adapters, CLI, memory, workers, skills, tests, scripts). Union types, None handling, enum values, API compatibility, type annotations. Full-repo mypy clean (0 errors, 181 source files). |
+| 68 | Phase 1 Foundation: Skill Taxonomy + CONTEXT.md | 1253 | SkillTier enum, SkillClassification dataclass, SkillTaxonomyRegistry. Default registry with 25 built-in skill classifications (15 user, 9 agent, 1 hybrid). CONTEXT.md project-level shared vocabulary. 20 new tests (14 taxonomy + 6 context). Fixed 2 pre-existing test failures (notes delete, qdrant embedder fallback). |
 
 ---
 
 ## Next 5 Prompts Queue
-
-### Plan 68 — [Open Slot] (Priority TBD)
-
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 67.
-
-**Expected impact**: TBD
-
-**Baseline changes**: TBD
-
-**Gate**: TBD
-
----
 
 ### Plan 69 — [Open Slot] (Priority TBD)
 
@@ -85,30 +74,30 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
-### Plan 70 — 5-Plan Milestone Full Scan (Priority 1 — tentative)
+### Plan 70 — [Open Slot] (Priority TBD)
 
-**Scope**: Post-Plans 66-69 full-repo scan and baseline refresh. Capture new baselines after system mypy remediation.
-
-**Expected impact**:
-- Scope TBD pending Plans 67-69 completion. This entry is a **placeholder**.
-- Expected updates: mypy baseline (core/system clean, full-repo TBD), ruff (target: 0), bandit (target: 0 medium), pip-audit (target ≤20), vulture (target ≤25), test count (target ≈1235)
-
-**Baseline changes**:
-- Will be determined at Plan 69 scoping time (GLM inspects actual repo state)
-
-**Gate**: Full 6-tool scan passes (pytest + ruff + mypy . + bandit + pip-audit + vulture). All baselines recorded. Handoff status sections updated.
-
----
-
-### Plan 71 — [Open Slot] (Priority TBD)
-
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 70.
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 69.
 
 **Expected impact**: TBD
 
 **Baseline changes**: TBD
 
 **Gate**: TBD
+
+---
+
+### Plan 71 — 5-Plan Milestone Full Scan (Priority 1 — tentative)
+
+**Scope**: Post-Plans 66-70 full-repo scan and baseline refresh. Capture new baselines after skill taxonomy foundation.
+
+**Expected impact**:
+- Scope TBD pending Plans 67-69 completion. This entry is a **placeholder**.
+- Expected updates: mypy baseline (core/system clean, full-repo TBD), ruff (target: 0), bandit (target: 0 medium), pip-audit (target ≤20), vulture (target ≤25), test count (target ≈1235)
+
+**Baseline changes**:
+- Will be determined at Plan 70 scoping time (GLM inspects actual repo state)
+
+**Gate**: Full 6-tool scan passes (pytest + ruff + mypy . + bandit + pip-audit + vulture). All baselines recorded. Handoff status sections updated.
 
 ---
 
@@ -124,9 +113,21 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
+### Plan 73 — [Open Slot] (Priority TBD)
+
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 72.
+
+**Expected impact**: TBD
+
+**Baseline changes**: TBD
+
+**Gate**: TBD
+
+---
+
 ## Baseline Reconciliation Notes
 
-- **Test count delta**: 1231 → 1230 (-1). Within tolerance (±5). Likely due to test environment variation.
+- **Test count delta**: 1230 → 1253 (+23). OUTSIDE tolerance (±5). Plan 68 added 20 new tests (14 taxonomy + 6 context) and fixed 2 pre-existing failures. Baseline updated to reflect new test count.
 - **Mypy delta**: Full-repo 294 → 0 errors (-294). Major cleanup achieved through Plan 67. All 181 source files (adapters, CLI, memory, workers, skills, tests, scripts) now mypy-clean.
 - **Ruff delta**: 0 → 0. No change. Baseline held.
 
@@ -143,8 +144,9 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **Datetime handling** — Zero naive/aware mixing; all core/system/skills using timezone-aware UTC
 - **Ruff baseline** — 0 errors (Plan 59 cleanup held through Plans 56-66)
 - **Mypy baseline** — Full-repo mypy clean (0 errors, 181 source files). Adapters, CLI, memory, workers, skills, tests, scripts all remediated through Plan 67.
-- **Test suite** — 1230 passed, 67 skipped (Plan 67 mypy remediation; Plan 66 system cleanup; Plan 63b added 7 integration + E2E tests; restored 2 orchestrator integration tests)
+- **Test suite** — 1253 passed, 67 skipped (Plan 68 skill taxonomy + CONTEXT.md; Plan 67 mypy remediation; Plan 66 system cleanup; Plan 63b added 7 integration + E2E tests; restored 2 orchestrator integration tests)
 - **Eval harness** — Metrics (exact_match, token_f1, bleu, cosine_similarity) operational with trace emitter integration. Validation suite with 15 static tasks confirms metric behavior across 5 categories.
+- **Skill taxonomy** — SkillTier enum (USER_INVOKED, AGENT_INVOKED, HYBRID), SkillClassification dataclass, SkillTaxonomyRegistry. Default registry with 25 built-in skill classifications. CONTEXT.md project-level shared vocabulary.
 
 ### What's Broken Right Now
 
@@ -255,6 +257,7 @@ These features add defense, portability, and resilience:
 - **Plan 67 Delta (Mypy)**: Full mypy remediation across all remaining directories (adapters, CLI, memory, workers, skills, tests, scripts). Full-repo mypy clean: 294 → 0 errors (-294).
 - **Plan 67 Delta (Tests)**: 1231 → 1230 passed, 68 → 67 skipped (-1 each). Within tolerance (±5).
 - **Plan 67 Delta (AGENTS.md)**: Added OR28 (PowerShell session cleanup). Added L10 to LANDMINES.md (zombie PowerShell processes).
+- **Plan 68 Delta (Tests)**: 1230 → 1253 passed (+23), 67 skipped (no change). OUTSIDE tolerance (±5). Added 20 new tests (14 taxonomy + 6 context). Fixed 2 pre-existing test failures (notes delete, qdrant embedder fallback). Baseline updated to 1253.
 
 ---
 

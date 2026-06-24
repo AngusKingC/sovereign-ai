@@ -579,3 +579,22 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors
 - Mypy: 0 errors (181 source files)
 - Tag: prompt-67 verified on origin
+
+## 2026-06-24 — prompt-68
+
+**Plan**: Phase 1 Foundation: Skill Taxonomy + CONTEXT.md
+
+**Changed**:
+- core/skill_taxonomy.py: NEW — SkillTier enum, SkillClassification dataclass, SkillTaxonomyRegistry
+- skills/classifications.py: NEW — Default registry with 25 built-in skill classifications (15 user, 9 agent, 1 hybrid)
+- CONTEXT.md: NEW — Project-level shared vocabulary and domain context
+- tests/test_skill_taxonomy.py: NEW — 14 tests for skill taxonomy
+- tests/test_context_md.py: NEW — 6 tests for CONTEXT.md
+- tests/skills/test_notes_skill.py: Fixed test to match implementation (scoped_write vs scoped_delete)
+- tests/test_qdrant_backend.py: Fixed test to match implementation (query_points vs search)
+
+**Results**:
+- Tests: 1253 passed, 67 skipped, 0 failed
+- Ruff: 0 errors
+- Mypy: 0 errors (file-scoped)
+- Tag: prompt-68 verified on origin
