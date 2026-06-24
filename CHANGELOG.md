@@ -852,3 +852,22 @@ This changelog documents all implementations, changes, and decisions made during
 **Results**:
 - Tests: N/A (governance patch, no code changes)
 - Tag: governance-patch-03 verified locally
+
+## 2026-06-25 07:06 - prompt-77
+
+**Plan**: Self-Healing / AutoCorrector
+
+**Changed**:
+- core/schemas.py: Added proposal_type field to VersionUpdateProposal (default 'instruction_tweak')
+- core/auto_corrector.py: NEW — AutoCorrector class (classify + apply_proposal), ProposalClassification/ApplyStatus enums, ApplyResult model
+- core/instruction_versioning.py: Added uto_corrector parameter to InstructionVersionManager.__init__; branched check_and_trigger_update on auto_corrector presence; on ApplyStatus.ERROR pop _pending_proposals to prevent worker freeze (Rev2 fix for Claude Issue 2)
+- tests/test_auto_corrector.py: NEW — 12 unit tests
+- tests/test_instruction_versioning.py: Appended TestAutoCorrectorWiring class (5 tests, including ERROR-path regression test)
+- CONTEXT.md: Added Self-Healing Vocabulary section
+- vulture-whitelist.txt: Added 5 pytest fixture entries for TestAutoCorrectorWiring
+
+**Results**:
+- Tests: 1367 passed, 67 skipped (+17 from Plan 76 baseline of 1350 — OR17 invoked, +17 exceeds ±5 tolerance; all 17 are in-scope new tests for new AutoCorrector module + IVM wiring)
+- Ruff: 0 errors (baseline held)
+- Mypy: 0 errors (file-scoped on new + edited files)
+- Tag: prompt-77 verified on origin

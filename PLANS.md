@@ -8,8 +8,8 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Test Baseline
 
-**Current baseline**: **1350 passed, 67 skipped**
-**Verified**: Plan 76, Step S10 (full test suite with coverage)
+**Current baseline**: **1367 passed, 67 skipped**
+**Verified**: Plan 77, Step S8 (full test suite)
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -26,7 +26,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | **Mypy (full-repo)** | 0 errors | Plan 67 S6 | Delta: -294 from Plan 60 baseline (294 → 0). Full remediation of adapters, CLI, memory, workers, skills, tests, scripts (181 source files). |
 | **Bandit** | 3,384 low, 1 medium, 0 high | Plan 70 S4 | Delta: +205 low, +1 medium from Plan 60 baseline. New B608 finding in memory/postgres_trace_store.py:161 (false positive - asyncpg parameterized query). |
 | **pip-audit** | 19 CVEs across 4 packages | Plan 70 S5 | Stable across Plans 56-70. No actionable fixes (upstream only). |
-| **Vulture** | 33 high-confidence findings | Plan 75 S6 | Delta: +10 from Plan 70 baseline (23 → 33). New findings from Plans 73-74.5 (prism_llama + test mocks). Whitelist recreated as UTF-8 (was UTF-16, unreadable). CLI syntax fixed (Python-based comparison instead of positional arg). |
+| **Vulture** | 38 high-confidence findings | Plan 77 C2.7 | Delta: +5 from Plan 75 baseline (33 → 38). New findings from Plan 77 (5 pytest fixture entries in TestAutoCorrectorWiring class). Whitelisted per OR19 (fixture parameters required by pytest). |
 | **detect-secrets** | 15 findings (baseline) | Plan 71 S9 | Baseline established with .secrets.baseline. All findings are false positives (test fixtures, doc examples). |
 | **pre-commit** | Configured | Plan 74 S2 | Hooks installed: trailing-whitespace, end-of-file-fixer, check-yaml, check-json, check-toml, black, ruff, isort, detect-secrets. Mypy hook removed (stall prevention — follows imports into out-of-scope files). |
 | **pytest-cov** | Configured | Plan 71 S11 | Coverage reports: term-missing + HTML. No fail threshold (baseline: 1% coverage). |
@@ -70,22 +70,11 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 74.5 | PrismLlamaAdapter (Modified llama.cpp Integration) | 1308 | PrismLlamaAdapter implementation (adapters/prism_llama.py) following AR20 pattern (adapter-managed subprocess). Registered in cli/adapter_factory.py as prism_llama adapter type. User provides binary_path and model_path (no download logic). 17 unit tests + 2 adapter_factory tests. AR20 added to AGENTS.md. Modified llama.cpp vocabulary added to CONTEXT.md. 19 new tests. |
 | 75 | 5-Plan Milestone Full Scan + Vulture Whitelist Fix | 1308 | Full 6-tool checkpoint scan. Tests: 1308 passed, 67 skipped (baseline held). Ruff: 0 errors (baseline held). Mypy: 0 errors in 263 source files (baseline held - after fixing types-PyYAML regression). Bandit: 3420 low, 4 medium (B108 x3, B608), 0 high (baseline held). pip-audit: 10 CVEs (stable). Vulture: 33 findings (updated from 23, all whitelisted after UTF-8 encoding fix + CLI syntax fix). Coverage: 83% (baseline held). Fixed vulture whitelist bugs (UTF-16 → UTF-8, wrong CLI syntax → Python-based comparison). Fixed mypy regression (added types-PyYAML to requirements-dev.txt). |
 | 76 | PEMADS Phase 1: Debate Pool + Task Classifier + Testing Battery Framework | 1350 | PEMADS Phase 1 infrastructure (no LLM calls, no debates). New modules: memory/debate_pool.py (DebatePool class), core/task_classifier.py (TaskClassifier class), skills/testing_battery/ (TestingBatterySkill). Governance updates: AI_HANDOFF.md (tiered review system + context brief structure), PLANS.md (roadmap revision to Claude's Option C), CONTEXT.md (PEMADS vocabulary). 42 new tests (10 debate_pool + 12 task_classifier + 20 testing_battery). Coverage: 83% (baseline held). |
+| 77 | Self-Healing / AutoCorrector | 1367 | AutoCorrector module + IVM wiring. Safe proposals auto-applied; unsafe escalated. _pending_proposals cleaned on ERROR (Claude Issue 2 fix). OR17 invoked (+17 tests, exceeds ±5). |
 
 ---
 
 ## Next 5 Prompts Queue
-
-### Plan 77 — Self-Healing / AutoCorrector (Priority 1 — Kimi Critical #3)
-
-**Scope**: `AutoCorrector` module — applies safe proposals (instruction tweaks, routing weight adjustments) from `orchestrator/improvement_loop.py`, escalates unsafe proposals (code changes) to approval gate. Wire into improvement loop's `check_and_trigger_update()` path. Closes the "self-improving AI" promise.
-
-**Expected impact**: Core promise delivered. Improvement loop no longer discards `VersionUpdateProposal`.
-
-**Baseline changes**: Test count may increase with AutoCorrector tests.
-
-**Gate**: Full test suite pass, ruff 0, mypy 0.
-
----
 
 ### Plan 78 — Circuit Breaker at Orchestrator Level (Priority 2 — Kimi High)
 
@@ -123,24 +112,72 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
-### Plan 81 — PEMADS Phase 2: Expert Panel Manager + Hot-Swap (Priority 1)
+### Plan 81 — PEMADS Phase 2: Expert Panel Manager + VRAM Hot-Swap (Priority 1 — Kimi Critical #4)
 
-**Scope**: Expert panel manager — creates pruned-expert models (via model pruning), orchestrates turn-based debates between diverse architectures, VRAM hot-swap to load/unload experts. Requires Plan 77-79 prerequisites (circuit breaker, self-healing, routing).
+**Scope**: ExpertPanelManager (orchestrates turn-based debates between diverse architectures), VRAM hot-swap (unload models between debate rounds to fit multiple experts). Requires Plans 78-79 prerequisites (circuit breaker, model routing).
 
-**Expected impact**: Live debates between specialized experts. Foundation for Phase 3 judge.
+**Expected impact**: Live debates enabled. PEMADS core feature delivered.
 
-**Baseline changes**: Test count increase (expert panel manager + hot-swap tests).
+**Baseline changes**: Test count may increase with expert panel + VRAM hot-swap tests.
 
 **Gate**: Full test suite pass, ruff 0, mypy 0.
 
 ---
 
-**Plans 82-86 (post-scan)**:
-- **Plan 82**: Multi-channel approval gates (Kimi High — lands right before Phase 3, where implementation decisions need oversight)
-- **Plan 83**: PEMADS Phase 3 — Judge + implementation gate + full testing battery (now safe — multi-channel approvals in place)
-- **Plan 84**: PEMADS Phase 5 — Integration & hardening (Phase 4 cloud pruner stays deferred — local-first)
-- **Plan 85**: 5-plan milestone scan (mandatory)
-- **Plan 86**: [Open Slot] (Priority TBD)
+### Plan 82 — Multi-Channel Approval Gates (Priority 1 — Kimi Critical #5)
+
+**Scope**: Extend ApprovalGate to support multi-channel approvals (Telegram, email, web UI). Required before AutoCorrector can autonomously apply code changes (Plan 77 deferred: code_change proposal type). Also required for PEMADS Phase 3 autonomous implementation gate.
+
+**Expected impact**: Human-in-the-loop for unsafe operations across channels. Prerequisite for Plan 77 code_change auto-apply + PEMADS Phase 3.
+
+**Baseline changes**: Test count may increase with multi-channel approval tests.
+
+**Gate**: Full test suite pass, ruff 0, mypy 0.
+
+---
+
+### Plan 83 — PEMADS Phase 3: Judge + Implementation Gate (Priority 1 — Kimi Critical #6)
+
+**Scope**: PEMADSJudge (evaluates debate quality, decides implementation), implementation gate (requires Plan 82 multi-channel approvals). Autonomous decisions with quality threshold enforcement.
+
+**Expected impact**: PEMADS full autonomy. End-to-end self-improvement loop.
+
+**Baseline changes**: Test count may increase with judge + implementation gate tests.
+
+**Gate**: Full test suite pass, ruff 0, mypy 0.
+
+---
+
+### Plan 84 — PEMADS Phase 4: Pruned Expert Model Generation (Priority 2 — Kimi High)
+
+**Scope**: PrunedExpertGenerator (creates task-specialized models by pruning base models on debate history). Requires Plan 83 judge quality data.
+
+**Expected impact**: Specialized models for task types. Performance optimization.
+
+**Baseline changes**: Test count may increase with pruned expert generation tests.
+
+**Gate**: Full test suite pass, ruff 0, mypy 0.
+
+---
+
+### Plan 85 — Open Slot (TBD)
+
+**Scope**: TBD
+
+**Expected impact**: TBD
+
+**Baseline changes**: TBD
+
+**Gate**: TBD
+
+---
+
+**Plans 86-90 (post-scan)**:
+- **Plan 86**: Multi-channel approval gates (Kimi High — lands right before Phase 3, where implementation decisions need oversight)
+- **Plan 87**: PEMADS Phase 3 — Judge + implementation gate + full testing battery (now safe — multi-channel approvals in place)
+- **Plan 88**: PEMADS Phase 5 — Integration & hardening (Phase 4 cloud pruner stays deferred — local-first)
+- **Plan 89**: 5-plan milestone scan (mandatory)
+- **Plan 90**: [Open Slot] (Priority TBD)
 
 **Roadmap source**: Claude's Option C from the 5-AI panel review (2026-06-25). See `roadmap-sequencing-strategy-and-review-request.md` for the full review process and GLM's evaluation.
 
@@ -148,12 +185,12 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Baseline Reconciliation Notes
 
-- **Test count delta**: 1253 → 1257 (+4) at Plan 71 (AR18 compliance test). 1257 → 1257 (no change) at Plan 72 (no tests added). 1257 → 1269 (+12) at Plan 73 (sandbox tests + skill test updates). 1269 → 1289 (+20) at Plan 74 (cost tracker tests + orchestrator/resource_budget test updates). 1289 → 1308 (+19) at Plan 74.5 (17 PrismLlamaAdapter tests + 2 adapter_factory tests). 1308 → 1308 (no change) at Plan 75 (scan-only plan, no new tests). 1308 → 1350 (+42) at Plan 76 (10 debate_pool + 12 task_classifier + 20 testing_battery). Baseline updated to 1350 passed, 67 skipped. Within ±5 tolerance (actual +42 vs expected +38, all new tests are in-scope).
+- **Test count delta**: 1253 → 1257 (+4) at Plan 71 (AR18 compliance test). 1257 → 1257 (no change) at Plan 72 (no tests added). 1257 → 1269 (+12) at Plan 73 (sandbox tests + skill test updates). 1269 → 1289 (+20) at Plan 74 (cost tracker tests + orchestrator/resource_budget test updates). 1289 → 1308 (+19) at Plan 74.5 (17 PrismLlamaAdapter tests + 2 adapter_factory tests). 1308 → 1308 (no change) at Plan 75 (scan-only plan, no new tests). 1308 → 1350 (+42) at Plan 76 (10 debate_pool + 12 task_classifier + 20 testing_battery). 1350 → 1367 (+17) at Plan 77 (12 AutoCorrector + 5 IVM wiring). OR17 invoked — delta exceeds ±5 tolerance. Justification: all 17 tests are in-scope new tests for new AutoCorrector module + IVM wiring. No existing tests modified or deleted. Baseline updated to 1367 passed, 67 skipped.
 - **Mypy delta**: 0 → 0 (no change) at Plan 71. 0 → 0 (no change) at Plan 72. 0 → 0 (no change) at Plan 73. 0 → 0 (no change) at Plan 74 (file-scoped mypy on new files, all clean). 1 error → 0 at Plan 75 (fixed types-PyYAML regression - was missing from requirements-dev.txt after Plan 74 mypy hook removal). Baseline holds at 0 errors.
 - **Ruff delta**: 0 → 0 (no change) at Plan 71. 0 → 0 (no change) at Plan 72. 0 → 0 (no change) at Plan 73. 0 → 0 (no change) at Plan 74 (black/isort auto-fixed during pre-commit). Baseline holds at 0 errors.
 - **Bandit delta**: No change at Plan 71-73. No change at Plan 74 (no security-sensitive code added).
 - **pip-audit delta**: No change at Plan 71-73. No change at Plan 74 (no dependency changes).
-- **Vulture delta**: No change at Plan 71-73. No change at Plan 74 (no new dead code; 23 findings remain in whitelist). 23 → 33 (+10) at Plan 75 (new findings from Plans 73-74.5: prism_llama __aexit__ params + test mocks). Whitelist recreated as UTF-8 (was UTF-16, unreadable). CLI syntax fixed (Python-based comparison instead of positional arg).
+- **Vulture delta**: No change at Plan 71-73. No change at Plan 74 (no new dead code; 23 findings remain in whitelist). 23 → 33 (+10) at Plan 75 (new findings from Plans 73-74.5: prism_llama __aexit__ params + test mocks). Whitelist recreated as UTF-8 (was UTF-16, unreadable). CLI syntax fixed (Python-based comparison instead of positional arg). 33 → 38 (+5) at Plan 77 (5 pytest fixture entries in TestAutoCorrectorWiring class). Whitelisted per OR19 (fixture parameters required by pytest).
 - **detect-secrets**: Baseline established at Plan 71 with 15 findings (all false positives). No change at Plan 72-74.
 - **pre-commit**: Configured at Plan 71 with 10 hooks. Mypy hook removed at Plan 74 (stall prevention — follows imports into out-of-scope files, causing Plan 73 stall).
 - **pytest-cov**: Configured at Plan 71 with term-missing and HTML reports. Coverage baseline captured at Plan 71: 82% (24,664 statements, 4,359 missing). No change at Plan 72-74 (coverage held at 82%). Coverage increased to 83% at Plan 74.5 (25,626 statements, 4,476 missing) due to new adapter tests.
