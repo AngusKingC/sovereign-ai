@@ -148,6 +148,8 @@ S0.1. **Run `/jarvis-open`** — verifies previous prompt's tag on origin and co
 
 S0.2. **Read AGENTS.md in full.** AGENTS.md is always-on — every file edit in this plan MUST comply with its rules. If an AGENTS.md rule's application is ambiguous, read `LANDMINES.md` for the trigger and diagnostic context behind the rule.
 
+S0.2.5. **Re-read AGENTS.md after governance patches.** If this plan is resuming after a governance patch (Plan {N}.0 or Governance Directive) that added new rules to AGENTS.md, re-read AGENTS.md NOW before S1. The rules added by the patch were not in AGENTS.md when you originally read it at S0.2. Do not skip this re-read — the new rules (e.g., OR34 task list discipline, OR35-OR38 output discipline) apply to this plan's execution. If you do not re-read, you will execute with stale rules and may repeat the failure patterns the patch was designed to prevent.
+
 S0.3. **Add any new rules GLM specified for this plan and commit** before any coding step. Then proceed to the plan body (S1 onward).
 
 ### Plan body (S1-Sn)

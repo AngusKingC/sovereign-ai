@@ -4,7 +4,7 @@ Devin's always-on rules. Read before every coding session.
 
 **Rule naming**:
 - **AR{n}** = Architecture Rules (AR1-AR20)
-- **OR{n}** = Operational Rules (OR1-OR33)
+- **OR{n}** = Operational Rules (OR1-OR38)
 
 **If a rule's application is unclear or ambiguous**, read LANDMINES.md to find the source landmine and understand the diagnostic context behind the rule.
 
@@ -139,6 +139,41 @@ OR28. PowerShell session cleanup: After each command execution block, Devin MUST
 
 ### Hook discipline (NEW — Plan 74)
 OR33. Never exclude files from pre-commit hooks (mypy, ruff, black, etc.) to bypass errors. If a hook fails on a file outside the plan's scope, STOP and report per OR16 — do not edit `.pre-commit-config.yaml` to exclude the file. The correct response is either: (a) fix the error if it's in-scope, (b) STOP and report if it's out-of-scope, or (c) use `$env:SKIP="<hook_id>"; git commit` (PowerShell syntax) for a single commit if the hook itself is broken. Never edit hook config to permanently exclude files. (Source: landmine L12 — Plan 73 execution, Devin attempted to exclude core/task_state_machine.py from mypy hook instead of fixing the type errors)
+
+### Task list discipline (REVISED — Governance Directive 01)
+OR34. Execute plan steps in strict numerical order (S0 → S1 → S2 → ... → Sn). Do not START a later step until the current step is complete. Do not MARK a task complete based on work done in a different section — a task is complete only when its corresponding plan section is fully executed in order. If S0 (opening) edits a governance doc and S6 (plan body) also edits the same doc, completing S0 does NOT complete S6, and you must not start S6 until S1-S5 are done. If a step is blocked, STOP and report — do not jump ahead to a later step. (Source: landmine L17 — Plan 76 execution; revised by Governance Directive 01 to prohibit starting out of order, not just marking complete out of order)
+
+### Git output discipline (NEW — Governance Directive 01)
+OR35. Use token-efficient git commands to reduce context consumption:
+- Use `git status -s` (short format) for routine checks, NOT `git status` (full format). Short format returns one line per changed file.
+- Use `git diff --stat` for overview, NOT `git diff` (full diff). Only use full `git diff` when you need to see specific line changes.
+- Use `git log --oneline -N` (with count limit, e.g., `-5`), NEVER bare `git log`.
+- Pipe all git output through `Select-Object -Last N` to truncate: `git status -s | Select-Object -Last 10`
+- If output is needed in full (e.g., diagnosing a specific issue), note why before running the full command.
+
+### PowerShell output discipline (NEW — Governance Directive 01)
+OR36. Minimize PowerShell output to reduce context token consumption:
+- Always pipe command output through `Select-Object -Last N` (default N=5 unless more is needed).
+- For multi-command verification, chain with `;` and capture only the final summary line.
+- Never run a command that produces >20 lines of output without truncation.
+- For pre-commit hooks: run with `2>&1 | Select-Object -Last 10` to capture only pass/fail summary. If a hook fails, re-run that specific hook without truncation to see full output.
+- For pytest: always use `-q --tb=short` flags. For targeted tests with `-v`, pipe through `Select-Object -Last 20`.
+- For ruff/mypy: pipe through `Select-Object -Last 3` — you only need the error count.
+
+### Todo list discipline (NEW — Governance Directive 01)
+OR37. Minimize todo list output to reduce context token consumption:
+- Print the full todo list ONCE at plan start.
+- After completing a task, print only: "Task N complete. Starting Task N+1: [name]" (one line).
+- Do NOT re-print the full todo list after each task completion.
+- Do NOT print the todo list before starting each task — you already know what's next from the previous completion message.
+- Exception: if the user asks to see the todo list, print it in full.
+
+### Batch verification (NEW — Governance Directive 01)
+OR38. Batch verification commands to reduce the number of separate command executions and output blocks:
+- Instead of running 6 separate verification commands (syntax, ruff, mypy, detect-secrets, vulture, tests), chain them with `;` and capture only the final summary.
+- Example: `python -c "import ast; ast.parse(open('file.py').read())" ; ruff check file.py ; mypy file.py --ignore-missing-imports ; echo "---CHECKS DONE---" 2>&1 | Select-Object -Last 5`
+- If any check fails, the failure will appear in the last 5 lines. Then re-run the failing check individually for full output.
+- This reduces 6 Devin actions + 6 output blocks to 1 Devin action + 1 output block.
 
 ---
 
