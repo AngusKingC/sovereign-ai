@@ -643,3 +643,34 @@ This changelog documents all implementations, changes, and decisions made during
 - pip-audit: 19 known vulnerabilities in 4 packages (informational baseline)
 - Vulture: 23 high-confidence findings (baseline held)
 - Tag: prompt-70 verified on origin
+
+## 2026-06-24 21:13 — prompt-71
+
+**Plan**: Code Hygiene + Tooling Integration
+
+**Changed**:
+- system/resource_manager.py: AR18 cleanup (added logging, replaced except Exception: pass with logger.warning), datetime.now() → datetime.now(timezone.utc)
+- system/model_acquisition.py: AR18 cleanup, API key validation (HF_TOKEN, ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_API_KEY), dead code fixes (lines 224, 350)
+- system/model_registry.py: AR18 cleanup, datetime.now() → datetime.now(timezone.utc)
+- system/profiler.py: datetime.now() → datetime.now(timezone.utc)
+- core/approval_gate.py: AR18 cleanup
+- skills/notes/notes_skill.py: AR18 cleanup
+- skills/calendar/calendar_skill.py: AR18 cleanup
+- skills/reminder/reminder_skill.py: AR18 cleanup
+- skills/email/email_skill.py: AR18 cleanup
+- cli/command_history.py: datetime.now() → datetime.now(timezone.utc)
+- memory/obsidian.py: datetime.now() → datetime.now(timezone.utc)
+- tests/test_ar18_compliance.py: NEW AR18 compliance regression test
+- .pre-commit-config.yaml: NEW pre-commit configuration (black, ruff, isort, mypy, detect-secrets)
+- .secrets.baseline: NEW detect-secrets baseline (15 findings)
+- .github/workflows/ci.yml: Updated to Python 3.12, added detect-secrets and coverage jobs, mypy scope changed to full-repo, vulture whitelist updated
+- pytest.ini: Added pytest-cov configuration (term-missing + HTML reports)
+- PLANS.md: Updated baseline (1257 passed, 67 skipped), added new tooling baselines (detect-secrets, pre-commit, pytest-cov)
+
+**Results**:
+- Tests: 1257 passed, 67 skipped (+4 from baseline)
+- Coverage: 82% (24,664 statements, 4,359 missing)
+- Ruff: 0 errors (baseline held)
+- Mypy: 0 errors on touched files (baseline held)
+- detect-secrets: 15 findings baseline established
+- Tag: prompt-71 verified locally
