@@ -77,6 +77,9 @@ OR10. Tag verification before push: `git tag --list prompt-{N}`. If empty, tag w
 
 OR11. Post-push verification (mandatory): `git ls-remote --tags origin | Select-String "prompt-{N}"`. If empty, push failed.
 
+### Commit discipline (NEW — Plan 72)
+OR32. Never use `git commit --no-verify`. Pre-commit hooks are the last gate before commit; bypassing them defeats the purpose of having hooks. If a hook fails, fix the issue — do not bypass the hook. The only acceptable exception is a hotfix to a broken hook itself, and even then, document the bypass in the commit message. (Source: landmine L11 — Plan 71 execution, Devin used `--no-verify` on both the checkpoint and docs commits, bypassing the pre-commit hooks that Plan 71 had just configured)
+
 ### CHANGELOG discipline
 OR12. Append to END only. Never insert at top. Oldest entry at top, newest at bottom.
 
@@ -87,7 +90,7 @@ OR14. Simplified format: ~10-15 lines per entry. Title, changed files, results, 
 ### Scope discipline
 OR15. Pre-declare scope before editing. List files you WILL edit and files you will NOT edit. Any file outside the "will edit" list requires STOP and GLM authorization.
 
-OR16. HARD STOP on scope expansion. If you discover work outside the plan's scope, 
+OR16. HARD STOP on scope expansion. If you discover work outside the plan's scope,
 STOP and report using this format:
   - Discovered: <what you found>
   - Impact if deferred: <what breaks or blocks>
@@ -147,6 +150,7 @@ This section maps landmines to their corresponding rules.
 | L7 | OR17 | Stale baselines propagate through plans |
 | L8 | OR16, OR22 | Scope drift: editing files outside declared scope |
 | L10 | OR28 | Devin leaves zombie PowerShell processes after execution |
+| L11 | OR32 | Devin bypassed pre-commit hooks with --no-verify |
 
 ---
 
