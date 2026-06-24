@@ -64,3 +64,8 @@ tests\test_task_state_machine.py:355: unused variable 'raw_output' (100% confide
 tests\test_task_state_machine.py:425: unused variable 'raw_output' (100% confidence)
 tests\test_task_state_machine.py:499: unused variable 'raw_output' (100% confidence)
 tests\test_together_adapter.py:40: unused variable 'mock_together_client' (100% confidence)
+tests\test_instruction_versioning.py:828: unused variable 'setup_low_trend_high_ratings' (100% confidence)
+tests\test_instruction_versioning.py:846: unused variable 'setup_low_trend_high_ratings' (100% confidence)
+tests\test_instruction_versioning.py:867: unused variable 'setup_low_trend_high_ratings' (100% confidence)
+tests\test_instruction_versioning.py:887: unused variable 'setup_low_trend_high_ratings' (100% confidence)
+tests\test_instruction_versioning.py:907: unused variable 'setup_low_trend_high_ratings' (100% confidence)

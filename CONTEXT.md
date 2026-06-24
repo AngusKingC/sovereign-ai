@@ -89,3 +89,15 @@ This file defines the domain terms, conventions, and shared vocabulary used acro
 | **Phase 1** | PEMADS infrastructure — debate pool, task classifier, testing battery framework. No LLM calls, no debates, no safety risks. (Plan 76) |
 | **Phase 2** | PEMADS expert panel manager + VRAM hot-swap. Live debates. Requires Plan 77-79 prerequisites. (Plan 81) |
 | **Phase 3** | PEMADS judge + implementation gate + full testing battery. Autonomous decisions. Requires Plan 82 multi-channel approvals. (Plan 83) |
+
+## Self-Healing Vocabulary (NEW — Plan 77)
+
+| Term | Definition |
+|---|---|
+| **AutoCorrector** | Module (`core/auto_corrector.py`) that classifies `VersionUpdateProposal`s as safe or unsafe based on `proposal_type`, auto-applies safe proposals via `InstructionVersionManager.approve_update()`, and escalates unsafe proposals to `ApprovalGate`. Closes the "self-improving AI" promise — instruction tweaks no longer need manual approval. |
+| **ProposalClassification** | Enum returned by `AutoCorrector.classify()`. Values: `SAFE` (auto-apply), `UNSAFE` (escalate). Unknown proposal types default to `UNSAFE` (defense in depth). |
+| **ApplyStatus** | Enum returned by `AutoCorrector.apply_proposal()`. Values: `APPLIED` (safe proposal applied), `ESCALATED` (unsafe proposal sent to ApprovalGate), `ERROR` (application or escalation failed — see message). Caller (`InstructionVersionManager`) MUST clear `_pending_proposals` on ERROR to prevent worker freeze. |
+| **ApplyResult** | Pydantic model returned by `AutoCorrector.apply_proposal()`. Fields: `proposal_id`, `status`, `classification`, `message`, `applied_at`. |
+| **proposal_type** | Field on `VersionUpdateProposal` (added Plan 77). Determines AutoCorrector classification. Values: `instruction_tweak` (safe, default), `routing_weight` (safe), `code_change` (unsafe), `model_download` (unsafe). Defaults to `instruction_tweak` for backward compatibility (OR27). |
+| **Safe proposal** | A proposal whose `proposal_type` is in `{instruction_tweak, routing_weight}`. Auto-applied without human approval. Reversible via `InstructionVersionManager.rollback()`. |
+| **Unsafe proposal** | A proposal whose `proposal_type` is in `{code_change, model_download}` or is unknown. Escalated to `ApprovalGate` for human-in-the-loop review. |
