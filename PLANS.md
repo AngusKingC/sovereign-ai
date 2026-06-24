@@ -8,8 +8,8 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Test Baseline
 
-**Current baseline**: **1289 passed, 67 skipped**
-**Verified**: Plan 74, Step S11 (full test suite with coverage)
+**Current baseline**: **1308 passed, 67 skipped**
+**Verified**: Plan 74.5, Step S6 (full test suite with coverage)
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -67,12 +67,25 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 72 | Plan 71 Completion + Scope Violation Cleanup | 1257 | Completed Plan 71's tooling gaps: requirements-dev.txt (dev deps), vulture-whitelist.txt (23 findings), CI vulture whitelist + flip, workflow updates (jarvis-open/verify/close). Deleted temp file scan/logs/checkpoint-scan-prompt-70.md. Added OR32 to AGENTS.md (never use --no-verify). Added Coverage baseline row to PLANS.md (82%). No test count change. |
 | 73 | Sandboxed Code Execution (AR19) | 1269 | SandboxExecutor implementation (core/sandbox.py). Skills updated to use SandboxExecutor (code_execution, terminal). Tests updated with mock sandbox_executor. New sandbox tests (test_sandbox.py). AR19 added to AGENTS.md. Sandbox vocabulary added to CONTEXT.md. SANDBOX component added to TraceComponent enum. 12 new tests (sandbox + skill test updates). |
 | 74 | Cost Tracking & Spend Caps (Critical #2) | 1289 | CostTracker implementation (core/cost_tracker.py). Wired into Orchestrator (spend checks + cost recording) and ResourceBudget ($ cap delegation). New trace events (COST_RECORDED, COST_ALERT, COST_FALLBACK_TRIGGERED). Comprehensive tests (test_cost_tracker.py). OR33 added to AGENTS.md (no hook exclusions per L12). Cost tracking vocabulary added to CONTEXT.md. Pre-commit mypy hook removed (stall prevention). 20 new tests. |
+| 74.5 | PrismLlamaAdapter (Modified llama.cpp Integration) | 1308 | PrismLlamaAdapter implementation (adapters/prism_llama.py) following AR20 pattern (adapter-managed subprocess). Registered in cli/adapter_factory.py as prism_llama adapter type. User provides binary_path and model_path (no download logic). 17 unit tests + 2 adapter_factory tests. AR20 added to AGENTS.md. Modified llama.cpp vocabulary added to CONTEXT.md. 19 new tests. |
 
 ---
 
 ## Next 5 Prompts Queue
 
-### Plan 75 — Dependency Security + Parallel Tests (Priority 2)
+### Plan 76 — 5-Plan Milestone Full Scan (Priority 1)
+
+**Scope**: Full 6-tool checkpoint scan (pytest, ruff, mypy, bandit, pip-audit, vulture). Coverage verification. Static analysis baseline reconciliation.
+
+**Expected impact**: Baseline verification, trend analysis.
+
+**Baseline changes**: Test count should hold at 1308 passed, 67 skipped (±5 tolerance). All tool counts should hold within tolerance.
+
+**Gate**: All 6 tools pass, coverage ≥78% (83% baseline -5%).
+
+---
+
+### Plan 77 — Dependency Security + Parallel Tests (Priority 2)
 
 **Scope**: pip-audit continue-on-error flip (diskcache replacement + --ignore-vuln strategy), pytest-xdist parallel test execution, informational metrics (safety, interrogate, radon, hypothesis).
 
@@ -81,30 +94,6 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 **Baseline changes**: No test count change. pip-audit CVE count may change after diskcache replacement.
 
 **Gate**: Full test suite pass, pip-audit 0 actionable CVEs.
-
----
-
-### Plan 76 — 5-Plan Milestone Full Scan (Priority 1)
-
-**Scope**: Full 6-tool checkpoint scan (pytest, ruff, mypy, bandit, pip-audit, vulture). Coverage verification. Static analysis baseline reconciliation.
-
-**Expected impact**: Baseline verification, trend analysis.
-
-**Baseline changes**: Test count should hold at 1289 passed, 67 skipped (±5 tolerance). All tool counts should hold within tolerance.
-
-**Gate**: All 6 tools pass, coverage ≥77% (82% baseline -5%).
-
----
-
-### Plan 77 — [Open Slot] (Priority TBD)
-
-**Scope**: TBD — to be defined by GLM based on project state post-Plan 76.
-
-**Expected impact**: TBD
-
-**Baseline changes**: TBD
-
-**Gate**: TBD
 
 ---
 
@@ -132,9 +121,21 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
+### Plan 80 — [Open Slot] (Priority TBD)
+
+**Scope**: TBD — to be defined by GLM based on project state post-Plan 79.
+
+**Expected impact**: TBD
+
+**Baseline changes**: TBD
+
+**Gate**: TBD
+
+---
+
 ## Baseline Reconciliation Notes
 
-- **Test count delta**: 1253 → 1257 (+4) at Plan 71 (AR18 compliance test). 1257 → 1257 (no change) at Plan 72 (no tests added). 1257 → 1269 (+12) at Plan 73 (sandbox tests + skill test updates). 1269 → 1289 (+20) at Plan 74 (cost tracker tests + orchestrator/resource_budget test updates). Baseline updated to 1289 passed, 67 skipped. Within ±5 tolerance (actual +20, but all new tests are in-scope).
+- **Test count delta**: 1253 → 1257 (+4) at Plan 71 (AR18 compliance test). 1257 → 1257 (no change) at Plan 72 (no tests added). 1257 → 1269 (+12) at Plan 73 (sandbox tests + skill test updates). 1269 → 1289 (+20) at Plan 74 (cost tracker tests + orchestrator/resource_budget test updates). 1289 → 1308 (+19) at Plan 74.5 (17 PrismLlamaAdapter tests + 2 adapter_factory tests). Baseline updated to 1308 passed, 67 skipped. Within ±5 tolerance (actual +19, all new tests are in-scope).
 - **Mypy delta**: 0 → 0 (no change) at Plan 71. 0 → 0 (no change) at Plan 72. 0 → 0 (no change) at Plan 73. 0 → 0 (no change) at Plan 74 (file-scoped mypy on new files, all clean). Baseline holds at 0 errors.
 - **Ruff delta**: 0 → 0 (no change) at Plan 71. 0 → 0 (no change) at Plan 72. 0 → 0 (no change) at Plan 73. 0 → 0 (no change) at Plan 74 (black/isort auto-fixed during pre-commit). Baseline holds at 0 errors.
 - **Bandit delta**: No change at Plan 71-73. No change at Plan 74 (no security-sensitive code added).
@@ -142,7 +143,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **Vulture delta**: No change at Plan 71-73. No change at Plan 74 (no new dead code; 23 findings remain in whitelist).
 - **detect-secrets**: Baseline established at Plan 71 with 15 findings (all false positives). No change at Plan 72-74.
 - **pre-commit**: Configured at Plan 71 with 10 hooks. Mypy hook removed at Plan 74 (stall prevention — follows imports into out-of-scope files, causing Plan 73 stall).
-- **pytest-cov**: Configured at Plan 71 with term-missing and HTML reports. Coverage baseline captured at Plan 71: 82% (24,664 statements, 4,359 missing). No change at Plan 72-74 (coverage held at 82%).
+- **pytest-cov**: Configured at Plan 71 with term-missing and HTML reports. Coverage baseline captured at Plan 71: 82% (24,664 statements, 4,359 missing). No change at Plan 72-74 (coverage held at 82%). Coverage increased to 83% at Plan 74.5 (25,626 statements, 4,476 missing) due to new adapter tests.
 - **Plan 71 scope violation**: Plan 71's checkpoint commit (72e2aa6) bundled 10 GLM Prompts/ plan files into the prompt-71 tag, violating OR26. Plan 72 documented this violation and enforced the going-forward pattern via OR32 and workflow doc updates.
 - **Plan 73 stall**: Plan 73 stalled due to mypy hook following imports into out-of-scope files (core/task_state_machine.py). Plan 74 removed mypy from pre-commit (stall prevention) and added OR33 (no hook exclusions per L12).
 

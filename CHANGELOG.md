@@ -738,3 +738,22 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors
 - Coverage: 82% overall (core 85%, system 87%, memory 84%, adapters 83%, skills 81%)
 - Tag: prompt-74 verified on origin
+
+## 2026-06-25 02:07 — prompt-74.5
+
+**Plan**: PrismLlamaAdapter (Modified llama.cpp Integration)
+
+**Changed**:
+- adapters/prism_llama.py: NEW — PrismLlamaAdapter class for modified llama.cpp builds (AR20 pattern)
+- tests/test_prism_llama_adapter.py: NEW — 17 unit tests for PrismLlamaAdapter
+- cli/adapter_factory.py: Added prism_llama branch + **kwargs for adapter-specific config
+- tests/test_adapter_factory.py: Added 2 tests for prism_llama registration
+- AGENTS.md: Added AR20 (adapter-managed subprocess servers)
+- CONTEXT.md: Added modified llama.cpp vocabulary section
+- PLANS.md: Updated test baseline, added PrismLlamaAdapter to 'What Works Right Now'
+
+**Results**:
+- Tests: 1308 passed, 67 skipped (+19 from baseline 1289)
+- Ruff: 0 errors (baseline held)
+- Coverage: 83% (up from 82% baseline)
+- Tag: prompt-74.5 verified on origin
