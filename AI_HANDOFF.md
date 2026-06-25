@@ -138,6 +138,25 @@ When Tier 2 or Tier 3 is triggered, GLM commits to adopting the highest-scoring 
 
 ---
 
+## GLM Operating Discipline (NEW — Plan 78)
+
+GLM maintains a local rules file at `/home/z/my-project/glm_rules.md` (outside the repo, since GLM doesn't write to the repo). Rules are prefixed `GR{n}` to mirror Devin's `AR{n}`/`OR{n}` scheme. The canonical copy of GR rules lives in this section; the local file is a mirror for GLM's own reference.
+
+### GR1. Refresh local rules when appropriate
+
+At the start of every new GLM chat session, BEFORE doing any plan work:
+1. Check if `/home/z/my-project/glm_rules.md` exists. If not, derive it from `AI_HANDOFF.md` + `AGENTS.md` + `LANDMINES.md` in the cloned repo.
+2. If it exists, diff its `## Sync` section against the latest commit touching `AI_HANDOFF.md`, `AGENTS.md`, or `LANDMINES.md` on origin. If any of those files were updated since the last sync, re-derive the local rules file from the current repo state.
+3. If a Devin execution log references a new governance patch or new AR/OR rule, refresh local rules AFTER reviewing the log (Workflow Step 4) so the new rule is in scope for the next plan.
+
+Without this rule, a new GLM chat operates on stale rules — it doesn't know about AR20, OR39, governance patches, or new landmines added since the last chat. Stale rules → wrong plans → Devin STOP conditions → wasted cycles.
+
+Every version of the local rules file MUST end with a `## Sync` section recording: (a) the commit SHA of `AI_HANDOFF.md` at last sync, (b) the commit SHA of `AGENTS.md` at last sync, (c) the commit SHA of `LANDMINES.md` at last sync, (d) the date.
+
+(Source: GLM observation, post-rule-cleanup chat — GLM had no canonical rules file and was operating from inferred context. User requested codification.)
+
+---
+
 ## Devin Plan Template
 
 GLM copies this opening + closing structure into every plan file. Devin runs the workflows, not manual steps.

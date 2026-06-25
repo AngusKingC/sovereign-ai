@@ -91,7 +91,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ### Plan 78 — Circuit Breaker at Orchestrator Level (Priority 2 — Kimi High)
 
-**Scope**: Extend existing `core/adapter_fallback.py` circuit breaker to per-worker and orchestrator-level. Add degraded mode (queue tasks instead of failing). Required before PEMADS Phase 2 (live debates).
+**Scope**: Extend existing `core/adapter_fallback.py` circuit breaker to per-worker and orchestrator-level. Add degraded mode (queue tasks instead of failing). Required before PEMADS Phase 2 — cascade failure prevention only. Orchestrator-crash recovery is a separate concern (deferred to `orchestrator-crash-recovery` plan).
 
 **Expected impact**: Cascade failure prevention. Prerequisite for PEMADS Phase 2 safety.
 
@@ -182,6 +182,22 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 **Baseline changes**: TBD
 
 **Gate**: TBD
+
+---
+
+### Plan infra-remediation — Infrastructure & Modularity Remediation (deferred from Plan 78 Rev1)
+
+**Scope**: Fix systematic gaps between AGENTS.md rules and code reality discovered in GLM AST scan (2026-06-26, verified counts):
+- 2 AR1 violations (core/worker_factory.py:38, core/resource_budget.py:23 — inline imports of system/)
+- 264 AR18 violations (bare `except Exception: pass` across 43 files — top: skills/notes/notes_skill.py:36, skills/calendar/calendar_skill.py:24, skills/reminder/reminder_skill.py:18)
+- 38 print() statements in production code (top: core/observability.py:5)
+- test_ar18_compliance.py is BROKEN — passes while 264 violations exist (only catches `except Exception:` immediately followed by `pass`, misses the common `except Exception:\n    # comment\n    pass` pattern)
+
+**Prerequisite**: Fix test_ar18_compliance.py FIRST (S2.1 of infra-remediation plan) before any AR18 remediation work.
+
+**Expected impact**: Closes the gap between AGENTS.md rules and code reality. Not blocking PEMADS Phase 2.
+
+**Gate**: Full test suite pass, ruff 0, mypy 0, test_ar18_compliance.py actually fails on real violations.
 
 ---
 
