@@ -11,9 +11,9 @@ from uuid import uuid4
 import pytest
 
 from core.memory_router import MemoryBackend, MemoryRouter
+from core.observability import MemoryTraceEmitter
 from core.orchestrator import Orchestrator
 from core.schemas import Task, TaskPriority, WorkerProfile, WorkerStatus
-from core.observability import MemoryTraceEmitter
 from workers.echo_worker import EchoWorker, MockLLMAdapter
 
 
@@ -39,11 +39,11 @@ class MockMemoryBackend(MemoryBackend):
 
 class MockWorkerProfileWithStatus:
     """Mock worker profile with status attribute for testing."""
-    
+
     def __init__(self, base_profile: WorkerProfile, status: WorkerStatus):
         self._base_profile = base_profile
         self.status = status
-    
+
     def __getattr__(self, name):
         """Delegate all other attributes to the base profile."""
         return getattr(self._base_profile, name)
@@ -65,7 +65,12 @@ class TestOrchestrator:
     @pytest.fixture
     def orchestrator(self, memory_router, trace_emitter):
         """Create an orchestrator."""
-        return Orchestrator(memory_router=memory_router, emitter=trace_emitter)
+        return Orchestrator(
+            memory_router=memory_router,
+            emitter=trace_emitter,
+            worker_circuit_breaker=None,
+            degraded_mode_threshold=0.5,
+        )
 
     @pytest.fixture
     def sample_task(self):
@@ -78,15 +83,20 @@ class TestOrchestrator:
             created_at=datetime.now(timezone.utc),
         )
 
-    def test_route_task_raises_value_error_with_no_workers(self, orchestrator, sample_task):
+    def test_route_task_raises_value_error_with_no_workers(
+        self, orchestrator, sample_task
+    ):
         """Test that route_task raises WorkerNotFoundError when no workers are registered."""
         import asyncio
+
         from core.exceptions import WorkerNotFoundError
 
         with pytest.raises(WorkerNotFoundError, match="No workers registered"):
             asyncio.run(orchestrator.route_task(sample_task))
 
-    def test_single_registered_worker_is_always_selected(self, orchestrator, memory_router, sample_task):
+    def test_single_registered_worker_is_always_selected(
+        self, orchestrator, memory_router, sample_task
+    ):
         """Test that a single registered worker is always selected."""
         profile = WorkerProfile(
             worker_id="worker1",
@@ -110,7 +120,9 @@ class TestOrchestrator:
         output = asyncio.run(orchestrator.route_task(sample_task))
         assert output.worker_id == "worker1"
 
-    def test_worker_with_matching_complexity_scores_higher(self, orchestrator, memory_router, sample_task):
+    def test_worker_with_matching_complexity_scores_higher(
+        self, orchestrator, memory_router, sample_task
+    ):
         """Test that worker with matching complexity scores higher."""
         # Create two workers with different preferred complexity
         profile1 = WorkerProfile(
@@ -144,14 +156,18 @@ class TestOrchestrator:
         worker2 = EchoWorker(profile=profile2, llm=llm2, memory_router=memory_router)
 
         orchestrator.register_worker("worker2", worker2)  # Register second first
-        orchestrator.register_worker("worker1", worker1)  # Register matching complexity second
+        orchestrator.register_worker(
+            "worker1", worker1
+        )  # Register matching complexity second
 
         import asyncio
 
         output = asyncio.run(orchestrator.route_task(sample_task))
         assert output.worker_id == "worker1"  # Should win due to complexity match
 
-    def test_worker_with_matching_capability_keywords_scores_higher(self, orchestrator, memory_router):
+    def test_worker_with_matching_capability_keywords_scores_higher(
+        self, orchestrator, memory_router
+    ):
         """Test that worker with matching capability keywords scores higher."""
         task = Task(
             task_id=uuid4(),
@@ -199,7 +215,9 @@ class TestOrchestrator:
         output = asyncio.run(orchestrator.route_task(task))
         assert output.worker_id == "worker2"  # Should win due to capability match
 
-    def test_worker_with_both_matching_complexity_and_capabilities_wins(self, orchestrator, memory_router):
+    def test_worker_with_both_matching_complexity_and_capabilities_wins(
+        self, orchestrator, memory_router
+    ):
         """Test that worker with both matching complexity and capabilities wins over partial matches."""
         task = Task(
             task_id=uuid4(),
@@ -245,9 +263,13 @@ class TestOrchestrator:
         import asyncio
 
         output = asyncio.run(orchestrator.route_task(task))
-        assert output.worker_id == "worker2"  # Should win with both matches (score 3 vs score 1)
+        assert (
+            output.worker_id == "worker2"
+        )  # Should win with both matches (score 3 vs score 1)
 
-    def test_tie_broken_by_registration_order(self, orchestrator, memory_router, sample_task):
+    def test_tie_broken_by_registration_order(
+        self, orchestrator, memory_router, sample_task
+    ):
         """Test that tie is broken by registration order (first registered wins)."""
         profile1 = WorkerProfile(
             worker_id="worker1",
@@ -287,7 +309,9 @@ class TestOrchestrator:
         output = asyncio.run(orchestrator.route_task(sample_task))
         assert output.worker_id == "worker1"  # Should win due to registration order
 
-    def test_process_task_with_explicit_worker_id_still_works(self, orchestrator, memory_router, sample_task):
+    def test_process_task_with_explicit_worker_id_still_works(
+        self, orchestrator, memory_router, sample_task
+    ):
         """Test that process_task with explicit worker ID still works."""
         profile = WorkerProfile(
             worker_id="worker1",
@@ -311,15 +335,20 @@ class TestOrchestrator:
         output = asyncio.run(orchestrator.process_task(sample_task, "worker1"))
         assert output.worker_id == "worker1"
 
-    def test_process_task_raises_value_error_for_unknown_worker_id(self, orchestrator, sample_task):
+    def test_process_task_raises_value_error_for_unknown_worker_id(
+        self, orchestrator, sample_task
+    ):
         """Test that process_task raises WorkerNotFoundError for unknown worker ID."""
         import asyncio
+
         from core.exceptions import WorkerNotFoundError
 
         with pytest.raises(WorkerNotFoundError, match="not found"):
             asyncio.run(orchestrator.process_task(sample_task, "nonexistent"))
 
-    def test_trace_events_emitted_during_routing(self, orchestrator, memory_router, sample_task, trace_emitter):
+    def test_trace_events_emitted_during_routing(
+        self, orchestrator, memory_router, sample_task, trace_emitter
+    ):
         """Test that trace events are emitted during routing."""
         profile = WorkerProfile(
             worker_id="worker1",
@@ -334,7 +363,9 @@ class TestOrchestrator:
             preferred_complexity=0.5,
         )
         llm = MockLLMAdapter()
-        worker = EchoWorker(profile=profile, llm=llm, memory_router=memory_router, emitter=trace_emitter)
+        worker = EchoWorker(
+            profile=profile, llm=llm, memory_router=memory_router, emitter=trace_emitter
+        )
 
         orchestrator.register_worker("worker1", worker)
 
@@ -351,7 +382,9 @@ class TestOrchestrator:
         assert "orchestrator_routing_complete" in event_types
         assert "operation_complete" in event_types
 
-    def test_multiple_workers_with_no_overlap_first_registered_wins(self, orchestrator, memory_router):
+    def test_multiple_workers_with_no_overlap_first_registered_wins(
+        self, orchestrator, memory_router
+    ):
         """Test that with multiple workers with no overlap, first registered wins."""
         task = Task(
             task_id=uuid4(),
@@ -397,7 +430,9 @@ class TestOrchestrator:
         import asyncio
 
         output = asyncio.run(orchestrator.route_task(task))
-        assert output.worker_id == "worker1"  # Should win due to registration order (both score 0)
+        assert (
+            output.worker_id == "worker1"
+        )  # Should win due to registration order (both score 0)
 
     def test_deprecated_worker_excluded_from_routing(self, orchestrator, memory_router):
         """Test that deprecated workers are excluded from routing."""
@@ -434,6 +469,7 @@ class TestOrchestrator:
 
         # Should raise WorkerNotFoundError since the only worker is deprecated
         from core.exceptions import WorkerNotFoundError
+
         with pytest.raises(WorkerNotFoundError, match="No workers registered"):
             asyncio.run(orchestrator.route_task(task))
 
@@ -472,6 +508,7 @@ class TestOrchestrator:
 
         # Should raise WorkerNotFoundError since the only worker is archived
         from core.exceptions import WorkerNotFoundError
+
         with pytest.raises(WorkerNotFoundError, match="No workers registered"):
             asyncio.run(orchestrator.route_task(task))
 
@@ -511,7 +548,9 @@ class TestOrchestrator:
         output = asyncio.run(orchestrator.route_task(task))
         assert output.worker_id == "active_worker"
 
-    def test_fallback_chain_injected_into_worker_on_registration(self, memory_router, trace_emitter):
+    def test_fallback_chain_injected_into_worker_on_registration(
+        self, memory_router, trace_emitter
+    ):
         """Test that fallback chain is injected into worker when registered."""
         from core.adapter_fallback import AdapterFallbackChain
 
@@ -528,6 +567,8 @@ class TestOrchestrator:
             memory_router=memory_router,
             fallback_chain=fallback_chain,
             emitter=trace_emitter,
+            worker_circuit_breaker=None,
+            degraded_mode_threshold=0.5,
         )
 
         # Create and register a worker
@@ -552,7 +593,9 @@ class TestOrchestrator:
         assert worker.fallback_chain is not None
         assert worker.fallback_chain == fallback_chain
 
-    def test_orchestrator_works_without_fallback_chain(self, orchestrator, memory_router, sample_task):
+    def test_orchestrator_works_without_fallback_chain(
+        self, orchestrator, memory_router, sample_task
+    ):
         """Test that orchestrator works normally when fallback_chain is None (backward compatibility)."""
         profile = WorkerProfile(
             worker_id="worker1",
@@ -578,7 +621,9 @@ class TestOrchestrator:
         # Verify worker does not have fallback chain
         assert worker.fallback_chain is None
 
-    def test_get_top_candidates_returns_n_highest_scored_workers(self, orchestrator, memory_router):
+    def test_get_top_candidates_returns_n_highest_scored_workers(
+        self, orchestrator, memory_router
+    ):
         """Test that get_top_candidates returns the n highest scored workers."""
         # Create 3 workers with different capabilities
         profile1 = WorkerProfile(
@@ -634,13 +679,15 @@ class TestOrchestrator:
 
         # Task with "python" keyword should match worker1 and worker2
         candidates = asyncio.run(orchestrator.get_top_candidates("python task", 2))
-        
+
         # Should return 2 workers
         assert len(candidates) == 2
         # Should return the highest scored workers (worker1 and worker2 both have "python" capability)
         assert "worker1" in candidates or "worker2" in candidates
 
-    def test_get_top_candidates_returns_all_when_fewer_than_n_registered(self, orchestrator, memory_router):
+    def test_get_top_candidates_returns_all_when_fewer_than_n_registered(
+        self, orchestrator, memory_router
+    ):
         """Test that get_top_candidates returns all workers when fewer than n are registered."""
         # Create only 2 workers
         profile1 = WorkerProfile(
@@ -680,7 +727,7 @@ class TestOrchestrator:
 
         # Request 5 workers but only 2 are registered
         candidates = asyncio.run(orchestrator.get_top_candidates("test task", 5))
-        
+
         # Should return all 2 workers
         assert len(candidates) == 2
         assert "worker1" in candidates
@@ -726,7 +773,9 @@ class TestOrchestrator:
         assert len(tasks) == 0
 
     @pytest.mark.asyncio
-    async def test_list_workers_returns_registered_workers(self, orchestrator, memory_router):
+    async def test_list_workers_returns_registered_workers(
+        self, orchestrator, memory_router
+    ):
         """Test that list_workers returns a list of dicts with worker metadata."""
         # Register a worker first
         profile = WorkerProfile(
@@ -765,4 +814,3 @@ class TestOrchestrator:
         workers = await orchestrator.list_workers()
         assert isinstance(workers, list)
         assert len(workers) == 0
-

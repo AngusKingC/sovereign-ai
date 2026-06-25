@@ -29,8 +29,13 @@ class TaskStateMachine:
 
     VALID_TRANSITIONS: dict[TaskStatus, list[TaskStatus]] = {
         TaskStatus.RECEIVED: [
+            TaskStatus.QUEUED,
             TaskStatus.PLANNED,
             TaskStatus.FAILED,
+            TaskStatus.CANCELLED,
+        ],
+        TaskStatus.QUEUED: [
+            TaskStatus.EXECUTING,
             TaskStatus.CANCELLED,
         ],
         TaskStatus.PLANNED: [

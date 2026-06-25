@@ -5,9 +5,12 @@ Single responsibility: Analytical coordination layer that routes tasks to worker
 without holding opinions or writing beliefs. Pure analysis and dispatch.
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import time
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from core.input_sanitiser import InputSanitiser
@@ -34,6 +37,7 @@ if TYPE_CHECKING:
     from core.orchestrator_improvement import OrchestratorImprovementLoop
     from core.trace_optimiser import TraceOptimiser
     from core.worker_base import WorkerBase
+    from core.worker_circuit_breaker import WorkerCircuitBreaker
     from orchestrator.improvement_loop import ImprovementLoopOrchestrator
 
 
@@ -54,6 +58,8 @@ class Orchestrator:
         output_evaluator: "OutputEvaluator | None" = None,
         emitter: TraceEmitter | None = None,
         cost_tracker: "CostTracker | None" = None,
+        worker_circuit_breaker: "WorkerCircuitBreaker | None" = None,
+        degraded_mode_threshold: float = 0.5,
     ) -> None:
         """Initialize the orchestrator with dependencies.
 
@@ -88,6 +94,11 @@ class Orchestrator:
         self._emitter = emitter or MemoryTraceEmitter()
         self._input_sanitiser = input_sanitiser or InputSanitiser(emitter=emitter)
         self._cost_tracker = cost_tracker
+        self.worker_circuit_breaker = worker_circuit_breaker
+        self.degraded_mode_threshold = degraded_mode_threshold
+        # Issue #2 fix: type annotation matches runtime tuple storage.
+        # Each entry is (task, worker_id, queued_at) for timeout tracking (Issue #5).
+        self._queued_tasks: list[tuple[Task, str, datetime]] = []
 
         # Import TaskStateMachine lazily to avoid circular imports
         from core.task_state_machine import TaskStateMachine
@@ -99,6 +110,101 @@ class Orchestrator:
 
         self.scratchpad_manager = ScratchpadManager(memory_router)
 
+    async def _execute_task(self, task: Task, worker_id: str) -> WorkerOutput:
+        """Execute a task via the assigned worker. Called by process_task (normal
+        path) and _maybe_resume_queued_tasks (resume path).
+
+        This method contains the worker.run + record_success/record_failure logic.
+        It does NOT call _maybe_resume_queued_tasks (no recursion). It does NOT
+        check is_degraded() (caller is responsible for that check).
+
+        (Source: Claude Rev3 review Issue #2 — Rev3's _maybe_resume_queued_tasks
+        called process_task, which called _maybe_resume_queued_tasks at its start,
+        creating unbounded recursion. Rev4 breaks the cycle by extracting this
+        helper.)
+
+        Args:
+            task: The task to execute
+            worker_id: The worker to route to
+
+        Returns:
+            WorkerOutput from the worker
+        """
+        worker = self.workers[worker_id]
+
+        # Transition to EXECUTING.
+        # Resume path arrives with task in QUEUED state (Rev5 Issue #1 fix —
+        # _maybe_resume_queued_tasks no longer pre-transitions).
+        # Direct process_task path may arrive in any pre-EXECUTING state
+        # (e.g., RECEIVED, PLANNED). Guard handles both.
+        if task.current_state != TaskStatus.EXECUTING:
+            task = await self.state_machine.transition(
+                task,
+                TaskStatus.EXECUTING,
+                reason="Worker execution starting",
+                actor="orchestrator",
+            )
+
+        try:
+            output = await worker.run(task)
+            if self.worker_circuit_breaker is not None:
+                self.worker_circuit_breaker.record_success(worker_id)
+            return output
+        except Exception:
+            if self.worker_circuit_breaker is not None:
+                self.worker_circuit_breaker.record_failure(worker_id)
+            raise
+
+    def is_degraded(self) -> bool:
+        """True if degraded worker ratio exceeds threshold.
+
+        Returns False if worker_circuit_breaker is None (no circuit breaker configured).
+
+        Returns:
+            True if system is in degraded mode, False otherwise
+        """
+        if self.worker_circuit_breaker is None:
+            return False
+        ratio = self.worker_circuit_breaker.get_degraded_worker_ratio()
+        return ratio >= self.degraded_mode_threshold
+
+    async def _maybe_resume_queued_tasks(self) -> None:
+        """Opportunistically drain the task queue when system exits degraded mode.
+
+        Called at process_task entry (when a new task arrives). If the system is
+        no longer degraded, resume up to N queued tasks (N = number of available
+        workers). Each resumed task is executed via _execute_task (not process_task)
+        to avoid recursion (Issue #2 fix).
+
+        Rev5 Issue #1 fix: Does NOT pre-transition tasks to EXECUTING. Tasks are
+        transitioned from QUEUED to EXECUTING inside _execute_task, which handles
+        both direct and resume paths uniformly.
+        """
+        if not self._queued_tasks or self.is_degraded():
+            return
+
+        # Determine how many tasks to resume (limit to available workers)
+        available_workers = len(self.workers)
+        tasks_to_resume = min(len(self._queued_tasks), available_workers)
+
+        # Resume tasks in FIFO order
+        for _ in range(tasks_to_resume):
+            if not self._queued_tasks:
+                break
+            task, worker_id, _ = self._queued_tasks.pop(0)
+            try:
+                # Use _execute_task, not process_task, to avoid recursion (Issue #2 fix)
+                await self._execute_task(task, worker_id)
+                logger.info(
+                    "Resumed queued task %s for worker %s", task.task_id, worker_id
+                )
+            except Exception:
+                # If resume fails, re-queue the task for next attempt
+                self._queued_tasks.append((task, worker_id, datetime.now(timezone.utc)))
+                logger.warning(
+                    "Failed to resume queued task %s, re-queued", task.task_id
+                )
+
     def register_worker(self, worker_id: str, worker: "WorkerBase") -> None:
         """Register a worker with the orchestrator."""
         self.workers[worker_id] = worker
@@ -106,6 +212,10 @@ class Orchestrator:
         # Inject fallback chain into worker if available
         if self.fallback_chain is not None and hasattr(worker, "fallback_chain"):
             worker.fallback_chain = self.fallback_chain
+
+        # NEW: register with circuit breaker so denominator is the full roster
+        if self.worker_circuit_breaker is not None:
+            self.worker_circuit_breaker.register_worker(worker_id)
 
         # Emit worker registration event (wrapped to avoid crashing main path)
         try:
@@ -177,7 +287,6 @@ class Orchestrator:
         Returns:
             List of worker IDs ordered by routing score (highest first)
         """
-        from datetime import datetime, timezone
         from uuid import uuid4
 
         from core.schemas import Task, TaskPriority, WorkerStatus
@@ -235,12 +344,47 @@ class Orchestrator:
 
         This is a minimal implementation for testing.
         """
+        # Opportunistically drain the queue if system has exited degraded mode
+        await self._maybe_resume_queued_tasks()
+
         if worker_id not in self.workers:
             from core.exceptions import WorkerNotFoundError
 
             raise WorkerNotFoundError(worker_id)
 
         worker = self.workers[worker_id]
+
+        # Check worker circuit breaker before execution
+        if self.worker_circuit_breaker is not None:
+            if not self.worker_circuit_breaker.is_available(worker_id):
+                # Worker circuit is open. If system is in degraded mode, queue the task.
+                if self.is_degraded():
+                    # Transition to QUEUED and add to queue
+                    task = await self.state_machine.transition(
+                        task,
+                        TaskStatus.QUEUED,
+                        reason=f"Worker {worker_id} circuit open, system degraded",
+                        actor="orchestrator",
+                    )
+                    self._queued_tasks.append(
+                        (task, worker_id, datetime.now(timezone.utc))
+                    )
+                    logger.warning(
+                        "Worker %s circuit open, system degraded — task queued",
+                        worker_id,
+                    )
+                    # Return a placeholder output indicating task is queued
+                    return WorkerOutput(
+                        task_id=task.task_id,
+                        worker_id=worker_id,
+                        content="",
+                        confidence=0.0,
+                        model_used="none",
+                        metadata={
+                            "queued": True,
+                            "reason": "Worker circuit open, system degraded",
+                        },
+                    )
 
         # Check spend cap before execution if cost_tracker is configured
         if self._cost_tracker is not None:
@@ -306,7 +450,9 @@ class Orchestrator:
             )
 
         try:
-            output = await worker.run(task)
+            # Replace: output = await worker.run(task)
+            # With:
+            output = await self._execute_task(task, worker_id)
 
             # Evaluate output quality if evaluator is available
             if self.output_evaluator:
@@ -1065,7 +1211,6 @@ class Orchestrator:
         Raises:
             ValueError: If priority is not a valid TaskPriority value
         """
-        from datetime import datetime, timezone
         from uuid import uuid4
 
         from core.schemas import TaskPriority

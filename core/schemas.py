@@ -34,6 +34,7 @@ class TaskStatus(str, Enum):
     """Status of task execution."""
 
     RECEIVED = "received"
+    QUEUED = "queued"
     PLANNED = "planned"
     EXECUTING = "executing"
     VALIDATING = "validating"
