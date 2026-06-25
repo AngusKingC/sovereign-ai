@@ -937,3 +937,18 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 → 0
 - Coverage: 83% (test_ar18_compliance.py)
 - Tag: rule-cleanup verified on origin
+
+## 2026-06-26 00:12 — governance-patch-04
+
+**Plan**: OR38 clarification (disambiguate '2+ decades ago') + OR39 (plan file retention) + L20 landmine + jarvis-close.md C12 update
+
+**Changed**:
+- AGENTS.md: revised OR38 (catch-up clause now explicit N-2 formula with example), added OR39 (plan files must be committed to git)
+- LANDMINES.md: appended L20 (plan files 72-77 not committed to git, history gaps)
+- .windsurf/workflows/jarvis-close.md: updated C12 to explicitly add GLM Prompts/plan-{N}*.md to git add
+
+**Results**:
+- Tests: 1364 passed, 67 skipped (rule-cleanup baseline: 1364)
+- Ruff: 0 → 0 (no .py files touched)
+- Coverage: 83% (unchanged)
+- Tag: governance-patch-04 verified on origin

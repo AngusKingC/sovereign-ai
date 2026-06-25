@@ -12,12 +12,14 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **Plan rule-cleanup**: Test baseline updated from 1367 to 1364 (delta -3). Cause: Test function consolidation in test_ar18_compliance.py (4 hardcoded file-list tests replaced with 1 repo-wide walk). No tests lost — test count delta is from function count reduction, not test deletion. Vulture baseline updated from 38 to 39 findings (delta +1). Cause: Added line 107 variant for core/event_trigger.py last_check_time (CRLF line ending mismatch on Windows). Authorized post-hoc as necessary side effect of test refactor.
 
+**Plan governance-patch-04**: Test baseline updated from 1364 to 1431 tests collected (delta +67). Cause: Baseline discrepancy discovered at S5.6 — PLANS.md documented 1364 but actual collection at rule-cleanup was 1431. No test files added between rule-cleanup and governance-patch-04; the 1364 figure was stale (likely from test execution count vs collection count mismatch). Governance patch touched only docs/workflow files — no test count change. Updated baseline to reflect actual collection count (1431).
+
 ---
 
 ## Test Baseline
 
-**Current baseline**: **1364 passed, 67 skipped**
-**Verified**: Plan rule-cleanup, Step S3 (full test suite)
+**Current baseline**: **1431 tests collected (1364 passed, 67 skipped)**
+**Verified**: Plan governance-patch-04, Step S5.6 (test collection verification)
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -81,6 +83,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 77 | Self-Healing / AutoCorrector | 1367 | AutoCorrector module + IVM wiring. Safe proposals auto-applied; unsafe escalated. _pending_proposals cleaned on ERROR (Claude Issue 2 fix). OR17 invoked (+17 tests, exceeds ±5). |
 | ar18-fix-all | AR18 Compliance Remediation | 1367 | Fixed all 148 bare except:pass violations across 23 production files (112 Category A + 36 Category B). Added logging infrastructure to all files. Updated vulture whitelist (38 findings, line number corrections). Full repo AR18 compliance scan shows 0 violations. |
 | rule-cleanup | AR18 Compliance Test Refactor | 1364 | Replaced 4 hardcoded file-list test functions with 1 repo-wide walk (mirrors test_di_compliance.py pattern). Test count delta: -3 (function consolidation, no tests lost). Updated vulture whitelist (39 findings, added line 107 variant for CRLF line ending mismatch). |
+| governance-patch-04 | OR38 clarification + OR39 (plan file retention) + L20 | 1364 | Revised OR38 catch-up clause (N-2 formula). Added OR39 (plan files must be committed in C12). Appended L20. Updated jarvis-close.md C12. Named plan — does not consume prompt-78. |
 
 ---
 
