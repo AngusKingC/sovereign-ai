@@ -5,20 +5,18 @@ Single responsibility: Provide a production-ready worker implementation
 that wraps OllamaAdapter for general-purpose LLM interactions.
 """
 
+import logging
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from core.observability import TraceComponent, TraceEvent, TraceEventType, TraceLevel
 from core.schemas import Message, MessageRole, Task, WorkerOutput, WorkerProfile
 from core.worker_base import LLMAdapter, LLMResponse, WorkerBase
-from core.observability import (
-    TraceComponent,
-    TraceEventType,
-    TraceLevel,
-    TraceEvent,
-)
 
 if TYPE_CHECKING:
     from core.memory_router import MemoryRouter
+
+logger = logging.getLogger(__name__)
 
 
 class OllamaWorker(WorkerBase):
@@ -31,7 +29,7 @@ class OllamaWorker(WorkerBase):
         profile: WorkerProfile | None = None,
     ) -> None:
         """Initialize the Ollama worker.
-        
+
         Args:
             adapter: LLM adapter to use for generation
             memory_router: Memory router for context retrieval
@@ -50,33 +48,37 @@ class OllamaWorker(WorkerBase):
                 capabilities=["general", "chat", "reasoning", "code", "analysis"],
                 preferred_complexity=0.5,
             )
-        
+
         # Create a mock memory router if none provided
         if memory_router is None:
-            from core.memory_router import MemoryRouter, MemoryBackend
             from typing import Any
-            
+
+            from core.memory_router import MemoryBackend, MemoryRouter
+
             class NullMemoryBackend(MemoryBackend):
                 async def fetch(self, task: Task) -> list[dict[str, Any]]:
                     return []
+
                 async def write(self, data: dict[str, Any]) -> None:
                     pass
+
                 async def list_keys(self, pattern: str | None = None) -> list[str]:
                     return []
-            
+
             memory_router = MemoryRouter(backends={"null": NullMemoryBackend()})
-        
+
         super().__init__(profile, adapter, memory_router)
 
     async def build_prompt(self, task: Task, memory: list) -> list[Message]:
         """Build the prompt for the LLM based on task and memory.
-        
+
         Constructs:
         1. System message establishing the agent's role
         2. Memory context messages (if any)
         3. User message from task.intent
         """
         import time
+
         start_time = time.perf_counter()
 
         try:
@@ -95,8 +97,8 @@ class OllamaWorker(WorkerBase):
                     duration_ms=0,
                 )
                 await self.emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             now = datetime.now()
             messages = [
@@ -109,7 +111,9 @@ class OllamaWorker(WorkerBase):
 
             # Add memory context if available
             if memory:
-                memory_text = "\n".join([str(m.get("content", str(m))) for m in memory[:5]])
+                memory_text = "\n".join(
+                    [str(m.get("content", str(m))) for m in memory[:5]]
+                )
                 messages.append(
                     Message(
                         role=MessageRole.SYSTEM,
@@ -144,8 +148,8 @@ class OllamaWorker(WorkerBase):
                     duration_ms=duration_ms,
                 )
                 await self.emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             return messages
         except Exception as e:
@@ -166,19 +170,22 @@ class OllamaWorker(WorkerBase):
                     error_message=str(e),
                 )
                 await self.emitter.emit(event)
-            except Exception:
-                pass  # Trace failure should not crash main path
+            except Exception as e2:
+                logger.warning(
+                    "Trace emission failed: %s", e2
+                )  # Trace failure should not crash main path
             raise
 
     async def parse_output(self, raw: LLMResponse, task_id: str) -> WorkerOutput:
         """Parse the raw LLM response into a WorkerOutput.
-        
+
         Returns WorkerOutput with:
         - result set to the response text
         - confidence=0.9
         - empty reasoning_steps
         """
         import time
+
         start_time = time.perf_counter()
 
         try:
@@ -196,8 +203,8 @@ class OllamaWorker(WorkerBase):
                     duration_ms=0,
                 )
                 await self.emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             output = WorkerOutput(
                 worker_id=self.profile.worker_id,
@@ -229,8 +236,8 @@ class OllamaWorker(WorkerBase):
                     duration_ms=duration_ms,
                 )
                 await self.emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             return output
         except Exception as e:
@@ -251,7 +258,8 @@ class OllamaWorker(WorkerBase):
                     error_message=str(e),
                 )
                 await self.emitter.emit(event)
-            except Exception:
-                pass  # Trace failure should not crash main path
+            except Exception as e2:
+                logger.warning(
+                    "Trace emission failed: %s", e2
+                )  # Trace failure should not crash main path
             raise
-

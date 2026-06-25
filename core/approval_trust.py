@@ -5,21 +5,25 @@ entirely for previously-approved commands, while keeping a hardcoded NEVER_ALLOW
 list for genuinely dangerous operations.
 """
 
+import logging
 from enum import Enum
 from typing import Any
 
 from core.observability import (
-    TraceEventType,
-    TraceComponent,
-    TraceLevel,
-    TraceEvent,
-    TraceEmitter,
     MemoryTraceEmitter,
+    TraceComponent,
+    TraceEmitter,
+    TraceEvent,
+    TraceEventType,
+    TraceLevel,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class TrustLevel(str, Enum):
     """Trust levels for command approval."""
+
     ALWAYS_ASK = "always_ask"
     SESSION_TRUST = "session_trust"
     PERMANENT_TRUST = "permanent_trust"
@@ -87,9 +91,11 @@ class ApprovalTrustRegistry:
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    pass
-                raise ApprovalDeniedError(command, f"Command matches blocked pattern: {pattern}")
+                except Exception as e:
+                    logger.warning("Trace emission failed: %s", e)
+                raise ApprovalDeniedError(
+                    command, f"Command matches blocked pattern: {pattern}"
+                )
 
         # Check session trust
         if command in self._session_trust:
@@ -145,7 +151,9 @@ class ApprovalTrustRegistry:
                     # Memory router write failed, but session trust is set
                     pass
         else:
-            raise ValueError(f"Invalid scope: {scope}. Must be 'session' or 'permanent'.")
+            raise ValueError(
+                f"Invalid scope: {scope}. Must be 'session' or 'permanent'."
+            )
 
         # Emit trace event
         try:
@@ -158,8 +166,8 @@ class ApprovalTrustRegistry:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
     async def revoke_trust(self, command: str) -> None:
         """Revoke trust for a command.
@@ -197,8 +205,8 @@ class ApprovalTrustRegistry:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
     async def is_trusted(self, command: str) -> bool:
         """Check if a command is trusted.
@@ -219,6 +227,7 @@ class ApprovalTrustRegistry:
         trust_level = await self.get_trust_level(command)
         if trust_level == TrustLevel.NEVER_ALLOW:
             from core.exceptions import ApprovalDeniedError
+
             raise ApprovalDeniedError(command, "Command is in NEVER_ALLOW list")
         return trust_level in (TrustLevel.SESSION_TRUST, TrustLevel.PERMANENT_TRUST)
 
@@ -236,11 +245,13 @@ class ApprovalTrustRegistry:
         # Add session-trusted commands
         if include_session:
             for command, level in self._session_trust.items():
-                trusted_commands.append({
-                    "command": command,
-                    "level": level,
-                    "source": "session",
-                })
+                trusted_commands.append(
+                    {
+                        "command": command,
+                        "level": level,
+                        "source": "session",
+                    }
+                )
 
         # Add permanent-trusted commands from MemoryRouter
         if self.memory_router is not None:

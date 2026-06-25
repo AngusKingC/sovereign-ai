@@ -5,6 +5,7 @@ Single responsibility: Enforce resource budgets for multi-worker dispatch,
 including token limits, concurrent worker limits, and VRAM limits.
 """
 
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -20,6 +21,8 @@ from core.observability import (
 if TYPE_CHECKING:
     from core.cost_tracker import CostTracker
     from system.resource_manager import ResourceManager
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -97,8 +100,8 @@ class ResourceBudget:
                         duration_ms=0,
                     )
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
             return BudgetCheckResult(
                 approved=False,
                 reason=f"Token request {tokens_requested} exceeds per-task limit {self._max_tokens_per_task}",
@@ -126,8 +129,8 @@ class ResourceBudget:
                             duration_ms=0,
                         )
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("Trace emission failed: %s", e)
                 return BudgetCheckResult(
                     approved=False,
                     reason=f"Token request {tokens_requested} would exceed per-session limit {self._max_tokens_per_session} (already used {session_used})",
@@ -161,8 +164,8 @@ class ResourceBudget:
                                 duration_ms=0,
                             )
                         )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning("Trace emission failed: %s", e)
                     return BudgetCheckResult(
                         approved=False,
                         reason=f"Cost cap exceeded: {cost_decision.reason}",
@@ -182,8 +185,8 @@ class ResourceBudget:
                             duration_ms=0,
                         )
                     )
-                except Exception:
-                    pass
+                except Exception as e2:
+                    logger.warning("Trace emission failed: %s", e2)
 
         # Budget approved
         try:
@@ -200,8 +203,8 @@ class ResourceBudget:
                     duration_ms=0,
                 )
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
         tokens_available = self._max_tokens_per_task
         if session_id:
@@ -244,8 +247,8 @@ class ResourceBudget:
                         duration_ms=0,
                     )
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
             return BudgetCheckResult(
                 approved=False,
                 reason=f"Current concurrent workers {current_concurrent} already at or exceeds max {self._max_concurrent_workers}",
@@ -266,8 +269,8 @@ class ResourceBudget:
                     duration_ms=0,
                 )
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
         return BudgetCheckResult(
             approved=True,
@@ -301,8 +304,8 @@ class ResourceBudget:
                         duration_ms=0,
                     )
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
             return BudgetCheckResult(
                 approved=True,
                 reason="No resource manager - VRAM check skipped",
@@ -325,8 +328,8 @@ class ResourceBudget:
                     duration_ms=0,
                 )
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
         return BudgetCheckResult(
             approved=True,
@@ -388,8 +391,8 @@ class ResourceBudget:
                     duration_ms=0,
                 )
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
         return BudgetCheckResult(
             approved=True,
@@ -440,5 +443,5 @@ class ResourceBudget:
                     duration_ms=0,
                 )
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)

@@ -11,6 +11,7 @@ Unsafe proposals continue through the existing ApprovalGate path. When auto_corr
 is None, behavior is unchanged — every proposal goes to ApprovalGate.
 """
 
+import logging
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -30,6 +31,8 @@ from core.observability import (
 from core.rating_system import RatingSystem
 from core.schemas import InstructionFile, VersionUpdateProposal
 from core.worker_factory import DynamicWorkerProfile
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from core.auto_corrector import AutoCorrector
@@ -98,8 +101,8 @@ class InstructionVersionManager:
                         duration_ms=0,
                     )
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
             return existing_proposal
 
         # Check rating trend
@@ -214,8 +217,10 @@ class InstructionVersionManager:
                     },
                 )
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "Trace emission failed: %s", e
+            )  # Trace failure should not crash main path
 
         return proposal
 
@@ -307,8 +312,10 @@ class InstructionVersionManager:
                     },
                 )
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "Trace emission failed: %s", e
+            )  # Trace failure should not crash main path
 
         return new_instruction
 
@@ -360,8 +367,10 @@ class InstructionVersionManager:
                     },
                 )
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "Trace emission failed: %s", e
+            )  # Trace failure should not crash main path
 
     async def rollback(self, worker_id: str, target_version: int) -> InstructionFile:
         """Rollback instruction file to a previous version.
@@ -456,8 +465,10 @@ class InstructionVersionManager:
                     },
                 )
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "Trace emission failed: %s", e
+            )  # Trace failure should not crash main path
 
         return rollback_instruction
 

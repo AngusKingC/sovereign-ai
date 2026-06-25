@@ -5,22 +5,26 @@ Single responsibility: Generate embeddings for text using Ollama's embedding API
 This provides the semantic search capability for memory backends.
 """
 
-import httpx
+import logging
 import time
 
+import httpx
+
 from core.observability import (
-    TraceEventType,
-    TraceComponent,
-    TraceLevel,
-    TraceEvent,
-    TraceEmitter,
     MemoryTraceEmitter,
+    TraceComponent,
+    TraceEmitter,
+    TraceEvent,
+    TraceEventType,
+    TraceLevel,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class OllamaEmbedder:
     """Ollama-based text embedder using nomic-embed-text model."""
-    
+
     def __init__(
         self,
         base_url: str = "http://localhost:11434",
@@ -28,7 +32,7 @@ class OllamaEmbedder:
         emitter: TraceEmitter | None = None,
     ) -> None:
         """Initialize the Ollama embedder.
-        
+
         Args:
             base_url: Base URL of the Ollama server
             model: Name of the embedding model to use
@@ -38,21 +42,21 @@ class OllamaEmbedder:
         self.model = model
         self._client: httpx.AsyncClient | None = None
         self._emitter = emitter or MemoryTraceEmitter()
-    
+
     def _ensure_client(self) -> None:
         """Ensure HTTP client is initialized."""
         if self._client is None:
             self._client = httpx.AsyncClient(timeout=60.0)
-    
+
     async def embed(self, text: str) -> list[float]:
         """Generate embedding for the given text.
-        
+
         Args:
             text: Text to embed
-            
+
         Returns:
             List of float values representing the embedding vector
-            
+
         Raises:
             RuntimeError: If HTTP request fails or connection error occurs
         """
@@ -74,29 +78,26 @@ class OllamaEmbedder:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             self._ensure_client()
-            
+
             if self._client is None:
                 raise RuntimeError("HTTP client failed to initialize")
-            
+
             response = await self._client.post(
                 f"{self.base_url}/api/embeddings",
-                json={
-                    "model": self.model,
-                    "prompt": text
-                }
+                json={"model": self.model, "prompt": text},
             )
-            
+
             response.raise_for_status()
             data = response.json()
-            
+
             embedding = data.get("embedding")
             if embedding is None:
                 raise RuntimeError("Ollama response missing 'embedding' field")
-            
+
             duration_ms = int((time.perf_counter() - start_time) * 1000)
 
             # Emit embedding complete event
@@ -114,9 +115,9 @@ class OllamaEmbedder:
                     duration_ms=duration_ms,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
-            
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
+
             return embedding
         except Exception as e:
             duration_ms = int((time.perf_counter() - start_time) * 1000)
@@ -136,35 +137,36 @@ class OllamaEmbedder:
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass  # Trace failure should not crash main path
+            except Exception as e2:
+                logger.warning(
+                    "Trace emission failed: %s", e2
+                )  # Trace failure should not crash main path
             if isinstance(e, httpx.ConnectError):
                 raise RuntimeError(f"Ollama embed connection error: {e}")
             elif isinstance(e, httpx.HTTPError):
                 raise RuntimeError(f"Ollama embed HTTP error: {e}")
             else:
                 raise RuntimeError(f"Ollama embed failed: {e}")
-    
+
     async def health_check(self) -> bool:
         """Check if Ollama server is healthy and accessible.
-        
+
         Returns:
             True if Ollama is reachable, False otherwise
         """
         try:
             self._ensure_client()
-            
+
             if self._client is None:
                 return False
-            
+
             response = await self._client.get(f"{self.base_url}/api/tags")
             return response.status_code == 200
         except Exception:
             return False
-    
+
     async def close(self) -> None:
         """Close the HTTP client."""
         if self._client:
             await self._client.aclose()
             self._client = None
-

@@ -6,23 +6,27 @@ This module defines the voice interface layer that will be wired to real audio c
 and Whisper STT in Prompt 33.5.
 """
 
+import logging
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
 from core.observability import (
+    MemoryTraceEmitter,
     TraceComponent,
+    TraceEmitter,
+    TraceEvent,
     TraceEventType,
     TraceLevel,
-    TraceEvent,
-    TraceEmitter,
-    MemoryTraceEmitter,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class VoiceConfig(BaseModel):
     """Configuration for voice interface."""
+
     wake_word: str = "jarvis"
     wake_word_sensitivity: float = Field(default=0.5, ge=0.0, le=1.0)
     stt_model: str = "base"
@@ -34,6 +38,7 @@ class VoiceConfig(BaseModel):
 
 class VoiceCommand(BaseModel):
     """A voice command transcribed from audio."""
+
     command_id: UUID = Field(default_factory=uuid4)
     transcript: str
     confidence: float = Field(ge=0.0, le=1.0)
@@ -48,8 +53,8 @@ class VoiceInterface:
         self,
         config: VoiceConfig | None = None,
         emitter: TraceEmitter | None = None,
-        transcription_skill=None,   # TranscriptionSkill | None
-        tts_skill=None,             # TTSSkill | None
+        transcription_skill=None,  # TranscriptionSkill | None
+        tts_skill=None,  # TTSSkill | None
     ):
         """Initialize the voice interface."""
         self._config = config or VoiceConfig()
@@ -83,8 +88,8 @@ class VoiceInterface:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
         return detected
 
@@ -137,8 +142,8 @@ class VoiceInterface:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
         return command
 
@@ -156,8 +161,8 @@ class VoiceInterface:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
     async def stop_listening(self) -> None:
         """Stop listening for voice input."""
@@ -173,8 +178,8 @@ class VoiceInterface:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
     async def notify(self, message: str) -> None:
         """
@@ -198,5 +203,5 @@ class VoiceInterface:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)

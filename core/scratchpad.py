@@ -5,20 +5,31 @@ Single responsibility: Manage ephemeral working memory scratchpads for worker re
 Scratchpads are separate from long-term memory and are compacted on task completion.
 """
 
+import logging
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
-
 from core.memory_router import MemoryRouter
-from core.observability import TraceComponent, TraceEventType, TraceLevel, TraceEvent, TraceEmitter, MemoryTraceEmitter
+from core.observability import (
+    MemoryTraceEmitter,
+    TraceComponent,
+    TraceEmitter,
+    TraceEvent,
+    TraceEventType,
+    TraceLevel,
+)
 from core.schemas import Scratchpad, ScratchpadEntry, ScratchpadEntryType
+
+logger = logging.getLogger(__name__)
 
 
 class ScratchpadManager:
     """Manages per-task working memory scratchpads."""
 
-    def __init__(self, memory_router: MemoryRouter, emitter: TraceEmitter | None = None) -> None:
+    def __init__(
+        self, memory_router: MemoryRouter, emitter: TraceEmitter | None = None
+    ) -> None:
         """Initialize scratchpad manager with memory router for persistence."""
         self.memory_router = memory_router
         # In-memory cache for active scratchpads (in production, this would be Postgres)
@@ -27,19 +38,19 @@ class ScratchpadManager:
 
     async def create(self, task_id: UUID) -> Scratchpad:
         """Create a new scratchpad for a task.
-        
+
         Args:
             task_id: Task identifier
-            
+
         Returns:
             New scratchpad instance
         """
         scratchpad = Scratchpad(task_id=task_id)
         self._scratchpads[task_id] = scratchpad
-        
+
         # Persist to Postgres (in production, would write to database)
         await self._persist_scratchpad(scratchpad)
-        
+
         # Emit trace event
         try:
             event = TraceEvent(
@@ -54,17 +65,17 @@ class ScratchpadManager:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass
-        
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
+
         return scratchpad
 
     async def get(self, task_id: UUID) -> Scratchpad | None:
         """Retrieve scratchpad by task_id.
-        
+
         Args:
             task_id: Task identifier
-            
+
         Returns:
             Scratchpad if found, None otherwise
         """
@@ -79,21 +90,21 @@ class ScratchpadManager:
         metadata: dict[str, Any] | None = None,
     ) -> ScratchpadEntry:
         """Append an entry to the scratchpad.
-        
+
         Args:
             task_id: Task identifier
             worker_id: Worker creating the entry
             entry_type: Type of scratchpad entry
             content: Entry content
             metadata: Optional additional metadata
-            
+
         Returns:
             Created scratchpad entry
         """
         scratchpad = self._scratchpads.get(task_id)
         if not scratchpad:
             raise ValueError(f"No scratchpad found for task {task_id}")
-        
+
         entry = ScratchpadEntry(
             task_id=task_id,
             worker_id=worker_id,
@@ -101,12 +112,12 @@ class ScratchpadManager:
             content=content,
             metadata=metadata or {},
         )
-        
+
         scratchpad.entries.append(entry)
-        
+
         # Persist updated scratchpad
         await self._persist_scratchpad(scratchpad)
-        
+
         # Emit trace event
         try:
             event = TraceEvent(
@@ -123,39 +134,43 @@ class ScratchpadManager:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass
-        
+        except Exception as e:
+            logger.warning(
+                "Trace emission failed: %s", e
+            )  # Trace failure should not crash main path
+
         return entry
 
-    async def compact(self, task_id: UUID, llm_summary: str | None = None) -> Scratchpad:
+    async def compact(
+        self, task_id: UUID, llm_summary: str | None = None
+    ) -> Scratchpad:
         """Compact the scratchpad on task completion.
-        
+
         Args:
             task_id: Task identifier
             llm_summary: Optional LLM-generated summary. If not provided, generates rule-based summary.
-            
+
         Returns:
             Updated scratchpad with summary
         """
         scratchpad = self._scratchpads.get(task_id)
         if not scratchpad:
             raise ValueError(f"No scratchpad found for task {task_id}")
-        
+
         # Generate summary if not provided
         if llm_summary:
             summary = llm_summary
         else:
             summary = self._generate_rule_based_summary(scratchpad)
-        
+
         # Update scratchpad
         scratchpad.summary = summary
         scratchpad.completed_at = datetime.now(timezone.utc)
         scratchpad.is_compacted = True
-        
+
         # Persist updated scratchpad
         await self._persist_scratchpad(scratchpad)
-        
+
         # Write compacted summary to long-term memory
         await self.memory_router.write_to_collection(
             data={
@@ -169,7 +184,7 @@ class ScratchpadManager:
             collection="scratchpad",
             document_id=str(task_id),
         )
-        
+
         # Emit trace event
         try:
             event = TraceEvent(
@@ -185,20 +200,22 @@ class ScratchpadManager:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass
-        
+        except Exception as e:
+            logger.warning(
+                "Trace emission failed: %s", e
+            )  # Trace failure should not crash main path
+
         return scratchpad
 
     async def delete(self, task_id: UUID) -> None:
         """Delete scratchpad (called on task failure, after preserving for debug).
-        
+
         Args:
             task_id: Task identifier
         """
         if task_id in self._scratchpads:
             del self._scratchpads[task_id]
-        
+
         # Emit trace event
         try:
             event = TraceEvent(
@@ -210,33 +227,35 @@ class ScratchpadManager:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(
+                "Trace emission failed: %s", e
+            )  # Trace failure should not crash main path
 
     async def get_entries_by_type(
         self, task_id: UUID, entry_type: ScratchpadEntryType
     ) -> list[ScratchpadEntry]:
         """Filter entries by type.
-        
+
         Args:
             task_id: Task identifier
             entry_type: Type of entries to retrieve
-            
+
         Returns:
             List of entries matching the specified type
         """
         scratchpad = self._scratchpads.get(task_id)
         if not scratchpad:
             return []
-        
+
         return [entry for entry in scratchpad.entries if entry.entry_type == entry_type]
 
     def _generate_rule_based_summary(self, scratchpad: Scratchpad) -> str:
         """Generate a simple rule-based summary of the scratchpad.
-        
+
         Args:
             scratchpad: Scratchpad to summarize
-            
+
         Returns:
             Generated summary string
         """
@@ -244,34 +263,34 @@ class ScratchpadManager:
         entry_counts: dict[ScratchpadEntryType, int] = {}
         for entry in scratchpad.entries:
             entry_counts[entry.entry_type] = entry_counts.get(entry.entry_type, 0) + 1
-        
+
         # Extract intermediate results as key findings
         intermediate_results = [
             entry.content
             for entry in scratchpad.entries
             if entry.entry_type == ScratchpadEntryType.INTERMEDIATE_RESULT
         ]
-        
+
         # Build summary
         summary_parts = [
             f"Scratchpad contained {len(scratchpad.entries)} entries.",
             f"Entry types: {', '.join(f'{t.value}: {c}' for t, c in entry_counts.items())}.",
         ]
-        
+
         if intermediate_results:
-            summary_parts.append(
-                f"Key findings: {'; '.join(intermediate_results[:3])}"
-            )
+            summary_parts.append(f"Key findings: {'; '.join(intermediate_results[:3])}")
             if len(intermediate_results) > 3:
-                summary_parts.append(f"... and {len(intermediate_results) - 3} more results.")
-        
+                summary_parts.append(
+                    f"... and {len(intermediate_results) - 3} more results."
+                )
+
         return " ".join(summary_parts)
 
     async def _persist_scratchpad(self, scratchpad: Scratchpad) -> None:
         """Persist scratchpad to storage.
-        
+
         In production, this would write to Postgres. For now, we use the memory router.
-        
+
         Args:
             scratchpad: Scratchpad to persist
         """

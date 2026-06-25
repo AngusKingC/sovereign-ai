@@ -5,23 +5,26 @@ Single responsibility: Manage vector embeddings and semantic search operations
 through Qdrant, providing the vector memory layer.
 """
 
+import logging
 import time
 from typing import Any
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
+from qdrant_client.models import Distance, PointStruct, VectorParams
 
-from core.memory_router import MemoryBackend
-from core.schemas import Task
 from core.embedder import OllamaEmbedder
+from core.memory_router import MemoryBackend
 from core.observability import (
-    TraceEventType,
-    TraceComponent,
-    TraceLevel,
-    TraceEvent,
-    TraceEmitter,
     MemoryTraceEmitter,
+    TraceComponent,
+    TraceEmitter,
+    TraceEvent,
+    TraceEventType,
+    TraceLevel,
 )
+from core.schemas import Task
+
+logger = logging.getLogger(__name__)
 
 
 class QdrantBackend(MemoryBackend):
@@ -61,7 +64,9 @@ class QdrantBackend(MemoryBackend):
         if self.collection_name not in collection_names:
             self.client.create_collection(
                 collection_name=self.collection_name,
-                vectors_config=VectorParams(size=self.vector_size, distance=Distance.COSINE),
+                vectors_config=VectorParams(
+                    size=self.vector_size, distance=Distance.COSINE
+                ),
             )
 
     async def fetch(self, task: Task) -> list[dict[str, Any]]:
@@ -89,8 +94,8 @@ class QdrantBackend(MemoryBackend):
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             await self._ensure_connection()
 
@@ -110,8 +115,8 @@ class QdrantBackend(MemoryBackend):
                         duration_ms=duration_ms,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("Trace emission failed: %s", e)
                 return []
 
             # Generate embedding for task intent
@@ -129,8 +134,8 @@ class QdrantBackend(MemoryBackend):
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    pass
+                except Exception as e2:
+                    logger.warning("Trace emission failed: %s", e2)
                 query_vector = [0.0] * self.vector_size
 
             search_result = self.client.query_points(
@@ -166,8 +171,8 @@ class QdrantBackend(MemoryBackend):
                     duration_ms=duration_ms,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             return result
         except Exception as e:
@@ -188,8 +193,10 @@ class QdrantBackend(MemoryBackend):
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass  # Trace failure should not crash main path
+            except Exception as e2:
+                logger.warning(
+                    "Trace emission failed: %s", e2
+                )  # Trace failure should not crash main path
             return []
 
     async def write(self, data: dict[str, Any]) -> None:
@@ -217,8 +224,8 @@ class QdrantBackend(MemoryBackend):
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             await self._ensure_connection()
 
@@ -236,8 +243,8 @@ class QdrantBackend(MemoryBackend):
                         duration_ms=duration_ms,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("Trace emission failed: %s", e)
                 return
 
             # Generate embedding for content
@@ -256,8 +263,8 @@ class QdrantBackend(MemoryBackend):
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    pass
+                except Exception as e2:
+                    logger.warning("Trace emission failed: %s", e2)
                 vector = [0.0] * self.vector_size
 
             point = PointStruct(
@@ -287,8 +294,8 @@ class QdrantBackend(MemoryBackend):
                     duration_ms=duration_ms,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
         except Exception as e:
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             # Emit error event (wrapped to avoid crashing main path)
@@ -306,8 +313,10 @@ class QdrantBackend(MemoryBackend):
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass  # Trace failure should not crash main path
+            except Exception as e2:
+                logger.warning(
+                    "Trace emission failed: %s", e2
+                )  # Trace failure should not crash main path
             # Silently fail on connection errors
             pass
 
@@ -322,5 +331,3 @@ class QdrantBackend(MemoryBackend):
             self.client.close()
             self.client = None
         await self.embedder.close()
-
-

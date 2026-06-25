@@ -6,23 +6,27 @@ enabling dynamic discovery and instantiation of worker capabilities.
 """
 
 import asyncio
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from core.observability import (
+    MemoryTraceEmitter,
     TraceComponent,
+    TraceEmitter,
+    TraceEvent,
     TraceEventType,
     TraceLevel,
-    TraceEvent,
-    TraceEmitter,
-    MemoryTraceEmitter,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
 class SkillMetadata:
     """Metadata for a skill plugin."""
+
     name: str
     description: str
     parameters: dict[str, Any]
@@ -63,8 +67,8 @@ class SkillRegistry:
                     duration_ms=0,
                 )
                 await self.emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
             return {}
 
         discovered = {}
@@ -95,8 +99,8 @@ class SkillRegistry:
                         duration_ms=0,
                     )
                     await self.emitter.emit(event)
-                except Exception:
-                    pass
+                except Exception as e2:
+                    logger.warning("Trace emission failed: %s", e2)
 
         self._skills = discovered
 
@@ -113,12 +117,14 @@ class SkillRegistry:
                 duration_ms=0,
             )
             await self.emitter.emit(event)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
         return discovered
 
-    async def _parse_skill_md(self, skill_md_path: Path, skill_dir: Path) -> SkillMetadata | None:
+    async def _parse_skill_md(
+        self, skill_md_path: Path, skill_dir: Path
+    ) -> SkillMetadata | None:
         """
         Parse SKILL.md file and extract metadata.
 
@@ -130,12 +136,12 @@ class SkillRegistry:
             SkillMetadata if parsing succeeds, None otherwise
         """
         loop = asyncio.get_event_loop()
-        
+
         # Uses run_in_executor rather than aiofiles to avoid adding a new dependency for a single call site
         def read_file() -> str:
             with open(skill_md_path, "r") as f:
                 return f.read()
-        
+
         content = await loop.run_in_executor(None, read_file)
 
         # Simple parsing - extract key sections
@@ -236,10 +242,7 @@ class SkillRegistry:
         Returns:
             List of matching skills
         """
-        return [
-            skill for skill in self._skills.values()
-            if capability in skill.tags
-        ]
+        return [skill for skill in self._skills.values() if capability in skill.tags]
 
     def query_by_task_type(self, task_type: str) -> list[SkillMetadata]:
         """
@@ -254,8 +257,7 @@ class SkillRegistry:
         # For now, this is a simple tag-based query
         # In production, this would be more sophisticated
         return [
-            skill for skill in self._skills.values()
-            if task_type.lower() in skill.tags
+            skill for skill in self._skills.values() if task_type.lower() in skill.tags
         ]
 
     def query_by_dependency(self, dependency: str) -> list[SkillMetadata]:
@@ -269,8 +271,7 @@ class SkillRegistry:
             List of matching skills
         """
         return [
-            skill for skill in self._skills.values()
-            if dependency in skill.dependencies
+            skill for skill in self._skills.values() if dependency in skill.dependencies
         ]
 
     def all_skills(self) -> dict[str, SkillMetadata]:

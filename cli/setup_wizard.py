@@ -5,25 +5,28 @@ Provides an interactive Rich-based wizard for configuring Jarvis on first launch
 Writes jarvis.config.yaml for structured settings and .env for API keys.
 """
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 from rich.prompt import Prompt
+from rich.table import Table
 
 from core.observability import (
-    TraceEmitter,
     MemoryTraceEmitter,
-    TraceEventType,
     TraceComponent,
-    TraceLevel,
+    TraceEmitter,
     TraceEvent,
+    TraceEventType,
+    TraceLevel,
 )
 
 if TYPE_CHECKING:
     pass
+
+logger = logging.getLogger(__name__)
 
 
 class SetupWizard:
@@ -84,27 +87,40 @@ class SetupWizard:
         if config["adapter"] == "ollama":
             try:
                 import httpx
+
                 response = httpx.get("http://localhost:11434/api/tags", timeout=3)
                 if response.status_code == 200:
                     data = response.json()
                     if "models" in data:
                         available_models = [m["name"] for m in data["models"]]
-                        self._console.print(f"[green]✓[/green] Ollama reachable. Found {len(available_models)} models.")
+                        self._console.print(
+                            f"[green]✓[/green] Ollama reachable. Found {len(available_models)} models."
+                        )
                         for model in available_models[:5]:
                             self._console.print(f"  - {model}")
                         if len(available_models) > 5:
-                            self._console.print(f"  ... and {len(available_models) - 5} more")
+                            self._console.print(
+                                f"  ... and {len(available_models) - 5} more"
+                            )
                 else:
-                    self._console.print("[yellow]⚠[/yellow] Ollama not reachable. Continuing anyway.")
+                    self._console.print(
+                        "[yellow]⚠[/yellow] Ollama not reachable. Continuing anyway."
+                    )
             except Exception:
-                self._console.print("[yellow]⚠[/yellow] Ollama not reachable. Continuing anyway.")
+                self._console.print(
+                    "[yellow]⚠[/yellow] Ollama not reachable. Continuing anyway."
+                )
 
         # Model
         if config["adapter"] == "ollama" and available_models:
             config["model"] = Prompt.ask(
                 "Model",
                 choices=available_models,
-                default="qwen2.5-coder:7b" if "qwen2.5-coder:7b" in available_models else available_models[0],
+                default=(
+                    "qwen2.5-coder:7b"
+                    if "qwen2.5-coder:7b" in available_models
+                    else available_models[0]
+                ),
             )
         else:
             config["model"] = Prompt.ask(
@@ -170,7 +186,9 @@ class SetupWizard:
         table.add_row("Postgres URL", config["postgres_url"] or "(skipped)")
         table.add_row("Qdrant URL", config["qdrant_url"] or "(skipped)")
         table.add_row("Obsidian Path", config["obsidian_path"] or "(skipped)")
-        table.add_row("Telegram Token", "***" if config["telegram_bot_token"] else "(skipped)")
+        table.add_row(
+            "Telegram Token", "***" if config["telegram_bot_token"] else "(skipped)"
+        )
         table.add_row("Approval Mode", config["approval_mode"])
 
         self._console.print(table)
@@ -241,9 +259,10 @@ class SetupWizard:
                 duration_ms=0,
             )
             import asyncio
+
             asyncio.run(self._emitter.emit(event))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
     def load(self) -> dict:
         """Load configuration from file.
@@ -272,9 +291,10 @@ class SetupWizard:
                 duration_ms=0,
             )
             import asyncio
+
             asyncio.run(self._emitter.emit(event))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
         return config
 
@@ -297,16 +317,18 @@ class SetupWizard:
         if config.get("adapter") == "ollama":
             try:
                 import httpx
+
                 response = httpx.get("http://localhost:11434/api/tags", timeout=3)
                 status["ollama"] = response.status_code == 200
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Ollama check failed: %s", e)
 
         # Check Postgres
         if config.get("postgres_url"):
             try:
-                import asyncpg
                 import asyncio
+
+                import asyncpg
 
                 async def check_postgres():
                     conn = await asyncpg.connect(config["postgres_url"])
@@ -314,17 +336,18 @@ class SetupWizard:
                     return True
 
                 status["postgres"] = asyncio.run(check_postgres())
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Postgres check failed: %s", e)
 
         # Check Qdrant
         if config.get("qdrant_url"):
             try:
                 import httpx
+
                 response = httpx.get(f"{config['qdrant_url']}/health", timeout=3)
                 status["qdrant"] = response.status_code == 200
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Qdrant check failed: %s", e)
 
         # Check Obsidian
         if config.get("obsidian_path"):
@@ -336,10 +359,18 @@ class SetupWizard:
         table.add_column("Service", style="cyan")
         table.add_column("Status", style="green")
 
-        table.add_row("Ollama", "[green]✓[/green]" if status["ollama"] else "[red]✗[/red]")
-        table.add_row("Postgres", "[green]✓[/green]" if status["postgres"] else "[red]✗[/red]")
-        table.add_row("Qdrant", "[green]✓[/green]" if status["qdrant"] else "[red]✗[/red]")
-        table.add_row("Obsidian", "[green]✓[/green]" if status["obsidian"] else "[red]✗[/red]")
+        table.add_row(
+            "Ollama", "[green]✓[/green]" if status["ollama"] else "[red]✗[/red]"
+        )
+        table.add_row(
+            "Postgres", "[green]✓[/green]" if status["postgres"] else "[red]✗[/red]"
+        )
+        table.add_row(
+            "Qdrant", "[green]✓[/green]" if status["qdrant"] else "[red]✗[/red]"
+        )
+        table.add_row(
+            "Obsidian", "[green]✓[/green]" if status["obsidian"] else "[red]✗[/red]"
+        )
 
         self._console.print(table)
 
@@ -354,8 +385,9 @@ class SetupWizard:
                 duration_ms=0,
             )
             import asyncio
+
             asyncio.run(self._emitter.emit(event))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
         return status

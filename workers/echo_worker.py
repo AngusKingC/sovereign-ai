@@ -5,6 +5,7 @@ Single responsibility: Provide a simple worker implementation that echoes
 input back for integration testing purposes.
 """
 
+import logging
 import time
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -12,15 +13,17 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from core.memory_router import MemoryRouter
 
+from core.observability import (
+    TraceComponent,
+    TraceEmitter,
+    TraceEvent,
+    TraceEventType,
+    TraceLevel,
+)
 from core.schemas import Message, MessageRole, Task, WorkerOutput, WorkerProfile
 from core.worker_base import LLMAdapter, LLMResponse, WorkerBase
-from core.observability import (
-    TraceEventType,
-    TraceComponent,
-    TraceLevel,
-    TraceEvent,
-    TraceEmitter,
-)
+
+logger = logging.getLogger(__name__)
 
 
 class MockLLMAdapter(LLMAdapter):
@@ -94,20 +97,30 @@ class EchoWorker(WorkerBase):
                     duration_ms=0,
                 )
                 await self.emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             now = datetime.now()
             messages = [
-                Message(role=MessageRole.SYSTEM, content="You are an echo assistant.", timestamp=now),
-                Message(role=MessageRole.USER, content=f"Task: {task.intent}", timestamp=now),
+                Message(
+                    role=MessageRole.SYSTEM,
+                    content="You are an echo assistant.",
+                    timestamp=now,
+                ),
+                Message(
+                    role=MessageRole.USER, content=f"Task: {task.intent}", timestamp=now
+                ),
             ]
 
             # Add memory context if available
             if memory:
                 memory_text = "\n".join([str(m) for m in memory[:3]])
                 messages.append(
-                    Message(role=MessageRole.USER, content=f"Memory context:\n{memory_text}", timestamp=now)
+                    Message(
+                        role=MessageRole.USER,
+                        content=f"Memory context:\n{memory_text}",
+                        timestamp=now,
+                    )
                 )
 
             duration_ms = int((time.perf_counter() - start_time) * 1000)
@@ -127,8 +140,8 @@ class EchoWorker(WorkerBase):
                     duration_ms=duration_ms,
                 )
                 await self.emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             return messages
         except Exception as e:
@@ -149,8 +162,10 @@ class EchoWorker(WorkerBase):
                     error_message=str(e),
                 )
                 await self.emitter.emit(event)
-            except Exception:
-                pass  # Trace failure should not crash main path
+            except Exception as e2:
+                logger.warning(
+                    "Trace emission failed: %s", e2
+                )  # Trace failure should not crash main path
             raise
 
     async def parse_output(self, raw: LLMResponse, task_id: str) -> WorkerOutput:
@@ -172,8 +187,10 @@ class EchoWorker(WorkerBase):
                     duration_ms=0,
                 )
                 await self.emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    "Trace emission failed: %s", e
+                )  # Trace failure should not crash main path
 
             output = WorkerOutput(
                 worker_id=self.profile.worker_id,
@@ -205,8 +222,10 @@ class EchoWorker(WorkerBase):
                     duration_ms=duration_ms,
                 )
                 await self.emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    "Trace emission failed: %s", e
+                )  # Trace failure should not crash main path
 
             return output
         except Exception as e:
@@ -227,7 +246,8 @@ class EchoWorker(WorkerBase):
                     error_message=str(e),
                 )
                 await self.emitter.emit(event)
-            except Exception:
-                pass  # Trace failure should not crash main path
+            except Exception as e2:
+                logger.warning(
+                    "Trace emission failed: %s", e2
+                )  # Trace failure should not crash main path
             raise
-

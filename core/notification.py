@@ -4,6 +4,7 @@ Notification System - routes interrupts and notifications with urgency-based del
 Single responsibility: Queue and deliver notifications based on urgency, integrate with ApprovalGate for action requests.
 """
 
+import logging
 from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -15,20 +16,23 @@ if TYPE_CHECKING:
 from pydantic import BaseModel, Field
 
 from core.observability import (
+    MemoryTraceEmitter,
     TraceComponent,
+    TraceEmitter,
+    TraceEvent,
     TraceEventType,
     TraceLevel,
-    TraceEvent,
-    TraceEmitter,
-    MemoryTraceEmitter,
 )
 
 if TYPE_CHECKING:
     from core.approval_gate import ApprovalGate
 
+logger = logging.getLogger(__name__)
+
 
 class NotificationType(str, Enum):
     """Urgency levels for notifications."""
+
     INFO = "info"
     WARNING = "warning"
     URGENT = "urgent"
@@ -38,14 +42,24 @@ class NotificationType(str, Enum):
 class Notification(BaseModel):
     """A notification to be delivered to the user."""
 
-    id: str = Field(default_factory=lambda: str(uuid4()), description="Unique notification identifier")
+    id: str = Field(
+        default_factory=lambda: str(uuid4()),
+        description="Unique notification identifier",
+    )
     type: NotificationType = Field(..., description="Notification urgency type")
     title: str = Field(..., description="Notification title")
     message: str = Field(..., description="Notification message content")
     source: str = Field(..., description="Component that raised the notification")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When notification was created")
-    data: dict = Field(default_factory=dict, description="Arbitrary payload for downstream consumers")
-    delivered: bool = Field(default=False, description="Whether notification has been delivered")
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="When notification was created",
+    )
+    data: dict = Field(
+        default_factory=dict, description="Arbitrary payload for downstream consumers"
+    )
+    delivered: bool = Field(
+        default=False, description="Whether notification has been delivered"
+    )
 
 
 class NotificationSystem:
@@ -83,40 +97,44 @@ class NotificationSystem:
             raise ValueError("Notification must be a valid Notification instance")
 
         try:
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.COMPONENT_START,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                message="Notification received",
-                data={
-                    "notification_id": notification.id,
-                    "type": notification.type.value,
-                    "title": notification.title,
-                    "source": notification.source,
-                },
-                duration_ms=0,
-            ))
-        except Exception:
-            pass
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.COMPONENT_START,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="Notification received",
+                    data={
+                        "notification_id": notification.id,
+                        "type": notification.type.value,
+                        "title": notification.title,
+                        "source": notification.source,
+                    },
+                    duration_ms=0,
+                )
+            )
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
         if notification.type in (NotificationType.INFO, NotificationType.WARNING):
             # Queue for later delivery
             self._queue.append(notification)
             try:
-                await self._emitter.emit(TraceEvent(
-                    event_type=TraceEventType.OPERATION_COMPLETE,
-                    component=TraceComponent.WORKER,
-                    level=TraceLevel.INFO,
-                    message="Notification queued",
-                    data={
-                        "notification_id": notification.id,
-                        "type": notification.type.value,
-                        "queue_size": len(self._queue),
-                    },
-                    duration_ms=0,
-                ))
-            except Exception:
-                pass
+                await self._emitter.emit(
+                    TraceEvent(
+                        event_type=TraceEventType.OPERATION_COMPLETE,
+                        component=TraceComponent.WORKER,
+                        level=TraceLevel.INFO,
+                        message="Notification queued",
+                        data={
+                            "notification_id": notification.id,
+                            "type": notification.type.value,
+                            "queue_size": len(self._queue),
+                        },
+                        duration_ms=0,
+                    )
+                )
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
         elif notification.type == NotificationType.URGENT:
             # Deliver immediately
@@ -128,7 +146,7 @@ class NotificationSystem:
                 try:
                     from datetime import timedelta
 
-                    from core.approval_gate import ApprovalRequest, ApprovalActionType
+                    from core.approval_gate import ApprovalActionType, ApprovalRequest
 
                     request = ApprovalRequest(
                         request_id=notification.id,
@@ -148,59 +166,70 @@ class NotificationSystem:
                     else:
                         # Denied - don't deliver
                         try:
-                            await self._emitter.emit(TraceEvent(
-                                event_type=TraceEventType.OPERATION_COMPLETE,
-                                component=TraceComponent.WORKER,
-                                level=TraceLevel.WARNING,
-                                message="Action notification denied by approval gate",
-                                data={
-                                    "notification_id": notification.id,
-                                    "reason": response.decision_reason,
-                                },
-                                duration_ms=0,
-                            ))
-                        except Exception:
-                            pass
+                            await self._emitter.emit(
+                                TraceEvent(
+                                    event_type=TraceEventType.OPERATION_COMPLETE,
+                                    component=TraceComponent.WORKER,
+                                    level=TraceLevel.WARNING,
+                                    message="Action notification denied by approval gate",
+                                    data={
+                                        "notification_id": notification.id,
+                                        "reason": response.decision_reason,
+                                    },
+                                    duration_ms=0,
+                                )
+                            )
+                        except Exception as e2:
+                            logger.warning("Trace emission failed: %s", e2)
                 except Exception as e:
                     # Approval gate failed - treat as urgent
                     try:
-                        await self._emitter.emit(TraceEvent(
-                            event_type=TraceEventType.OPERATION_ERROR,
-                            component=TraceComponent.WORKER,
-                            level=TraceLevel.ERROR,
-                            message="Approval gate request failed, treating as urgent",
-                            data={
-                                "notification_id": notification.id,
-                                "error": str(e),
-                            },
-                            duration_ms=0,
-                        ))
-                    except Exception:
-                        pass
+                        await self._emitter.emit(
+                            TraceEvent(
+                                event_type=TraceEventType.OPERATION_ERROR,
+                                component=TraceComponent.WORKER,
+                                level=TraceLevel.ERROR,
+                                message="Approval gate request failed, treating as urgent",
+                                data={
+                                    "notification_id": notification.id,
+                                    "error": str(e),
+                                },
+                                duration_ms=0,
+                            )
+                        )
+                    except Exception as e2:
+                        logger.warning("Trace emission failed: %s", e2)
                     await self._deliver(notification)
             else:
                 # No approval gate - treat as urgent
                 try:
-                    await self._emitter.emit(TraceEvent(
-                        event_type=TraceEventType.OPERATION_COMPLETE,
-                        component=TraceComponent.WORKER,
-                        level=TraceLevel.INFO,
-                        message="Action notification treated as urgent (no approval gate)",
-                        data={
-                            "notification_id": notification.id,
-                        },
-                        duration_ms=0,
-                    ))
-                except Exception:
-                    pass
+                    await self._emitter.emit(
+                        TraceEvent(
+                            event_type=TraceEventType.OPERATION_COMPLETE,
+                            component=TraceComponent.WORKER,
+                            level=TraceLevel.INFO,
+                            message="Action notification treated as urgent (no approval gate)",
+                            data={
+                                "notification_id": notification.id,
+                            },
+                            duration_ms=0,
+                        )
+                    )
+                except Exception as e:
+                    logger.warning("Trace emission failed: %s", e)
                 await self._deliver(notification)
 
         # Send to Telegram gateway if set and notification is REQUIRES_ACTION or URGENT
-        if self._telegram_gateway is not None and notification.type in (NotificationType.REQUIRES_ACTION, NotificationType.URGENT):
+        if self._telegram_gateway is not None and notification.type in (
+            NotificationType.REQUIRES_ACTION,
+            NotificationType.URGENT,
+        ):
             try:
                 await self._telegram_gateway.send_notification(notification)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    "Telegram gateway send failed: %s", e
+                )  # Trace failure should not crash main path
 
     async def _deliver(self, notification: Notification) -> None:
         """
@@ -212,20 +241,24 @@ class NotificationSystem:
         notification.delivered = True
 
         try:
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                message="Notification delivered",
-                data={
-                    "notification_id": notification.id,
-                    "type": notification.type.value,
-                    "title": notification.title,
-                },
-                duration_ms=0,
-            ))
-        except Exception:
-            pass
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="Notification delivered",
+                    data={
+                        "notification_id": notification.id,
+                        "type": notification.type.value,
+                        "title": notification.title,
+                    },
+                    duration_ms=0,
+                )
+            )
+        except Exception as e:
+            logger.warning(
+                "Trace emission failed: %s", e
+            )  # Trace failure should not crash main path
 
     async def flush_queue(self) -> list[Notification]:
         """
@@ -242,18 +275,22 @@ class NotificationSystem:
         self._queue.clear()
 
         try:
-            await self._emitter.emit(TraceEvent(
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.WORKER,
-                level=TraceLevel.INFO,
-                message="Notification queue flushed",
-                data={
-                    "delivered_count": len(delivered),
-                },
-                duration_ms=0,
-            ))
-        except Exception:
-            pass
+            await self._emitter.emit(
+                TraceEvent(
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.WORKER,
+                    level=TraceLevel.INFO,
+                    message="Notification queue flushed",
+                    data={
+                        "delivered_count": len(delivered),
+                    },
+                    duration_ms=0,
+                )
+            )
+        except Exception as e:
+            logger.warning(
+                "Trace emission failed: %s", e
+            )  # Trace failure should not crash main path
 
         return delivered
 

@@ -6,6 +6,7 @@ providing persistent, human-readable memory storage.
 """
 
 import asyncio
+import logging
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +23,8 @@ from core.observability import (
     TraceLevel,
 )
 from core.schemas import Task
+
+logger = logging.getLogger(__name__)
 
 
 class ObsidianBackend(MemoryBackend):
@@ -58,8 +61,8 @@ class ObsidianBackend(MemoryBackend):
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             if not self.vault_path.exists():
                 duration_ms = int((time.perf_counter() - start_time) * 1000)
@@ -77,8 +80,8 @@ class ObsidianBackend(MemoryBackend):
                         duration_ms=duration_ms,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("Trace emission failed: %s", e)
                 return memory
 
             # Run file I/O in thread pool to avoid blocking
@@ -117,8 +120,8 @@ class ObsidianBackend(MemoryBackend):
                     duration_ms=duration_ms,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             return memory
         except Exception as e:
@@ -139,8 +142,10 @@ class ObsidianBackend(MemoryBackend):
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass  # Trace failure should not crash main path
+            except Exception as e2:
+                logger.warning(
+                    "Trace emission failed: %s", e2
+                )  # Trace failure should not crash main path
             raise
 
     async def write(self, data: dict[str, Any]) -> None:
@@ -166,8 +171,8 @@ class ObsidianBackend(MemoryBackend):
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
             unique_id = str(uuid4())[:8]
@@ -198,8 +203,8 @@ class ObsidianBackend(MemoryBackend):
                     duration_ms=duration_ms,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
         except Exception as e:
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             # Emit error event (wrapped to avoid crashing main path)
@@ -217,8 +222,10 @@ class ObsidianBackend(MemoryBackend):
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass  # Trace failure should not crash main path
+            except Exception as e2:
+                logger.warning(
+                    "Trace emission failed: %s", e2
+                )  # Trace failure should not crash main path
             raise
 
     async def list_keys(self, prefix: str) -> list[str]:

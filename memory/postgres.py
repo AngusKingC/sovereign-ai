@@ -6,6 +6,7 @@ using asyncpg, following the Layer 0 memory substrate pattern.
 """
 
 import json
+import logging
 import re
 import time
 from typing import Any
@@ -13,15 +14,17 @@ from typing import Any
 import asyncpg
 
 from core.memory_router import MemoryBackend
-from core.schemas import Task
 from core.observability import (
-    TraceEventType,
-    TraceComponent,
-    TraceLevel,
-    TraceEvent,
-    TraceEmitter,
     MemoryTraceEmitter,
+    TraceComponent,
+    TraceEmitter,
+    TraceEvent,
+    TraceEventType,
+    TraceLevel,
 )
+from core.schemas import Task
+
+logger = logging.getLogger(__name__)
 
 _TABLE_NAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]{0,62}$")
 
@@ -58,7 +61,8 @@ class PostgresBackend(MemoryBackend):
             raise RuntimeError("Connection pool not initialized")
 
         async with self.pool.acquire() as conn:
-            await conn.execute(f"""
+            await conn.execute(
+                f"""
                 CREATE TABLE IF NOT EXISTS {self.table_name} (
                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                     task_id UUID,
@@ -67,12 +71,15 @@ class PostgresBackend(MemoryBackend):
                     created_at TIMESTAMP DEFAULT NOW(),
                     updated_at TIMESTAMP DEFAULT NOW()
                 )
-            """)
+            """
+            )
             # Create index on task_id for faster queries
-            await conn.execute(f"""
+            await conn.execute(
+                f"""
                 CREATE INDEX IF NOT EXISTS idx_{self.table_name}_task_id
                 ON {self.table_name}(task_id)
-            """)
+            """
+            )
 
     async def fetch(self, task: Task) -> list[dict[str, Any]]:
         """
@@ -99,8 +106,8 @@ class PostgresBackend(MemoryBackend):
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             await self._ensure_connection()
 
@@ -120,8 +127,8 @@ class PostgresBackend(MemoryBackend):
                         duration_ms=duration_ms,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("Trace emission failed: %s", e)
                 return []
 
             async with self.pool.acquire() as conn:
@@ -163,8 +170,8 @@ class PostgresBackend(MemoryBackend):
                     duration_ms=duration_ms,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             return result
         except Exception as e:
@@ -185,8 +192,10 @@ class PostgresBackend(MemoryBackend):
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass  # Trace failure should not crash main path
+            except Exception as e2:
+                logger.warning(
+                    "Trace emission failed: %s", e2
+                )  # Trace failure should not crash main path
             return []
 
     async def write(self, data: dict[str, Any]) -> None:
@@ -213,8 +222,8 @@ class PostgresBackend(MemoryBackend):
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             await self._ensure_connection()
 
@@ -232,12 +241,14 @@ class PostgresBackend(MemoryBackend):
                         duration_ms=duration_ms,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("Trace emission failed: %s", e)
                 return
 
             task_id = data.get("task_id")
-            content = {k: v for k, v in data.items() if k not in ["task_id", "metadata"]}
+            content = {
+                k: v for k, v in data.items() if k not in ["task_id", "metadata"]
+            }
             metadata = data.get("metadata", {})
 
             async with self.pool.acquire() as conn:
@@ -267,8 +278,8 @@ class PostgresBackend(MemoryBackend):
                     duration_ms=duration_ms,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
         except Exception as e:
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             # Emit error event (wrapped to avoid crashing main path)
@@ -286,8 +297,10 @@ class PostgresBackend(MemoryBackend):
                     error_message=str(e),
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass  # Trace failure should not crash main path
+            except Exception as e2:
+                logger.warning(
+                    "Trace emission failed: %s", e2
+                )  # Trace failure should not crash main path
             # Silently fail on connection errors
             pass
 
@@ -301,4 +314,3 @@ class PostgresBackend(MemoryBackend):
         if self.pool:
             await self.pool.close()
             self.pool = None
-

@@ -4,26 +4,30 @@ A2A (Agent-to-Agent) Protocol for worker-to-worker communication.
 Single responsibility: Route sub-tasks between workers with circular dependency detection.
 """
 
-from uuid import UUID, uuid4
-from typing import Any
+import logging
 from datetime import timezone
+from typing import Any
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
-from core.schemas import Task, TaskPriority
+from core.exceptions import CircularDependencyError
 from core.observability import (
+    MemoryTraceEmitter,
     TraceComponent,
+    TraceEmitter,
+    TraceEvent,
     TraceEventType,
     TraceLevel,
-    TraceEvent,
-    TraceEmitter,
-    MemoryTraceEmitter,
 )
-from core.exceptions import CircularDependencyError
+from core.schemas import Task, TaskPriority
+
+logger = logging.getLogger(__name__)
 
 
 class A2ARequest(BaseModel):
     """Request envelope for A2A sub-task submission."""
+
     task_id: UUID = Field(default_factory=uuid4)
     input: str
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -34,6 +38,7 @@ class A2ARequest(BaseModel):
 
 class A2AResponse(BaseModel):
     """Response envelope for A2A sub-task results."""
+
     task_id: UUID
     status: str  # "completed", "failed", "pending"
     output: str = ""
@@ -46,25 +51,27 @@ class A2ARouter:
 
     def __init__(self, orchestrator, emitter: TraceEmitter | None = None) -> None:
         """Initialize the A2A router.
-        
+
         Args:
             orchestrator: The orchestrator instance for routing tasks
             emitter: Trace emitter for observability
         """
         self._orchestrator = orchestrator
         self._emitter = emitter or MemoryTraceEmitter()
-        self._active_tasks: dict[UUID, set[UUID]] = {}  # parent -> set of child task_ids
+        self._active_tasks: dict[UUID, set[UUID]] = (
+            {}
+        )  # parent -> set of child task_ids
 
     async def submit(self, request: A2ARequest) -> A2AResponse:
         """
         Submit an A2A sub-task request for routing.
-        
+
         Args:
             request: The A2A request to submit
-            
+
         Returns:
             A2AResponse with the result
-            
+
         Raises:
             CircularDependencyError: If circular dependency detected
         """
@@ -84,8 +91,8 @@ class A2ARouter:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
             assert request.parent_task_id is not None
             raise CircularDependencyError(request.task_id, request.parent_task_id)
 
@@ -111,12 +118,13 @@ class A2ARouter:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
         try:
             # Convert A2ARequest to Task
             from datetime import datetime
+
             task = Task(
                 task_id=request.task_id,
                 parent_task_id=request.parent_task_id,
@@ -152,8 +160,8 @@ class A2ARouter:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             return response
 
@@ -173,8 +181,8 @@ class A2ARouter:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
             # Return failed response
             return A2AResponse(
@@ -186,10 +194,10 @@ class A2ARouter:
     async def get_children(self, parent_task_id: UUID) -> list[UUID]:
         """
         Get all child task IDs for a given parent task.
-        
+
         Args:
             parent_task_id: The parent task ID
-            
+
         Returns:
             List of child task IDs
         """
@@ -198,10 +206,10 @@ class A2ARouter:
     async def cancel_children(self, parent_task_id: UUID) -> int:
         """
         Cancel all active child tasks for a given parent.
-        
+
         Args:
             parent_task_id: The parent task ID
-            
+
         Returns:
             Count of tasks cancelled
         """
@@ -225,19 +233,19 @@ class A2ARouter:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
         return count
 
     def _check_circular(self, parent_task_id: UUID | None, new_task_id: UUID) -> bool:
         """
         Check if adding new_task_id would create a circular dependency.
-        
+
         Args:
             parent_task_id: The parent task ID (can be None for root tasks)
             new_task_id: The new task ID to check
-            
+
         Returns:
             True if circular dependency detected, False otherwise
         """

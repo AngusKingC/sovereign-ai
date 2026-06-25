@@ -5,6 +5,7 @@ Single responsibility: Manage event-based task triggers for the MonitorDaemon.
 Supports threshold, schedule, and change triggers to automatically create tasks.
 """
 
+import logging
 from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Any
@@ -13,14 +14,16 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 
 from core.observability import (
+    MemoryTraceEmitter,
     TraceComponent,
     TraceEmitter,
-    MemoryTraceEmitter,
+    TraceEvent,
     TraceEventType,
     TraceLevel,
-    TraceEvent,
 )
 from core.schemas import Task, TaskPriority, TaskStatus
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from core.orchestrator import Orchestrator
@@ -28,6 +31,7 @@ if TYPE_CHECKING:
 
 class TriggerType(str, Enum):
     """Types of event triggers."""
+
     THRESHOLD = "threshold"  # Trigger when metric crosses threshold
     SCHEDULE = "schedule"  # Trigger at specific time or interval
     CHANGE = "change"  # Trigger when metric changes significantly
@@ -35,6 +39,7 @@ class TriggerType(str, Enum):
 
 class TriggerOperator(str, Enum):
     """Comparison operators for threshold triggers."""
+
     GREATER_THAN = ">"
     LESS_THAN = "<"
     GREATER_THAN_OR_EQUAL = ">="
@@ -46,17 +51,34 @@ class TriggerOperator(str, Enum):
 class EventTrigger(BaseModel):
     """An event trigger that can create tasks when conditions are met."""
 
-    trigger_id: UUID = Field(default_factory=uuid4, description="Unique trigger identifier")
+    trigger_id: UUID = Field(
+        default_factory=uuid4, description="Unique trigger identifier"
+    )
     trigger_type: TriggerType = Field(description="Type of trigger")
     metric_name: str = Field(description="Name of the metric to monitor")
-    operator: TriggerOperator | None = Field(default=None, description="Comparison operator for threshold triggers")
-    threshold: float | None = Field(default=None, description="Threshold value for threshold triggers")
-    schedule_interval_seconds: int | None = Field(default=None, description="Interval in seconds for schedule triggers")
+    operator: TriggerOperator | None = Field(
+        default=None, description="Comparison operator for threshold triggers"
+    )
+    threshold: float | None = Field(
+        default=None, description="Threshold value for threshold triggers"
+    )
+    schedule_interval_seconds: int | None = Field(
+        default=None, description="Interval in seconds for schedule triggers"
+    )
     enabled: bool = Field(default=True, description="Whether the trigger is enabled")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional trigger metadata")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When the trigger was created")
-    last_triggered_at: datetime | None = Field(default=None, description="When the trigger last fired")
-    trigger_count: int = Field(default=0, description="Number of times the trigger has fired")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional trigger metadata"
+    )
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="When the trigger was created",
+    )
+    last_triggered_at: datetime | None = Field(
+        default=None, description="When the trigger last fired"
+    )
+    trigger_count: int = Field(
+        default=0, description="Number of times the trigger has fired"
+    )
 
     def should_trigger(self, metric_value: float) -> bool:
         """Check if the trigger should fire based on the metric value."""
@@ -138,8 +160,8 @@ class TriggerEngine:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
     async def unregister(self, trigger_id: UUID) -> None:
         """Unregister an event trigger.
@@ -162,8 +184,8 @@ class TriggerEngine:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Trace emission failed: %s", e)
 
     async def ingest_metric(self, metric_name: str, value: float) -> None:
         """Ingest a metric value and evaluate triggers.
@@ -183,7 +205,10 @@ class TriggerEngine:
 
         # Evaluate threshold triggers
         for trigger in self._triggers.values():
-            if trigger.metric_name == metric_name and trigger.trigger_type == TriggerType.THRESHOLD:
+            if (
+                trigger.metric_name == metric_name
+                and trigger.trigger_type == TriggerType.THRESHOLD
+            ):
                 if trigger.should_trigger(value):
                     await self._handle_trigger_firing(trigger, {"metric_value": value})
 
@@ -194,9 +219,13 @@ class TriggerEngine:
         for trigger in self._triggers.values():
             if trigger.trigger_type == TriggerType.SCHEDULE:
                 if trigger.should_schedule(now):
-                    await self._handle_trigger_firing(trigger, {"scheduled_time": now.isoformat()})
+                    await self._handle_trigger_firing(
+                        trigger, {"scheduled_time": now.isoformat()}
+                    )
 
-    async def _handle_trigger_firing(self, trigger: EventTrigger, context: dict[str, Any]) -> None:
+    async def _handle_trigger_firing(
+        self, trigger: EventTrigger, context: dict[str, Any]
+    ) -> None:
         """Handle a trigger firing by creating a task.
 
         Args:
@@ -227,8 +256,10 @@ class TriggerEngine:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(
+                    "Trace emission failed: %s", e
+                )  # Trace failure should not crash main path
         except Exception as e:
             try:
                 event = TraceEvent(
@@ -243,8 +274,10 @@ class TriggerEngine:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception:
-                pass
+            except Exception as e2:
+                logger.warning(
+                    "Trace emission failed: %s", e2
+                )  # Trace failure should not crash main path
 
     def build_task(self, trigger: EventTrigger, context: dict[str, Any]) -> Task:
         """Build a task from a trigger firing.
@@ -260,9 +293,13 @@ class TriggerEngine:
 
         if trigger.trigger_type == TriggerType.THRESHOLD:
             metric_value = context.get("metric_value", 0)
-            intent += f" crossed threshold {trigger.threshold} (current: {metric_value})"
+            intent += (
+                f" crossed threshold {trigger.threshold} (current: {metric_value})"
+            )
         elif trigger.trigger_type == TriggerType.SCHEDULE:
-            scheduled_time = context.get("scheduled_time", datetime.now(timezone.utc).isoformat())
+            scheduled_time = context.get(
+                "scheduled_time", datetime.now(timezone.utc).isoformat()
+            )
             intent += f" at scheduled time {scheduled_time}"
 
         return Task(

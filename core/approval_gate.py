@@ -520,9 +520,9 @@ class ApprovalGate:
                         duration_ms=0,
                     )
                 )
-            except Exception:
+            except Exception as e:
                 # Nested trace emit failure - don't crash
-                pass
+                logger.warning("Nested trace emit failed: %s", e)
 
         # Return pending response (will be resolved later via respond() or timeout)
         return ApprovalResponse(
@@ -620,9 +620,9 @@ class ApprovalGate:
                                 duration_ms=0,
                             )
                         )
-                    except Exception:
+                    except Exception as e:
                         # Nested trace emit failure - don't crash
-                        pass
+                        logger.warning("Nested trust trace emit failed: %s", e)
                     # Trust setting failed, but approval still succeeds
         else:
             request.status = "denied"

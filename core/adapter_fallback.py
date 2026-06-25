@@ -5,17 +5,20 @@ the system degrades gracefully rather than failing hard when the primary adapter
 is unavailable (Ollama crashed, VRAM full, API timeout).
 """
 
+import logging
 import time
 from typing import Any
 
 from core.observability import (
-    TraceEventType,
-    TraceComponent,
-    TraceLevel,
-    TraceEvent,
-    TraceEmitter,
     MemoryTraceEmitter,
+    TraceComponent,
+    TraceEmitter,
+    TraceEvent,
+    TraceEventType,
+    TraceLevel,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class AdapterFallbackChain:
@@ -41,7 +44,9 @@ class AdapterFallbackChain:
             circuit_breaker_timeout: Seconds before a tripped circuit breaker resets and the adapter is retried
         """
         if not adapters:
-            raise ValueError("adapters list must contain at least one (adapter, model_name) pair")
+            raise ValueError(
+                "adapters list must contain at least one (adapter, model_name) pair"
+            )
 
         self.adapters = adapters
         self.resource_manager = resource_manager
@@ -105,8 +110,8 @@ class AdapterFallbackChain:
                             duration_ms=0,
                         )
                         await self._emitter.emit(event)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning("Trace emission failed: %s", e)
                     continue
                 else:
                     # Circuit breaker timeout elapsed, reset it
@@ -122,13 +127,15 @@ class AdapterFallbackChain:
                             duration_ms=0,
                         )
                         await self._emitter.emit(event)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning("Trace emission failed: %s", e)
 
             # Check VRAM if resource_manager is provided
             if self.resource_manager is not None:
                 try:
-                    can_fit, reason = await self.resource_manager.can_load(model_name, "default", None)
+                    can_fit, reason = await self.resource_manager.can_load(
+                        model_name, "default", None
+                    )
                     if not can_fit:
                         try:
                             event = TraceEvent(
@@ -144,12 +151,12 @@ class AdapterFallbackChain:
                                 duration_ms=0,
                             )
                             await self._emitter.emit(event)
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.warning("Trace emission failed: %s", e)
                         continue
-                except Exception:
+                except Exception as e:
                     # VRAM check failed, proceed anyway
-                    pass
+                    logger.warning("VRAM check failed: %s", e)
 
             # Check approval for cloud adapters (non-primary)
             if i > 0 and self._is_cloud_adapter(adapter):
@@ -166,16 +173,21 @@ class AdapterFallbackChain:
                                     component=TraceComponent.ADAPTER_FALLBACK_CHAIN,
                                     level=TraceLevel.WARNING,
                                     message="Cloud adapter fallback denied by approval gate",
-                                    data={"reason": "approval_denied", "adapter": adapter_name},
+                                    data={
+                                        "reason": "approval_denied",
+                                        "adapter": adapter_name,
+                                    },
                                     duration_ms=0,
                                 )
                                 await self._emitter.emit(event)
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                logger.warning(
+                                    "Trace emission failed: %s", e
+                                )  # Trace failure should not crash main path
                             continue
-                    except Exception:
+                    except Exception as e:
                         # Approval check failed, proceed anyway
-                        pass
+                        logger.warning("Approval check failed: %s", e)
 
             # Attempt execution
             try:
@@ -215,8 +227,10 @@ class AdapterFallbackChain:
                         duration_ms=0,
                     )
                     await self._emitter.emit(event)
-                except Exception:
-                    pass
+                except Exception as e2:
+                    logger.warning(
+                        "Trace emission failed: %s", e2
+                    )  # Trace failure should not crash main path
 
                 # Continue to next adapter
                 continue
@@ -272,8 +286,8 @@ class AdapterFallbackChain:
                 duration_ms=0,
             )
             await self._emitter.emit(event)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
 
     def get_status(self) -> list[dict]:
         """Return current status of all adapters in the chain.
@@ -294,14 +308,16 @@ class AdapterFallbackChain:
                 elapsed = time.time() - self._circuit_open_since[i]
                 resets_in_seconds = max(0, self.circuit_breaker_timeout - elapsed)
 
-            status.append({
-                "index": i,
-                "adapter": adapter_name,
-                "model": model_name,
-                "failures": self._failure_counts[i],
-                "circuit_open": circuit_open,
-                "resets_in_seconds": resets_in_seconds,
-            })
+            status.append(
+                {
+                    "index": i,
+                    "adapter": adapter_name,
+                    "model": model_name,
+                    "failures": self._failure_counts[i],
+                    "circuit_open": circuit_open,
+                    "resets_in_seconds": resets_in_seconds,
+                }
+            )
 
         return status
 
@@ -314,7 +330,11 @@ class AdapterFallbackChain:
         Returns:
             The adapter name (class name or string representation)
         """
-        return adapter.__class__.__name__ if hasattr(adapter, "__class__") else str(adapter)
+        return (
+            adapter.__class__.__name__
+            if hasattr(adapter, "__class__")
+            else str(adapter)
+        )
 
     def _is_cloud_adapter(self, adapter: Any) -> bool:
         """Check if an adapter appears to be a cloud adapter.

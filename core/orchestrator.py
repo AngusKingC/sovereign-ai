@@ -162,8 +162,10 @@ class Orchestrator:
                         )
                     )
                 )
-            except Exception:
-                pass  # Avoid infinite recursion if trace emit fails
+            except Exception as e2:
+                logger.warning(
+                    "Trace emission failed: %s", e2
+                )  # Avoid infinite recursion if trace emit fails
 
     async def get_top_candidates(self, task: str, n: int) -> list[str]:
         """Returns IDs of the top n registered workers ordered by routing score for this task.
@@ -1026,8 +1028,10 @@ class Orchestrator:
                         )
                     )
                 )
-            except Exception:
-                pass  # Avoid infinite recursion if trace emit fails
+            except Exception as e2:
+                logger.warning(
+                    "Trace emission failed: %s", e2
+                )  # Avoid infinite recursion if trace emit fails
 
     async def submit_subtask(self, request: "A2ARequest") -> "A2AResponse":
         """

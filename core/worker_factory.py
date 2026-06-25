@@ -6,37 +6,41 @@ with appropriate capabilities by matching against the SkillRegistry.
 """
 
 import asyncio
+import logging
 import re
 import typing
-from typing import TYPE_CHECKING
-from uuid import uuid4, UUID
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
-from core.schemas import WorkerProfile, Task, Message, WorkerStatus
 from core.observability import (
+    NullTraceEmitter,
     TraceComponent,
-    TraceEventType,
-    TraceLevel,
     TraceEmitter,
     TraceEvent,
-    NullTraceEmitter,
+    TraceEventType,
+    TraceLevel,
 )
+from core.schemas import Message, Task, WorkerProfile, WorkerStatus
 from core.worker_base import WorkerBase
 
+logger = logging.getLogger(__name__)
+
 if TYPE_CHECKING:
-    from core.skill_registry import SkillRegistry
-    from core.orchestrator import Orchestrator
-    from core.memory_router import MemoryRouter
-    from core.worker_base import LLMResponse
-    from core.schemas import WorkerOutput
-    from system.worker_persistence import WorkerPersistence
     from core.instruction_generator import InstructionGenerator
+    from core.memory_router import MemoryRouter
+    from core.orchestrator import Orchestrator
+    from core.schemas import WorkerOutput
+    from core.skill_registry import SkillRegistry
+    from core.worker_base import LLMResponse
+    from system.worker_persistence import WorkerPersistence
 
 
 class DynamicWorkerProfile(BaseModel):
     """Extended profile for dynamically generated workers."""
+
     worker_id: str
     worker_type: str
     name: str
@@ -77,7 +81,7 @@ class WorkerFactory:
         instruction_generator: "InstructionGenerator | None" = None,
     ) -> None:
         """Initialize the worker factory with dependencies.
-        
+
         Args:
             skill_registry: Registry of available skills
             orchestrator: Orchestrator for worker registration
@@ -92,10 +96,10 @@ class WorkerFactory:
         self.memory_router = memory_router
         self.persistence = persistence
         self.instruction_generator = instruction_generator
-        
+
         # Cache for generated worker profiles
         self._worker_profiles: dict[str, DynamicWorkerProfile] = {}
-        
+
         # Load workers from persistence if provided
         if self.persistence:
             asyncio.create_task(self.load_workers_from_persistence())
@@ -103,23 +107,23 @@ class WorkerFactory:
     async def create_worker(self, description: str, task: Task) -> "WorkerBase":
         """
         Create a worker from a natural language description.
-        
+
         Args:
             description: Natural language description of the worker
             task: Task to use for complexity analysis
-            
+
         Returns:
             Created worker instance
-            
+
         Raises:
             ValueError: If description is invalid
         """
         # Generate worker profile from description
         profile = self._generate_profile(description, task)
-        
+
         # Store profile in cache
         self._worker_profiles[profile.worker_id] = profile
-        
+
         # Convert to WorkerProfile
         worker_profile = WorkerProfile(
             worker_id=profile.worker_id,
@@ -136,12 +140,12 @@ class WorkerFactory:
             capabilities=profile.capabilities,
             preferred_complexity=profile.preferred_complexity,
         )
-        
+
         # Create worker instance
         # For now, we'll create a placeholder worker since actual worker creation
         # requires LLM adapter and other dependencies that are not available in this prompt
         # This will be implemented in a future prompt
-        
+
         # Create a minimal worker for testing purposes
         # In production, this would use the profile to configure a real worker
         worker = PlaceholderWorker(
@@ -149,28 +153,30 @@ class WorkerFactory:
             memory_router=self.memory_router,
             emitter=self.emitter,
         )
-        
+
         # Register worker in orchestrator
         self.orchestrator.register_worker(profile.worker_id, worker)
-        
+
         # Persist worker definition using WorkerPersistence if available
         if self.persistence:
             try:
                 await self.persistence.save(profile)
             except Exception as e:
                 try:
-                    await self.emitter.emit(TraceEvent(
-                        event_id=uuid4(),
-                        timestamp=datetime.now(timezone.utc),
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.ORCHESTRATOR,
-                        level=TraceLevel.ERROR,
-                        message=f"Failed to persist worker profile: {str(e)}",
-                        data={"error": str(e), "worker_id": profile.worker_id},
-                        duration_ms=0,
-                    ))
-                except Exception:
-                    pass
+                    await self.emitter.emit(
+                        TraceEvent(
+                            event_id=uuid4(),
+                            timestamp=datetime.now(timezone.utc),
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.ORCHESTRATOR,
+                            level=TraceLevel.ERROR,
+                            message=f"Failed to persist worker profile: {str(e)}",
+                            data={"error": str(e), "worker_id": profile.worker_id},
+                            duration_ms=0,
+                        )
+                    )
+                except Exception as e2:
+                    logger.warning("Trace emission failed: %s", e2)
         else:
             # Fallback to memory_router.write_to_collection for backward compatibility
             try:
@@ -188,83 +194,90 @@ class WorkerFactory:
                         "created_at": datetime.now(timezone.utc).isoformat(),
                     },
                     collection="workers",
-                    document_id=profile.worker_id
+                    document_id=profile.worker_id,
                 )
             except Exception as e:
                 try:
-                    await self.emitter.emit(TraceEvent(
-                        event_id=uuid4(),
-                        timestamp=datetime.now(timezone.utc),
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.ORCHESTRATOR,
-                        level=TraceLevel.ERROR,
-                        message=f"Failed to persist worker profile: {str(e)}",
-                        data={"error": str(e), "worker_id": profile.worker_id},
-                        duration_ms=0,
-                    ))
-                except Exception:
-                    pass
-        
+                    await self.emitter.emit(
+                        TraceEvent(
+                            event_id=uuid4(),
+                            timestamp=datetime.now(timezone.utc),
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.ORCHESTRATOR,
+                            level=TraceLevel.ERROR,
+                            message=f"Failed to persist worker profile: {str(e)}",
+                            data={"error": str(e), "worker_id": profile.worker_id},
+                            duration_ms=0,
+                        )
+                    )
+                except Exception as e2:
+                    logger.warning("Trace emission failed: %s", e2)
+
         # Generate instruction file if InstructionGenerator is available
         if self.instruction_generator:
             try:
-                instruction_file, updated_profile = await self.instruction_generator.generate_instruction_file(
-                    profile=profile,
-                    trigger="Initial worker creation"
+                instruction_file, updated_profile = (
+                    await self.instruction_generator.generate_instruction_file(
+                        profile=profile, trigger="Initial worker creation"
+                    )
                 )
                 # Update profile with instruction file reference
                 profile = updated_profile
             except Exception as e:
                 try:
-                    await self.emitter.emit(TraceEvent(
-                        event_id=uuid4(),
-                        timestamp=datetime.now(timezone.utc),
-                        event_type=TraceEventType.OPERATION_ERROR,
-                        component=TraceComponent.ORCHESTRATOR,
-                        level=TraceLevel.ERROR,
-                        message=f"Failed to generate instruction file: {str(e)}",
-                        data={"error": str(e), "worker_id": profile.worker_id},
-                        duration_ms=0,
-                    ))
-                except Exception:
-                    pass
-        
+                    await self.emitter.emit(
+                        TraceEvent(
+                            event_id=uuid4(),
+                            timestamp=datetime.now(timezone.utc),
+                            event_type=TraceEventType.OPERATION_ERROR,
+                            component=TraceComponent.ORCHESTRATOR,
+                            level=TraceLevel.ERROR,
+                            message=f"Failed to generate instruction file: {str(e)}",
+                            data={"error": str(e), "worker_id": profile.worker_id},
+                            duration_ms=0,
+                        )
+                    )
+                except Exception as e2:
+                    logger.warning("Trace emission failed: %s", e2)
+
         # Emit trace event
         try:
-            await self.emitter.emit(TraceEvent(
-                event_id=uuid4(),
-                timestamp=datetime.now(timezone.utc),
-                event_type=TraceEventType.ORCHESTRATOR_WORKER_REGISTERED,
-                component=TraceComponent.ORCHESTRATOR,
-                level=TraceLevel.INFO,
-                message=f"Worker created from description: {profile.name}",
-                data={
-                    "worker_id": profile.worker_id,
-                    "worker_type": profile.worker_type,
-                    "capabilities": profile.capabilities,
-                    "description": description,
-                },
-                duration_ms=0,
-            ))
-        except Exception:
-            pass
-        
+            await self.emitter.emit(
+                TraceEvent(
+                    event_id=uuid4(),
+                    timestamp=datetime.now(timezone.utc),
+                    event_type=TraceEventType.ORCHESTRATOR_WORKER_REGISTERED,
+                    component=TraceComponent.ORCHESTRATOR,
+                    level=TraceLevel.INFO,
+                    message=f"Worker created from description: {profile.name}",
+                    data={
+                        "worker_id": profile.worker_id,
+                        "worker_type": profile.worker_type,
+                        "capabilities": profile.capabilities,
+                        "description": description,
+                    },
+                    duration_ms=0,
+                )
+            )
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
+
         return worker
 
     async def can_route(self, task: Task) -> bool:
         """
         Check if the orchestrator has a worker that can handle the task.
-        
+
         Args:
             task: Task to check
-            
+
         Returns:
             True if a matching worker exists, False otherwise
         """
         # Check if orchestrator has any workers
         if not self.orchestrator.workers:
             return False
-        
+
         # Simple check: if there are workers, assume one can handle the task
         # In production, this would use the orchestrator's routing logic
         return True
@@ -272,10 +285,10 @@ class WorkerFactory:
     async def get_or_create_worker(self, task: Task) -> "WorkerBase":
         """
         Get an existing worker or create a new one if needed.
-        
+
         Args:
             task: Task to get or create worker for
-            
+
         Returns:
             Worker instance
         """
@@ -292,60 +305,62 @@ class WorkerFactory:
     async def list_workers(self) -> list[WorkerProfile]:
         """
         List all registered worker profiles.
-        
+
         Returns:
             List of worker profiles
         """
         profiles = []
         for worker_id, worker in self.orchestrator.workers.items():
-            if hasattr(worker, 'profile'):
+            if hasattr(worker, "profile"):
                 profiles.append(worker.profile)
-        
+
         return profiles
 
     async def deregister_worker(self, worker_id: str) -> None:
         """
         Remove a worker from the orchestrator registry.
-        
+
         Args:
             worker_id: The worker ID to deregister
         """
         # Remove from orchestrator
         self.orchestrator.deregister_worker(worker_id)
-        
+
         # Remove from cache
         if worker_id in self._worker_profiles:
             del self._worker_profiles[worker_id]
-        
+
         # Emit trace event
         try:
-            await self.emitter.emit(TraceEvent(
-                event_id=uuid4(),
-                timestamp=datetime.now(timezone.utc),
-                event_type=TraceEventType.ORCHESTRATOR_WORKER_DEREGISTERED,
-                component=TraceComponent.ORCHESTRATOR,
-                level=TraceLevel.INFO,
-                message=f"Worker deregistered: {worker_id}",
-                data={"worker_id": worker_id},
-                duration_ms=0,
-            ))
-        except Exception:
-            pass
-    
+            await self.emitter.emit(
+                TraceEvent(
+                    event_id=uuid4(),
+                    timestamp=datetime.now(timezone.utc),
+                    event_type=TraceEventType.ORCHESTRATOR_WORKER_DEREGISTERED,
+                    component=TraceComponent.ORCHESTRATOR,
+                    level=TraceLevel.INFO,
+                    message=f"Worker deregistered: {worker_id}",
+                    data={"worker_id": worker_id},
+                    duration_ms=0,
+                )
+            )
+        except Exception as e:
+            logger.warning("Trace emission failed: %s", e)
+
     async def load_workers_from_persistence(self) -> int:
         """
         Load all persisted workers from PostgreSQL and register them with the orchestrator.
-        
+
         Returns:
             Number of workers loaded
         """
         if not self.persistence:
             return 0
-        
+
         try:
             profiles = await self.persistence.load_all()
             count = 0
-            
+
             for profile in profiles:
                 # Only register ACTIVE workers with the orchestrator
                 if profile.status == WorkerStatus.ACTIVE:
@@ -355,75 +370,79 @@ class WorkerFactory:
                         memory_router=self.memory_router,
                         emitter=self.emitter,
                     )
-                    
+
                     # Register worker in orchestrator
                     self.orchestrator.register_worker(profile.worker_id, worker)
-                    
+
                     # Cache profile
                     self._worker_profiles[profile.worker_id] = profile
-                    
+
                     count += 1
-            
-            await self.emitter.emit(TraceEvent(
-                event_id=uuid4(),
-                timestamp=datetime.now(timezone.utc),
-                event_type=TraceEventType.OPERATION_COMPLETE,
-                component=TraceComponent.ORCHESTRATOR,
-                level=TraceLevel.INFO,
-                message=f"Loaded {count} workers from persistence",
-                data={"count": count},
-                duration_ms=0,
-            ))
-            
+
+            await self.emitter.emit(
+                TraceEvent(
+                    event_id=uuid4(),
+                    timestamp=datetime.now(timezone.utc),
+                    event_type=TraceEventType.OPERATION_COMPLETE,
+                    component=TraceComponent.ORCHESTRATOR,
+                    level=TraceLevel.INFO,
+                    message=f"Loaded {count} workers from persistence",
+                    data={"count": count},
+                    duration_ms=0,
+                )
+            )
+
             return count
         except Exception as e:
             try:
-                await self.emitter.emit(TraceEvent(
-                    event_id=uuid4(),
-                    timestamp=datetime.now(timezone.utc),
-                    event_type=TraceEventType.OPERATION_ERROR,
-                    component=TraceComponent.ORCHESTRATOR,
-                    level=TraceLevel.ERROR,
-                    message=f"Failed to load workers from persistence: {str(e)}",
-                    data={"error": str(e)},
-                    duration_ms=0,
-                ))
-            except Exception:
-                pass
+                await self.emitter.emit(
+                    TraceEvent(
+                        event_id=uuid4(),
+                        timestamp=datetime.now(timezone.utc),
+                        event_type=TraceEventType.OPERATION_ERROR,
+                        component=TraceComponent.ORCHESTRATOR,
+                        level=TraceLevel.ERROR,
+                        message=f"Failed to load workers from persistence: {str(e)}",
+                        data={"error": str(e)},
+                        duration_ms=0,
+                    )
+                )
+            except Exception as e2:
+                logger.warning("Trace emission failed: %s", e2)
             return 0
 
     def _generate_profile(self, description: str, task: Task) -> DynamicWorkerProfile:
         """
         Generate a worker profile from a description (rule-based, no LLM).
-        
+
         Args:
             description: Natural language description
             task: Task for complexity analysis
-            
+
         Returns:
             Generated worker profile
         """
         # Generate worker_id as slug from description
         worker_id = self._slugify(description)
-        
+
         # Parse capability keywords from description
         capabilities = self._parse_capabilities(description)
-        
+
         # Match against SkillRegistry capabilities
         matched_skills = []
         for capability in capabilities:
             skills = self.skill_registry.query_by_capability(capability)
             if skills:
                 matched_skills.extend([skill.name for skill in skills])
-        
+
         # Set complexity based on task complexity
         complexity = task.complexity_score
         complexity_min = max(0.0, complexity - 0.2)
         complexity_max = min(1.0, complexity + 0.2)
-        
+
         # Determine worker type from description
         worker_type = self._determine_worker_type(description)
-        
+
         return DynamicWorkerProfile(
             worker_id=worker_id,
             worker_type=worker_type,
@@ -438,10 +457,10 @@ class WorkerFactory:
     def _slugify(self, text: str) -> str:
         """
         Convert text to a slug format.
-        
+
         Args:
             text: Text to slugify
-            
+
         Returns:
             Slugified text
         """
@@ -458,49 +477,71 @@ class WorkerFactory:
     def _parse_capabilities(self, description: str) -> list[str]:
         """
         Parse capability keywords from description.
-        
+
         Args:
             description: Description to parse
-            
+
         Returns:
             List of capability keywords
         """
         # Simple keyword extraction based on common capability terms
         capability_keywords = [
-            "write", "read", "file", "data", "text", "code", "script",
-            "web", "scrape", "api", "network", "database", "storage",
-            "image", "video", "audio", "media", "process", "transform",
-            "analyze", "search", "query", "compute", "calculate",
+            "write",
+            "read",
+            "file",
+            "data",
+            "text",
+            "code",
+            "script",
+            "web",
+            "scrape",
+            "api",
+            "network",
+            "database",
+            "storage",
+            "image",
+            "video",
+            "audio",
+            "media",
+            "process",
+            "transform",
+            "analyze",
+            "search",
+            "query",
+            "compute",
+            "calculate",
         ]
-        
+
         description_lower = description.lower()
         capabilities = []
-        
+
         for keyword in capability_keywords:
             if keyword in description_lower:
                 capabilities.append(keyword)
-        
+
         return capabilities
 
     def _determine_worker_type(self, description: str) -> str:
         """
         Determine worker type from description.
-        
+
         Args:
             description: Description to analyze
-            
+
         Returns:
             Worker type string
         """
         description_lower = description.lower()
-        
+
         if any(word in description_lower for word in ["file", "write", "read"]):
             return "file_worker"
         elif any(word in description_lower for word in ["web", "scrape", "api"]):
             return "web_worker"
         elif any(word in description_lower for word in ["data", "database", "storage"]):
             return "data_worker"
-        elif any(word in description_lower for word in ["image", "video", "audio", "media"]):
+        elif any(
+            word in description_lower for word in ["image", "video", "audio", "media"]
+        ):
             return "media_worker"
         elif any(word in description_lower for word in ["code", "script", "program"]):
             return "code_worker"
@@ -510,12 +551,12 @@ class WorkerFactory:
 
 class PlaceholderWorker(WorkerBase):
     """Placeholder worker for testing WorkerFactory.
-    
+
     This is a minimal implementation that satisfies the WorkerBase interface
     but does not perform actual work. In a future prompt, this will be replaced
     with a real dynamically generated worker.
     """
-    
+
     def __init__(
         self,
         profile: "WorkerProfile | DynamicWorkerProfile",
@@ -524,14 +565,14 @@ class PlaceholderWorker(WorkerBase):
     ) -> None:
         """Initialize placeholder worker."""
         # Create a mock LLM adapter for testing
-        from core.worker_base import LLMAdapter, LLMResponse
         from core.schemas import Message
-        
+        from core.worker_base import LLMAdapter, LLMResponse
+
         class MockLLMAdapter(LLMAdapter):
             def __init__(self):
                 self._model_name = "mock"
                 self._cost_per_token = 0.0
-            
+
             async def generate(
                 self,
                 messages: list[Message],
@@ -545,25 +586,26 @@ class PlaceholderWorker(WorkerBase):
                     tokens_used=0,
                     duration_ms=0,
                 )
-            
+
             @property
             def model_name(self) -> str:
                 return self._model_name
-            
+
             @property
             def cost_per_token(self) -> float:
                 return self._cost_per_token
-        
+
         super().__init__(
             profile=typing.cast(WorkerProfile, profile),
             llm=MockLLMAdapter(),
             memory_router=memory_router,
             emitter=emitter,
         )
-    
+
     async def build_prompt(self, task: Task, memory: list) -> list[Message]:
         """Build prompt (placeholder)."""
         from core.schemas import Message, MessageRole
+
         return [
             Message(
                 role=MessageRole.SYSTEM,
@@ -576,10 +618,11 @@ class PlaceholderWorker(WorkerBase):
                 timestamp=datetime.now(timezone.utc),
             ),
         ]
-    
+
     async def parse_output(self, raw: "LLMResponse", task_id: str) -> "WorkerOutput":
         """Parse output (placeholder)."""
         from core.schemas import WorkerOutput
+
         return WorkerOutput(
             worker_id=self.profile.worker_id,
             task_id=UUID(task_id),
