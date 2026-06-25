@@ -168,8 +168,17 @@ OR37. Batch verification commands to reduce the number of separate command execu
 - If any check fails, the failure will appear in the last 5 lines. Then re-run the failing check individually for full output.
 - This reduces 6 Devin actions + 6 output blocks to 1 Devin action + 1 output block.
 
-### GLM Prompts directory hygiene (NEW — Governance Patch 03)
-OR38. At decade boundary tags (prompt-{N}0 where N > 0, e.g., prompt-70, prompt-80, prompt-90), delete the previous decade's plan files from `GLM Prompts/` directory. Delete files matching `plan-{previous_decade}*` (e.g., at prompt-70, delete plan-60* through plan-69*; at prompt-80, delete plan-70* through plan-79*). Commit the deletions as part of the decade boundary plan's docs commit. This prevents the directory from growing unbounded and avoids "deleted files reappear" cycles. Do NOT delete governance directives, governance patches, or the current decade's files. Additionally, if `GLM Prompts/` contains files from 2+ decades ago at any plan's opening (S0.1), delete them at that opening — don't wait for the next decade boundary. (Source: GLM observation — user manually deletes old plan files but they reappear in git status as untracked, causing noise and token waste)
+### GLM Prompts directory hygiene (REVISED — Governance Patch 04)
+OR38. At decade boundary tags (prompt-{N}0 where N > 0, e.g., prompt-80, prompt-90), delete the previous decade's plan files from `GLM Prompts/` directory. Delete files matching `plan-{previous_decade}*` (e.g., at prompt-80, delete plan-70* through plan-79*; at prompt-90, delete plan-80* through plan-89*). Commit the deletions as part of the decade boundary plan's docs commit (C12). This prevents the directory from growing unbounded and avoids "deleted files reappear" cycles. Do NOT delete governance directives, governance patches, or the current decade's files.
+
+**Catch-up clause** (revised at Governance Patch 04): if `GLM Prompts/` contains files from decade N-2 or earlier at any plan's opening (S0.1), where N is the current decade, delete them at that opening as a `docs: cleanup pre-{tag}` commit per OR26. Files from the immediately previous decade (N-1) are NOT eligible for catch-up deletion — wait for the decade boundary. Example: at prompt-75 (N=70s), files from the 50s or earlier (N-2=50s) are eligible for catch-up; files from the 60s (N-1=60s) are NOT — wait for prompt-80.
+
+**Decade definition**: the decade is determined by the tens digit of the prompt number. prompt-70 through prompt-79 = 70s decade. prompt-80 through prompt-89 = 80s decade. Named plans (e.g., `ar18-fix-all`, `rule-cleanup`) inherit the decade of their predecessor tag.
+
+(Source: GLM observation; revised at Governance Patch 04 to disambiguate "2+ decades ago" which was misinterpreted as "previous decade" during ar18-fix-all execution, causing premature deletion of 60s files at 70s opening. Original language from Governance Patch 03.)
+
+### Plan file retention (NEW — Governance Patch 04)
+OR39. Plan files (`plan-{N}.md`, `plan-{N}-Rev{n}.md`, `plan-{N}-Rev{n}-context-brief.md`, `plan-{N}-context-brief.md`) MUST be committed to git. The current plan's files MUST be added in the C12 docs commit (`git add CHANGELOG.md PLANS.md LANDMINES.md "GLM Prompts/plan-{N}*.md"`). Plan files from previous plans discovered untracked at /jarvis-open (S0.1) are an OR26 violation — commit them as `docs: cleanup pre-{tag}` with tag `docs-cleanup-{N}` before proceeding. Plan files are part of the project record; they document what Devin executed against. Losing them to git history gaps makes retroactive review impossible. (Source: L20 — plan files for prompts 72-77 were never committed to git; only 70 and 71 were. The CHANGELOG and PLANS.md document what those plans did, but the actual plan files are lost to git.)
 
 ---
 
