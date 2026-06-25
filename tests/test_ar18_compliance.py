@@ -3,11 +3,15 @@ AR18 Compliance Test - Regression prevention for Rule AR18.
 
 Rule AR18: No broad `except Exception:` without inline comment + WARNING trace.
 
-This test scans specified files to ensure all `except Exception:` blocks
-have both an inline comment and a WARNING trace (via logging.warning or similar).
+This test scans all production .py files (repo-wide walk, mirroring test_di_compliance.py)
+to ensure no `except Exception:` block is followed by a bare `pass`. AR18's full requirement
+(inline comment + WARNING trace) is not AST-enforced — too many variants of 'WARNING trace'
+(logger.warning, emitter.emit, print to stderr). Test enforces the worst case: bare `pass`
+with no handling.
 """
 
 import ast
+import os
 from pathlib import Path
 from typing import List, Tuple
 
@@ -74,96 +78,67 @@ def check_ar18_compliance(filepath: Path) -> List[Tuple[int, str, str]]:
     return violations
 
 
-def test_ar18_compliance_system_files():
-    """Test AR18 compliance in system/ files that were cleaned up."""
-    files_to_check = [
-        "system/resource_manager.py",
-        "system/model_acquisition.py",
-        "system/model_registry.py",
-        "system/profiler.py",
-    ]
+EXCLUDE_DIRS = {
+    "tests",
+    ".venv",
+    "venv",
+    "env",
+    "__pycache__",
+    ".git",
+    "node_modules",
+    "build",
+    "dist",
+    ".tox",
+    ".eggs",
+    ".pytest_cache",
+}
+EXCLUDE_FILES = {"test_ar18_compliance.py"}
 
-    all_violations = []
-    for file_path in files_to_check:
-        filepath = Path(file_path)
-        if not filepath.exists():
+
+def get_python_files() -> list[str]:
+    """Walk all production .py files, excluding tests and virtualenvs.
+
+    Mirrors tests/test_di_compliance.py:get_python_files() pattern.
+    Longer exclude list than test_di_compliance.py because the AR18 test
+    must not walk into vendored third-party code (dist/, build/, node_modules/)
+    where bare except blocks are common and unfixable.
+    """
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    files = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in EXCLUDE_DIRS]
+        for filename in filenames:
+            if filename.endswith(".py") and filename not in EXCLUDE_FILES:
+                files.append(os.path.join(dirpath, filename))
+    return files
+
+
+def test_ar18_compliance_repo_wide():
+    """AR18: No bare `except Exception: pass` in any production file.
+
+    Replaces 4 hardcoded file-list tests (Plan 71) with a repo-wide walk
+    mirroring tests/test_di_compliance.py. Catches new files added since
+    Plan 71 (auto_corrector, sandbox, cost_tracker, task_classifier,
+    debate_pool, prism_llama, testing_battery).
+
+    Test function count delta: 4 → 1 (net -3). ar18-fix-all baseline 1367
+    becomes 1364 at this plan's close. See PLANS.md reconciliation note.
+    """
+    all_violations: list[tuple[str, int, str]] = []
+    for filepath in get_python_files():
+        path = Path(filepath)
+        if not path.exists():
             continue
-
-        violations = check_ar18_compliance(filepath)
-        all_violations.extend(violations)
+        # check_ar18_compliance returns List[Tuple[int, str, str]] where
+        # the third element is str(filepath) (redundant — we already have
+        # filepath from the outer loop). We carry filepath explicitly to
+        # decouple from the helper's return shape; the helper's third
+        # element is ignored via the underscore.
+        for line_num, snippet, _ in check_ar18_compliance(path):
+            all_violations.append((filepath, line_num, snippet))
 
     if all_violations:
         violation_msg = "AR18 violations found:\n"
-        for line_num, snippet, filepath_str in all_violations:
-            violation_msg += f"\n{filepath_str}:{line_num}\n{snippet}\n---\n"
-        assert False, violation_msg
-
-
-def test_ar18_compliance_core_files():
-    """Test AR18 compliance in core/ files that were cleaned up."""
-    files_to_check = [
-        "core/approval_gate.py",
-    ]
-
-    all_violations = []
-    for file_path in files_to_check:
-        filepath = Path(file_path)
-        if not filepath.exists():
-            continue
-
-        violations = check_ar18_compliance(filepath)
-        all_violations.extend(violations)
-
-    if all_violations:
-        violation_msg = "AR18 violations found:\n"
-        for line_num, snippet, filepath_str in all_violations:
-            violation_msg += f"\n{filepath_str}:{line_num}\n{snippet}\n---\n"
-        assert False, violation_msg
-
-
-def test_ar18_compliance_skills_files():
-    """Test AR18 compliance in skills/ files that were cleaned up."""
-    files_to_check = [
-        "skills/notes/notes_skill.py",
-        "skills/calendar/calendar_skill.py",
-        "skills/reminder/reminder_skill.py",
-        "skills/email/email_skill.py",
-    ]
-
-    all_violations = []
-    for file_path in files_to_check:
-        filepath = Path(file_path)
-        if not filepath.exists():
-            continue
-
-        violations = check_ar18_compliance(filepath)
-        all_violations.extend(violations)
-
-    if all_violations:
-        violation_msg = "AR18 violations found:\n"
-        for line_num, snippet, filepath_str in all_violations:
-            violation_msg += f"\n{filepath_str}:{line_num}\n{snippet}\n---\n"
-        assert False, violation_msg
-
-
-def test_ar18_compliance_cli_memory_files():
-    """Test AR18 compliance in cli/ and memory/ files that were cleaned up."""
-    # Note: cli/command_history.py and memory/obsidian.py were only
-    # cleaned up for datetime.now() (S5), not for AR18 (S4).
-    # This test is kept for future AR18 cleanup if needed.
-    files_to_check = []
-
-    all_violations = []
-    for file_path in files_to_check:
-        filepath = Path(file_path)
-        if not filepath.exists():
-            continue
-
-        violations = check_ar18_compliance(filepath)
-        all_violations.extend(violations)
-
-    if all_violations:
-        violation_msg = "AR18 violations found:\n"
-        for line_num, snippet, filepath_str in all_violations:
+        for filepath_str, line_num, snippet in all_violations:
             violation_msg += f"\n{filepath_str}:{line_num}\n{snippet}\n---\n"
         assert False, violation_msg
