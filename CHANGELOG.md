@@ -952,3 +952,24 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 → 0 (no .py files touched)
 - Coverage: 83% (unchanged)
 - Tag: governance-patch-04 verified on origin
+
+## 2026-06-26 01:57 — prompt-78
+
+**Plan**: Worker Circuit Breaker
+
+**Changed**:
+- core/worker_circuit_breaker.py: New file - worker-level circuit breaker with failure tracking and auto-reset
+- core/orchestrator.py: Integrated circuit breaker, added degraded mode with task queuing, extracted _execute_task helper
+- core/schemas.py: Added QUEUED to TaskStatus enum
+- core/task_state_machine.py: Updated transition table for QUEUED state
+- tests/test_worker_circuit_breaker.py: New file - comprehensive tests for circuit breaker and degraded mode
+- tests/test_orchestrator.py: Updated for new constructor parameters
+- tests/test_task_state_machine.py: Updated for QUEUED state transitions
+- tests/test_security.py: Updated for new constructor parameters
+- vulture-whitelist.txt: Added new findings from added code
+
+**Results**:
+- Tests: 1386 passed, 67 skipped
+- Ruff: All checks passed
+- Coverage: 83% overall
+- Tag: prompt-78 verified on origin

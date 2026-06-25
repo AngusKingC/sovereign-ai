@@ -14,12 +14,14 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **Plan governance-patch-04**: Test baseline updated from 1364 to 1431 tests collected (delta +67). Cause: Baseline discrepancy discovered at S5.6 — PLANS.md documented 1364 but actual collection at rule-cleanup was 1431. No test files added between rule-cleanup and governance-patch-04; the 1364 figure was stale (likely from test execution count vs collection count mismatch). Governance patch touched only docs/workflow files — no test count change. Updated baseline to reflect actual collection count (1431).
 
+**Plan 78**: Test baseline updated from 1431 to 1453 tests collected (delta +22). Cause: 19 new tests in test_worker_circuit_breaker.py (worker-level circuit breaker + aggregate behavior + degraded mode queuing) + 3 test updates in test_task_state_machine.py (QUEUED state transitions). All new tests are in-scope for Plan 78. Vulture baseline updated from 39 to 41 findings (delta +2). Cause: 4 core/schemas.py cls entries (line shifts from QUEUED status addition at line 37) + 3 test_worker_circuit_breaker.py raw_output entries (new MockWorker parse_output methods in test fixtures). All whitelisted per OR19 (fixture parameters required by pytest/middleware). Coverage held at 83% (baseline held).
+
 ---
 
 ## Test Baseline
 
-**Current baseline**: **1431 tests collected (1364 passed, 67 skipped)**
-**Verified**: Plan governance-patch-04, Step S5.6 (test collection verification)
+**Current baseline**: **1453 tests collected (1386 passed, 67 skipped)**
+**Verified**: Plan 78, Step S5 (full test suite)
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -36,7 +38,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | **Mypy (full-repo)** | 0 errors | Plan 67 S6 | Delta: -294 from Plan 60 baseline (294 → 0). Full remediation of adapters, CLI, memory, workers, skills, tests, scripts (181 source files). |
 | **Bandit** | 3,384 low, 1 medium, 0 high | Plan 70 S4 | Delta: +205 low, +1 medium from Plan 60 baseline. New B608 finding in memory/postgres_trace_store.py:161 (false positive - asyncpg parameterized query). |
 | **pip-audit** | 19 CVEs across 4 packages | Plan 70 S5 | Stable across Plans 56-70. No actionable fixes (upstream only). |
-| **Vulture** | 39 high-confidence findings | Plan rule-cleanup C2.7 | Delta: +1 from Plan ar18-fix-all baseline (38 → 39). Added line 107 variant for core/event_trigger.py last_check_time (CRLF line ending mismatch on Windows). All whitelisted per OR19 (fixture parameters required by pytest/middleware). |
+| **Vulture** | 41 high-confidence findings | Plan 78 C2.7 | Delta: +2 from rule-cleanup baseline (39 → 41). Added 4 core/schemas.py cls entries (line shifts from QUEUED status addition) and 3 test_worker_circuit_breaker.py raw_output entries (new MockWorker parse_output methods). All whitelisted per OR19 (fixture parameters required by pytest/middleware). |
 | **detect-secrets** | 15 findings (baseline) | Plan 71 S9 | Baseline established with .secrets.baseline. All findings are false positives (test fixtures, doc examples). |
 | **pre-commit** | Configured | Plan 74 S2 | Hooks installed: trailing-whitespace, end-of-file-fixer, check-yaml, check-json, check-toml, black, ruff, isort, detect-secrets. Mypy hook removed (stall prevention — follows imports into out-of-scope files). |
 | **pytest-cov** | Configured | Plan 71 S11 | Coverage reports: term-missing + HTML. No fail threshold (baseline: 1% coverage). |
@@ -84,22 +86,11 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | ar18-fix-all | AR18 Compliance Remediation | 1367 | Fixed all 148 bare except:pass violations across 23 production files (112 Category A + 36 Category B). Added logging infrastructure to all files. Updated vulture whitelist (38 findings, line number corrections). Full repo AR18 compliance scan shows 0 violations. |
 | rule-cleanup | AR18 Compliance Test Refactor | 1364 | Replaced 4 hardcoded file-list test functions with 1 repo-wide walk (mirrors test_di_compliance.py pattern). Test count delta: -3 (function consolidation, no tests lost). Updated vulture whitelist (39 findings, added line 107 variant for CRLF line ending mismatch). |
 | governance-patch-04 | OR38 clarification + OR39 (plan file retention) + L20 | 1364 | Revised OR38 catch-up clause (N-2 formula). Added OR39 (plan files must be committed in C12). Appended L20. Updated jarvis-close.md C12. Named plan — does not consume prompt-78. |
+| 78 | Worker Circuit Breaker | 1386 | WorkerCircuitBreaker class (core/worker_circuit_breaker.py) with failure tracking and auto-reset. Integrated into Orchestrator with degraded mode (task queuing when too many workers fail). Added QUEUED to TaskStatus enum. Updated TaskStateMachine transitions. Comprehensive tests (test_worker_circuit_breaker.py). Coverage: 83% (baseline held). |
 
 ---
 
 ## Next 5 Prompts Queue
-
-### Plan 78 — Circuit Breaker at Orchestrator Level (Priority 2 — Kimi High)
-
-**Scope**: Extend existing `core/adapter_fallback.py` circuit breaker to per-worker and orchestrator-level. Add degraded mode (queue tasks instead of failing). Required before PEMADS Phase 2 — cascade failure prevention only. Orchestrator-crash recovery is a separate concern (deferred to `orchestrator-crash-recovery` plan).
-
-**Expected impact**: Cascade failure prevention. Prerequisite for PEMADS Phase 2 safety.
-
-**Baseline changes**: Test count may increase with circuit breaker tests.
-
-**Gate**: Full test suite pass, ruff 0, mypy 0.
-
----
 
 ### Plan 79 — Model Routing / Tiered Selection (Priority 2 — Kimi High)
 
@@ -238,11 +229,12 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **Memory router** — All memory access routed through MemoryRouter; no direct imports; BackendRouter supports trace store registration
 - **Serialization** — Jsonify strict mode, circular ref detection, type coercion all working
 - **Datetime handling** — Zero naive/aware mixing; all core/system/skills using timezone-aware UTC
-- **Ruff baseline** — 0 errors (Plan 59 cleanup held through Plans 56-66)
+- **Ruff baseline** — 0 errors (Plan 59 cleanup held through Plans 56-78)
 - **Mypy baseline** — Full-repo mypy clean (0 errors, 181 source files). Adapters, CLI, memory, workers, skills, tests, scripts all remediated through Plan 67.
-- **Test suite** — 1253 passed, 67 skipped (Plan 68 skill taxonomy + CONTEXT.md; Plan 67 mypy remediation; Plan 66 system cleanup; Plan 63b added 7 integration + E2E tests; restored 2 orchestrator integration tests)
+- **Test suite** — 1386 passed, 67 skipped (Plan 78 worker circuit breaker + degraded mode; Plan 77 AutoCorrector + IVM; Plan 76 PEMADS Phase 1; Plan 68 skill taxonomy + CONTEXT.md; Plan 67 mypy remediation; Plan 66 system cleanup; Plan 63b added 7 integration + E2E tests; restored 2 orchestrator integration tests)
 - **Eval harness** — Metrics (exact_match, token_f1, bleu, cosine_similarity) operational with trace emitter integration. Validation suite with 15 static tasks confirms metric behavior across 5 categories.
 - **Skill taxonomy** — SkillTier enum (USER_INVOKED, AGENT_INVOKED, HYBRID), SkillClassification dataclass, SkillTaxonomyRegistry. Default registry with 25 built-in skill classifications. CONTEXT.md project-level shared vocabulary.
+- **Worker Circuit Breaker** — WorkerCircuitBreaker class with failure tracking and auto-reset. Integrated into Orchestrator with degraded mode (task queuing when too many workers fail). QUEUED task status added to TaskStateMachine. Comprehensive tests covering worker-level and aggregate behavior.
 
 ### What's Broken Right Now
 
