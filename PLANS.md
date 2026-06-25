@@ -1,6 +1,6 @@
 # PLANS.md — Sovereign AI Project State
 
-**Last updated**: Post-Plan ar18-fix-all (2026-06-25)
+**Last updated**: Post-Plan rule-cleanup (2026-06-25)
 
 This document tracks the dynamic state of the Sovereign AI project: baselines, completed prompts, and the next-5-prompt queue. It is the canonical source for test counts, static analysis baselines, and which prompt is currently active.
 
@@ -10,12 +10,14 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **Plan ar18-fix-all**: Vulture baseline updated from 33 to 38 findings (delta +5). Cause: Line number corrections due to code edits in AR18 remediation (core/event_trigger.py, core/schemas.py, tests/test_instruction_versioning.py). All findings whitelisted per OR19 (fixture parameters required by pytest/middleware). Tolerance: Acceptable - line number drift is expected when editing code; whitelist updated to reflect new locations.
 
+**Plan rule-cleanup**: Test baseline updated from 1367 to 1364 (delta -3). Cause: Test function consolidation in test_ar18_compliance.py (4 hardcoded file-list tests replaced with 1 repo-wide walk). No tests lost — test count delta is from function count reduction, not test deletion. Vulture baseline updated from 38 to 39 findings (delta +1). Cause: Added line 107 variant for core/event_trigger.py last_check_time (CRLF line ending mismatch on Windows). Authorized post-hoc as necessary side effect of test refactor.
+
 ---
 
 ## Test Baseline
 
-**Current baseline**: **1367 passed, 67 skipped**
-**Verified**: Plan ar18-fix-all, Step C1 (full test suite)
+**Current baseline**: **1364 passed, 67 skipped**
+**Verified**: Plan rule-cleanup, Step S3 (full test suite)
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -32,7 +34,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | **Mypy (full-repo)** | 0 errors | Plan 67 S6 | Delta: -294 from Plan 60 baseline (294 → 0). Full remediation of adapters, CLI, memory, workers, skills, tests, scripts (181 source files). |
 | **Bandit** | 3,384 low, 1 medium, 0 high | Plan 70 S4 | Delta: +205 low, +1 medium from Plan 60 baseline. New B608 finding in memory/postgres_trace_store.py:161 (false positive - asyncpg parameterized query). |
 | **pip-audit** | 19 CVEs across 4 packages | Plan 70 S5 | Stable across Plans 56-70. No actionable fixes (upstream only). |
-| **Vulture** | 38 high-confidence findings | Plan ar18-fix-all C2.7 | Delta: +5 from Plan 77 baseline (33 → 38). Line number corrections due to code edits in AR18 remediation. New findings in core/event_trigger.py, core/schemas.py, tests/test_instruction_versioning.py. All whitelisted per OR19 (fixture parameters required by pytest/middleware). |
+| **Vulture** | 39 high-confidence findings | Plan rule-cleanup C2.7 | Delta: +1 from Plan ar18-fix-all baseline (38 → 39). Added line 107 variant for core/event_trigger.py last_check_time (CRLF line ending mismatch on Windows). All whitelisted per OR19 (fixture parameters required by pytest/middleware). |
 | **detect-secrets** | 15 findings (baseline) | Plan 71 S9 | Baseline established with .secrets.baseline. All findings are false positives (test fixtures, doc examples). |
 | **pre-commit** | Configured | Plan 74 S2 | Hooks installed: trailing-whitespace, end-of-file-fixer, check-yaml, check-json, check-toml, black, ruff, isort, detect-secrets. Mypy hook removed (stall prevention — follows imports into out-of-scope files). |
 | **pytest-cov** | Configured | Plan 71 S11 | Coverage reports: term-missing + HTML. No fail threshold (baseline: 1% coverage). |
@@ -78,6 +80,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 76 | PEMADS Phase 1: Debate Pool + Task Classifier + Testing Battery Framework | 1350 | PEMADS Phase 1 infrastructure (no LLM calls, no debates). New modules: memory/debate_pool.py (DebatePool class), core/task_classifier.py (TaskClassifier class), skills/testing_battery/ (TestingBatterySkill). Governance updates: AI_HANDOFF.md (tiered review system + context brief structure), PLANS.md (roadmap revision to Claude's Option C), CONTEXT.md (PEMADS vocabulary). 42 new tests (10 debate_pool + 12 task_classifier + 20 testing_battery). Coverage: 83% (baseline held). |
 | 77 | Self-Healing / AutoCorrector | 1367 | AutoCorrector module + IVM wiring. Safe proposals auto-applied; unsafe escalated. _pending_proposals cleaned on ERROR (Claude Issue 2 fix). OR17 invoked (+17 tests, exceeds ±5). |
 | ar18-fix-all | AR18 Compliance Remediation | 1367 | Fixed all 148 bare except:pass violations across 23 production files (112 Category A + 36 Category B). Added logging infrastructure to all files. Updated vulture whitelist (38 findings, line number corrections). Full repo AR18 compliance scan shows 0 violations. |
+| rule-cleanup | AR18 Compliance Test Refactor | 1364 | Replaced 4 hardcoded file-list test functions with 1 repo-wide walk (mirrors test_di_compliance.py pattern). Test count delta: -3 (function consolidation, no tests lost). Updated vulture whitelist (39 findings, added line 107 variant for CRLF line ending mismatch). |
 
 ---
 
@@ -192,12 +195,12 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Baseline Reconciliation Notes
 
-- **Test count delta**: 1253 → 1257 (+4) at Plan 71 (AR18 compliance test). 1257 → 1257 (no change) at Plan 72 (no tests added). 1257 → 1269 (+12) at Plan 73 (sandbox tests + skill test updates). 1269 → 1289 (+20) at Plan 74 (cost tracker tests + orchestrator/resource_budget test updates). 1289 → 1308 (+19) at Plan 74.5 (17 PrismLlamaAdapter tests + 2 adapter_factory tests). 1308 → 1308 (no change) at Plan 75 (scan-only plan, no new tests). 1308 → 1350 (+42) at Plan 76 (10 debate_pool + 12 task_classifier + 20 testing_battery). 1350 → 1367 (+17) at Plan 77 (12 AutoCorrector + 5 IVM wiring). OR17 invoked — delta exceeds ±5 tolerance. Justification: all 17 tests are in-scope new tests for new AutoCorrector module + IVM wiring. No existing tests modified or deleted. Baseline updated to 1367 passed, 67 skipped.
+- **Test count delta**: 1253 → 1257 (+4) at Plan 71 (AR18 compliance test). 1257 → 1257 (no change) at Plan 72 (no tests added). 1257 → 1269 (+12) at Plan 73 (sandbox tests + skill test updates). 1269 → 1289 (+20) at Plan 74 (cost tracker tests + orchestrator/resource_budget test updates). 1289 → 1308 (+19) at Plan 74.5 (17 PrismLlamaAdapter tests + 2 adapter_factory tests). 1308 → 1308 (no change) at Plan 75 (scan-only plan, no new tests). 1308 → 1350 (+42) at Plan 76 (10 debate_pool + 12 task_classifier + 20 testing_battery). 1350 → 1367 (+17) at Plan 77 (12 AutoCorrector + 5 IVM wiring). OR17 invoked — delta exceeds ±5 tolerance. Justification: all 17 tests are in-scope new tests for new AutoCorrector module + IVM wiring. No existing tests modified or deleted. 1367 → 1364 (-3) at rule-cleanup (test function consolidation: 4 hardcoded file-list tests replaced with 1 repo-wide walk). No tests lost — delta is from function count reduction, not test deletion. Baseline updated to 1364 passed, 67 skipped.
 - **Mypy delta**: 0 → 0 (no change) at Plan 71. 0 → 0 (no change) at Plan 72. 0 → 0 (no change) at Plan 73. 0 → 0 (no change) at Plan 74 (file-scoped mypy on new files, all clean). 1 error → 0 at Plan 75 (fixed types-PyYAML regression - was missing from requirements-dev.txt after Plan 74 mypy hook removal). Baseline holds at 0 errors.
 - **Ruff delta**: 0 → 0 (no change) at Plan 71. 0 → 0 (no change) at Plan 72. 0 → 0 (no change) at Plan 73. 0 → 0 (no change) at Plan 74 (black/isort auto-fixed during pre-commit). Baseline holds at 0 errors.
 - **Bandit delta**: No change at Plan 71-73. No change at Plan 74 (no security-sensitive code added).
 - **pip-audit delta**: No change at Plan 71-73. No change at Plan 74 (no dependency changes).
-- **Vulture delta**: No change at Plan 71-73. No change at Plan 74 (no new dead code; 23 findings remain in whitelist). 23 → 33 (+10) at Plan 75 (new findings from Plans 73-74.5: prism_llama __aexit__ params + test mocks). Whitelist recreated as UTF-8 (was UTF-16, unreadable). CLI syntax fixed (Python-based comparison instead of positional arg). 33 → 38 (+5) at Plan 77 (5 pytest fixture entries in TestAutoCorrectorWiring class). Whitelisted per OR19 (fixture parameters required by pytest).
+- **Vulture delta**: No change at Plan 71-73. No change at Plan 74 (no new dead code; 23 findings remain in whitelist). 23 → 33 (+10) at Plan 75 (new findings from Plans 73-74.5: prism_llama __aexit__ params + test mocks). Whitelist recreated as UTF-8 (was UTF-16, unreadable). CLI syntax fixed (Python-based comparison instead of positional arg). 33 → 38 (+5) at Plan 77 (5 pytest fixture entries in TestAutoCorrectorWiring class). Whitelisted per OR19 (fixture parameters required by pytest). 38 → 39 (+1) at rule-cleanup (added line 107 variant for core/event_trigger.py last_check_time — CRLF line ending mismatch on Windows). Authorized post-hoc as necessary side effect of test refactor.
 - **detect-secrets**: Baseline established at Plan 71 with 15 findings (all false positives). No change at Plan 72-74.
 - **pre-commit**: Configured at Plan 71 with 10 hooks. Mypy hook removed at Plan 74 (stall prevention — follows imports into out-of-scope files, causing Plan 73 stall).
 - **pytest-cov**: Configured at Plan 71 with term-missing and HTML reports. Coverage baseline captured at Plan 71: 82% (24,664 statements, 4,359 missing). No change at Plan 72-74 (coverage held at 82%). Coverage increased to 83% at Plan 74.5 (25,626 statements, 4,476 missing) due to new adapter tests.

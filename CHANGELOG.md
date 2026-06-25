@@ -909,3 +909,31 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: All checks passed
 - Coverage: 83% overall
 - Tag: ar18-fix-all verified locally
+
+## 2026-06-25 23:03 — rule-cleanup
+
+**Plan**: AR18 compliance test scope expansion (hardcoded 9-file list → repo-wide walk)
+
+**Changed**:
+- tests/test_ar18_compliance.py: replaced 4 hardcoded file-list test functions with 1 repo-wide walk (mirrors test_di_compliance.py pattern). Test count delta: -3 (4 functions removed, 1 added).
+- vulture-whitelist.txt: added line 107 variant for core/event_trigger.py last_check_time (CRLF line ending mismatch).
+
+**Results**:
+- Tests: 1364 passed, 67 skipped (delta: -3 from ar18-fix-all baseline of 1367 — test function consolidation, no tests lost)
+- Ruff: 0 → 0
+- Coverage: 83% (test_ar18_compliance.py)
+- Tag: rule-cleanup verified on origin
+
+## 2026-06-25 23:03 — rule-cleanup
+
+**Plan**: AR18 compliance test scope expansion (hardcoded 9-file list → repo-wide walk)
+
+**Changed**:
+- tests/test_ar18_compliance.py: replaced 4 hardcoded file-list test functions with 1 repo-wide walk (mirrors test_di_compliance.py pattern). Test count delta: -3 (4 functions removed, 1 added).
+- vulture-whitelist.txt: added line 107 variant for core/event_trigger.py last_check_time (CRLF line ending mismatch).
+
+**Results**:
+- Tests: 1364 passed, 67 skipped (delta: -3 from ar18-fix-all baseline of 1367 — test function consolidation, no tests lost)
+- Ruff: 0 → 0
+- Coverage: 83% (test_ar18_compliance.py)
+- Tag: rule-cleanup verified on origin

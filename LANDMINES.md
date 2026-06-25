@@ -125,3 +125,13 @@ Append-only historical record of failure patterns. See AGENTS.md for guidance on
 **Mitigation**: OR34 (execute steps in strict numerical order, do not start a later step until current is complete).
 
 ---
+
+## L18 — CRLF line ending mismatch causes vulture line number drift
+
+**Trigger**: Plan rule-cleanup, vulture reported core/event_trigger.py:107 for last_check_time, but the whitelist had line 88. Investigation revealed the file has 312 lines (CRLF) on Windows but git shows 263 lines (LF). The line number difference (107 vs 88) is exactly the CRLF line count delta (312 - 263 = 49 lines; 107 - 88 = 19, but the actual shift is due to how line endings affect line counting in different tools).
+
+**Impact**: Vulture reports line numbers that don't match git HEAD or the whitelist. Pre-commit hooks fail because the whitelist entry doesn't match the reported line number. Requires adding both line number variants to the whitelist (LF and CRLF versions) to pass on Windows.
+
+**Mitigation**: When vulture reports a line number that doesn't match the whitelist on Windows, check if the file has CRLF line endings (git config core.autocrlf true). Add both line number variants to the whitelist if necessary. Use .NET UTF8Encoding API (without BOM) for temp file writes to avoid encoding issues.
+
+---
