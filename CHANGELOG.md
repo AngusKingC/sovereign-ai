@@ -871,3 +871,41 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors (baseline held)
 - Mypy: 0 errors (file-scoped on new + edited files)
 - Tag: prompt-77 verified on origin
+
+## 2026-06-25 22:21 — ar18-fix-all
+
+**Plan**: AR18 compliance remediation - fix all bare except:pass violations
+
+**Changed**:
+- memory/postgres.py: Added logging infrastructure and replaced 5 bare except blocks with logger.warning
+- memory/obsidian.py: Added logging infrastructure and replaced 6 bare except blocks with logger.warning
+- core/notification.py: Added logging infrastructure and replaced 3 bare except blocks with logger.warning
+- workers/echo_worker.py: Added logging infrastructure and replaced 3 bare except blocks with logger.warning
+- cli/setup_wizard.py: Added logging infrastructure and replaced 3 bare except blocks with logger.warning
+- core/adapter_fallback.py: Added logging infrastructure and replaced 5 bare except blocks with logger.warning
+- core/a2a_protocol.py: Added logging infrastructure and replaced 4 bare except blocks with logger.warning
+- core/instruction_versioning.py: Added logging infrastructure and replaced 4 bare except blocks with logger.warning
+- core/rating_system.py: Added logging infrastructure and replaced 3 bare except blocks with logger.warning
+- core/event_trigger.py: Added logging infrastructure and replaced 2 bare except blocks with logger.warning
+- core/orchestrator_improvement.py: Added logging infrastructure and replaced 3 bare except blocks with logger.warning
+- core/scratchpad.py: Added logging infrastructure and replaced 3 bare except blocks with logger.warning
+- core/approval_trust.py: Added logging infrastructure and replaced 4 bare except blocks with logger.warning
+- core/embedder.py: Added logging infrastructure and replaced 1 bare except block with logger.warning
+- core/evaluator.py: Added logging infrastructure and replaced 1 bare except block with logger.warning
+- core/instruction_generator.py: Added logging infrastructure and replaced 1 bare except block with logger.warning
+- core/skill_registry.py: Added logging infrastructure and replaced 1 bare except block with logger.warning
+- core/trace_optimiser.py: Added logging infrastructure and replaced 1 bare except block with logger.warning
+- core/voice_interface.py: Added logging infrastructure and replaced 1 bare except block with logger.warning
+- core/worker_factory.py: Added logging infrastructure and replaced 5 bare except blocks with logger.warning
+- workers/ollama_worker.py: Added logging infrastructure and replaced 6 bare except blocks with logger.warning
+- core/retention.py: Added logging infrastructure and replaced 5 bare except blocks with logger.warning
+- core/orchestrator.py: Added logging infrastructure and replaced 2 bare except blocks with logger.warning
+- core/auth.py: Added logging infrastructure and replaced 4 bare except blocks with logger.warning
+- vulture-whitelist.txt: Updated with corrected line numbers and new findings
+- .secrets.baseline: Updated baseline
+
+**Results**:
+- Tests: 1367 passed, 67 skipped, 5 warnings
+- Ruff: All checks passed
+- Coverage: 83% overall
+- Tag: ar18-fix-all verified locally
