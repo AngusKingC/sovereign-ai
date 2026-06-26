@@ -155,6 +155,29 @@ If this plan hit a new failure pattern not covered by existing landmines, append
 
 If no new failure patterns were encountered, skip this step. Silence is acceptable here (unlike C9 — landmines are only added when patterns actually emerge).
 
+## Step 11.5: Decade boundary plan file cleanup (OR38 enforcement — NEW)
+
+Check if the current tag is a decade boundary (prompt-{N}0 where N > 0, e.g., prompt-80, prompt-90, prompt-100). If yes, delete the previous decade's plan files from `Prompts/` directory per OR38.
+
+```powershell
+# Check if this is a decade boundary (prompt-{N}0)
+$currentTag = "prompt-{N}"
+if ($currentTag -match "prompt-(\d+)0") {
+    $decade = [int]$matches[1] - 10
+    $pattern = "plan-${decade}*"
+    Write-Host "Decade boundary detected: $currentTag"
+    Write-Host "Deleting previous decade plan files: $pattern"
+    Get-ChildItem -Path "Prompts" -Filter $pattern | ForEach-Object {
+        Write-Host "  Deleting: $($_.Name)"
+        Remove-Item $_.FullName -Force
+    }
+} else {
+    Write-Host "Not a decade boundary: $currentTag — skipping plan file cleanup"
+}
+```
+
+If files were deleted, they will be included in the C13 docs commit. This automated enforcement prevents the human error factor (plan-90 didn't include the deletion step, so 80s files weren't deleted).
+
 ## Step 12: Create execution log file (NEW — auto-create for user paste)
 
 Create the execution log file at `logs/execution-log-prompt-{N}.md` (repo root `logs/` directory). This file is created with a header template only — the user will paste the actual Devin execution log content in Step C12.5 before the docs commit.
