@@ -1101,3 +1101,28 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: N/A (no Python files touched)
 - Coverage: 83% (unchanged)
 - Tag: prompt-84 verified locally
+
+## 2026-06-26 20:43 — prompt-85
+
+**Plan**: 5-Plan Milestone Scan and Fix
+
+**Changed**:
+- core/a2a_protocol.py: Fixed mypy shadowing error (renamed inner exception variable e to trace_e)
+- core/multi_worker.py: Removed stale reference to non-existent core.resource_manager module (removed import, parameter, and VRAM management code)
+- tests/test_multi_worker.py: Updated test fixtures to remove resource_manager parameter and assertions
+- PLANS.md: Fixed Plan 81 test count inconsistency (9 → 7 tests), fixed queue duplication (Terminal moved from Plan 85 to Plan 86, scan moved to Plan 90), updated test baseline to include Playwright E2E (8 passed), updated Last updated line
+- .windsurf/workflows/jarvis-open.md: Fixed pre-commit --check flag error (replaced with Test-Path .git/hooks/pre-commit)
+
+**Results**:
+- Tests: 1418 passed, 67 skipped
+- Ruff: 0 errors on touched files
+- Mypy: 0 errors (fixed 1 shadowing error)
+- Bandit: 3568 low, 5 medium, 0 high (baseline)
+- pip-audit: 20 CVEs (baseline)
+- Vulture: 40 findings (baseline)
+- detect-secrets: 0 new
+- Vitest: 46 passed
+- Playwright E2E: 8 passed (first execution)
+- TypeScript: 0 errors
+- Coverage: 83% (baseline held)
+- Tag: prompt-85 verified locally

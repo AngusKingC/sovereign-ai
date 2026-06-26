@@ -1,6 +1,6 @@
 # PLANS.md — Sovereign AI Project State
 
-**Last updated**: Post-Plan rule-cleanup (2026-06-25)
+**Last updated**: Post-Plan 85 scan (2026-06-26)
 
 This document tracks the dynamic state of the Sovereign AI project: baselines, completed prompts, and the next-5-prompt queue. It is the canonical source for test counts, static analysis baselines, and which prompt is currently active.
 
@@ -30,14 +30,17 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **Plan 84**: Test baseline updated with Vitest tests (first baseline). Python tests held at 1418 passed, 67 skipped. Vitest: 46 tests passed (18 stores + 7 hooks + 6 components + 5 shell + 10 existing). Playwright E2E: 8 tests created (4 shell + 2 SSE + 2 CORS) - deferred execution to Plan 86 scan (requires running servers). No Python files touched, so ruff/mypy/bandit/pip-audit not applicable. Vulture baseline held at 40 findings. Coverage held at 83% (baseline held).
 
+**Plan 85**: Vulture baseline updated from 41 to 40 findings (delta -1). Cause: Reconciliation of discrepancy between static analysis table (41 from Plan 79) and reconciliation notes (40 from Plans 82-84). Actual count verified at Plan 85 scan is 40. All findings whitelisted per OR19. Mypy baseline held at 0 errors (fixed 1 shadowing error in core/a2a_protocol.py:191).
+
 ---
 
 ## Test Baseline
 
-**Current baseline**: **1418 Python tests collected (1418 passed, 67 skipped) + 46 Vitest tests passed**
-**Verified**: Plan 84, Step C1 (full test suite)
+**Current baseline**: **1418 Python tests collected (1418 passed, 67 skipped) + 46 Vitest tests passed + 8 Playwright E2E tests passed**
+**Verified**: Plan 85, Step S8 (full test suite)
 **Tolerance**: ±5 tests for Python (variance acceptable due to parameterized fixtures and environment variation)
 **Vitest baseline**: 46 tests passed (first baseline established Plan 84)
+**Playwright E2E baseline**: 8 tests passed (first baseline established Plan 85)
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
 ---
@@ -53,7 +56,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | **Mypy (full-repo)** | 0 errors | Plan 67 S6 | Delta: -294 from Plan 60 baseline (294 → 0). Full remediation of adapters, CLI, memory, workers, skills, tests, scripts (181 source files). |
 | **Bandit** | 3,384 low, 1 medium, 0 high | Plan 70 S4 | Delta: +205 low, +1 medium from Plan 60 baseline. New B608 finding in memory/postgres_trace_store.py:161 (false positive - asyncpg parameterized query). |
 | **pip-audit** | 19 CVEs across 4 packages | Plan 70 S5 | Stable across Plans 56-70. No actionable fixes (upstream only). |
-| **Vulture** | 41 high-confidence findings | Plan 79 C2.7 | Delta: 0 from Plan 78 baseline (41 → 41). Added 4 test_security.py req entries, 3 test_task_state_machine.py raw_output entries, 3 test_worker_circuit_breaker.py raw_output entries (test fixture parameters per OR19). All whitelisted. |
+| **Vulture** | 40 high-confidence findings | Plan 85 S2 | Delta: -1 from Plan 79 baseline (41 → 40). Reconciliation: Plans 82-84 reconciliation notes documented 40 findings, but static analysis table still showed 41 from Plan 79. Actual count verified at Plan 85 scan is 40. All findings whitelisted per OR19 (fixture parameters required by pytest/middleware). |
 | **detect-secrets** | 15 findings (baseline) | Plan 71 S9 | Baseline established with .secrets.baseline. All findings are false positives (test fixtures, doc examples). |
 | **pre-commit** | Configured | Plan 74 S2 | Hooks installed: trailing-whitespace, end-of-file-fixer, check-yaml, check-json, check-toml, black, ruff, isort, detect-secrets. Mypy hook removed (stall prevention — follows imports into out-of-scope files). |
 | **pytest-cov** | Configured | Plan 71 S11 | Coverage reports: term-missing + HTML. No fail threshold (baseline: 1% coverage). |
@@ -104,21 +107,22 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 78 | Worker Circuit Breaker | 1386 | WorkerCircuitBreaker class (core/worker_circuit_breaker.py) with failure tracking and auto-reset. Integrated into Orchestrator with degraded mode (task queuing when too many workers fail). Added QUEUED to TaskStatus enum. Updated TaskStateMachine transitions. Comprehensive tests (test_worker_circuit_breaker.py). Coverage: 83% (baseline held). |
 | 79 | Model Routing / Tiered Selection | 1405 | ModelTierRouter class (core/model_tier_router.py) for task complexity classification and model routing. Integrated into Orchestrator with cost fallback hook + pre-execution routing. Wired into CLI (serve.py, tui.py). 19 new tests (test_model_tier_router.py). Coverage: 83% (baseline held). |
 | 80 | Sovereign AI UI Shell | 1411 | Next.js 15 frontend with TypeScript, Tailwind v4, Zustand stores, shell components, useSSE hook, API client, ToolInspector panel. FastAPI backend stubs with mocked data, auth middleware, SSE endpoints. 6 new backend tests. Coverage: 83% (baseline held). |
-| 81 | Backend Unification + API Endpoints | 1418 | Merged backend/main.py into web/server.py (eliminated two-server architecture). Added CORS middleware, cookie-based auth for SSE. Added 15 new API endpoints (costs, circuit-breaker, approvals, memory, skills, system stats, SSE streams, PTY WebSocket). Added orchestrator getter methods (get_task, list_workers_with_status, get_session_timeline). Added API response models to core/schemas.py. Created src/lib/api.ts with comprehensive TypeScript client. Updated src/next.config.ts with rewrites. Created src/.env.example. 9 new backend tests. Coverage: 83% (baseline held). |
+| 81 | Backend Unification + API Endpoints | 1418 | Merged backend/main.py into web/server.py (eliminated two-server architecture). Added CORS middleware, cookie-based auth for SSE. Added 15 new API endpoints (costs, circuit-breaker, approvals, memory, skills, system stats, SSE streams, PTY WebSocket). Added orchestrator getter methods (get_task, list_workers_with_status, get_session_timeline). Added API response models to core/schemas.py. Created src/lib/api.ts with comprehensive TypeScript client. Updated src/next.config.ts with rewrites. Created src/.env.example. 7 new backend tests. Coverage: 83% (baseline held). |
 | 82 | Frontend State + Shell Layout | 1418 | Created 6 Zustand stores (task, worker, cost, approval, memory, uiStore with VIEWS/DRAWERS enums). Created 6 data-fetching hooks (usePolling with visibility detection + 5 specific polling hooks). Created useKeyboardShortcuts hook (view shortcuts t/w/a/c, drawer shortcut m, Escape closes drawer only). Updated globals.css with CSS tokens + CSS Grid shell styles + drawer overlay styles. Updated layout.tsx to Server Component with metadata export, delegated shell rendering to ShellClient. Created ShellClient client component with keyboard shortcuts, CSS Grid shell, drawer overlays at shell level. Created MainPane, MemoryDrawer, SettingsDrawer placeholder components. Updated StatusBar (removed deferred labels, added data-testid, wired settings button to openDrawer). Updated Sidebar (7 nav items using VIEWS enum, 2 drawer buttons, active indicator with amber border, data-testid). Updated BottomBar (activation grid placeholder with canvas 32×16, useEffect with cancelAnimationFrame cleanup, data-testid). Updated memoryStore tests to match new array-based API. Updated page.tsx (removed setActivation usage, commented out SSE memory handling). Coverage: 83% (baseline held). |
 | 83 | Operational Panels + Drawers | 1418 | Created 9 panel components: TasksPanel (active/completed/failed sections), WorkersPanel (registry + circuit status), ApprovalQueuePanel (pending + respond actions), CostDashboardPanel (progress bars + breakdown), MemoryDrawer (full implementation with search/sort/export/import), SettingsDrawer (4 tabs with mocked fields), SkillsPanel (skill registry), HelpPanel (static shortcuts), TerminalPlaceholder. Updated page.tsx with polling hooks and view routing using VIEWS constants. StatusBar already wired to settings gear (Plan 82). Coverage: 83% (baseline held). |
 | 84 | Test Suite + Playwright E2E | 1418 + 46 Vitest | Added 17 new store tests (taskStore, workerStore, costStore, approvalStore, memoryStore, uiStore). Created hooks.test.ts with 7 hook tests (usePolling, useStatusPolling, useKeyboardShortcuts, useMemoryPolling). Created components.test.tsx with 6 component tests (TasksPanel, WorkersPanel, ApprovalQueuePanel, CostDashboardPanel, MemoryDrawer, SettingsDrawer). Added 5 shell tests (Sidebar, StatusBar, BottomBar, RightPanel). Added EventSource mock to vitest.setup.ts. Excluded e2e directory from vitest.config.ts. Added @playwright/test and concurrently to package.json, created e2e:serve script. Created playwright.config.ts with cross-platform webServer. Created 8 Playwright E2E tests (shell.spec.ts: 4, sse.spec.ts: 2, cors.spec.ts: 2). First Vitest baseline: 46 tests passed. Playwright E2E deferred to Plan 86 scan. Coverage: 83% (baseline held). |
+| 85 | 5-Plan Milestone Scan and Fix | 1418 + 46 Vitest + 8 Playwright | Fixed mypy shadowing error in core/a2a_protocol.py:191 (renamed inner exception variable). Reconciled vulture baseline from 41 to 40 findings (discrepancy between static analysis table and reconciliation notes). Fixed Plan 81 test count inconsistency (9 → 7 tests). Ran Playwright E2E tests (8 passed). Fixed PLANS.md queue duplication (Terminal moved from Plan 85 to Plan 86, scan moved to Plan 90). Fixed pre-commit --check flag error in jarvis-open workflow (replaced with Test-Path). Full static analysis scan: Ruff 0 errors, Mypy 0 errors, Bandit 3568 low/5 medium/0 high, pip-audit 20 CVEs (baseline), Vulture 40 findings, detect-secrets 0 new. Full test suite: 1418 Python passed, 46 Vitest passed, 8 Playwright passed, TypeScript 0 errors, Coverage 83%. Coverage: 83% (baseline held). |
 
 ---
 
 ## Next 5 Prompts Queue (Updated for 4-Plan Batches + Scan Prompts)
 
-**New structure**: 4-plan batches with scan prompts every 5 plans. Plan 85 is now code production. Scan moved to Plan 86.
+**New structure**: 4-plan batches with scan prompts every 5 plans. Plan 85 is a scan prompt (Batch 1 completion). Scan moved to Plan 90.
 
-### Batch 1: Plans 85–88 (JArvis UI Shell — Code Production)
+### Batch 1: Plans 86–89 (JArvis UI Shell — Code Production)
 
-#### Plan 85 — JArvis UI: Terminal xterm.js + System Panels + Subagent UI (Priority 1)
-**Depends on**: `prompt-84` | **Tag**: `prompt-85`
+#### Plan 86 — JArvis UI: Terminal xterm.js + System Panels + Subagent UI (Priority 1)
+**Depends on**: `prompt-85` | **Tag**: `prompt-86`
 **Scope**: xterm.js WebSocket PTY integration. LogViewer, SystemStats, SubagentPanel. Replaces terminal placeholder from Plan 83.
 **What to do**:
 1. Install xterm.js and xterm-addon-fit packages
@@ -132,24 +136,6 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 9. Add Playwright E2E tests for terminal interaction
 **STOP condition**: If PTY WebSocket fails to connect, STOP and report.
 
-### Scan Prompt: Plan 86 — 5-Plan Milestone Scan (Mandatory)
-**Depends on**: `prompt-85` | **Tag**: `prompt-86`
-**Scope**: Whole-repo scan after Batch 1 completes. No new features. Fixes only. Verify all 4 plans have CHANGELOG entries and tags. Update baselines (Vitest + Playwright first baselines).
-**What to scan**:
-1. Full pytest suite (expected: 1418+ passed)
-2. ruff check . (expected: 0)
-3. mypy core/ system/ (expected: 0)
-4. bandit, pip-audit, vulture
-5. cd src && npm test (Vitest baseline)
-6. cd src && npx playwright test (E2E baseline - first execution)
-7. Coverage ≥78% (83% baseline -5% tolerance)
-8. LANDMINES.md: any landmine without AR/OR rule → propose via C9
-9. CHANGELOG.md: verify Plans 82–85 have entries
-10. PLANS.md: baselines current, queue reflects actual state
-**STOP condition**: If scan reveals structural problem requiring design decisions, STOP and report.
-
-### Batch 2: Plans 87–90 (PEMADS + Terminal + System)
-
 #### Plan 87 — PEMADS Phase 2: Expert Panel Manager + VRAM Hot-Swap (Priority 1)
 **Depends on**: `prompt-86` | **Tag**: `prompt-87`
 **Scope**: Backend PEMADS: ExpertPanelManager (manages expert worker pool for debates), VRAMManager (tracks VRAM usage, swap in/out models). Integrates with WorkerCircuitBreaker and ModelTierRouter.
@@ -162,25 +148,25 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 **Depends on**: `prompt-88` | **Tag**: `prompt-89`
 **Scope**: MultiChannelApprovalGate (Web UI / Telegram / Email channels). Frontend: Always Approve, batch actions, expiry countdown, channel indicator, toast notifications.
 
-#### Plan 90 — Terminal xterm.js + System Panels + Subagent UI (Priority 1)
+### Scan Prompt: Plan 90 — 5-Plan Milestone Scan (Mandatory)
 **Depends on**: `prompt-89` | **Tag**: `prompt-90`
-**Scope**: xterm.js WebSocket PTY integration. LogViewer, SystemStats, SubagentPanel. Replaces terminal placeholder from Plan 83.
-
-### Scan Prompt: Plan 91 — 5-Plan Milestone Scan (Mandatory)
-**Depends on**: `prompt-90` | **Tag**: `prompt-91`
-**Scope**: Whole-repo scan after Batch 2 completes. No new features. Fixes only. Verify all 4 plans have CHANGELOG entries and tags. Update baselines.
+**Scope**: Whole-repo scan after Batch 1 completes. No new features. Fixes only. Verify all 4 plans have CHANGELOG entries and tags. Update baselines (Vitest + Playwright first baselines).
 **What to scan**:
-1. Full pytest suite
-2. ruff check .
-3. mypy core/ system/
+1. Full pytest suite (expected: 1418+ passed)
+2. ruff check . (expected: 0)
+3. mypy core/ system/ (expected: 0)
 4. bandit, pip-audit, vulture
-5. cd src && npm test (Vitest)
-6. cd src && npx playwright test (E2E)
-7. Coverage ≥78%
+5. cd src && npm test (Vitest baseline)
+6. cd src && npx playwright test (E2E baseline - first execution)
+7. Coverage ≥78% (83% baseline -5% tolerance)
 8. LANDMINES.md: any landmine without AR/OR rule → propose via C9
-9. CHANGELOG.md: verify Plans 87–90 have entries
+9. CHANGELOG.md: verify Plans 86–89 have entries
 10. PLANS.md: baselines current, queue reflects actual state
 **STOP condition**: If scan reveals structural problem requiring design decisions, STOP and report.
+
+### Batch 2: Plans 91–94 (PEMADS + System)
+
+#### Plan 91 — Open Slot (Priority TBD)
 
 ### Batch 3: Plans 92–95 (Open Slot)
 
