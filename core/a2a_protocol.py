@@ -181,8 +181,8 @@ class A2ARouter:
                     duration_ms=0,
                 )
                 await self._emitter.emit(event)
-            except Exception as e:
-                logger.warning("Trace emission failed: %s", e)
+            except Exception as trace_e:
+                logger.warning("Trace emission failed: %s", trace_e)
 
             # Return failed response
             return A2AResponse(
