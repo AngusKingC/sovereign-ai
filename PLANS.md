@@ -18,12 +18,14 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **Plan 79**: Test baseline updated from 1386 to 1405 tests collected (delta +19). Cause: 19 new tests in test_model_tier_router.py (classification heuristics, routing logic, cost fallback integration). All new tests are in-scope for Plan 79. Vulture baseline updated from 41 to 41 findings (delta 0). Cause: 4 new test_security.py req entries, 3 new test_task_state_machine.py raw_output entries, 3 new test_worker_circuit_breaker.py raw_output entries (test fixture parameters per OR19). All whitelisted. Coverage held at 83% (baseline held).
 
+**Plan 80**: Test baseline updated from 1405 to 1411 tests collected (delta +6). Cause: 6 new backend tests in test_ui_backend.py (FastAPI stubs: health, auth, status, memory, subagents). All new tests are in-scope for Plan 80. Vulture baseline updated from 41 to 41 findings (delta 0). No new vulture findings (backend/ and tests/ excluded from vulture scan). Coverage held at 83% (baseline held).
+
 ---
 
 ## Test Baseline
 
-**Current baseline**: **1405 tests collected (1405 passed, 67 skipped)**
-**Verified**: Plan 79, Step C1 (full test suite)
+**Current baseline**: **1411 tests collected (1411 passed, 67 skipped)**
+**Verified**: Plan 80, Step C1 (full test suite)
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -90,24 +92,13 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | governance-patch-04 | OR38 clarification + OR39 (plan file retention) + L20 | 1364 | Revised OR38 catch-up clause (N-2 formula). Added OR39 (plan files must be committed in C12). Appended L20. Updated jarvis-close.md C12. Named plan — does not consume prompt-78. |
 | 78 | Worker Circuit Breaker | 1386 | WorkerCircuitBreaker class (core/worker_circuit_breaker.py) with failure tracking and auto-reset. Integrated into Orchestrator with degraded mode (task queuing when too many workers fail). Added QUEUED to TaskStatus enum. Updated TaskStateMachine transitions. Comprehensive tests (test_worker_circuit_breaker.py). Coverage: 83% (baseline held). |
 | 79 | Model Routing / Tiered Selection | 1405 | ModelTierRouter class (core/model_tier_router.py) for task complexity classification and model routing. Integrated into Orchestrator with cost fallback hook + pre-execution routing. Wired into CLI (serve.py, tui.py). 19 new tests (test_model_tier_router.py). Coverage: 83% (baseline held). |
+| 80 | Sovereign AI UI Shell | 1411 | Next.js 15 frontend with TypeScript, Tailwind v4, Zustand stores, shell components, useSSE hook, API client, ToolInspector panel. FastAPI backend stubs with mocked data, auth middleware, SSE endpoints. 6 new backend tests. Coverage: 83% (baseline held). |
 
 ---
 
 ## Next 5 Prompts Queue
 
-### Plan 80 — Sovereign AI UI Shell (Priority 1 — user-directed)
-
-**Scope**: Next.js 15 + FastAPI shell layout with placeholder panels, backend stubs serving mocked data, wiring for live (mocked) data end-to-end. Defers xterm.js/PTY terminal, memory drawer, subagent panel, and full panel implementations to follow-on plans.
-
-**Expected impact**: Web UI foundation for Sovereign AI. First web UI plan — introduces Next.js, TypeScript, Zustand, shadcn/ui to the project.
-
-**Baseline changes**: Introduces Vitest test suite (frontend) alongside existing pytest (backend). ~15 new tests total (~5 Vitest + ~10 pytest).
-
-**Gate**: Full pytest suite pass (1405 baseline held), Vitest suite pass, ruff 0, mypy 0 (backend only), TypeScript strict compile pass, ESLint pass.
-
----
-
-### Plan 81 — 5-Plan Milestone Full Scan (Priority 1 — mandatory, deferred from Plan 80)
+### Plan 81 — 5-Plan Milestone Full Scan (Priority 1 — mandatory)
 
 **Scope**: Full 6-tool checkpoint scan (pytest, ruff, mypy, bandit, pip-audit, vulture) + coverage verification + NEW Vitest baseline verification. Baseline reconciliation after Plans 76-80. Validates PEMADS Phase 1 + 3 Kimi gaps + UI shell foundation before Phase 2 begins.
 
@@ -131,7 +122,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
-### Plan 82 — Multi-Channel Approval Gates (Priority 1 — Kimi Critical #5)
+### Plan 83 — Multi-Channel Approval Gates (Priority 1 — Kimi Critical #5)
 
 **Scope**: Extend ApprovalGate to support multi-channel approvals (Telegram, email, web UI). Required before AutoCorrector can autonomously apply code changes (Plan 77 deferred: code_change proposal type). Also required for PEMADS Phase 3 autonomous implementation gate.
 
@@ -143,9 +134,9 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
-### Plan 83 — PEMADS Phase 3: Judge + Implementation Gate (Priority 1 — Kimi Critical #6)
+### Plan 84 — PEMADS Phase 3: Judge + Implementation Gate (Priority 1 — Kimi Critical #6)
 
-**Scope**: PEMADSJudge (evaluates debate quality, decides implementation), implementation gate (requires Plan 82 multi-channel approvals). Autonomous decisions with quality threshold enforcement.
+**Scope**: PEMADSJudge (evaluates debate quality, decides implementation), implementation gate (requires Plan 83 multi-channel approvals). Autonomous decisions with quality threshold enforcement.
 
 **Expected impact**: PEMADS full autonomy. End-to-end self-improvement loop.
 
@@ -155,9 +146,9 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
-### Plan 84 — PEMADS Phase 4: Pruned Expert Model Generation (Priority 2 — Kimi High)
+### Plan 85 — PEMADS Phase 4: Pruned Expert Model Generation (Priority 2 — Kimi High)
 
-**Scope**: PrunedExpertGenerator (creates task-specialized models by pruning base models on debate history). Requires Plan 83 judge quality data.
+**Scope**: PrunedExpertGenerator (creates task-specialized models by pruning base models on debate history). Requires Plan 84 judge quality data.
 
 **Expected impact**: Specialized models for task types. Performance optimization.
 

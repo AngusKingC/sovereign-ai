@@ -993,3 +993,20 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors (fixed ModelChoice unused import, worker_factory unused variable)
 - Coverage: core 83%, system 83%, memory 83%, adapters 83%, skills 83%
 - Tag: prompt-79 verified on origin
+
+## 2026-06-26 13:09 — prompt-80
+
+**Plan**: Sovereign AI UI Shell — Next.js 15 + FastAPI
+
+**Changed**:
+- src/: Next.js 15 frontend with TypeScript, Tailwind v4, Zustand stores, shell components, useSSE hook, API client, ToolInspector panel
+- backend/: FastAPI stubs with mocked data, auth middleware, SSE endpoints
+- tests/test_ui_backend.py: pytest tests for backend API
+- DECISIONS.md: architectural decisions documentation
+- README.md: project documentation
+
+**Results**:
+- Tests: 1411 passed, 67 skipped
+- Ruff: All checks passed
+- Coverage: core 83%, system 83%, memory 83%, adapters 83%, skills 83%
+- Tag: prompt-80 verified locally
