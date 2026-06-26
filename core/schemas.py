@@ -150,6 +150,9 @@ class Task(BaseModel):
     )
     created_at: datetime
     validation_failures: int = Field(default=0, ge=0)
+    metadata: Optional[dict[str, Any]] = Field(
+        default=None, description="Additional metadata for the task"
+    )
 
     @field_validator("complexity_score")
     @classmethod

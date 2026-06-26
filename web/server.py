@@ -423,6 +423,37 @@ def create_app(
             logger.warning(f"respond_approval failed: {e}")
             return {"status": "not_found", "id": approval_id}
 
+    # GET /api/vram/status — auth required
+    @app.get("/api/vram/status")
+    async def vram_status():
+        """Return VRAM status for PEMADS debates."""
+        try:
+            if hasattr(orchestrator, "vram_manager") and orchestrator.vram_manager:
+                return await orchestrator.vram_manager.get_vram_status()
+            # Fallback
+            return {"loaded_models": [], "debate_loaded": [], "loaded_count": 0}
+        except Exception as e:
+            logger.warning(f"vram_status failed: {e}")
+            return {"loaded_models": [], "debate_loaded": [], "loaded_count": 0}
+
+    # GET /api/debates/{debate_id} — auth required
+    @app.get("/api/debates/{debate_id}")
+    async def get_debate(debate_id: str):
+        """Return debate history from DebatePool."""
+        try:
+            if (
+                hasattr(orchestrator, "expert_panel_manager")
+                and orchestrator.expert_panel_manager
+            ):
+                if hasattr(orchestrator, "debate_pool") and orchestrator.debate_pool:
+                    history = orchestrator.debate_pool.get_debate_history(debate_id)
+                    return {"debate_id": debate_id, "history": history}
+                return {"error": "DebatePool not configured"}, 404
+            return {"error": "PEMADS not configured"}, 404
+        except Exception as e:
+            logger.warning(f"get_debate failed: {e}")
+            return {"error": str(e)}, 500
+
     # GET /api/memory/slots — auth required
     @app.get("/api/memory/slots")
     async def get_memory_slots():
@@ -606,35 +637,175 @@ def create_app(
             logger.warning(f"WebSocket handler error: {e}")
             pass
 
-    # WebSocket /api/pty — auth required via ?token=<value> query param
-    @app.websocket("/api/pty")
+    # WebSocket /ws/pty — auth required via ?token=<value> query param
+    @app.websocket("/ws/pty")
     async def pty_websocket(websocket: WebSocket):
-        """Bidirectional PTY stream for xterm.js (DEFERRED — stub only)."""
+        """WebSocket PTY endpoint for terminal access.
+
+        Auth: token query param (same as existing /ws endpoint).
+        Spawns a pseudo-terminal, streams output, receives input.
+
+        Rev2 H1 fix: All blocking syscalls (select, os.read, os.write) run in
+        executor to avoid freezing the asyncio event loop.
+        Rev2 H2 fix: Platform-specific imports inside guards. Windows uses
+        pywinpty if available, otherwise returns 501.
+        """
+        import sys
+
+        token = websocket.query_params.get("token")
+        if not token or not await auth_manager.validate_token(token):
+            await websocket.close(code=4001, reason="Unauthorized")
+            return
+
+        # Rev2 H2 fix — platform-specific imports inside guard
+        if sys.platform == "win32":
+            try:
+                import winpty  # type: ignore
+            except ImportError:
+                logger.warning(
+                    "pywinpty not installed — PTY endpoint unavailable on Windows"
+                )
+                await websocket.close(
+                    code=4002,
+                    reason="PTY unavailable on Windows (pywinpty not installed)",
+                )
+                return
+            # Windows implementation using winpty (similar pattern, different API)
+            await _windows_pty_websocket(websocket, winpty, _emitter)
+            return
+
+        # Unix implementation
+        try:
+            import os
+            import pty
+            import select
+            import signal
+        except ImportError:
+            await websocket.close(code=4003, reason="PTY unavailable on this platform")
+            return
+
         await websocket.accept()
 
-        # Extract token from query param
-        token = websocket.query_params.get("token")
+        loop = asyncio.get_event_loop()
+        master, slave = pty.openpty()
+        pid = os.fork()
 
-        # Validate token
-        if not token:
-            await websocket.close(code=1008)
-            return
+        if pid == 0:
+            # Child process — becomes the shell
+            os.setsid()
+            os.dup2(slave, 0)
+            os.dup2(slave, 1)
+            os.dup2(slave, 2)
+            os.close(master)
+            os.close(slave)
+            os.execvp("bash", ["bash"])
+        else:
+            # Parent process — relay I/O via executor (Rev2 H1 fix)
+            os.close(slave)
 
-        is_valid = await auth_manager.validate_token(token)
-        if not is_valid:
-            await websocket.close(code=1008)
-            return
+            async def read_pty_output():
+                """Read from PTY master, send to WebSocket. Runs blocking read in executor."""
+                try:
+                    while True:
+                        # Rev2 H1 fix — run blocking select in executor
+                        readable, _, _ = await loop.run_in_executor(
+                            None, lambda: select.select([master], [], [], 0.1)
+                        )
+                        if master in readable:
+                            # Rev2 H1 fix — run blocking os.read in executor
+                            data = await loop.run_in_executor(
+                                None, lambda: os.read(master, 4096)
+                            )
+                            if not data:
+                                break  # PTY closed
+                            await websocket.send_text(
+                                data.decode("utf-8", errors="replace")
+                            )
+                except Exception as e:
+                    logger.warning(f"PTY read error: {e}")
 
-        try:
-            while True:
-                data = await websocket.receive_text()
-                await websocket.send_text(f"[PTY stub] received: {data}")
-        except WebSocketDisconnect:
-            logger.info("PTY WebSocket disconnected")
-        except Exception as e:
-            logger.warning("PTY WebSocket error: %s", e)
+            async def read_websocket_input():
+                """Read from WebSocket, write to PTY master."""
+                try:
+                    while True:
+                        message = await websocket.receive_text()
+                        # Rev2 H1 fix — run blocking os.write in executor
+                        await loop.run_in_executor(
+                            None, lambda: os.write(master, message.encode())
+                        )
+                except Exception as e:
+                    logger.warning(f"WebSocket read error: {e}")
+
+            try:
+                # Run reader and writer concurrently, cancel both when either finishes
+                reader_task = asyncio.create_task(read_pty_output())
+                writer_task = asyncio.create_task(read_websocket_input())
+
+                done, pending = await asyncio.wait(
+                    [reader_task, writer_task], return_when=asyncio.FIRST_COMPLETED
+                )
+                for task in pending:
+                    task.cancel()
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass
+            finally:
+                os.close(master)
+                try:
+                    os.kill(pid, signal.SIGTERM)
+                    await asyncio.sleep(0.1)  # Give process time to exit
+                    os.kill(pid, signal.SIGKILL)  # Force kill if still alive
+                except ProcessLookupError:
+                    pass  # Already dead
+                os.waitpid(pid, 0)
 
     # Mount static files
     app.mount("/static", StaticFiles(directory="web/static"), name="static")
 
     return app
+
+
+async def _windows_pty_websocket(websocket, winpty_module, emitter):
+    """Windows PTY implementation using pywinpty. Separate function for clarity."""
+    await websocket.accept()
+    loop = asyncio.get_event_loop()
+
+    # Create winpty PTY process
+    pty_proc = winpty_module.PTY()
+    pty_proc.spawn("cmd.exe")  # or powershell.exe
+
+    async def read_pty_output():
+        try:
+            while True:
+                # winpty read is blocking — run in executor
+                data = await loop.run_in_executor(None, lambda: pty_proc.read(4096))
+                if data:
+                    await websocket.send_text(data)
+        except Exception as e:
+            logger.warning(f"Windows PTY read error: {e}")
+
+    async def read_websocket_input():
+        try:
+            while True:
+                message = await websocket.receive_text()
+                # winpty write is blocking — run in executor
+                await loop.run_in_executor(None, lambda: pty_proc.write(message))
+        except Exception as e:
+            logger.warning(f"Windows WebSocket read error: {e}")
+
+    try:
+        reader_task = asyncio.create_task(read_pty_output())
+        writer_task = asyncio.create_task(read_websocket_input())
+
+        done, pending = await asyncio.wait(
+            [reader_task, writer_task], return_when=asyncio.FIRST_COMPLETED
+        )
+        for task in pending:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+    finally:
+        pty_proc.close()

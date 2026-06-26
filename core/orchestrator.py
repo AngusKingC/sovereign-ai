@@ -33,12 +33,15 @@ if TYPE_CHECKING:
     from core.cost_tracker import CostTracker
     from core.escalation import EscalationEngine
     from core.evaluator import OutputEvaluator
+    from core.expert_panel_manager import ExpertPanelManager
     from core.memory_router import MemoryRouter
     from core.model_tier_router import ModelTierRouter
     from core.orchestrator_improvement import OrchestratorImprovementLoop
     from core.trace_optimiser import TraceOptimiser
+    from core.vram_manager import VRAMManager
     from core.worker_base import WorkerBase
     from core.worker_circuit_breaker import WorkerCircuitBreaker
+    from memory.debate_pool import DebatePool
     from orchestrator.improvement_loop import ImprovementLoopOrchestrator
 
 
@@ -62,6 +65,9 @@ class Orchestrator:
         worker_circuit_breaker: "WorkerCircuitBreaker | None" = None,
         degraded_mode_threshold: float = 0.5,
         model_tier_router: "ModelTierRouter | None" = None,
+        expert_panel_manager: "ExpertPanelManager | None" = None,
+        vram_manager: "VRAMManager | None" = None,
+        debate_pool: "DebatePool | None" = None,
     ) -> None:
         """Initialize the orchestrator with dependencies.
 
@@ -99,6 +105,9 @@ class Orchestrator:
         self.worker_circuit_breaker = worker_circuit_breaker
         self.degraded_mode_threshold = degraded_mode_threshold
         self.model_tier_router = model_tier_router
+        self.expert_panel_manager = expert_panel_manager
+        self.vram_manager = vram_manager
+        self.debate_pool = debate_pool
         # Issue #2 fix: type annotation matches runtime tuple storage.
         # Each entry is (task, worker_id, queued_at) for timeout tracking (Issue #5).
         self._queued_tasks: list[tuple[Task, str, datetime]] = []
@@ -494,6 +503,18 @@ class Orchestrator:
                         duration_ms=0,
                     )
                 )
+
+        # Check if task should be debated (PEMADS Phase 2)
+        if self.expert_panel_manager and await self.expert_panel_manager.should_debate(
+            task
+        ):
+            logger.info(f"Task {task.task_id} flagged for PEMADS debate")
+            debate_id = await self.expert_panel_manager.run_debate(task)
+            # Store debate_id for Plan 88 Judge to pick up
+            task.metadata = task.metadata or {}
+            task.metadata["debate_id"] = debate_id
+            # For now, proceed with normal execution after debate
+            # Plan 88 will add Judge + ImplementationGate to evaluate debate results
 
         # Transition to EXECUTING before worker execution
         try:
