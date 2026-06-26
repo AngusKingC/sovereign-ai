@@ -1,793 +1,544 @@
-# Plan 81 — Playwright E2E Testing Infrastructure
+# Plan 81 — Backend Unification + API Endpoints
 
-## Context
+**Tag**: `prompt-81` | **Depends on**: `prompt-80`
 
-prompt-80 delivered the Sovereign AI UI Shell (Next.js + FastAPI). The shell works, but verification was manual — the user had to open a browser, inspect DevTools, and check headers. This led to bugs slipping through:
+### Scope
+Unify `backend/main.py` and `web/server.py` into a single FastAPI app. Add all missing API endpoints for the operational dashboard. Fix the broken frontend imports (`src/lib/api.ts` missing). No frontend components in this plan — pure backend infrastructure.
 
-1. **CORS errors on first run** — `DEV_TOKEN` requires env var (Rev3 C4 fix), but this wasn't obvious from the README. User hit 500 errors immediately.
-2. **Broken Vitest `shell.test.tsx`** — import resolution failure (`@/components/shell/StatusBar` not found). 0 tests ran. Not caught because the test suite wasn't run as a gate.
-3. **Missing pytest tests** — plan specified ~12-15 backend tests, only 6 were written. Not caught because the count wasn't verified against the plan.
+### S0. Opening
 
-**Root cause**: No automated E2E tests that actually open a browser, click things, and verify the UI works end-to-end. Unit tests (Vitest) and integration tests (pytest) test pieces in isolation, but they don't catch:
-- CORS misconfiguration (only surfaces with a real browser making real cross-origin requests)
-- Cookie auth failures (only surfaces with real `Set-Cookie` + `Cookie` header inspection)
-- SSE connection failures (only surfaces with real EventSource connecting to real backend)
-- Layout bugs (only surfaces with real DOM rendering)
+S0.1. Run `/jarvis-open` — verifies `prompt-80` tag on origin, working copy clean on master.
+S0.2. Read AGENTS.md in full. Read CONTEXT.md for domain vocabulary.
+S0.3. **NEW (Panel C3)**: Before writing any endpoint, verify each external method exists:
+- Run `grep -n "def get_spend_summary\|def get_status\|def get_degraded" core/ system/ workers/ -r`
+- Run `grep -n "_pending_requests\|fetch_by_filter\|_task_history" core/ -r`
+- Produce a "Method Verification Table" in this plan's working notes: list each method, its actual signature, and whether it exists.
+- If a method does NOT exist, add it to S3 (as a real getter with `# TODO: implement` comment) — do NOT return mocked data.
+S0.4. No new AGENTS.md rules this prompt.
 
-**Plan 81 installs Playwright E2E testing infrastructure** so Devin can run `bun run test:e2e` and get a pass/fail on whether the UI actually works — before tagging the plan complete. No more manual DevTools inspection.
+### S1. Audit and merge `backend/main.py` into `web/server.py`
 
-**Author's reasoning**: Playwright over Cypress because (a) Playwright is faster, (b) better API, (c) multi-browser support, (d) `webServer` config auto-starts backend + frontend — Devin doesn't need to manually start servers. The `codege` mode (`npx playwright codegen`) lets Devin record tests by clicking — no manual selector writing.
+**Before any merge, verify current state** (Panel C11):
+1. Run `cat backend/main.py` — capture all endpoints, middleware, and imports
+2. Run `cat web/server.py` — capture existing endpoints, middleware, and imports
+3. Run `grep -r "backend.main\|from backend\|import backend" . --include="*.py" --include="*.yml" --include="*.yaml" --include="Dockerfile*" --include="*.toml" --include="*.sh"` — find all references to backend package
+4. Produce a diff report: which endpoints exist in both, which are unique to backend/main.py, which middleware differs
 
-**Confidence**: 82%. Playwright is well-understood. The only complexity is SSE testing (Playwright needs to wait for events, not just page loads) and the `webServer` config (needs to start both backend with `SOVEREIGN_DEV_TOKEN` set and frontend dev server).
+**Merge rules** (Panel C1 from Panel 4):
+- CORS: Verify `allow_origins` includes `http://localhost:3000`, `allow_credentials=True`, `allow_methods=["*"]`, `allow_headers=["*"]`
+- Auth: All migrated endpoints must use the same auth middleware as existing web/server.py endpoints
+- Endpoints to migrate: `GET /health`, `GET /api/status` (merge fields), `GET /api/tasks`, `GET /api/workers`, `POST /api/tasks`, `GET /api/memory/activations` (SSE), `GET /api/tools/stream` (SSE), `GET /api/agent/reasoning` (SSE), `GET /api/subagents`, `DELETE /api/subagents/{id}`
 
----
+**After merge**:
+- Delete `backend/main.py` and `backend/` directory
+- Update `pyproject.toml` to remove `backend` package
+- Update all references found in step 3 above
 
-## Opening (S0)
+### S2. Add missing API endpoints to `web/server.py`
 
-### S0.1. Run `/jarvis-open`
+**Rule: NO mocked data. Only real methods or empty typed structures.** (Panel C3 — resolved contradiction)
 
-Verify `prompt-80` tag exists on origin:
-```powershell
-git ls-remote --tags origin | Select-String "prompt-80"
+For each endpoint below, follow this decision tree:
+1. Does the method exist with the expected signature? → Wire directly.
+2. Does the method exist with a different signature? → Adapt the wrapper in web/server.py.
+3. Does the method NOT exist? → Add a thin getter in S3 that returns a properly typed empty structure. Mark with `# TODO: implement when [module] is ready`.
+
+| Endpoint | Method | Data Source | Response Model | If Missing |
+|----------|--------|-------------|----------------|------------|
+| `GET /api/costs/summary` | GET | `cost_tracker.get_spend_summary()` | `CostSummaryResponse` | Return `{"daily_spend": 0.0, "daily_cap": 10.0, "monthly_spend": 0.0, "monthly_cap": 100.0, "alert_threshold": 80, "fallback_threshold": 90, "model_breakdown": {}}` |
+| `GET /api/costs/daily` | GET | `cost_tracker.daily_usage` | `DailyCostResponse` | Return `{"date": "", "total_usd": 0.0, "entries": []}` |
+| `GET /api/circuit-breaker/status` | GET | `worker_circuit_breaker.get_status()` + `get_degraded_worker_ratio()` | `CircuitStatusResponse` | Return `{"workers": [], "degraded_ratio": 0.0}` |
+| `POST /api/circuit-breaker/reset` | POST | `worker_circuit_breaker.reset_circuit(worker_id)` | `ResetResponse` | Return `{"status": "not_implemented", "worker_id": ""}` (Rev5 L-B fix — was `"ok"`, misleading for ops dashboard) |
+| `GET /api/approvals/pending` | GET | `approval_gate.list_pending()` (NEW public getter) | `List[ApprovalResponse]` | Return `[]` |
+| `POST /api/approvals/{id}/respond` | POST | `approval_gate.respond(id, approved)` | `ApprovalResponse` | Return `{"status": "not_found", "id": ""}` |
+| `GET /api/memory/slots` | GET | `memory_router.fetch_by_filter()` | `List[MemorySlotResponse]` | Return `[]` |
+| `GET /api/memory/slots/export` | GET | `memory_router.fetch_by_filter()` | JSON blob | Return `[]` (Panel S4 — renamed from /memory/export) |
+| `POST /api/memory/slots/import` | POST | `memory_router.scoped_write()` | `ImportResponse` | Return `{"imported": 0, "errors": []}` |
+| `GET /api/skills` | GET | `skill_registry.list_skills()` (scan skills/ directory) | `List[SkillResponse]` | Return `[]` |
+| `GET /api/sessions/{id}/timeline` | GET | `orchestrator.get_session_timeline(id)` | `List[TimelineResponse]` | Return `[]` |
+| `GET /api/system` | GET | `system_monitor.get_stats()` | `SystemStatsResponse` | Return `{"cpu_percent": 0.0, "memory_percent": 0.0, "uptime_seconds": 0, "active_workers": 0}` |
+
+**Auth strategy for SSE endpoints** (Panel C2, Rev3 H6 fix): SSE routes (`/api/memory/activations`, `/api/tools/stream`, `/api/agent/reasoning`) must use cookie-based auth (not Bearer headers, since EventSource cannot send custom headers). **Verify the existing auth middleware reads cookies. If it does NOT, add a cookie-based auth dependency for SSE routes specifically, falling back to the standard Bearer check for non-SSE routes.** Do not leave this as a 'verify and document' step — fix the middleware if verification fails. Document the final auth strategy in the endpoint comments.
+
+### S3. Add orchestrator/core getter methods
+
+Add these methods to the appropriate modules. All are thin wrappers — no new logic:
+
+**`core/orchestrator.py`**:
+```python
+def list_tasks(self, status: Optional[str] = None) -> List[Task]:
+    """Return tasks filtered by status."""
+
+def get_task(self, task_id: str) -> Optional[Task]:
+    """Return single task by ID."""
+
+def list_workers_with_status(self) -> List[Dict]:
+    """Return workers enriched with circuit breaker status."""
+
+def get_session_timeline(self, session_id: str) -> List[Dict]:
+    """Return phase timeline for a session."""
 ```
 
-Confirm working copy clean and on master:
-```powershell
-git status -s
-git branch --show-current
+**`core/approval_gate.py`** (NEW public getter — Panel C12, Rev3 L3 fix):
+```python
+def list_pending(self) -> List[ApprovalResponse]:
+    """Return list of pending approval requests as API response models.
+    Public accessor for _pending_requests. Converts internal ApprovalRequest
+    objects to ApprovalResponse models for API consumption.
+    """
+    # S0.3 verification: check if _pending_requests is dict or list
+    # If dict: return [ApprovalResponse.from_request(r) for r in self._pending_requests.values()]
+    # If list: return [ApprovalResponse.from_request(r) for r in self._pending_requests]
+    # Add ApprovalResponse.from_request() classmethod to core/schemas.py if it doesn't exist
+```
+**Note**: ApprovalResponse must be defined in `core/schemas.py` before this getter. If `ApprovalResponse.from_request()` does not exist, add it as a classmethod that maps ApprovalRequest fields → ApprovalResponse fields.
+
+**Additional thin getters** (Rev3 H4 fix — required for endpoints in S2 with 'If Missing' fallbacks. Each returns a properly typed empty structure marked `# TODO: implement when [module] is ready`. Do NOT return hardcoded mocked data from the endpoint handler — the endpoint must call these getters.):
+
+**`core/skill_registry.py`** (if `list_skills()` doesn't exist):
+```python
+def list_skills(self) -> List[Dict[str, Any]]:
+    """Return list of registered skills for UI consumption."""
+    # TODO: implement when skill registry is complete
+    return []
 ```
 
-**Applying OR26**: If governance docs or plan files are untracked, commit as `docs: cleanup pre-prompt-81` tagged `docs-cleanup-81` before proceeding.
-
-**Applying OR39**: Ensure `plan-81*.md` is added in C12 docs commit.
-
-### S0.2. Read AGENTS.md in full
-
-Pay special attention to:
-- AR21: `src/` (TypeScript) governance — Playwright tests live in `src/e2e/`, follow same rules
-- AR17: Auth middleware wraps all routes except `/health` — E2E tests must authenticate
-- OR15: Pre-declare scope (see Scope Declaration)
-- OR16: HARD STOP on scope expansion
-
-### S0.3. Add any new AGENTS.md rules and commit
-
-No new AGENTS.md rules this prompt. Playwright is testing infrastructure governed by AR21 (TypeScript strict + ESLint).
-
-Commit as `docs: no new rules for plan-81` before proceeding.
-
----
-
-## Plan Body
-
-### S1 — Install Playwright + Configure webServer
-
-**Applying AR21**: Playwright tests live in `src/e2e/`. TypeScript strict mode + ESLint apply.
-
-#### S1.1. Install Playwright
-
-```powershell
-cd src
-bun add -D @playwright/test
-bunx playwright install --with-deps chromium
+**`system/system_monitor.py`** (if `get_stats()` doesn't exist):
+```python
+def get_stats(self) -> Dict[str, Any]:
+    """Return system stats for UI consumption."""
+    # TODO: implement when system monitor is complete
+    return {"cpu_percent": 0.0, "memory_percent": 0.0, "uptime_seconds": 0, "active_workers": 0}
 ```
 
-**Note**: Install Chromium only (not Firefox/WebKit) — keeps install fast, covers 95% of cases. Multi-browser can be added later if needed.
+**`core/worker_circuit_breaker.py`** (if `get_status()` doesn't exist):
+```python
+def get_status(self) -> Dict[str, Any]:
+    """Return circuit breaker status for all workers."""
+    # TODO: implement when circuit breaker is complete
+    return {"workers": [], "degraded_ratio": 0.0}
+```
 
-#### S1.2. Create `src/playwright.config.ts`
+**`memory/memory_router.py`** (if `fetch_by_filter()` doesn't exist):
+```python
+def fetch_by_filter(self, **kwargs) -> List[Dict[str, Any]]:
+    """Return memory slots matching filter criteria."""
+    # TODO: implement when memory router is complete
+    return []
+```
+
+**`memory/memory_router.py`** (if `scoped_write()` doesn't exist — Rev4 H-A fix):
+```python
+def scoped_write(self, key: str, value: Any, scope: str = "default") -> Dict[str, Any]:
+    """Write a memory slot within a scope. Returns import-style response."""
+    # TODO: implement when memory router is complete
+    return {"imported": 0, "errors": ["scoped_write not implemented"]}
+```
+
+**`core/approval_gate.py`** (if `respond()` doesn't exist — Rev4 H-A fix):
+```python
+def respond(self, request_id: str, approved: bool) -> Dict[str, Any]:
+    """Respond to a pending approval request. Returns response status."""
+    # TODO: implement when approval gate is complete
+    return {"status": "not_found", "id": request_id}
+```
+
+**`core/worker_circuit_breaker.py`** (if `reset_circuit()` doesn't exist — Rev4 H-A fix, Rev5 L-B fix):
+```python
+def reset_circuit(self, worker_id: str) -> Dict[str, Any]:
+    """Reset circuit breaker for a specific worker. Returns reset status."""
+    # TODO: implement when circuit breaker is complete
+    # Rev5 L-B fix — return "not_implemented" (was "ok"), to honestly signal the
+    # stub did nothing. Operators relying on the Reset Circuit button need to
+    # know the action didn't actually happen. Mirrors sibling stubs
+    # (scoped_write returns errors, respond returns not_found).
+    return {"status": "not_implemented", "worker_id": worker_id}
+```
+
+**`core/worker_circuit_breaker.py`** (if `get_degraded_worker_ratio()` doesn't exist — Rev4 H-A fix):
+```python
+def get_degraded_worker_ratio(self) -> float:
+    """Return ratio of workers in degraded/open circuit state."""
+    # TODO: implement when circuit breaker is complete
+    return 0.0
+```
+
+**`system/cost_tracker.py`** (if `daily_usage` property doesn't exist — Rev4 H-A fix):
+```python
+@property
+def daily_usage(self) -> Dict[str, Any]:
+    """Return today's cost usage breakdown."""
+    # TODO: implement when cost tracking is complete
+    return {"date": "", "total_usd": 0.0, "entries": []}
+```
+
+**Verification note** (Rev4 H-A fix): The S0.3 Method Verification Table MUST cross-check every method referenced in the S2 endpoint table against the S3 getter list above. The complete list of methods requiring getters (existing or stubbed) is:
+- `cost_tracker.get_spend_summary()` ✓ (Rev3 H4)
+- `cost_tracker.daily_usage` ✓ (Rev4 H-A)
+- `worker_circuit_breaker.get_status()` ✓ (Rev3 H4)
+- `worker_circuit_breaker.get_degraded_worker_ratio()` ✓ (Rev4 H-A)
+- `worker_circuit_breaker.reset_circuit(worker_id)` ✓ (Rev4 H-A)
+- `approval_gate.list_pending()` ✓ (Rev3 C12)
+- `approval_gate.respond(id, approved)` ✓ (Rev4 H-A)
+- `memory_router.fetch_by_filter()` ✓ (Rev3 H4)
+- `memory_router.scoped_write()` ✓ (Rev4 H-A)
+- `skill_registry.list_skills()` ✓ (Rev3 H4)
+- `orchestrator.get_session_timeline(id)` ✓ (Rev3 C3)
+- `system_monitor.get_stats()` ✓ (Rev3 H4)
+If any method is missing AND cannot be added as a thin getter, STOP and report.
+
+**`system/cost_tracker.py`** (if `get_spend_summary` doesn't exist):
+```python
+def get_spend_summary(self) -> Dict[str, Any]:
+    """Return spend summary for UI consumption."""
+    # TODO: implement when cost tracking is complete
+    return {
+        "daily_spend": 0.0,
+        "daily_cap": self.policy.daily_cap_usd if hasattr(self, 'policy') else 10.0,
+        "monthly_spend": 0.0,
+        "monthly_cap": self.policy.monthly_cap_usd if hasattr(self, 'policy') else 100.0,
+        "alert_threshold": 80,
+        "fallback_threshold": 90,
+        "model_breakdown": {},
+    }
+```
+
+### S4. Create `src/lib/api.ts`
+
+This file is MISSING and breaks the frontend build. Create it with typed API wrappers.
+
+**Auth handling** (Panel C2, Rev3 H2 fix): The frontend uses Next.js rewrites (proxy to backend) so regular fetch calls are same-origin. **All regular API calls MUST use relative paths (`/api/status`) so they route through the Next.js proxy. Do NOT use absolute `${BACKEND_URL}` URLs for fetch calls — that bypasses the proxy, breaks cookie auth, and makes the rewrite config dead code.** Auth is handled by the backend middleware via cookies set on the same origin. No Authorization header needed in api.ts for dev mode. For production, add a note: "Production auth: implement Next.js middleware to inject Bearer token."
+
+**SSE URLs** are the exception — `EventSource` cannot be proxied through Next.js rewrites, so SSE URLs must use the absolute `BACKEND_URL` with `credentials: 'include'` to send cookies cross-origin.
 
 ```typescript
-import { defineConfig, devices } from "@playwright/test";
+export const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
-export default defineConfig({
-  testDir: "./e2e",
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: process.env.CI ? "github" : "html",
-  use: {
-    baseURL: "http://localhost:3000",
-    trace: "on-first-retry",
-    // Capture screenshots on failure for debugging
-    screenshot: "only-on-failure",
-    video: "retain-on-failure",
-  },
-  projects: [
-    {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
-    },
-  ],
-  // Auto-start backend + frontend before tests, stop after
-  webServer: [
-    {
-      command: "cd ../backend && python -m uvicorn main:app --port 8000",
-      port: 8000,
-      timeout: 30_000,
-      reuseExistingServer: !process.env.CI,
-      env: {
-        SOVEREIGN_DEV_TOKEN: "dev-token-e2e",
-      },
-    },
-    {
-      command: "bun run dev",
-      port: 3000,
-      timeout: 30_000,
-      reuseExistingServer: !process.env.CI,
-    },
-  ],
-});
-```
+// All regular API functions use RELATIVE paths (/api/...) so they route through Next.js rewrites.
+// Auth is handled by backend middleware via same-origin cookies.
+// BACKEND_URL is reserved for SSE EventSource URLs only.
 
-**Key design decisions**:
-- `webServer` auto-starts both backend (port 8000) and frontend (port 3000) — Devin doesn't need to manually start servers
-- `SOVEREIGN_DEV_TOKEN: "dev-token-e2e"` is set in the env for the backend — backend won't crash (Rev3 C4 fix requires env var)
-- `reuseExistingServer: !process.env.CI` — in dev, reuses running servers (faster iteration); in CI, starts fresh
-- `trace: "on-first-retry"` — captures full trace on retry (DOM snapshots, network, console logs) for debugging
-- `screenshot: "only-on-failure"` + `video: "retain-on-failure"` — visual evidence of what went wrong
+export interface AgentStatus {
+  phase: "idle" | "planning" | "acting" | "reflecting";
+  session_id: string;
+  model: string;
+  latency_ms: number;
+  is_running: boolean;
+}
 
-#### S1.3. Add `test:e2e` script to `src/package.json`
+export interface Task {
+  id: string;
+  intent: string;
+  worker_id: string;
+  status: "RECEIVED" | "EXECUTING" | "VALIDATING" | "COMPLETE" | "FAILED" | "CANCELLED" | "QUEUED";
+  confidence: number;
+  cost_usd: number;
+  token_count: number;
+  created_at: string;
+  completed_at?: string;
+}
 
-```json
-{
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "test": "vitest run",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "lint": "next lint"
-  }
+export interface Worker {
+  id: string;
+  type: string;
+  capabilities: string[];
+  circuit_state: "CLOSED" | "OPEN" | "HALF_OPEN";
+  failures: number;
+  threshold: number;
+  last_used?: string;
+  task_count: number;
+}
+
+export interface CostSummary {
+  daily_spend: number;
+  daily_cap: number;
+  monthly_spend: number;
+  monthly_cap: number;
+  alert_threshold: number;
+  fallback_threshold: number;
+  model_breakdown: Record<string, number>;
+}
+
+export interface ApprovalRequest {
+  id: string;
+  type: string;
+  description: string;
+  risk: "low" | "medium" | "high";
+  expires_at: string;
+}
+
+export interface MemorySlot {
+  index: number;
+  key?: string;
+  value_preview?: string;
+  last_written?: string;
+  activation: number;
+}
+
+export interface SkillInfo {
+  name: string;
+  tier: "USER_INVOKED" | "AGENT_INVOKED" | "HYBRID";
+  enabled: boolean;
+  methods: string[];
+  requires: string[];
+}
+
+export interface TimelineSegment {
+  phase: string;
+  start: string;
+  end: string;
+  confidence: number;
+}
+
+export interface SystemStats {
+  cpu_percent: number;
+  memory_percent: number;
+  gpu_percent?: number;
+  uptime_seconds: number;
+  active_workers: number;
+}
+
+export async function getStatus(): Promise<AgentStatus> {
+  const res = await fetch(`/api/status`);
+  if (!res.ok) throw new Error(`Status ${res.status}`);
+  return res.json();
+}
+
+export async function getTasks(status?: string): Promise<Task[]> {
+  const url = status ? `/api/tasks?status=${status}` : `/api/tasks`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Tasks ${res.status}`);
+  return res.json();
+}
+
+export async function getWorkers(): Promise<Worker[]> {
+  const res = await fetch(`/api/workers`);
+  if (!res.ok) throw new Error(`Workers ${res.status}`);
+  return res.json();
+}
+
+export async function getCostsSummary(): Promise<CostSummary> {
+  const res = await fetch(`/api/costs/summary`);
+  if (!res.ok) throw new Error(`Costs ${res.status}`);
+  return res.json();
+}
+
+export async function getPendingApprovals(): Promise<ApprovalRequest[]> {
+  const res = await fetch(`/api/approvals/pending`);
+  if (!res.ok) throw new Error(`Approvals ${res.status}`);
+  return res.json();
+}
+
+export async function respondApproval(id: string, approved: boolean): Promise<void> {
+  const res = await fetch(`/api/approvals/${id}/respond`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ approved }),
+  });
+  if (!res.ok) throw new Error(`Respond ${res.status}`);
+}
+
+export async function getMemorySlots(limit = 100, offset = 0): Promise<MemorySlot[]> {
+  const res = await fetch(`/api/memory/slots?limit=${limit}&offset=${offset}`);
+  if (!res.ok) throw new Error(`Memory ${res.status}`);
+  return res.json();
+}
+
+export async function exportMemory(): Promise<Blob> {
+  const res = await fetch(`/api/memory/slots/export`);
+  if (!res.ok) throw new Error(`Export ${res.status}`);
+  return res.blob();
+}
+
+export async function importMemory(slots: Array<{key: string; value: unknown; scope?: string}>): Promise<void> {
+  const res = await fetch(`/api/memory/slots/import`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(slots),
+  });
+  if (!res.ok) throw new Error(`Import ${res.status}`);
+}
+
+export async function getSkills(): Promise<SkillInfo[]> {
+  const res = await fetch(`/api/skills`);
+  if (!res.ok) throw new Error(`Skills ${res.status}`);
+  return res.json();
+}
+
+export async function getSessionTimeline(sessionId: string): Promise<TimelineSegment[]> {
+  const res = await fetch(`/api/sessions/${sessionId}/timeline`);
+  if (!res.ok) throw new Error(`Timeline ${res.status}`);
+  return res.json();
+}
+
+export async function getSystemStats(): Promise<SystemStats> {
+  const res = await fetch(`/api/system`);
+  if (!res.ok) throw new Error(`System ${res.status}`);
+  return res.json();
+}
+
+export async function resetCircuit(workerId: string): Promise<void> {
+  const res = await fetch(`/api/circuit-breaker/reset`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ worker_id: workerId }),
+  });
+  if (!res.ok) throw new Error(`Reset ${res.status}`);
+}
+
+// SSE URLs use absolute BACKEND_URL because EventSource cannot be proxied through Next.js rewrites.
+// credentials: 'include' is required to send auth cookies cross-origin.
+export function sseUrl(path: string): string {
+  return `${BACKEND_URL}${path}`;
 }
 ```
 
-#### S1.4. Create `src/e2e/` directory
+### S5. Update `src/next.config.ts`
 
-```powershell
-mkdir src\e2e
-```
-
-#### S1.5. Verification
-
-```powershell
-cd src
-bunx playwright test --list
-```
-
-**STOP condition**: If Playwright doesn't install or config doesn't load, fix before proceeding.
-
----
-
-### S2 — Fix broken Vitest shell.test.tsx (prerequisite)
-
-prompt-80 left `src/__tests__/shell.test.tsx` broken — import resolution failure (`@/components/shell/StatusBar` not found). This must be fixed before E2E tests, because the same import paths are used.
-
-#### S2.1. Diagnose the import failure
-
-```powershell
-cd src
-bun run test
-```
-
-Expected error: `Failed to resolve import "@/components/shell/StatusBar" from "__tests__/shell.test.tsx"`
-
-**Root cause**: The `vitest.config.ts` alias may not match the actual file structure, OR the component files don't exist at the expected paths.
-
-#### S2.2. Verify component file paths
-
-```powershell
-# Check if components exist
-Test-Path src/components/shell/StatusBar.tsx
-Test-Path src/components/shell/Sidebar.tsx
-Test-Path src/components/shell/RightPanel.tsx
-Test-Path src/components/shell/BottomBar.tsx
-```
-
-If any don't exist, the component wasn't created — STOP and report (OR16).
-
-#### S2.3. Fix vitest.config.ts alias
-
-Update `src/vitest.config.ts` to ensure the `@/` alias resolves correctly:
-
+Add rewrites to proxy API requests to the unified backend:
 ```typescript
-import { defineConfig } from "vitest/config";
-import react from "@vitejs/plugin-react";
-import path from "path";
+import type { NextConfig } from "next";
 
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    globals: true,
-    environment: "jsdom",
-    setupFiles: ["./vitest.setup.ts"],
+const nextConfig: NextConfig = {
+  async rewrites() {
+    return [
+      { source: "/api/:path*", destination: "http://localhost:8000/api/:path*" },
+      { source: "/health", destination: "http://localhost:8000/health" },
+    ];
   },
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./"),
-    },
-  },
-});
+};
+
+export default nextConfig;
 ```
 
-**Key fix**: The alias must point to the project root (`./`), not `./src/` — because the import `@/components/shell/StatusBar` resolves to `src/components/shell/StatusBar` when `@` = `src/`.
+### S6. Create `src/.env.example` (NOT .env.local)
 
-#### S2.4. Verify Vitest tests pass
-
-```powershell
-cd src
-bun run test
+```
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+SOVEREIGN_DEV_TOKEN=dev-token-change-in-production
 ```
 
-Expected: `stores.test.ts` (9 tests) + `shell.test.tsx` (tests for StatusBar, Sidebar, RightPanel, BottomBar) all pass.
+**Note**: `src/.env.local` is NOT created by this plan. It is gitignored. Dev creates it locally from `.env.example`. (Panel M1 — accepted)
 
-**STOP condition**: If shell.test.tsx still fails after alias fix, debug the specific import error.
+### S7. Update `src/package.json`
+
+Ensure these dependencies are present (add if missing):
+- `zustand` (state management)
+- `lucide-react` (icons)
+
+Verify `ruff` and `mypy` are in pyproject.toml dev dependencies. If not, add them. (Panel M4 — accepted)
+
+### S8. Add backend tests for new endpoints
+
+Add to `tests/test_ui_backend.py`. **Auth handling** (Panel S7): Use `app.dependency_overrides` or a test fixture that disables auth for test mode.
+
+```python
+# conftest.py addition (if not present):
+# @pytest.fixture
+def client_no_auth():
+    # Override auth dependency for tests
+    from web.server import app
+    app.dependency_overrides[auth_dependency] = lambda: test_user
+    # ... existing client fixture
+    yield  # Rev3 L10 fix — yield for teardown
+    # Teardown: restore original overrides to prevent global state leak
+    app.dependency_overrides.pop(auth_dependency, None)
+
+# 9 new tests:
+def test_get_costs_summary(client_no_auth):
+    res = client_no_auth.get("/api/costs/summary")
+    assert res.status_code == 200
+    data = res.json()
+    assert "daily_spend" in data
+    assert "daily_cap" in data
+
+def test_get_costs_daily(client_no_auth):
+    res = client_no_auth.get("/api/costs/daily")
+    assert res.status_code == 200
+    assert "total_usd" in res.json()
+
+def test_get_circuit_breaker_status(client_no_auth):
+    res = client_no_auth.get("/api/circuit-breaker/status")
+    assert res.status_code == 200
+    data = res.json()
+    assert "workers" in data
+    assert "degraded_ratio" in data
+
+def test_post_circuit_breaker_reset(client_no_auth):
+    res = client_no_auth.post("/api/circuit-breaker/reset", json={"worker_id": "test_worker"})
+    assert res.status_code == 200
+    # Rev5 L-B fix — stub now returns "not_implemented" instead of misleading "ok".
+    # When the real method is implemented, this assertion should be updated to "ok".
+    assert res.json()["status"] == "not_implemented"
+
+def test_get_approvals_pending(client_no_auth):
+    res = client_no_auth.get("/api/approvals/pending")
+    assert res.status_code == 200
+    assert isinstance(res.json(), list)
+
+def test_post_approvals_respond(client_no_auth):
+    res = client_no_auth.post("/api/approvals/test-id/respond", json={"approved": True})
+    assert res.status_code in (200, 404)  # 404 if no pending approval exists
+
+def test_get_memory_slots(client_no_auth):
+    res = client_no_auth.get("/api/memory/slots")
+    assert res.status_code == 200
+    assert isinstance(res.json(), list)
+
+def test_get_skills(client_no_auth):
+    res = client_no_auth.get("/api/skills")
+    assert res.status_code == 200
+    data = res.json()
+    assert isinstance(data, list)
+    if data:
+        assert "name" in data[0]
+        assert "tier" in data[0]
+
+def test_get_system_stats(client_no_auth):
+    res = client_no_auth.get("/api/system")
+    assert res.status_code == 200
+    data = res.json()
+    assert "cpu_percent" in data
+    assert "memory_percent" in data
+```
+
+### S9. Verify build
+
+Run in order:
+1. `grep` verification from S0.3 — confirm Method Verification Table exists
+2. `ruff check web/server.py` — 0 errors
+3. `mypy web/server.py core/orchestrator.py core/schemas.py core/approval_gate.py --ignore-missing-imports` — 0 errors (Panel M7, Rev3 L5 fix — added approval_gate.py for C12 getter)
+4. `pytest tests/test_ui_backend.py -v` — all 15 tests pass (6 existing + 9 new)
+5. `cd src && npx tsc --noEmit` — confirm `lib/api.ts` compiles
+
+### STOP condition
+If merging `backend/main.py` into `web/server.py` causes any existing test to fail, STOP and report. Do not proceed until the merge is clean. If any method in the Method Verification Table is marked "missing" and cannot be added as a thin getter, STOP and report.
+
+### Files WILL create
+- `src/lib/api.ts`
+- `src/.env.example`
+
+### Files WILL edit
+- `web/server.py` (major — merge + new endpoints)
+- `core/orchestrator.py` (minor — add getter methods)
+- `core/schemas.py` (minor — add response models)
+- `core/approval_gate.py` (minor — add `list_pending()` public getter)
+- `src/next.config.ts` (minor — add rewrites)
+- `src/package.json` (minor — ensure deps)
+- `tests/test_ui_backend.py` (moderate — 9 new tests)
+- `pyproject.toml` (minor — remove backend package, ensure ruff/mypy present)
+
+### Files will NOT edit
+- `core/` logic modules (except thin getters in S3)
+- `cli/`
+- `skills/` logic
+- `adapters/`
+- `workers/`
+- `memory/` internals (except via existing router methods)
+- `system/` internals (except via existing cost_tracker/circuit_breaker)
+
+### Closing
+
+Run `/jarvis-close`. Tag `prompt-81`. CHANGELOG entry for Plan 81. Update PLANS.md (completed row, baseline shift).
 
 ---
-
-### S3 — E2E Test: Shell Renders
-
-#### S3.1. Create `src/e2e/shell.spec.ts`
-
-```typescript
-import { test, expect } from "@playwright/test";
-
-test.describe("Shell layout", () => {
-  test("status bar renders with session ID and phase badge", async ({ page }) => {
-    await page.goto("/");
-
-    // Session ID visible (format: SES-xxxx)
-    const sessionId = page.locator("text=/SES-/");
-    await expect(sessionId).toBeVisible();
-
-    // Phase badge visible (one of: Planning, Acting, Reflecting, Idle)
-    const phaseBadge = page.locator("text=/Sovereign ·/");
-    await expect(phaseBadge).toBeVisible();
-
-    // Model slug visible
-    await expect(page.locator("text=GLM-4.5 Flash")).toBeVisible();
-
-    // Run/Pause button visible
-    await expect(page.locator('button[aria-label*="Run"], button[aria-label*="Pause"]')).toBeVisible();
-  });
-
-  test("sidebar shows 6 nav icons", async ({ page }) => {
-    await page.goto("/");
-
-    // Sidebar has 6 buttons (Terminal, Memory, Subagents, Tools, Settings, Help)
-    const navButtons = page.locator("nav button");
-    await expect(navButtons).toHaveCount(6);
-  });
-
-  test("sidebar expands on hover", async ({ page }) => {
-    await page.goto("/");
-
-    const nav = page.locator("nav");
-
-    // Before hover: collapsed (64px)
-    await expect(nav).toHaveCSS("width", "64px");
-
-    // Hover to expand
-    await nav.hover();
-    await page.waitForTimeout(300); // transition duration
-
-    // After hover: expanded (200px)
-    await expect(nav).toHaveCSS("width", "200px");
-
-    // "Sovereign" wordmark visible when expanded
-    await expect(page.locator("nav text=Sovereign")).toBeVisible();
-  });
-
-  test("right panel shows 3 tabs", async ({ page }) => {
-    await page.goto("/");
-
-    await expect(page.locator("text=Tool inspector")).toBeVisible();
-    await expect(page.locator("text=Timeline")).toBeVisible();
-    await expect(page.locator("text=Reasoning")).toBeVisible();
-  });
-
-  test("bottom bar shows activation grid placeholder and token counter", async ({ page }) => {
-    await page.goto("/");
-
-    await expect(page.locator("text=/Activation grid placeholder/")).toBeVisible();
-    await expect(page.locator("text=/Tokens:/")).toBeVisible();
-  });
-
-  test("tab switching works", async ({ page }) => {
-    await page.goto("/");
-
-    // Click Timeline tab
-    await page.click("text=Timeline");
-    await expect(page.locator("text=/Session timeline — placeholder/")).toBeVisible();
-
-    // Click Reasoning tab
-    await page.click("text=Reasoning");
-    await expect(page.locator("text=/Reasoning stream — placeholder/")).toBeVisible();
-
-    // Click back to Tool inspector
-    await page.click("text=Tool inspector");
-    // Tool inspector content should be visible (either events or "Waiting" message)
-    await expect(page.locator("text=/Tool inspector|Waiting/")).toBeVisible();
-  });
-});
-```
-
-#### S3.2. Run the test
-
-```powershell
-cd src
-bun run test:e2e -- --grep "Shell layout"
-```
-
-**STOP condition**: If any shell layout test fails, fix before proceeding.
-
----
-
-### S4 — E2E Test: Tool Inspector + SSE
-
-This is the critical test — it verifies SSE works end-to-end (the exact thing Plan 80's manual S8a.4 verification checked, but automated).
-
-#### S4.1. Create `src/e2e/tool-inspector.spec.ts`
-
-```typescript
-import { test, expect } from "@playwright/test";
-
-test.describe("Tool Inspector + SSE", () => {
-  test("tool call events appear from SSE stream", async ({ page }) => {
-    await page.goto("/");
-
-    // Click Tool inspector tab
-    await page.click("text=Tool inspector");
-
-    // Wait for first tool call card to appear (mocked SSE sends every ~2s)
-    const firstCard = page.locator("[data-testid=tool-call-card]").first();
-    await expect(firstCard).toBeVisible({ timeout: 10_000 });
-
-    // Verify it has a tool name (web_search, memory_write, or code_exec)
-    const toolName = await firstCard.locator("text=/web_search|memory_write|code_exec/").textContent();
-    expect(toolName).toBeTruthy();
-  });
-
-  test("tool call cards expand on click", async ({ page }) => {
-    await page.goto("/");
-    await page.click("text=Tool inspector");
-
-    // Wait for a card
-    const card = page.locator("[data-testid=tool-call-card]").first();
-    await expect(card).toBeVisible({ timeout: 10_000 });
-
-    // Click to expand
-    await card.click();
-
-    // Arguments section should appear
-    await expect(page.locator("text=Arguments")).toBeVisible();
-  });
-
-  test("SSE connection is authenticated (not 401)", async ({ page }) => {
-    await page.goto("/");
-
-    // Wait for SSE request to fire
-    const sseRequest = page.waitForRequest(
-      (req) => req.url().includes("/api/tools/stream") || req.url().includes("/api/memory/activations"),
-      { timeout: 10_000 }
-    );
-
-    const request = await sseRequest;
-
-    // Verify it's not 401 — check the response
-    const response = await request.response();
-    expect(response?.status()).not.toBe(401);
-  });
-
-  test("cookie is set after login", async ({ page }) => {
-    await page.goto("/");
-
-    // Wait for login request
-    const loginRequest = page.waitForRequest(
-      (req) => req.url().includes("/api/auth/login"),
-      { timeout: 5_000 }
-    );
-
-    await loginRequest;
-
-    // Verify cookie is set
-    const cookies = await page.context().cookies();
-    const authCookie = cookies.find((c) => c.name === "sovereign_token");
-
-    expect(authCookie).toBeTruthy();
-    expect(authCookie?.httpOnly).toBe(true);
-    expect(authCookie?.sameSite).toBe("Lax");
-  });
-
-  test("status bar latency updates via polling", async ({ page }) => {
-    await page.goto("/");
-
-    // Get initial latency text
-    const latencyLocator = page.locator("text=/ms$/");
-    const initialLatency = await latencyLocator.textContent();
-
-    // Wait 3 seconds (polling interval is 2s)
-    await page.waitForTimeout(3000);
-
-    // Latency should still be visible (may or may not have changed value)
-    await expect(latencyLocator).toBeVisible();
-  });
-});
-```
-
-#### S4.2. Add `data-testid` attributes to components
-
-For Playwright to find elements reliably, add `data-testid` attributes:
-
-**`src/components/panels/ToolInspector.tsx`** — add to each tool call card:
-```tsx
-<div
-  data-testid="tool-call-card"
-  className="border-b border-border bg-surface-raised transition-colors hover:bg-surface-overlay"
-  // ... existing props
->
-```
-
-**`src/components/shell/StatusBar.tsx`** — add to latency chip:
-```tsx
-<span data-testid="latency-chip" className="font-mono text-xs text-text-muted">
-  {latency}ms
-</span>
-```
-
-**`src/components/shell/BottomBar.tsx`** — add to activation grid placeholder:
-```tsx
-<div data-testid="activation-grid-placeholder" className="font-mono text-xs text-text-muted">
-  Activation grid placeholder
-</div>
-```
-
-#### S4.3. Run the tests
-
-```powershell
-cd src
-bun run test:e2e -- --grep "Tool Inspector"
-```
-
-**STOP condition**: If SSE events don't appear, cookie isn't set, or 401 errors occur, fix before proceeding. These are the exact bugs Plan 80's manual verification was supposed to catch.
-
----
-
-### S5 — E2E Test: Error States
-
-#### S5.1. Create `src/e2e/error-states.spec.ts`
-
-```typescript
-import { test, expect } from "@playwright/test";
-
-test.describe("Error states", () => {
-  test("login failure shows console warning", async ({ page }) => {
-    // Listen for console messages
-    const consoleMessages: string[] = [];
-    page.on("console", (msg) => {
-      if (msg.type() === "warning") {
-        consoleMessages.push(msg.text());
-      }
-    });
-
-    // Block the login endpoint to simulate backend down
-    await page.route("**/api/auth/login", (route) => {
-      route.abort();
-    });
-
-    await page.goto("/");
-
-    // Wait for login attempt + failure
-    await page.waitForTimeout(2000);
-
-    // Verify console warning was logged
-    const authWarning = consoleMessages.find((m) => m.includes("Backend auth failed"));
-    expect(authWarning).toBeTruthy();
-  });
-
-  test("SSE reconnects and stops after maxRetries", async ({ page }) => {
-    await page.goto("/");
-    await page.click("text=Tool inspector");
-
-    // Block SSE endpoint to force reconnect attempts
-    await page.route("**/api/tools/stream", (route) => {
-      route.abort();
-    });
-    await page.route("**/api/memory/activations", (route) => {
-      route.abort();
-    });
-
-    // Wait for maxRetries (10 retries × backoff = ~30s max)
-    // Check that error state is eventually set (not infinite reconnect)
-    // This is hard to test directly — look for error indicator in UI
-    await page.waitForTimeout(35_000);
-
-    // If we get here without the page crashing, the reconnect loop terminated
-    // A more robust test would check for an error state in the UI
-    expect(true).toBeTruthy();
-  });
-});
-```
-
-**Note**: The maxRetries test is slow (~35s) due to backoff. It's included because it verifies the Rev5 H3 fix (maxRetries stops infinite reconnect). If it's too slow for CI, mark with `test.slow()` or skip in fast runs.
-
-#### S5.2. Run error state tests
-
-```powershell
-cd src
-bun run test:e2e -- --grep "Error states"
-```
-
----
-
-### S6 — E2E Test: CORS Verification
-
-This test catches the exact bug the user hit — backend not starting due to missing `SOVEREIGN_DEV_TOKEN`, causing CORS errors.
-
-#### S6.1. Create `src/e2e/cors.spec.ts`
-
-```typescript
-import { test, expect } from "@playwright/test";
-
-test.describe("CORS + backend connectivity", () => {
-  test("backend responds to /health", async ({ request }) => {
-    const response = await request.get("http://localhost:8000/health");
-    expect(response.status()).toBe(200);
-    expect(await response.json()).toEqual({ status: "ok" });
-  });
-
-  test("backend responds to /api/status with auth", async ({ request }) => {
-    const response = await request.get("http://localhost:8000/api/status", {
-      headers: { Authorization: "Bearer dev-token-e2e" },
-    });
-    expect(response.status()).toBe(200);
-
-    const data = await response.json();
-    expect(data.sessionId).toMatch(/^SES-/);
-    expect(data.phase).toBeIn(["planning", "acting", "reflecting", "idle"]);
-    expect(data.modelSlug).toBeTruthy();
-  });
-
-  test("backend returns 401 without auth", async ({ request }) => {
-    const response = await request.get("http://localhost:8000/api/status");
-    expect(response.status()).toBe(401);
-  });
-
-  test("frontend can reach backend (no CORS errors)", async ({ page }) => {
-    const consoleErrors: string[] = [];
-    page.on("console", (msg) => {
-      if (msg.type() === "error" && msg.text().includes("CORS")) {
-        consoleErrors.push(msg.text());
-      }
-    });
-
-    await page.goto("/");
-    await page.waitForTimeout(3000); // Let polling + SSE attempt
-
-    expect(consoleErrors).toHaveLength(0);
-  });
-});
-```
-
-#### S6.2. Run CORS tests
-
-```powershell
-cd src
-bun run test:e2e -- --grep "CORS"
-```
-
----
-
-### S7 — Update PLANS.md with Playwright baseline
-
-#### S7.1. Add Playwright baseline row to PLANS.md
-
-In the "Static Analysis Baseline" section, add:
-
-```markdown
-| **Playwright (E2E)** | ~15 tests | Plan 81 | First E2E baseline. Covers shell layout, tool inspector + SSE, error states, CORS. Run via `bun run test:e2e` in `src/`. |
-```
-
-In the "Test Baseline" section, update:
-
-```markdown
-**Current baseline**: **1411 pytest passed, 67 skipped + ~15 Vitest + ~15 Playwright E2E**
-**Verified**: Plan 81, Step S7 (full test suite)
-**Tolerance**: pytest ±5, Vitest ±5, Playwright ±5 (any drop requires justification)
-```
-
-#### S7.2. Update OR17 to cover Playwright
-
-In AGENTS.md, update OR17 to include Playwright:
-
-```markdown
-OR17. Baseline reconciliation. If S1 actual count ≠ plan's expected count, update PLANS.md baseline with actual number + reason. Applies to pytest, Vitest, AND Playwright E2E test counts. Don't let stale baselines propagate.
-```
-
-**Note**: This is a minor rule update. Commit as part of S0.3 governance commit.
-
----
-
-### S8 — Update package.json + README
-
-#### S8.1. Update `src/package.json` scripts
-
-Already done in S1.3 — `test:e2e` and `test:e2e:ui` scripts added.
-
-#### S8.2. Update README.md
-
-Add E2E testing section to README:
-
-```markdown
-### E2E Testing (Playwright)
-
-E2E tests verify the UI works end-to-end by opening a real browser, clicking
-elements, and checking SSE/auth/CORS.
-
-```bash
-cd src
-bun run test:e2e
-```
-
-This auto-starts the backend (port 8000) and frontend (port 3000), runs all
-E2E tests, then stops the servers.
-
-To run tests with a visible browser UI (for debugging):
-```bash
-bun run test:e2e:ui
-```
-
-To record new tests by clicking:
-```bash
-bunx playwright codegen http://localhost:3000
-```
-
-#### S8.3. Update DECISIONS.md
-
-Add entry:
-
-```markdown
-### D10: Playwright for E2E (Plan 81)
-**Decision**: Playwright with Chromium only, auto-starting backend + frontend via webServer config.
-**Rationale**: Playwright is faster than Cypress, has better API, and webServer config means Devin doesn't need to manually start servers. Chromium-only keeps install fast.
-**Alternative considered**: Cypress. Rejected — slower, single-browser, older ecosystem.
-**Alternative considered**: Puppeteer. Rejected — lower-level API, no built-in test runner.
-```
-
----
-
-### S9 — Run full E2E suite
-
-#### S9.1. Run all E2E tests
-
-```powershell
-cd src
-bun run test:e2e
-```
-
-Expected output:
-```
-Running 15 tests using 1 worker
-
-  ✓  1 [chromium] › shell.spec.ts:3:3 › Shell layout › status bar renders with session ID and phase badge
-  ✓  2 [chromium] › shell.spec.ts:15:3 › Shell layout › sidebar shows 6 nav icons
-  ✓  3 [chromium] › shell.spec.ts:20:3 › Shell layout › sidebar expands on hover
-  ✓  4 [chromium] › shell.spec.ts:30:3 › Shell layout › right panel shows 3 tabs
-  ✓  5 [chromium] › shell.spec.ts:36:3 › Shell layout › bottom bar shows activation grid placeholder and token counter
-  ✓  6 [chromium] › shell.spec.ts:42:3 › Shell layout › tab switching works
-  ✓  7 [chromium] › tool-inspector.spec.ts:4:3 › Tool Inspector + SSE › tool call events appear from SSE stream
-  ✓  8 [chromium] › tool-inspector.spec.ts:16:3 › Tool Inspector + SSE › tool call cards expand on click
-  ✓  9 [chromium] › tool-inspector.spec.ts:27:3 › Tool Inspector + SSE › SSE connection is authenticated (not 401)
-  ✓ 10 [chromium] › tool-inspector.spec.ts:40:3 › Tool Inspector + SSE › cookie is set after login
-  ✓ 11 [chromium] › tool-inspector.spec.ts:57:3 › Tool Inspector + SSE › status bar latency updates via polling
-  ✓ 12 [chromium] › error-states.spec.ts:4:3 › Error states › login failure shows console warning
-  ✓ 13 [chromium] › cors.spec.ts:4:3 › CORS + backend connectivity › backend responds to /health
-  ✓ 14 [chromium] › cors.spec.ts:10:3 › CORS + backend connectivity › backend responds to /api/status with auth
-  ✓ 15 [chromium] › cors.spec.ts:20:3 › CORS + backend connectivity › backend returns 401 without auth
-
-  15 passed (30.5s)
-```
-
-**STOP condition**: If any E2E test fails, fix before proceeding. These tests are the gate — if they pass, the UI works end-to-end.
-
-#### S9.2. Run Vitest + pytest to verify no regressions
-
-```powershell
-cd src
-bun run test
-
-cd ..
-python -m pytest tests/test_ui_backend.py -q --tb=short
-```
-
----
-
-## Closing
-
-Run `/jarvis-close` per workflow file `.windsurf/workflows/jarvis-close.md`.
-
-**Applying OR39**: Ensure `Prompts/plan-81*.md` is added in C12 docs commit.
-
-### Expected results
-
-- **pytest**: 1411 (unchanged — no new pytest tests this plan)
-- **Vitest**: 9 + shell.test.tsx tests (fixed in S2) = ~15 tests
-- **Playwright E2E**: NEW baseline — ~15 tests
-- **Ruff**: 0 errors
-- **Mypy**: 0 errors
-- **TypeScript**: strict compile pass
-- **ESLint**: 0 errors
-
-### Landmine capture (C11)
-
-**L22 candidate** (finally captured): Devin skipped tests specified in plan without reporting OR16 STOP. Plan 80 specified ~12-15 pytest tests + ~12 Vitest tests; actual was 6 pytest + 9 Vitest (shell.test.tsx broken). This pattern has recurred across Plans 78, 79, 80. Capture as L22:
-
-```markdown
-## L22 — Devin skips tests specified in plan without reporting OR16 STOP
-
-**Trigger**: Plans 78-80 execution. Devin consistently writes fewer tests than the plan specifies:
-- Plan 78: ~22 tests missing (plan claimed +44, actual +22)
-- Plan 79: All tests written (plan claimed +19, actual +19) — did NOT recur
-- Plan 80: ~9 tests missing (plan claimed ~27, actual ~15; shell.test.tsx broken with 0 tests)
-
-**Impact**: Regression guards permanently absent. Broken test files (shell.test.tsx) pass the gate because they have 0 tests (not 0 tests failed — 0 tests ran). The plan's test specification is treated as a suggestion, not a requirement.
-
-**Mitigation**: OR17 should check not just test COUNT but test FILE health. If a test file has 0 tests collected, that's a STOP condition. Plan 81 S2 fixes shell.test.tsx as a prerequisite.
-```
-
----
-
-## Scope Declaration
-
-**Applying OR15 and GR12**:
-
-### WILL edit
-
-| File | Change |
-|---|---|
-| `src/package.json` | Add `test:e2e` + `test:e2e:ui` scripts, add `@playwright/test` devDependency |
-| `src/playwright.config.ts` (NEW) | Playwright config with webServer auto-start |
-| `src/e2e/shell.spec.ts` (NEW) | Shell layout E2E tests (6 tests) |
-| `src/e2e/tool-inspector.spec.ts` (NEW) | Tool Inspector + SSE E2E tests (5 tests) |
-| `src/e2e/error-states.spec.ts` (NEW) | Error state E2E tests (2 tests) |
-| `src/e2e/cors.spec.ts` (NEW) | CORS + backend connectivity E2E tests (4 tests) |
-| `src/vitest.config.ts` | Fix `@/` alias (S2 — prerequisite fix) |
-| `src/__tests__/shell.test.tsx` | May need import path fixes after alias fix |
-| `src/components/panels/ToolInspector.tsx` | Add `data-testid="tool-call-card"` |
-| `src/components/shell/StatusBar.tsx` | Add `data-testid="latency-chip"` |
-| `src/components/shell/BottomBar.tsx` | Add `data-testid="activation-grid-placeholder"` |
-| `AGENTS.md` | Update OR17 to include Playwright + Vitest in baseline reconciliation |
-| `PLANS.md` | Add Playwright baseline row; update test baseline section |
-| `DECISIONS.md` | Add D10 (Playwright choice) |
-| `README.md` | Add E2E testing section |
-| `CHANGELOG.md` | Append entry at closing |
-| `LANDMINES.md` | Append L22 (test-skipping pattern, finally captured) |
-
-### WILL NOT edit
-
-- `backend/main.py` (no changes — E2E tests verify it as-is)
-- `src/app/layout.tsx`, `src/app/page.tsx` (no changes)
-- `src/stores/*.ts` (no changes)
-- `src/hooks/useSSE.ts` (no changes)
-- `src/lib/api.ts` (no changes)
-- `core/`, `cli/`, `web/`, `adapters/`, `memory/`, `system/`, `skills/`, `workers/` (no changes)
-
-### Tests added
-
-- 15 Playwright E2E tests (6 shell + 5 tool-inspector + 2 error-states + 2 CORS)
-- **Note**: Vitest shell.test.tsx fix (S2) may add ~5 tests that were supposed to run in Plan 80 but didn't (0 tests collected due to broken imports)
-- **Total**: ~15 new E2E tests + ~5 recovered Vitest tests
-
-### Baseline changes expected
-
-- **pytest**: 1411 (unchanged)
-- **Vitest**: 9 → ~14 (shell.test.tsx fixed, tests now run)
-- **Playwright E2E**: NEW baseline — 15 tests
-- **Ruff/Mypy/TypeScript/ESLint**: 0 errors (unchanged)
-
-### HARD STOP conditions
-
-- Any E2E test fails (the whole point is they pass)
-- shell.test.tsx can't be fixed (S2 prerequisite fails)
-- Backend doesn't start with `SOVEREIGN_DEV_TOKEN=dev-token-e2e` (webServer config broken)
-- Any file outside "WILL edit" list needs editing (OR16)
