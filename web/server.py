@@ -34,11 +34,16 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Store the polling task handle so we can cancel it on shutdown
+_telegram_poll_task: asyncio.Task | None = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for FastAPI app."""
-    # Startup: run secrets audit
+    global _telegram_poll_task
+
+    # Startup: run secrets audit and start Telegram polling
     try:
         _emitter = app.state._emitter
         audit = SecretsAudit(emitter=_emitter)
@@ -48,8 +53,41 @@ async def lifespan(app: FastAPI):
             f"Secrets audit failed: {e}"
         )  # Secrets audit failure should not crash the server
         pass
+
+    # Start Telegram polling if multi_channel_approval_gate is configured
+    try:
+        orchestrator = app.state.orchestrator
+        if (
+            orchestrator.multi_channel_approval_gate
+            and orchestrator.multi_channel_approval_gate._telegram
+        ):
+
+            async def poll_loop():
+                try:
+                    while True:
+                        await orchestrator.multi_channel_approval_gate.poll_telegram_responses()
+                        await asyncio.sleep(5)
+                except asyncio.CancelledError:
+                    logger.info("Telegram polling task cancelled")
+                    raise
+                except Exception as e:
+                    logger.error(f"Telegram polling error: {e}")
+
+            _telegram_poll_task = asyncio.create_task(poll_loop())
+            logger.info("Telegram polling task started")
+    except Exception as e:
+        logger.warning(f"Failed to start Telegram polling: {e}")
+
     yield
-    # Shutdown: no cleanup needed currently
+
+    # Shutdown: cancel the Telegram polling task
+    if _telegram_poll_task and not _telegram_poll_task.done():
+        _telegram_poll_task.cancel()
+        try:
+            await _telegram_poll_task
+        except asyncio.CancelledError:
+            pass
+        logger.info("Telegram polling task cancelled")
 
 
 def create_app(
@@ -70,6 +108,7 @@ def create_app(
     app = FastAPI(lifespan=lifespan)
     _emitter = emitter or MemoryTraceEmitter()
     app.state._emitter = _emitter
+    app.state.orchestrator = orchestrator
     sanitiser = InputSanitiser(emitter=_emitter)
 
     # Wire AuthMiddleware into the app

@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
 from core.input_sanitiser import InputSanitiser
@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from core.implementation_gate import ImplementationGate
     from core.memory_router import MemoryRouter
     from core.model_tier_router import ModelTierRouter
+    from core.multi_channel_approval_gate import MultiChannelApprovalGate
     from core.orchestrator_improvement import OrchestratorImprovementLoop
     from core.pemads_judge import PEMADSJudge
     from core.trace_optimiser import TraceOptimiser
@@ -57,6 +58,7 @@ class Orchestrator:
         improvement_loop_orchestrator: "ImprovementLoopOrchestrator | None" = None,
         cloud_fallback_model: str = "gpt-4o",
         approval_gate: "ApprovalGate | None" = None,
+        multi_channel_approval_gate: "MultiChannelApprovalGate | None" = None,
         escalation_engine: "EscalationEngine | None" = None,
         fallback_chain: "AdapterFallbackChain | None" = None,
         a2a_router: "A2ARouter | None" = None,
@@ -96,6 +98,7 @@ class Orchestrator:
         self.improvement_loop_orchestrator = improvement_loop_orchestrator
         self.cloud_fallback_model = cloud_fallback_model
         self.approval_gate = approval_gate
+        self.multi_channel_approval_gate = multi_channel_approval_gate
         self.escalation_engine = escalation_engine
         self.fallback_chain = fallback_chain
         self._a2a_router = a2a_router
@@ -664,28 +667,52 @@ class Orchestrator:
                     )
                     if decision.should_escalate:
                         # Request approval for escalation
-                        if self.approval_gate:
+                        if self.multi_channel_approval_gate:
+                            from core.approval_gate import (
+                                ApprovalActionType,
+                                ApprovalRequest,
+                            )
+
+                            session_id = (
+                                str((task.metadata or {}).get("session_id", "default"))
+                                if task.metadata
+                                else "default"
+                            )
+                            request = ApprovalRequest(
+                                request_id=f"escal-{task.task_id}",
+                                task_id=str(task.task_id),
+                                session_id=session_id,
+                                action_type=ApprovalActionType.CLOUD_ESCALATION,
+                                action_description=f"Escalation for task {task.task_id}: {', '.join(decision.reasons)}",
+                                action_parameters={},
+                                risk_level="medium",
+                                reason_for_approval=", ".join(decision.reasons),
+                                expires_at=datetime.now(timezone.utc)
+                                + timedelta(seconds=300),
+                            )
+                            response = (
+                                await self.multi_channel_approval_gate.request_approval(
+                                    request
+                                )
+                            )
+                            approved = response.approved
+                        elif self.approval_gate:
                             approved = await self.escalation_engine.request_approval(
                                 task, decision
                             )
-                            if approved:
-                                # Execute escalation
-                                output = (
-                                    await self.escalation_engine.execute_escalation(
-                                        task, decision
-                                    )
-                                )
-                            else:
-                                # Escalation denied
-                                output.metadata["escalation_denied"] = True
-                                output.metadata["denied_reason"] = (
-                                    "User denied escalation"
-                                )
                         else:
                             # No approval gate - escalate automatically
+                            approved = True
+
+                        if approved:
+                            # Execute escalation
                             output = await self.escalation_engine.execute_escalation(
                                 task, decision
                             )
+                        else:
+                            # Escalation denied
+                            output.metadata["escalation_denied"] = True
+                            output.metadata["denied_reason"] = "User denied escalation"
                 except Exception:
                     # Escalation error should not crash task processing
                     pass

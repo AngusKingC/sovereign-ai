@@ -985,20 +985,61 @@ class ApprovalGate:
                 pass
 
     async def load_scopes(self, session_id: str) -> None:
-        """Load active scopes for a session from Postgres into cache.
+        """Load approval scopes from Postgres for a session.
 
-        Args:
-            session_id: Session identifier
+        Replaces the stub TODO from Plan 81. Queries the approval_scopes table
+        for active scopes matching the session_id, populates _scope_cache.
+
+        Rev2 H10 fix — catch specific exceptions instead of broad Exception.
+        The original code swallowed ALL errors (including AttributeError if
+        postgres_trace_store.fetch doesn't exist), silently disabling scope
+        enforcement. Now catches specific Postgres/connection errors and
+        re-raises AttributeError (programming error, should not be hidden).
         """
-        # In a real implementation, this would query Postgres
-        # For now, we'll initialize an empty list for the session
-        if session_id not in self._scope_cache:
-            self._scope_cache[session_id] = []
+        if not self.memory_router:
+            return
 
-        # TODO: Implement Postgres query to load scopes
-        # This would involve querying the approval_scopes table
-        # for scopes with matching session_id and is_active=True
-        # and expires_at > NOW()
+        try:
+            # Query active scopes for this session
+            query = """
+                SELECT scope_id, session_id, scope_type, scope_pattern,
+                       size_limit_mb, time_limit_seconds, granted_at, expires_at,
+                       granted_by, is_active, revoked_at, revoked_by
+                FROM approval_scopes
+                WHERE session_id = $1 AND is_active = TRUE
+                  AND (expires_at IS NULL OR expires_at > NOW())
+            """
+            # Verify postgres_trace_store.fetch exists before calling
+            if not hasattr(self.memory_router, "postgres_trace_store"):
+                raise AttributeError(
+                    "memory_router.postgres_trace_store not configured"
+                )
+            if not hasattr(self.memory_router.postgres_trace_store, "fetch"):
+                raise AttributeError(
+                    "postgres_trace_store.fetch method not implemented"
+                )
+
+            rows = await self.memory_router.postgres_trace_store.fetch(
+                query, session_id
+            )
+
+            scopes = [ApprovalScope(**row) for row in rows]
+            self._scope_cache[session_id] = scopes
+            logger.info(f"Loaded {len(scopes)} active scopes for session {session_id}")
+
+        except AttributeError:
+            # Rev2 H10 fix — programming errors must not be silently swallowed
+            logger.error(
+                f"load_scopes configuration error for session {session_id}: missing postgres_trace_store.fetch"
+            )
+            raise  # Re-raise — this is a bug, not a runtime issue
+        except Exception as e:
+            # Catch specific Postgres errors (asyncpg.PostgresError, ConnectionRefusedError, etc.)
+            # but log them loudly — scope enforcement failure is a security concern
+            logger.error(
+                f"Failed to load scopes for session {session_id}: {type(e).__name__}: {e}"
+            )
+            self._scope_cache[session_id] = []
 
     async def expire_pending(self) -> None:
         """Expire pending approval requests that have timed out.
