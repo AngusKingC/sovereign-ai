@@ -719,7 +719,7 @@ This changelog documents all implementations, changes, and decisions made during
 - Coverage: 82% (baseline held)
 - Tag: prompt-73 verified on origin
 
-## 2025-06-25 00:57 — prompt-74
+## 2026-06-25 00:57 — prompt-74
 
 **Plan**: Cost Tracking & Spend Caps (Critical #2)
 
@@ -815,7 +815,7 @@ This changelog documents all implementations, changes, and decisions made during
 - Coverage: 83% (baseline held)
 - Tag: prompt-76 verified on origin
 
-## <2025-06-25> 14:00 — governance-directive-01
+## 2026-06-25 14:00 — governance-directive-01
 
 **Plan**: Governance Directive 01 — Execution Discipline + Token Conservation Rules
 
@@ -828,7 +828,7 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: N/A (governance only)
 - Coverage: N/A (governance only)
 - Tag: governance-directive-01 verified on origin
-## <2025-06-25> 14:00 - governance-patch-02
+## 2026-06-25 14:00 — governance-patch-02
 
 **Plan**: Governance Patch 02 - L17 Landmine + Vulture Whitelist Update
 
@@ -924,20 +924,6 @@ This changelog documents all implementations, changes, and decisions made during
 - Coverage: 83% (test_ar18_compliance.py)
 - Tag: rule-cleanup verified on origin
 
-## 2026-06-25 23:03 — rule-cleanup
-
-**Plan**: AR18 compliance test scope expansion (hardcoded 9-file list → repo-wide walk)
-
-**Changed**:
-- tests/test_ar18_compliance.py: replaced 4 hardcoded file-list test functions with 1 repo-wide walk (mirrors test_di_compliance.py pattern). Test count delta: -3 (4 functions removed, 1 added).
-- vulture-whitelist.txt: added line 107 variant for core/event_trigger.py last_check_time (CRLF line ending mismatch).
-
-**Results**:
-- Tests: 1364 passed, 67 skipped (delta: -3 from ar18-fix-all baseline of 1367 — test function consolidation, no tests lost)
-- Ruff: 0 → 0
-- Coverage: 83% (test_ar18_compliance.py)
-- Tag: rule-cleanup verified on origin
-
 ## 2026-06-26 00:12 — governance-patch-04
 
 **Plan**: OR38 clarification (disambiguate '2+ decades ago') + OR39 (plan file retention) + L20 landmine + jarvis-close.md C12 update
@@ -974,7 +960,7 @@ This changelog documents all implementations, changes, and decisions made during
 - Coverage: 83% overall
 - Tag: prompt-78 verified on origin
 
-## 2025-06-26 11:06 — prompt-79
+## 2026-06-26 11:06 — prompt-79
 
 **Plan**: Model Routing / Tiered Selection
 

@@ -96,77 +96,116 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ---
 
-## Next 5 Prompts Queue
+## Next 5 Prompts Queue (Updated for 4-Plan Batches + Scan Prompts)
 
-### Plan 81 — 5-Plan Milestone Full Scan (Priority 1 — mandatory)
+**New structure**: 4-plan batches with scan prompts every 5 plans. Plan 81 is now code production (not scan). Scan moved to Plan 85.
 
-**Scope**: Full 6-tool checkpoint scan (pytest, ruff, mypy, bandit, pip-audit, vulture) + coverage verification + NEW Vitest baseline verification. Baseline reconciliation after Plans 76-80. Validates PEMADS Phase 1 + 3 Kimi gaps + UI shell foundation before Phase 2 begins.
+### Batch 1: Plans 81–84 (JArvis UI Shell — Code Production)
 
-**Expected impact**: Baseline verification, trend analysis. First scan to include Vitest baseline.
+#### Plan 81 — JArvis UI: Backend Unification + API Endpoints (Priority 1 — Kimi Critical)
+**Depends on**: `prompt-80` | **Tag**: `prompt-81`
+**Scope**: Merge `backend/main.py` into `web/server.py` (eliminate two-server architecture). Add all missing API endpoints for operational dashboard: costs, circuit-breaker, approvals, memory, skills, system. Create `src/lib/api.ts` (currently MISSING — breaks frontend build). Add orchestrator getter methods for UI consumption. 9 new backend tests.
+**What to do**:
+1. Merge `backend/main.py` endpoints into `web/server.py`, delete `backend/` directory
+2. Add 12 new API endpoints wired to real orchestrator methods (not mocked)
+3. Add thin getter methods to `core/orchestrator.py`
+4. Create `src/lib/api.ts` with typed API wrappers
+5. Update `src/next.config.ts` with rewrites to backend
+6. Create `src/.env.local` and `src/.env.example`
+7. Add 9 backend tests to `tests/test_ui_backend.py`
+**STOP condition**: If merge causes any existing test to fail, STOP and report.
 
-**Baseline changes**: All baselines should hold within tolerance. New Vitest baseline established.
+#### Plan 82 — JArvis UI: Frontend State + Shell Layout (Priority 1 — Kimi Critical)
+**Depends on**: `prompt-81` | **Tag**: `prompt-82`
+**Scope**: Build all Zustand stores, data-fetching hooks, and persistent dashboard shell. CSS Grid layout, status bar, sidebar (9 nav items), main pane, right panel (3 tabs), bottom bar (activation grid placeholder). Keyboard shortcuts. No operational panels yet.
+**What to do**:
+1. Create 4 new Zustand stores (task, worker, cost, approval)
+2. Update agentStore with `activeView`
+3. Create 5 polling hooks (usePolling generic + 4 specific)
+4. Create useKeyboardShortcuts hook
+5. Update layout.tsx with CSS Grid shell
+6. Update globals.css with grid styles + missing tokens
+7. Update StatusBar, Sidebar, RightPanel, BottomBar
+8. Create MainPane component
+**STOP condition**: If `npx tsc --noEmit` reports errors, STOP and fix.
 
-**Gate**: All 6 Python tools pass, Vitest passes, coverage ≥78% (83% baseline -5%).
+#### Plan 83 — JArvis UI: Operational Panels + Drawers (Priority 1 — Kimi Critical)
+**Depends on**: `prompt-82` | **Tag**: `prompt-83`
+**Scope**: Build all operational panels: Tasks, Workers, Approvals, Costs. Memory Drawer, Settings Drawer, Skills Panel, Help Panel. Terminal placeholder (xterm.js deferred to Plan 89). Update page.tsx with view routing.
+**What to do**:
+1. Create TasksPanel (active/completed/failed sections)
+2. Create WorkersPanel (registry + circuit status)
+3. Create ApprovalQueuePanel (pending + respond actions)
+4. Create CostDashboardPanel (progress bars + breakdown)
+5. Create MemoryDrawer (slide-in, search, export/import)
+6. Create SettingsDrawer (4 tabs, mocked fields)
+7. Create SkillsPanel (skill registry)
+8. Create HelpPanel (static shortcuts)
+9. Create TerminalPlaceholder
+10. Update page.tsx with view routing
+**STOP condition**: If any panel throws TypeScript error, STOP and fix.
+
+#### Plan 84 — JArvis UI: Test Suite + Playwright E2E (Priority 1 — Kimi Critical)
+**Depends on**: `prompt-83` | **Tag**: `prompt-84`
+**Scope**: Complete test coverage for Plans 81–83. 47 tests total: 14 Vitest store tests, 4 Vitest hook tests, 6 Vitest component tests, 5 Vitest shell tests, 9 Playwright E2E tests. First Vitest + Playwright baselines.
+**What to do**:
+1. Add 14 store tests to `stores.test.ts`
+2. Create `hooks.test.ts` with 4 tests
+3. Create `components.test.tsx` with 6 tests
+4. Add 5 shell tests to `shell.test.tsx`
+5. Create Playwright config with dual webServer
+6. Create `e2e/shell.spec.ts` (4 tests)
+7. Create `e2e/sse.spec.ts` (3 tests)
+8. Create `e2e/cors.spec.ts` (2 tests)
+9. Run full suite: pytest + Vitest + Playwright + ruff + mypy + tsc
+**STOP condition**: If any test fails non-trivially, STOP and report.
+
+### Scan Prompt: Plan 85 — 5-Plan Milestone Scan (Mandatory)
+**Depends on**: `prompt-84` | **Tag**: `prompt-85`
+**Scope**: Whole-repo scan after Batch 1 completes. No new features. Fixes only. Verify all 4 plans have CHANGELOG entries and tags. Update baselines (Vitest + Playwright first baselines).
+**What to scan**:
+1. Full pytest suite (expected: 1420+ passed)
+2. ruff check . (expected: 0)
+3. mypy core/ system/ (expected: 0)
+4. bandit, pip-audit, vulture
+5. cd src && npm test (Vitest baseline)
+6. cd src && npx playwright test (E2E baseline)
+7. Coverage ≥78% (83% baseline -5% tolerance)
+8. LANDMINES.md: any landmine without AR/OR rule → propose via C9
+9. CHANGELOG.md: verify Plans 81–84 have entries
+10. PLANS.md: baselines current, queue reflects actual state
+**STOP condition**: If scan reveals structural problem requiring design decisions, STOP and report.
+
+### Batch 2: Plans 86–89 (PEMADS + Terminal + System)
+
+#### Plan 86 — PEMADS Phase 2: Expert Panel Manager + VRAM Hot-Swap (Priority 1)
+**Depends on**: `prompt-85` | **Tag**: `prompt-86`
+**Scope**: Backend PEMADS: ExpertPanelManager (manages expert worker pool for debates), VRAMManager (tracks VRAM usage, swap in/out models). Integrates with WorkerCircuitBreaker and ModelTierRouter.
+
+#### Plan 87 — PEMADS Phase 3: Judge + Implementation Gate (Priority 1)
+**Depends on**: `prompt-86` | **Tag**: `prompt-87`
+**Scope**: PEMADSJudge (evaluates debate quality, decides implementation), ImplementationGate (gates on quality threshold + approval). Quality thresholds per TaskType.
+
+#### Plan 88 — Multi-Channel Approvals + Approval UI Enhancements (Priority 1)
+**Depends on**: `prompt-87` | **Tag**: `prompt-88`
+**Scope**: MultiChannelApprovalGate (Web UI / Telegram / Email channels). Frontend: Always Approve, batch actions, expiry countdown, channel indicator, toast notifications.
+
+#### Plan 89 — Terminal xterm.js + System Panels + Subagent UI (Priority 1)
+**Depends on**: `prompt-88` | **Tag**: `prompt-89`
+**Scope**: xterm.js WebSocket PTY integration. LogViewer, SystemStats, SubagentPanel. Replaces terminal placeholder from Plan 83.
+
+### Scan Prompt: Plan 90 — Decade Scan + Infra Remediation (Mandatory)
+**Depends on**: `prompt-89` | **Tag**: `prompt-90`
+**Scope**: Full decade scan. AR18 remediation (264 bare except violations), AR1 violations (2 inline imports), print() → logging (38 statements). Whole-repo ruff/mypy/bandit/vulture sweep.
 
 ---
 
-### Plan 82 — PEMADS Phase 2: Expert Panel Manager + VRAM Hot-Swap (Priority 1 — Kimi Critical #4)
-
-**Scope**: ExpertPanelManager (orchestrates turn-based debates between diverse architectures), VRAM hot-swap (unload models between debate rounds to fit multiple experts). Requires Plans 78-79 prerequisites (circuit breaker, model routing).
-
-**Expected impact**: Live debates enabled. PEMADS core feature delivered.
-
-**Baseline changes**: Test count may increase with expert panel + VRAM hot-swap tests.
-
-**Gate**: Full test suite pass, ruff 0, mypy 0.
-
----
-
-### Plan 83 — Multi-Channel Approval Gates (Priority 1 — Kimi Critical #5)
-
-**Scope**: Extend ApprovalGate to support multi-channel approvals (Telegram, email, web UI). Required before AutoCorrector can autonomously apply code changes (Plan 77 deferred: code_change proposal type). Also required for PEMADS Phase 3 autonomous implementation gate.
-
-**Expected impact**: Human-in-the-loop for unsafe operations across channels. Prerequisite for Plan 77 code_change auto-apply + PEMADS Phase 3.
-
-**Baseline changes**: Test count may increase with multi-channel approval tests.
-
-**Gate**: Full test suite pass, ruff 0, mypy 0.
-
----
-
-### Plan 84 — PEMADS Phase 3: Judge + Implementation Gate (Priority 1 — Kimi Critical #6)
-
-**Scope**: PEMADSJudge (evaluates debate quality, decides implementation), implementation gate (requires Plan 83 multi-channel approvals). Autonomous decisions with quality threshold enforcement.
-
-**Expected impact**: PEMADS full autonomy. End-to-end self-improvement loop.
-
-**Baseline changes**: Test count may increase with judge + implementation gate tests.
-
-**Gate**: Full test suite pass, ruff 0, mypy 0.
-
----
-
-### Plan 85 — PEMADS Phase 4: Pruned Expert Model Generation (Priority 2 — Kimi High)
-
-**Scope**: PrunedExpertGenerator (creates task-specialized models by pruning base models on debate history). Requires Plan 84 judge quality data.
-
-**Expected impact**: Specialized models for task types. Performance optimization.
-
-**Baseline changes**: Test count may increase with pruned expert generation tests.
-
-**Gate**: Full test suite pass, ruff 0, mypy 0.
-
----
-
-### Plan 85 — Open Slot (TBD)
-
-**Scope**: TBD
-
-**Expected impact**: TBD
-
-**Baseline changes**: TBD
-
-**Gate**: TBD
+**Batch Rules**:
+- Batch size: 4 plans per batch (81–84, 86–89, 91–94)
+- Scan prompts: Every 5 plans (85, 90, 95)
+- Review tier: All batches use Tier 2 (5-AI panel)
+- Tagging: One tag per plan (not per batch)
+- Split: After panel clean pass, split combined file into 4 individual plan files
 
 ---
 
@@ -183,34 +222,6 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 **Expected impact**: Closes the gap between AGENTS.md rules and code reality. Not blocking PEMADS Phase 2.
 
 **Gate**: Full test suite pass, ruff 0, mypy 0, test_ar18_compliance.py actually fails on real violations.
-
----
-
-**Plans 86-90 (post-scan)**:
-- **Plan 86**: Multi-channel approval gates (Kimi High — lands right before Phase 3, where implementation decisions need oversight)
-- **Plan 87**: PEMADS Phase 3 — Judge + implementation gate + full testing battery (now safe — multi-channel approvals in place)
-- **Plan 88**: PEMADS Phase 5 — Integration & hardening (Phase 4 cloud pruner stays deferred — local-first)
-- **Plan 89**: 5-plan milestone scan (mandatory)
-- **Plan 90**: [Open Slot] (Priority TBD)
-
-**Roadmap source**: Claude's Option C from the 5-AI panel review (2026-06-25). See `roadmap-sequencing-strategy-and-review-request.md` for the full review process and the Prompt Creator's evaluation.
-
----
-
-## Baseline Reconciliation Notes
-
-- **Test count delta**: 1253 → 1257 (+4) at Plan 71 (AR18 compliance test). 1257 → 1257 (no change) at Plan 72 (no tests added). 1257 → 1269 (+12) at Plan 73 (sandbox tests + skill test updates). 1269 → 1289 (+20) at Plan 74 (cost tracker tests + orchestrator/resource_budget test updates). 1289 → 1308 (+19) at Plan 74.5 (17 PrismLlamaAdapter tests + 2 adapter_factory tests). 1308 → 1308 (no change) at Plan 75 (scan-only plan, no new tests). 1308 → 1350 (+42) at Plan 76 (10 debate_pool + 12 task_classifier + 20 testing_battery). 1350 → 1367 (+17) at Plan 77 (12 AutoCorrector + 5 IVM wiring). OR17 invoked — delta exceeds ±5 tolerance. Justification: all 17 tests are in-scope new tests for new AutoCorrector module + IVM wiring. No existing tests modified or deleted. 1367 → 1364 (-3) at rule-cleanup (test function consolidation: 4 hardcoded file-list tests replaced with 1 repo-wide walk). No tests lost — delta is from function count reduction, not test deletion. Baseline updated to 1364 passed, 67 skipped.
-- **Mypy delta**: 0 → 0 (no change) at Plan 71. 0 → 0 (no change) at Plan 72. 0 → 0 (no change) at Plan 73. 0 → 0 (no change) at Plan 74 (file-scoped mypy on new files, all clean). 1 error → 0 at Plan 75 (fixed types-PyYAML regression - was missing from requirements-dev.txt after Plan 74 mypy hook removal). Baseline holds at 0 errors.
-- **Ruff delta**: 0 → 0 (no change) at Plan 71. 0 → 0 (no change) at Plan 72. 0 → 0 (no change) at Plan 73. 0 → 0 (no change) at Plan 74 (black/isort auto-fixed during pre-commit). Baseline holds at 0 errors.
-- **Bandit delta**: No change at Plan 71-73. No change at Plan 74 (no security-sensitive code added).
-- **pip-audit delta**: No change at Plan 71-73. No change at Plan 74 (no dependency changes).
-- **Vulture delta**: No change at Plan 71-73. No change at Plan 74 (no new dead code; 23 findings remain in whitelist). 23 → 33 (+10) at Plan 75 (new findings from Plans 73-74.5: prism_llama __aexit__ params + test mocks). Whitelist recreated as UTF-8 (was UTF-16, unreadable). CLI syntax fixed (Python-based comparison instead of positional arg). 33 → 38 (+5) at Plan 77 (5 pytest fixture entries in TestAutoCorrectorWiring class). Whitelisted per OR19 (fixture parameters required by pytest). 38 → 39 (+1) at rule-cleanup (added line 107 variant for core/event_trigger.py last_check_time — CRLF line ending mismatch on Windows). Authorized post-hoc as necessary side effect of test refactor.
-- **detect-secrets**: Baseline established at Plan 71 with 15 findings (all false positives). No change at Plan 72-74.
-- **pre-commit**: Configured at Plan 71 with 10 hooks. Mypy hook removed at Plan 74 (stall prevention — follows imports into out-of-scope files, causing Plan 73 stall).
-- **pytest-cov**: Configured at Plan 71 with term-missing and HTML reports. Coverage baseline captured at Plan 71: 82% (24,664 statements, 4,359 missing). No change at Plan 72-74 (coverage held at 82%). Coverage increased to 83% at Plan 74.5 (25,626 statements, 4,476 missing) due to new adapter tests.
-- **Plan 71 scope violation**: Plan 71's checkpoint commit (72e2aa6) bundled 10 Prompt Creator Prompts/ plan files into the prompt-71 tag, violating OR26. Plan 72 documented this violation and enforced the going-forward pattern via OR32 and workflow doc updates.
-- **Plan 73 stall**: Plan 73 stalled due to mypy hook following imports into out-of-scope files (core/task_state_machine.py). Plan 74 removed mypy from pre-commit (stall prevention) and added OR33 (no hook exclusions per L12).
-- **Plan 75 CI vulture job failure**: CI vulture job has been failing since Plan 72 due to broken whitelist syntax (passing whitelist file as positional arg instead of Python-based comparison). Plan 75 fixed the syntax (jarvis-close.md, jarvis-verify.md, ci.yml). CI should now pass.
 
 ---
 

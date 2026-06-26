@@ -138,6 +138,156 @@ When Tier 2 or Tier 3 is triggered, the Prompt Creator commits to adopting the h
 
 ---
 
+
+## Batch Plan Process (NEW — Updated for 4-Plan Batches)
+
+Plans are drafted, reviewed, and fixed together in batches of 4 before any individual file is created. Scan prompts occur every 5 plans (not decade-close). This replaces the previous X1–X9 batch rule and X0 decade-close scan.
+
+### Why 4-plan batches?
+
+Reviewing 4 plans together lets the panel catch cross-plan ordering errors, dependency gaps, and scope overlap that single-plan reviews miss. Splitting early locks in mistakes. 4 plans is the minimum size that justifies batch review overhead while keeping iteration cycles fast.
+
+### Scan prompts every 5 plans
+
+After every 4-plan batch completes, a scan prompt runs to verify baselines, fix accumulated issues, and reconcile state before the next batch begins. Scan prompts are numbered at the 5-plan boundary (85, 90, 95, etc.).
+
+**Batch structure**:
+- Batch 1: Plans 81–84 (code production) → Scan 85
+- Batch 2: Plans 86–89 (code production) → Scan 90
+- Batch 3: Plans 91–94 (code production) → Scan 95
+- etc.
+
+### Step 1 — Draft the combined file
+
+Create one file: `plan-{X1}-{X4}-batch-Rev1.md` (e.g., `plan-81-84-batch-Rev1.md`).
+
+Structure:
+```
+# Batch Plans {X1}–{X4}
+
+## Overview
+Brief summary of what the 4 plans collectively accomplish, execution order, cross-plan dependencies.
+
+## Plan {X1} — {short title}
+### S0. Opening
+### S1–Sn. Plan body
+### STOP condition
+### Files WILL create
+### Files WILL edit
+### Files will NOT edit
+### Closing
+
+## Plan {X2} — {short title}
+[Same structure — each plan is self-contained with its own Opening and Closing]
+
+...
+
+## Plan {X4} — {short title}
+[Same structure]
+```
+
+Rules:
+- Every plan section must be fully self-contained, executable (S0 opening, body, Closing).
+- The Overview section must explicitly state: execution order, cross-plan dependencies, and shared state.
+- **Each plan's header must include a `Depends on:` line** listing prerequisite plans by number. Empty if independent. Machine-checkable by Devin at S0.1 via `/jarvis-open`.
+- Each plan gets its own `prompt-{N}` tag when Devin executes it. One tag per plan, not one per batch.
+
+Also create the batch context brief: `plan-{X1}-{X4}-batch-Rev1-context-brief.md`.
+
+The batch brief follows the same 3-part scaffold (Roles/Rules, Context, Answer Format) as a standard brief, with these additions:
+- **Cross-plan dependency map**: which plans depend on the output of a prior plan.
+- **Sequencing risks**: what happens if plans execute out of order.
+- **Author's confidence by plan**: e.g., "Plans 81–82: 80% confident. Plans 83–84: 65% confident — attack these hardest."
+
+### Step 2 — Round panel review
+
+Batch plans always use **Tier 2 (5-AI panel)** review — no exceptions.
+
+Panel members: Claude, Kimi, DeepSeek, Gemini, ChatGPT.
+
+The user sends the combined file + batch context brief to all five. The Prompt Creator collects all five responses and judges them using the same criteria as a standard Tier 2 review (highest-scoring recommendation wins). Apply all substantiated findings to the combined file.
+
+### Step 3 — Fix and re-review
+
+Produce a revised combined file: `plan-{X1}-{X4}-batch-Rev2.md`. Send to the panel (brief not required for Rev2+; panel reviews the revised combined file directly).
+
+Repeat (Rev3, Rev4…) until the panel's response is a clean pass — no unresolved high-severity issues remain after Prompt Creator adjudication. A clean pass means: (a) no panel member reports a substantiated high-severity issue that hasn't been addressed, and (b) any remaining low-severity items are documented as accepted/rejected with reasoning in the batch context brief's adjudication log. Do not split until clean pass.
+
+**Severity rubric — two categories only:**
+
+- **HIGH**: Issues that would cause a Devin STOP condition, data loss, security vulnerability, Windows incompatibility, or break existing tests. Any panel member may flag an issue as HIGH with a concrete failure scenario. HIGH issues block clean pass and must be resolved or explicitly overruled with user sign-off.
+- **LOW**: Style, formatting, naming preferences, speculative future features, or performance optimizations without measured impact. LOW items may be accepted or rejected at Prompt Creator discretion, with one-paragraph reasoning documented in the batch context brief adjudication log.
+
+There is no "medium" category. Every issue is either HIGH or LOW. If a panel member and the Prompt Creator disagree on severity, the issue is treated as HIGH until resolved.
+
+### Step 4 — Split into individual files
+
+After clean pass, split the confirmed combined file into 4 individual files:
+
+```
+{PROMPT_CREATOR_WORKSPACE}/download/{decade}s/plan-{X1}.md
+{PROMPT_CREATOR_WORKSPACE}/download/{decade}s/plan-{X2}.md
+{PROMPT_CREATOR_WORKSPACE}/download/{decade}s/plan-{X3}.md
+{PROMPT_CREATOR_WORKSPACE}/download/{decade}s/plan-{X4}.md
+```
+
+Each file contains only that plan's content (S0 opening, body, Closing) — no batch header, no overview, no other plans. Strip all cross-plan meta-text; each file must read as a standalone Devin prompt.
+
+Tell the user: "Copy the 4 files in `download/{decade}s/` to `c:\Jarvis\Prompts\{decade}s\` and point Devin at `plan-{X1}.md` first."
+
+### Execution failure within a batch
+
+If Devin hits a STOP condition on Plan {Xn}, subsequent plans that depend on {Xn} — directly or transitively — must also STOP. Dependency is determined by each plan's `Depends on:` line, not by user judgment. Plans with no dependency on {Xn} may proceed, but only if their prerequisite tags are confirmed present on origin by `/jarvis-open`.
+
+**Partial outputs:** If Plan {Xn} completed some but not all of its intended outputs, dependent plans must still STOP. The binary rule is: if Plan Y lists Plan X in `Depends on:`, and Plan X STOPped, Plan Y STOPs. No partial-dependency exceptions.
+
+**Revised plan review tier:** After a STOP, the Prompt Creator revises the failed plan and any dependent plans. Revisions to batch plans must undergo at least Tier 1 (Claude) review before re-execution. If the revision is substantial (touches 3+ files or changes architecture), Tier 2 (5-AI panel) is required.
+
+---
+
+## Scan Prompt (NEW — Replaces X0 Decade-Close Plan)
+
+Scan prompts occur every 5 plans (85, 90, 95, etc.) to verify baselines, fix accumulated issues, and reconcile state before the next batch begins.
+
+### Purpose
+
+After 4 plans execute, the repo accumulates small inconsistencies: stale imports, minor type errors that scraped past mypy, outdated docstrings, LANDMINES.md patterns not yet codified as rules, minor ruff warnings suppressed rather than fixed. The scan prompt cleans all of this up before the next batch begins.
+
+The scan prompt is queued after Plan X4 in `PLANS.md` and executes before the next batch's Plan X1 begins.
+
+**Drafting order constraint:** The next batch (e.g., 86–89) must not be drafted or panel-reviewed until the scan prompt has completed and its changes (including any new AR/OR rules proposed via C9) are committed to origin. This ensures the next batch is drafted against the post-scan repo state.
+
+**Batch failure interaction:** If a batch fails partially (e.g., Plan 83 STOPs, halting 84), the scan must not execute until the failure is resolved and all plans 81–84 have completed. The scan verifies the full batch's output; running it on a partial batch would produce false positives.
+
+### Scan Prompt Structure
+
+```
+## Plan {N} — N-Plan Milestone Scan and Fix
+
+### Scope
+Whole-repo scan. No new features. No new architecture. Fixes only.
+
+### What to scan
+- Run ruff, mypy, bandit, pip-audit, vulture in full — fix all findings not already documented as accepted suppressions in AGENTS.md.
+- Scan LANDMINES.md: for any landmine without a corresponding AR/OR rule in AGENTS.md, propose the missing rule (C9 — Devin's standard rule-proposal channel).
+- Scan CHANGELOG.md: verify every plan in the completed batch has a CHANGELOG entry.
+- Scan PLANS.md: verify baselines are current and the next-5-queue reflects actual state.
+- Scan all docstrings for references to removed/renamed modules.
+- Run full test suite: pytest, Vitest, Playwright (if applicable).
+- Verify coverage has not dropped >5% from baseline.
+
+### What NOT to do
+- Do not add new capabilities.
+- Do not refactor working code unless it violates an existing AR/OR rule.
+- Do not touch test fixtures beyond fixing failures caused by the above.
+
+### STOP condition
+If any scan reveals a structural problem requiring design decisions (not mechanical fixes), STOP and report to the user. Do not guess.
+```
+
+The scan prompt uses the standard S0 opening and `/jarvis-close` closing. It gets its own `prompt-{N}` tag.
+
+---
 ## Prompt Creator Operating Discipline (NEW — Plan 78)
 
 The Prompt Creator (GLM or Kimi) maintains a local rules file at `/home/z/my-project/prompt_creator_rules.md` (outside the repo, since the Prompt Creator doesn't write to the repo). Rules are prefixed `GR{n}` to mirror Devin's `AR{n}`/`OR{n}` scheme. The canonical copy of GR rules lives in this section; the local file is a mirror for the Prompt Creator's own reference.
