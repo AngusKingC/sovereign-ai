@@ -20,12 +20,16 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **Plan 80**: Test baseline updated from 1405 to 1411 tests collected (delta +6). Cause: 6 new backend tests in test_ui_backend.py (FastAPI stubs: health, auth, status, memory, subagents). All new tests are in-scope for Plan 80. Vulture baseline updated from 41 to 41 findings (delta 0). No new vulture findings (backend/ and tests/ excluded from vulture scan). Coverage held at 83% (baseline held).
 
+**Plan 81**: Test baseline updated from 1411 to 1418 tests collected (delta +7). Cause: 7 new backend tests in test_ui_backend.py (costs, circuit-breaker, approvals, memory, skills, system stats). All new tests are in-scope for Plan 81. Vulture baseline updated from 41 to 41 findings (delta 0). No new vulture findings. Coverage held at 83% (baseline held).
+
+**Plan 81**: No static analysis baseline changes. Ruff 0 errors held. Mypy file-scoped clean (web/server.py, core/approval_gate.py). Vulture 41 findings held. Coverage 83% held. All tool counts within tolerance.
+
 ---
 
 ## Test Baseline
 
-**Current baseline**: **1411 tests collected (1411 passed, 67 skipped)**
-**Verified**: Plan 80, Step C1 (full test suite)
+**Current baseline**: **1418 tests collected (1418 passed, 67 skipped)**
+**Verified**: Plan 81, Step C1 (full test suite)
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -93,6 +97,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 78 | Worker Circuit Breaker | 1386 | WorkerCircuitBreaker class (core/worker_circuit_breaker.py) with failure tracking and auto-reset. Integrated into Orchestrator with degraded mode (task queuing when too many workers fail). Added QUEUED to TaskStatus enum. Updated TaskStateMachine transitions. Comprehensive tests (test_worker_circuit_breaker.py). Coverage: 83% (baseline held). |
 | 79 | Model Routing / Tiered Selection | 1405 | ModelTierRouter class (core/model_tier_router.py) for task complexity classification and model routing. Integrated into Orchestrator with cost fallback hook + pre-execution routing. Wired into CLI (serve.py, tui.py). 19 new tests (test_model_tier_router.py). Coverage: 83% (baseline held). |
 | 80 | Sovereign AI UI Shell | 1411 | Next.js 15 frontend with TypeScript, Tailwind v4, Zustand stores, shell components, useSSE hook, API client, ToolInspector panel. FastAPI backend stubs with mocked data, auth middleware, SSE endpoints. 6 new backend tests. Coverage: 83% (baseline held). |
+| 81 | Backend Unification + API Endpoints | 1418 | Merged backend/main.py into web/server.py (eliminated two-server architecture). Added CORS middleware, cookie-based auth for SSE. Added 15 new API endpoints (costs, circuit-breaker, approvals, memory, skills, system stats, SSE streams, PTY WebSocket). Added orchestrator getter methods (get_task, list_workers_with_status, get_session_timeline). Added API response models to core/schemas.py. Created src/lib/api.ts with comprehensive TypeScript client. Updated src/next.config.ts with rewrites. Created src/.env.example. 9 new backend tests. Coverage: 83% (baseline held). |
 
 ---
 
@@ -100,20 +105,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **New structure**: 4-plan batches with scan prompts every 5 plans. Plan 81 is now code production (not scan). Scan moved to Plan 85.
 
-### Batch 1: Plans 81–84 (JArvis UI Shell — Code Production)
-
-#### Plan 81 — JArvis UI: Backend Unification + API Endpoints (Priority 1 — Kimi Critical)
-**Depends on**: `prompt-80` | **Tag**: `prompt-81`
-**Scope**: Merge `backend/main.py` into `web/server.py` (eliminate two-server architecture). Add all missing API endpoints for operational dashboard: costs, circuit-breaker, approvals, memory, skills, system. Create `src/lib/api.ts` (currently MISSING — breaks frontend build). Add orchestrator getter methods for UI consumption. 9 new backend tests.
-**What to do**:
-1. Merge `backend/main.py` endpoints into `web/server.py`, delete `backend/` directory
-2. Add 12 new API endpoints wired to real orchestrator methods (not mocked)
-3. Add thin getter methods to `core/orchestrator.py`
-4. Create `src/lib/api.ts` with typed API wrappers
-5. Update `src/next.config.ts` with rewrites to backend
-6. Create `src/.env.local` and `src/.env.example`
-7. Add 9 backend tests to `tests/test_ui_backend.py`
-**STOP condition**: If merge causes any existing test to fail, STOP and report.
+### Batch 1: Plans 82–85 (JArvis UI Shell — Code Production)
 
 #### Plan 82 — JArvis UI: Frontend State + Shell Layout (Priority 1 — Kimi Critical)
 **Depends on**: `prompt-81` | **Tag**: `prompt-82`
@@ -194,9 +186,43 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 **Depends on**: `prompt-88` | **Tag**: `prompt-89`
 **Scope**: xterm.js WebSocket PTY integration. LogViewer, SystemStats, SubagentPanel. Replaces terminal placeholder from Plan 83.
 
-### Scan Prompt: Plan 90 — Decade Scan + Infra Remediation (Mandatory)
+### Scan Prompt: Plan 90 — 5-Plan Milestone Scan (Mandatory)
 **Depends on**: `prompt-89` | **Tag**: `prompt-90`
-**Scope**: Full decade scan. AR18 remediation (264 bare except violations), AR1 violations (2 inline imports), print() → logging (38 statements). Whole-repo ruff/mypy/bandit/vulture sweep.
+**Scope**: Whole-repo scan after Batch 2 completes. No new features. Fixes only. Verify all 4 plans have CHANGELOG entries and tags. Update baselines.
+**What to scan**:
+1. Full pytest suite
+2. ruff check .
+3. mypy core/ system/
+4. bandit, pip-audit, vulture
+5. cd src && npm test (Vitest)
+6. cd src && npx playwright test (E2E)
+7. Coverage ≥78%
+8. LANDMINES.md: any landmine without AR/OR rule → propose via C9
+9. CHANGELOG.md: verify Plans 86–89 have entries
+10. PLANS.md: baselines current, queue reflects actual state
+**STOP condition**: If scan reveals structural problem requiring design decisions, STOP and report.
+
+### Batch 3: Plans 91–94 (Open Slot)
+
+#### Plan 91 — Open Slot (Priority TBD)
+**Depends on**: `prompt-90` | **Tag**: `prompt-91`
+**Scope**: TBD
+
+#### Plan 92 — Open Slot (Priority TBD)
+**Depends on**: `prompt-91` | **Tag**: `prompt-92`
+**Scope**: TBD
+
+#### Plan 93 — Open Slot (Priority TBD)
+**Depends on**: `prompt-92` | **Tag**: `prompt-93`
+**Scope**: TBD
+
+#### Plan 94 — Open Slot (Priority TBD)
+**Depends on**: `prompt-93` | **Tag**: `prompt-94`
+**Scope**: TBD
+
+### Scan Prompt: Plan 95 — 5-Plan Milestone Scan (Mandatory)
+**Depends on**: `prompt-94` | **Tag**: `prompt-95`
+**Scope**: Whole-repo scan after Batch 3 completes.
 
 ---
 

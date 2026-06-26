@@ -996,3 +996,27 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: All checks passed
 - Coverage: core 83%, system 83%, memory 83%, adapters 83%, skills 83%
 - Tag: prompt-80 verified locally
+
+## 2026-06-26 18:45 — prompt-81
+
+**Plan**: Backend Unification + API Endpoints
+
+**Changed**:
+- web/server.py: Merged backend/main.py, added CORS middleware, added 15 new API endpoints (costs, circuit-breaker, approvals, memory, skills, system stats, SSE streams, PTY WebSocket)
+- web/middleware/auth_middleware.py: Added cookie-based auth for SSE routes
+- core/orchestrator.py: Added get_task, list_workers_with_status, get_session_timeline getter methods
+- core/approval_gate.py: Added list_pending public getter, added Any import
+- core/schemas.py: Added 9 API response models (CostSummaryResponse, DailyCostResponse, CircuitStatusResponse, etc.)
+- core/skill_registry.py: Added list_skills getter method
+- core/cost_tracker.py: Added daily_usage property
+- system/system_monitor.py: Created new SystemMonitor class with get_stats method
+- tests/test_ui_backend.py: Updated to import from web/server, added 9 new endpoint tests, fixed async token generation
+- src/lib/api.ts: Created comprehensive API client with 15+ functions and TypeScript interfaces
+- src/next.config.ts: Added rewrites for /api/* and /health to backend
+- src/.env.example: Added NEXT_PUBLIC_BACKEND_URL and SOVEREIGN_DEV_TOKEN
+
+**Results**:
+- Tests: 1418 passed, 67 skipped
+- Ruff: 0 errors on touched files
+- Coverage: 83% total
+- Tag: prompt-81 verified locally
