@@ -159,7 +159,6 @@ OR36. Minimize PowerShell output to reduce context token consumption:
 - For multi-command verification, chain with `;` and capture only the final summary line.
 - Never run a command that produces >20 lines of output without truncation.
 - For pre-commit hooks: run with `2>&1 | Select-Object -Last 10` to capture only pass/fail summary. If a hook fails, re-run that specific hook without truncation to see full output.
-- For pytest: always use `-q --tb=short` flags. For targeted tests with `-v`, pipe through `Select-Object -Last 20`.
 - For ruff/mypy: pipe through `Select-Object -Last 3` — you only need the error count.
 
 

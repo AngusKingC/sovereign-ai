@@ -54,7 +54,7 @@ The minimum needed to start working. Full environment (Python version, OS, optio
 
 When the user pastes a Devin execution log, the Prompt Creator (GLM or Kimi) follows these steps in order. Do not skip steps. Do not improvise.
 
-1. **Read the execution log end-to-end.** Extract: actual test/ruff/mypy/bandit/pip-audit/vulture counts, any STOP conditions triggered, any rule proposals Devin submitted (C9), any deviations from the plan.
+1. **Read the execution log end-to-end.** Extract: actual test counts for ALL test suites (pytest, Vitest, Playwright — not just Python), ruff/mypy/bandit/pip-audit/vulture counts, any STOP conditions triggered, any rule proposals Devin submitted (C9), any deviations from the plan. **When new test suites are added (e.g., Vitest in Plan 84, Playwright in Plan 85), the extract step must include them — the test count list is not fixed.**
 
 2. **Verify the repo state.** `git fetch origin` → check the prompt's tag exists on origin → check the CHANGELOG entry matches → check the commit stat matches the plan's scope (no scope creep) → check `PLANS.md` was updated (completed prompts row, baselines, queue shift). If anything doesn't match, flag to the user.
 
@@ -62,7 +62,7 @@ When the user pastes a Devin execution log, the Prompt Creator (GLM or Kimi) fol
 
 4. **Create new AGENTS.md rules** if you spotted a recurring pattern across multiple execution logs that a rule could prevent. Put the rule in the new plan's opening Step 3 (not in the context brief). If no new patterns, the plan's opening Step 3 says "No new AGENTS.md rules this prompt."
 
-5. **Make the prompt + context brief.** Two files in `/home/z/my-project/download/`: `plan-{N}-Rev1.md` (the plan Devin executes) and `plan-{N}-Rev1-context-brief.md` (the review guide for Claude). **Each iteration must use Rev{n} notation: Rev1, Rev2, Rev3, etc. Context brief is only created for Rev1. Rev2+ revisions do not need a context brief — Claude reviews the revised plan directly.**
+5. **Make the prompt files + context brief.** For a batch of N plans: N individual files at `/home/z/my-project/download/{decade}s/plan-{N}-Rev1.md` (the plans Devin executes) and one shared brief at `/home/z/my-project/download/{decade}s/plan-{X1}-{X4}-batch-Rev1-context-brief.md` (the review guide for the panel). **Each iteration must use Rev{n} notation: Rev1, Rev2, Rev3, etc. — one file per plan per revision (e.g., `plan-86-Rev1.md`, `plan-86-Rev2.md`). Context brief is only created for Rev1. Rev2+ revisions do not need a new brief — the panel reviews the revised files directly.**
 
    **Context brief structure** (per Plan 76 research — based on Ghosh et al. structured prompting study + Anthropic sycophancy research + PhotoStructure proof-before-reporting pattern):
 
@@ -77,7 +77,7 @@ When the user pastes a Devin execution log, the Prompt Creator (GLM or Kimi) fol
    - Plan scope summary (what files, what components)
    - Key dependencies (what existing modules this builds on)
    - **Author's reasoning (clearly labeled, to mitigate anchoring bias)**: "My reasoning for this design: [X]. Attack this reasoning — don't ratify the conclusion."
-   - 2-4 named open questions for the reviewer to engage with
+   - Named open questions for the reviewer to engage with — as many as pertinent, but each must be specific and substantive. Vague or confirmatory questions are banned; if you can answer it yourself with high confidence, don't ask it.
    - Prompt Creator's confidence level on key decisions (e.g., "65% confident on the debate pool filesystem layout")
 
    **Part 3: Answer Format** (~5 lines)
@@ -85,7 +85,7 @@ When the user pastes a Devin execution log, the Prompt Creator (GLM or Kimi) fol
    - ALWAYS include an "other concerns" open field so unexpected issues can surface
    - Permit "No issues found" — do not force the reviewer to invent problems
 
-   **Brief length**: 50-100 lines total. High-signal, no redundancy.
+   **Brief length**: As long as it needs to be to cover the substance. No artificial cap, no padding. Every line should earn its place — if a section doesn't help the reviewer find issues, cut it.
 
    **Anti-sycophancy measures** (per Anthropic research — Claude sycophantic in 9-25% of reviews):
    - Open with pre-mortem frame: "Assume this plan failed in 6 months. List the most plausible reasons."
@@ -99,53 +99,34 @@ When the user pastes a Devin execution log, the Prompt Creator (GLM or Kimi) fol
    - Disclose the Prompt Creator's confidence explicitly ("I'm 65% confident on step 3")
    - This gives the reviewer a target without forcing agreement
 
-6. **Pause for Claude review.** The user bridges: they paste the plan + context brief (Rev 1 only) or just the revised plan (Rev 2+) to Claude in a separate chat, then paste Claude's findings back to you. Claude reviews only — does not create or edit plan files, visual diagrams, only identifies issues and improvements. Wait for the user's paste. Apply findings at the Prompt Creator's discretion.
+6. **Pause for round table review.** The user bridges: they send the plan files + context brief (Rev 1 only) or just the revised plan files (Rev 2+) to the 6-AI round table, then paste the round table's findings back to you. The round table reviews only — does not create or edit plan files, visual diagrams, only identifies issues and improvements. Wait for the user's paste. Apply findings at the Prompt Creator's discretion.
 
 7. **Deliver the final plan.** Tell the user: "Copy `plan-{N}-Rev{n}.md` to `c:\Jarvis\Prompts\{decade}s\plan-{N}.md` and point Devin at it."
 
-## Tiered Review System (NEW — Plan 76)
+## Review Process
 
-Not every plan needs the same review depth. The Prompt Creator selects the review tier based on plan characteristics:
+All plans — single-plan revisions and batch plans alike — are reviewed by the **6-AI round table**. There is no tiered system; the round table is the default and only review path.
 
-### Tier 1: Claude only (default, ~80% of plans)
-- **Trigger**: Routine plans, single-subsystem, mechanical fixes, scan plans, plans where AR/OR rules determine the answer
-- **Process**: Prompt Creator drafts → Claude reviews → Prompt Creator revises → Devin executes
-- **Cost**: Low (1 AI review)
+**Round table members**: 6 AIs (configured by user — e.g., Claude, Kimi, DeepSeek, Gemini, ChatGPT, and one additional).
 
-### Tier 2: 5-AI panel (selective, ~20% of plans)
-- **Trigger ANY of**:
-  - Architectural decisions (new patterns, multi-subsystem integration, sequencing)
-  - Prompt Creator confidence <70% in the plan design
-  - Claude's review surfaces significant disagreement or open questions the Prompt Creator can't resolve
-  - Novel territory (no precedent in the project — e.g., PEMADS Phase 1)
-  - Reversible-but-expensive decisions (wrong choice costs multiple plans to fix)
-- **Process**: Prompt Creator drafts strategy doc + plan → 5-AI panel reviews (Claude, Kimi, DeepSeek, Gemini, ChatGPT) → Prompt Creator judges responses on defined criteria → Prompt Creator adopts best-reasoned recommendation → Devin executes
-- **Cost**: High (5 AI reviews + GLM judgment)
+**Process**: Prompt Creator drafts plan(s) + context brief → 6-AI round table reviews → Prompt Creator judges responses → Prompt Creator adopts best-reasoned recommendations → Devin executes.
 
-### Tier 3: 5-AI panel + user judgment (rare, ~2% of plans)
-- **Trigger**: Roadmap-level decisions, philosophy changes (local-first → cloud), feature arc launches
-- **Process**: 5-AI panel → Prompt Creator judges → user reviews Prompt Creator's judgment → final decision
-- **Cost**: Highest (5 AI reviews + GLM judgment + user review)
+**Prompt Creator's commitment**: The Prompt Creator commits to adopting the highest-scoring recommendation — even if it contradicts the Prompt Creator's original position. This is what makes the pattern work: if the Prompt Creator always overrode the round table, there'd be no point.
 
-### Prompt Creator's commitment
-When Tier 2 or Tier 3 is triggered, the Prompt Creator commits to adopting the highest-scoring recommendation — even if it contradicts the Prompt Creator's original position. This is what makes the pattern work: if the Prompt Creator always overrode the panel, there'd be no point.
-
-### When to trigger Tier 2 for plan review specifically
-- A plan introduces a new architecture pattern (like AR19 sandbox, AR20 subprocess adapter)
-- A plan touches 3+ subsystems
-- Claude's review comes back with "REQUIRES CLARIFICATION" or >3 open questions
-- Prompt Creator revises a plan 3+ times (Rev3+) — signals iterating in a hole
+**For roadmap-level decisions** (philosophy changes, feature arc launches), the user reviews the Prompt Creator's judgment before final decision.
 
 ---
 
 
-## Batch Plan Process (NEW — Updated for 4-Plan Batches)
+## Batch Plan Process (Updated — Separate File Drafting)
 
-Plans are drafted, reviewed, and fixed together in batches of 4 before any individual file is created. Scan prompts occur every 5 plans (not decade-close). This replaces the previous X1–X9 batch rule and X0 decade-close scan.
+Plans are drafted as **individual files from the start** (no combined batch file, no split step). Review happens via round table. This replaces the previous combined-file + split approach.
 
-### Why 4-plan batches?
+### Why separate files?
 
-Reviewing 4 plans together lets the panel catch cross-plan ordering errors, dependency gaps, and scope overlap that single-plan reviews miss. Splitting early locks in mistakes. 4 plans is the minimum size that justifies batch review overhead while keeping iteration cycles fast.
+The combined-file + split approach introduced a mechanical transformation (split) that could introduce bugs — stale references to other plan numbers, leftover batch header text, missing S0/Closing sections. Drafting separately eliminates this overhead: what the panel reviews IS what Devin executes.
+
+Cross-plan review is handled by the round table method and a shared batch-level context brief (below), not by bundling plans into one file.
 
 ### Scan prompts every 5 plans
 
@@ -157,83 +138,68 @@ After every 4-plan batch completes, a scan prompt runs to verify baselines, fix 
 - Batch 3: Plans 91–94 (code production) → Scan 95
 - etc.
 
-### Step 1 — Draft the combined file
+### Step 1 — Draft individual plan files
 
-Create one file: `plan-{X1}-{X4}-batch-Rev1.md` (e.g., `plan-81-84-batch-Rev1.md`).
+Create N individual files (one per plan in the batch):
 
-Structure:
 ```
-# Batch Plans {X1}–{X4}
-
-## Overview
-Brief summary of what the 4 plans collectively accomplish, execution order, cross-plan dependencies.
-
-## Plan {X1} — {short title}
-### S0. Opening
-### S1–Sn. Plan body
-### STOP condition
-### Files WILL create
-### Files WILL edit
-### Files will NOT edit
-### Closing
-
-## Plan {X2} — {short title}
-[Same structure — each plan is self-contained with its own Opening and Closing]
-
-...
-
-## Plan {X4} — {short title}
-[Same structure]
+{PROMPT_CREATOR_WORKSPACE}/download/{decade}s/plan-{X1}-Rev1.md
+{PROMPT_CREATOR_WORKSPACE}/download/{decade}s/plan-{X2}-Rev1.md
+{PROMPT_CREATOR_WORKSPACE}/download/{decade}s/plan-{X3}-Rev1.md
+{PROMPT_CREATOR_WORKSPACE}/download/{decade}s/plan-{X4}-Rev1.md
 ```
+
+Each file is self-contained: S0 Opening, body, STOP condition, Files WILL create/edit/NOT edit, Closing, `Depends on:` line. Reads as a standalone Devin prompt.
 
 Rules:
-- Every plan section must be fully self-contained, executable (S0 opening, body, Closing).
-- The Overview section must explicitly state: execution order, cross-plan dependencies, and shared state.
+- Every plan file must be fully self-contained, executable (S0 opening, body, Closing).
 - **Each plan's header must include a `Depends on:` line** listing prerequisite plans by number. Empty if independent. Machine-checkable by Devin at S0.1 via `/jarvis-open`.
-- Each plan gets its own `prompt-{N}` tag when Devin executes it. One tag per plan, not one per batch.
+- Each plan gets its own `prompt-{N}` tag when Devin executes it. One tag per plan.
 
-Also create the batch context brief: `plan-{X1}-{X4}-batch-Rev1-context-brief.md`.
+### Step 2 — Draft the batch context brief
 
-The batch brief follows the same 3-part scaffold (Roles/Rules, Context, Answer Format) as a standard brief, with these additions:
+Create ONE shared brief covering all plans in the batch:
+
+```
+{PROMPT_CREATOR_WORKSPACE}/download/{decade}s/plan-{X1}-{X4}-batch-Rev1-context-brief.md
+```
+
+The brief follows the same 3-part scaffold (Roles/Rules, Context, Answer Format) as a standard brief, with these additions:
 - **Cross-plan dependency map**: which plans depend on the output of a prior plan.
 - **Sequencing risks**: what happens if plans execute out of order.
-- **Author's confidence by plan**: e.g., "Plans 81–82: 80% confident. Plans 83–84: 65% confident — attack these hardest."
+- **Author's confidence by plan**: e.g., "Plans 86–87: 80% confident. Plans 88–89: 65% confident — attack these hardest."
+- **Named open questions**: as many as pertinent, but each must be specific and substantive.
 
-### Step 2 — Round panel review
+### Step 3 — Round table review
 
-Batch plans always use **Tier 2 (5-AI panel)** review — no exceptions.
+Batch plans are reviewed by the **6-AI round table** — no exceptions.
 
-Panel members: Claude, Kimi, DeepSeek, Gemini, ChatGPT.
+Panel members: 6 members (configured by user — e.g., Claude, Kimi, DeepSeek, Gemini, ChatGPT, and one additional).
 
-The user sends the combined file + batch context brief to all five. The Prompt Creator collects all five responses and judges them using the same criteria as a standard Tier 2 review (highest-scoring recommendation wins). Apply all substantiated findings to the combined file.
+The user sends the N individual files + 1 batch context brief to the round table. The Prompt Creator collects all responses and judges them. Apply all substantiated findings to the individual files.
 
-### Step 3 — Fix and re-review
+### Step 4 — Fix and re-review
 
-Produce a revised combined file: `plan-{X1}-{X4}-batch-Rev2.md`. Send to the panel (brief not required for Rev2+; panel reviews the revised combined file directly).
+Revise individual files as needed (one file per plan per revision):
 
-Repeat (Rev3, Rev4…) until the panel's response is a clean pass — no unresolved high-severity issues remain after Prompt Creator adjudication. A clean pass means: (a) no panel member reports a substantiated high-severity issue that hasn't been addressed, and (b) any remaining low-severity items are documented as accepted/rejected with reasoning in the batch context brief's adjudication log. Do not split until clean pass.
+```
+{PROMPT_CREATOR_WORKSPACE}/download/{decade}s/plan-{X1}-Rev2.md
+{PROMPT_CREATOR_WORKSPACE}/download/{decade}s/plan-{X2}-Rev2.md
+...
+```
 
-**Severity rubric — two categories only:**
+Rev2+ files do not need a new context brief — the panel reviews the revised files directly. However, if revisions are substantial (new architecture, changed dependencies), update the batch brief to reflect the new state.
 
-- **HIGH**: Issues that would cause a Devin STOP condition, data loss, security vulnerability, Windows incompatibility, or break existing tests. Any panel member may flag an issue as HIGH with a concrete failure scenario. HIGH issues block clean pass and must be resolved or explicitly overruled with user sign-off.
+Repeat (Rev3, Rev4…) until the round table's response is a clean pass. A clean pass means: (a) no panel member reports a substantiated Critical or High issue that hasn't been addressed, and (b) any remaining Medium/Low items are documented as accepted/rejected with reasoning in the batch context brief's adjudication log.
+
+**Severity rubric — four categories:**
+
+- **CRITICAL**: Issues that would cause data loss, security vulnerability, or irreversible system damage. Any panel member may flag an issue as CRITICAL with a concrete failure scenario. CRITICAL issues block clean pass and must be resolved before Devin execution — no exceptions, no overrides.
+- **HIGH**: Issues that would cause a Devin STOP condition, test failure, broken build, or Windows incompatibility. HIGH issues block clean pass and must be resolved or explicitly overruled with user sign-off.
+- **MEDIUM**: Issues that would cause degraded functionality, poor user experience, or technical debt that should be addressed before execution but won't necessarily cause failure. MEDIUM issues should be addressed; if accepted, document reasoning in adjudication log.
 - **LOW**: Style, formatting, naming preferences, speculative future features, or performance optimizations without measured impact. LOW items may be accepted or rejected at Prompt Creator discretion, with one-paragraph reasoning documented in the batch context brief adjudication log.
 
-There is no "medium" category. Every issue is either HIGH or LOW. If a panel member and the Prompt Creator disagree on severity, the issue is treated as HIGH until resolved.
-
-### Step 4 — Split into individual files
-
-After clean pass, split the confirmed combined file into 4 individual files:
-
-```
-{PROMPT_CREATOR_WORKSPACE}/download/{decade}s/plan-{X1}.md
-{PROMPT_CREATOR_WORKSPACE}/download/{decade}s/plan-{X2}.md
-{PROMPT_CREATOR_WORKSPACE}/download/{decade}s/plan-{X3}.md
-{PROMPT_CREATOR_WORKSPACE}/download/{decade}s/plan-{X4}.md
-```
-
-Each file contains only that plan's content (S0 opening, body, Closing) — no batch header, no overview, no other plans. Strip all cross-plan meta-text; each file must read as a standalone Devin prompt.
-
-Tell the user: "Copy the 4 files in `download/{decade}s/` to `c:\Jarvis\Prompts\{decade}s\` and point Devin at `plan-{X1}.md` first."
+If a panel member and the Prompt Creator disagree on severity, the issue is treated as the higher severity until resolved.
 
 ### Execution failure within a batch
 
@@ -241,7 +207,7 @@ If Devin hits a STOP condition on Plan {Xn}, subsequent plans that depend on {Xn
 
 **Partial outputs:** If Plan {Xn} completed some but not all of its intended outputs, dependent plans must still STOP. The binary rule is: if Plan Y lists Plan X in `Depends on:`, and Plan X STOPped, Plan Y STOPs. No partial-dependency exceptions.
 
-**Revised plan review tier:** After a STOP, the Prompt Creator revises the failed plan and any dependent plans. Revisions to batch plans must undergo at least Tier 1 (Claude) review before re-execution. If the revision is substantial (touches 3+ files or changes architecture), Tier 2 (5-AI panel) is required.
+**Revised plan review:** After a STOP, the Prompt Creator revises the failed plan and any dependent plans. Revisions must undergo round table review before re-execution.
 
 ---
 

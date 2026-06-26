@@ -9,9 +9,9 @@ Execute each step in order. Paste output for each. Do NOT skip steps.
 
 ## Step 1: Full test suite
 ```powershell
-python -m pytest tests
+python -m pytest tests/
 ```
-Expected: check `PLANS.md` for current baseline. If tests fail, STOP.
+**Note**: Do NOT use `-q --tb=short` or pipe to `Select-Object -Last 5`. Run the full test suite with complete output so hangs and stuck tests are visible. If tests fail, STOP. Check `PLANS.md` for current baseline.
 
 ## Step 2: Ruff check on touched files
 ```powershell

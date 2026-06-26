@@ -8,6 +8,9 @@ export const VIEWS = {
   COSTS: "costs",
   TOOLS: "tools",
   HELP: "help",
+  TERMINAL: "terminal",
+  SYSTEM: "system",
+  SUBAGENTS: "subagents",
 } as const;
 
 export const DRAWERS = {
