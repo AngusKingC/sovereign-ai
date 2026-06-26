@@ -1212,3 +1212,27 @@ This changelog documents all implementations, changes, and decisions made during
 - Mypy: 0 errors
 - Coverage: 82% overall
 - Tag: prompt-89 verified on origin
+
+## 2026-06-26 23:34 — prompt-90
+
+**Plan**: 5-Plan Milestone Scan + Bug Fixes + UI Gap Foundation
+
+**Changed**:
+- src/__tests__/components.test.tsx: Fixed data-testid mismatch (approvals-panel instead of approval-queue-panel)
+- src/__tests__/stores.test.ts: Fixed approvalStore function name mismatch (removeRequest instead of remove)
+- api/models.py: NEW - API router stub for model endpoints (list, get, search)
+- api/workers.py: NEW - API router stub for worker endpoints (create, update, delete)
+- tests/test_api_stubs.py: NEW - Tests for API stub endpoints (6 tests)
+- web/server.py: Added imports and router includes for models and workers API
+- .github/workflows/ci.yml: Updated stale TODO reference from Plan 74 to upstream fix
+- PLANS.md: Updated baselines (test count 1457, bandit 3639/10/0, pip-audit 20 CVEs), added Plan 90 to Completed Prompts, marked Plan 90 as completed in queue
+
+**Results**:
+- Tests: 1457 passed, 67 skipped
+- Ruff: 0 errors
+- Mypy: 0 errors
+- Bandit: 3639 low, 10 medium, 0 high
+- pip-audit: 20 CVEs
+- Vulture: 40 findings (all whitelisted)
+- Coverage: 82%
+- Tag: prompt-90 verified on origin
