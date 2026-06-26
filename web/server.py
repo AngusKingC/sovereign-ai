@@ -16,6 +16,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
+from api.models import router as models_router
+from api.workers import router as workers_router
 from core.auth import AuthManager
 from core.input_sanitiser import InputSanitiser
 from core.observability import (
@@ -813,6 +815,10 @@ def create_app(
                 except ProcessLookupError:
                     pass  # Already dead
                 os.waitpid(pid, 0)
+
+    # Include new API routers (stubs for Plans 91-94)
+    app.include_router(models_router)
+    app.include_router(workers_router)
 
     # Mount static files
     app.mount("/static", StaticFiles(directory="web/static"), name="static")
