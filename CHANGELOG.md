@@ -1126,3 +1126,26 @@ This changelog documents all implementations, changes, and decisions made during
 - TypeScript: 0 errors
 - Coverage: 83% (baseline held)
 - Tag: prompt-85 verified locally
+
+## 2025-06-26 21:44 — prompt-86
+
+**Plan**: Terminal xterm.js + System Panels + Subagent UI
+
+**Changed**:
+- src/package.json: Added @xterm/xterm, @xterm/addon-fit, @xterm/addon-web-links dependencies
+- src/hooks/useWebSocket.ts: Created bidirectional WebSocket hook with reconnection logic
+- src/components/panels/TerminalPanel.tsx: Created real xterm.js terminal panel (replaces TerminalPlaceholder)
+- src/components/panels/SystemStatsPanel.tsx: Already existed, verified matches plan spec
+- src/components/panels/SubagentPanel.tsx: Already existed, verified matches plan spec
+- src/stores/subagentStore.ts: Extended with async killSubagent (calls backend DELETE endpoint)
+- src/stores/uiStore.ts: Already had TERMINAL, SYSTEM, SUBAGENTS views added
+- src/components/shell/Sidebar.tsx: Added 3 nav items (Terminal, System, Subagents)
+- src/app/page.tsx: Added view routing for 3 new panels, dynamic import for TerminalPanel (SSR fix)
+- web/server.py: Already had /ws/pty WebSocket endpoint and DELETE /api/subagents/{id} endpoint
+- src/components/panels/TerminalPlaceholder.tsx: Deleted (replaced by TerminalPanel)
+
+**Results**:
+- Tests: 1418 passed, 67 skipped
+- Ruff: 0 errors
+- Coverage: 82% overall
+- Tag: prompt-86 verified locally

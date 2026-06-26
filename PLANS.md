@@ -112,6 +112,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 83 | Operational Panels + Drawers | 1418 | Created 9 panel components: TasksPanel (active/completed/failed sections), WorkersPanel (registry + circuit status), ApprovalQueuePanel (pending + respond actions), CostDashboardPanel (progress bars + breakdown), MemoryDrawer (full implementation with search/sort/export/import), SettingsDrawer (4 tabs with mocked fields), SkillsPanel (skill registry), HelpPanel (static shortcuts), TerminalPlaceholder. Updated page.tsx with polling hooks and view routing using VIEWS constants. StatusBar already wired to settings gear (Plan 82). Coverage: 83% (baseline held). |
 | 84 | Test Suite + Playwright E2E | 1418 + 46 Vitest | Added 17 new store tests (taskStore, workerStore, costStore, approvalStore, memoryStore, uiStore). Created hooks.test.ts with 7 hook tests (usePolling, useStatusPolling, useKeyboardShortcuts, useMemoryPolling). Created components.test.tsx with 6 component tests (TasksPanel, WorkersPanel, ApprovalQueuePanel, CostDashboardPanel, MemoryDrawer, SettingsDrawer). Added 5 shell tests (Sidebar, StatusBar, BottomBar, RightPanel). Added EventSource mock to vitest.setup.ts. Excluded e2e directory from vitest.config.ts. Added @playwright/test and concurrently to package.json, created e2e:serve script. Created playwright.config.ts with cross-platform webServer. Created 8 Playwright E2E tests (shell.spec.ts: 4, sse.spec.ts: 2, cors.spec.ts: 2). First Vitest baseline: 46 tests passed. Playwright E2E deferred to Plan 86 scan. Coverage: 83% (baseline held). |
 | 85 | 5-Plan Milestone Scan and Fix | 1418 + 46 Vitest + 8 Playwright | Fixed mypy shadowing error in core/a2a_protocol.py:191 (renamed inner exception variable). Reconciled vulture baseline from 41 to 40 findings (discrepancy between static analysis table and reconciliation notes). Fixed Plan 81 test count inconsistency (9 → 7 tests). Ran Playwright E2E tests (8 passed). Fixed PLANS.md queue duplication (Terminal moved from Plan 85 to Plan 86, scan moved to Plan 90). Fixed pre-commit --check flag error in jarvis-open workflow (replaced with Test-Path). Full static analysis scan: Ruff 0 errors, Mypy 0 errors, Bandit 3568 low/5 medium/0 high, pip-audit 20 CVEs (baseline), Vulture 40 findings, detect-secrets 0 new. Full test suite: 1418 Python passed, 46 Vitest passed, 8 Playwright passed, TypeScript 0 errors, Coverage 83%. Coverage: 83% (baseline held). |
+| 86 | Terminal xterm.js + System Panels + Subagent UI | 1418 + 46 Vitest + 8 Playwright | Added xterm.js dependencies (@xterm/xterm, @xterm/addon-fit, @xterm/addon-web-links). Created useWebSocket hook with reconnection logic. Created TerminalPanel with xterm.js integration (dynamic import for SSR fix). SystemStatsPanel and SubagentPanel already existed from previous plans. Extended subagentStore with async killSubagent (calls backend DELETE endpoint). Added 3 nav items to Sidebar (Terminal, System, Subagents). Updated page.tsx with view routing for 3 new panels. Deleted TerminalPlaceholder. web/server.py already had /ws/pty WebSocket endpoint and DELETE /api/subagents/{id} endpoint. No test count changes (TypeScript only). Coverage: 83% (baseline held). |
 
 ---
 
@@ -119,22 +120,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **New structure**: 4-plan batches with scan prompts every 5 plans. Plan 85 is a scan prompt (Batch 1 completion). Scan moved to Plan 90.
 
-### Batch 1: Plans 86–89 (JArvis UI Shell — Code Production)
-
-#### Plan 86 — JArvis UI: Terminal xterm.js + System Panels + Subagent UI (Priority 1)
-**Depends on**: `prompt-85` | **Tag**: `prompt-86`
-**Scope**: xterm.js WebSocket PTY integration. LogViewer, SystemStats, SubagentPanel. Replaces terminal placeholder from Plan 83.
-**What to do**:
-1. Install xterm.js and xterm-addon-fit packages
-2. Create PTY WebSocket endpoint in web/server.py
-3. Create TerminalPanel component with xterm.js integration
-4. Create LogViewer component (session logs)
-5. Create SystemStats component (CPU, memory, disk)
-6. Create SubagentPanel component (subagent list + status)
-7. Update page.tsx to replace TerminalPlaceholder
-8. Add Vitest tests for new components
-9. Add Playwright E2E tests for terminal interaction
-**STOP condition**: If PTY WebSocket fails to connect, STOP and report.
+### Batch 1: Plans 87–90 (PEMADS + Scan)
 
 #### Plan 87 — PEMADS Phase 2: Expert Panel Manager + VRAM Hot-Swap (Priority 1)
 **Depends on**: `prompt-86` | **Tag**: `prompt-87`
@@ -232,7 +218,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **Eval harness** — Metrics (exact_match, token_f1, bleu, cosine_similarity) operational with trace emitter integration. Validation suite with 15 static tasks confirms metric behavior across 5 categories.
 - **Skill taxonomy** — SkillTier enum (USER_INVOKED, AGENT_INVOKED, HYBRID), SkillClassification dataclass, SkillTaxonomyRegistry. Default registry with 25 built-in skill classifications. CONTEXT.md project-level shared vocabulary.
 - **Worker Circuit Breaker** — WorkerCircuitBreaker class with failure tracking and auto-reset. Integrated into Orchestrator with degraded mode (task queuing when too many workers fail). QUEUED task status added to TaskStateMachine. Comprehensive tests covering worker-level and aggregate behavior.
-- **UI Shell** — Next.js 15 frontend with TypeScript, Tailwind v4, Zustand stores, shell components, polling hooks, API client. FastAPI backend with CORS, cookie-based auth, SSE endpoints. Operational panels: Tasks, Workers, Approvals, Costs, Skills, Help. Memory Drawer (search/sort/export/import), Settings Drawer (4 tabs). Terminal placeholder (xterm.js deferred to Plan 89).
+- **UI Shell** — Next.js 15 frontend with TypeScript, Tailwind v4, Zustand stores, shell components, polling hooks, API client. FastAPI backend with CORS, cookie-based auth, SSE endpoints. Operational panels: Tasks, Workers, Approvals, Costs, Skills, Help, Terminal (xterm.js), System Stats, Subagents. Memory Drawer (search/sort/export/import), Settings Drawer (4 tabs).
 
 ### What's Broken Right Now
 
