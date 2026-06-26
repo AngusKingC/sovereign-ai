@@ -251,6 +251,26 @@ class CostTracker:
             "total_records": len(self._records),
         }
 
+    @property
+    def daily_usage(self) -> dict[str, Any]:
+        """Return today's cost usage breakdown."""
+        now = datetime.now(timezone.utc)
+        today_str = now.strftime("%Y-%m-%d")
+        entries = [
+            {
+                "model": model,
+                "tokens_in": 0,  # TODO: extract from records when detailed tracking is added
+                "tokens_out": 0,
+                "cost_usd": spend,
+            }
+            for model, spend in self._model_spend.items()
+        ]
+        return {
+            "date": today_str,
+            "total_usd": self.get_daily_spend(now),
+            "entries": entries,
+        }
+
     async def _emit_cost_trace(self, record: CostRecord) -> None:
         """Emit COST_RECORDED trace event.
 

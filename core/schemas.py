@@ -769,3 +769,97 @@ class Scratchpad(BaseModel):
     @field_serializer("completed_at")
     def serialize_completed_at(self, value: datetime | None) -> str | None:
         return value.isoformat() if value else None
+
+
+# API Response Models for web/server.py endpoints
+
+
+class CostSummaryResponse(BaseModel):
+    """Response model for /api/costs/summary endpoint."""
+
+    daily_spend: float
+    daily_cap: float
+    monthly_spend: float
+    monthly_cap: float
+    alert_threshold: int
+    fallback_threshold: int
+    model_breakdown: dict[str, float]
+
+
+class DailyCostResponse(BaseModel):
+    """Response model for /api/costs/daily endpoint."""
+
+    date: str
+    total_usd: float
+    entries: list[dict[str, Any]]
+
+
+class CircuitStatusResponse(BaseModel):
+    """Response model for /api/circuit-breaker/status endpoint."""
+
+    workers: list[dict[str, Any]]
+    degraded_ratio: float
+
+
+class ResetResponse(BaseModel):
+    """Response model for /api/circuit-breaker/reset endpoint."""
+
+    status: str
+    worker_id: str
+
+
+class ApprovalResponse(BaseModel):
+    """Response model for approval endpoints."""
+
+    id: str
+    type: str
+    description: str
+    risk: str
+    expires_at: str
+    status: str | None = None
+
+
+class MemorySlotResponse(BaseModel):
+    """Response model for memory slot endpoints."""
+
+    index: int
+    key: str | None = None
+    value_preview: str | None = None
+    last_written: str | None = None
+    activation: float
+
+
+class ImportResponse(BaseModel):
+    """Response model for /api/memory/slots/import endpoint."""
+
+    imported: int
+    errors: list[str]
+
+
+class SkillResponse(BaseModel):
+    """Response model for /api/skills endpoint."""
+
+    name: str
+    tier: str
+    enabled: bool
+    methods: list[str]
+    requires: list[str]
+
+
+class TimelineResponse(BaseModel):
+    """Response model for /api/sessions/{id}/timeline endpoint."""
+
+    phase: str
+    start: str
+    end: str
+    confidence: float
+
+
+class SystemStatsResponse(BaseModel):
+    """Response model for /api/system endpoint."""
+
+    cpu_percent: float
+    memory_percent: float
+    uptime_seconds: int
+    active_workers: int
+    gpu_percent: float | None = None

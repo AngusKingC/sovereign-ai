@@ -7,16 +7,16 @@ from typing import TYPE_CHECKING
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response, JSONResponse
+from starlette.responses import JSONResponse, Response
 
 from core.auth import AuthManager
 from core.observability import (
+    MemoryTraceEmitter,
     TraceComponent,
+    TraceEmitter,
+    TraceEvent,
     TraceEventType,
     TraceLevel,
-    TraceEvent,
-    TraceEmitter,
-    MemoryTraceEmitter,
 )
 
 if TYPE_CHECKING:
@@ -30,7 +30,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app, auth_manager: AuthManager):
         """Initialize the auth middleware.
-        
+
         Args:
             app: The ASGI application
             auth_manager: The auth manager instance
@@ -40,11 +40,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next) -> Response:
         """Dispatch request with authentication check.
-        
+
         Args:
             request: The incoming request
             call_next: The next middleware or route handler
-            
+
         Returns:
             Response from call_next or 401 if authentication fails
         """
@@ -62,6 +62,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
         # Also check WebSocket upgrade requests: token as query param
         if not token:
             token = request.query_params.get("token")
+
+        # Check cookie-based auth for SSE routes (EventSource cannot send custom headers)
+        if not token:
+            token = request.cookies.get("sovereign_token")
 
         # If token missing, return 401
         if not token:
@@ -82,9 +86,13 @@ class SecretsAudit:
 
     SECRET_KEYS = ["api_key", "token", "secret", "password", "key"]
 
-    def __init__(self, config_path: str = "jarvis.config.yaml", emitter: TraceEmitter | None = None):
+    def __init__(
+        self,
+        config_path: str = "jarvis.config.yaml",
+        emitter: TraceEmitter | None = None,
+    ):
         """Initialize the secrets audit.
-        
+
         Args:
             config_path: Path to config file
             emitter: Trace emitter for observability
@@ -94,9 +102,9 @@ class SecretsAudit:
 
     async def audit(self) -> list[str]:
         """Audit config file for secrets.
-        
+
         Scans for any key whose name contains a word from SECRET_KEYS.
-        
+
         Returns:
             List of offending key names (empty list = clean)
         """
@@ -120,7 +128,9 @@ class SecretsAudit:
                                 offending_keys.append(key_name)
 
         for key in offending_keys:
-            print(f"WARNING: Secret key '{key}' found in config file. Should be in .env only.")
+            print(
+                f"WARNING: Secret key '{key}' found in config file. Should be in .env only."
+            )
             try:
                 event = TraceEvent(
                     event_type=TraceEventType.SECRETS_AUDIT_WARNING,
@@ -132,7 +142,9 @@ class SecretsAudit:
                 )
                 await self._emitter.emit(event)
             except Exception as e:
-                logger.warning(f"Trace emission failed in secrets audit: {e}")  # Trace failure should not abort operation
+                logger.warning(
+                    f"Trace emission failed in secrets audit: {e}"
+                )  # Trace failure should not abort operation
                 pass
 
         return offending_keys

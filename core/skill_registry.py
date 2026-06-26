@@ -282,3 +282,18 @@ class SkillRegistry:
             Dictionary mapping skill names to metadata
         """
         return self._skills.copy()
+
+    def list_skills(self) -> list[dict[str, Any]]:
+        """Return list of registered skills for UI consumption."""
+        result = []
+        for skill_name, skill in self._skills.items():
+            result.append(
+                {
+                    "name": skill_name,
+                    "tier": "USER_INVOKED",  # TODO: extract from skill metadata when tier field is added
+                    "enabled": True,
+                    "methods": [],  # TODO: extract from skill metadata
+                    "requires": skill.dependencies,
+                }
+            )
+        return result

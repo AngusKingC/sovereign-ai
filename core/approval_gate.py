@@ -8,7 +8,7 @@ for actions requiring human authorization.
 import logging
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import TYPE_CHECKING, Any, Literal, Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
@@ -1163,3 +1163,23 @@ class ApprovalGate:
                         nested_error,
                         exc_info=True,
                     )
+
+    async def list_pending(self) -> list[dict[str, Any]]:
+        """Return list of pending approval requests as API response models.
+        Public accessor for _pending_requests. Converts internal ApprovalRequest
+        objects to dict for API consumption.
+        """
+        result = []
+        for request_id, request in self._pending_requests.items():
+            result.append(
+                {
+                    "id": request.request_id,
+                    "type": request.action_type,
+                    "description": request.action_description,
+                    "risk": "medium",  # TODO: extract from request when risk field is added
+                    "expires_at": (
+                        request.expires_at.isoformat() if request.expires_at else ""
+                    ),
+                }
+            )
+        return result

@@ -1353,3 +1353,25 @@ class Orchestrator:
                 }
             )
         return result
+
+    async def get_task(self, task_id: str) -> Task | None:
+        """Return single task by ID."""
+        # Check if orchestrator has _active_tasks attribute
+        if hasattr(self, "_active_tasks"):
+            for task in self._active_tasks:
+                if task.task_id == task_id:
+                    return task
+        return None
+
+    async def list_workers_with_status(self) -> list[dict]:
+        """Return workers enriched with circuit breaker status."""
+        # Get basic worker list
+        workers = await self.list_workers()
+        # TODO: enrich with circuit breaker status when worker_circuit_breaker is integrated
+        # For now, return basic list
+        return workers
+
+    async def get_session_timeline(self, session_id: str) -> list[dict]:
+        """Return phase timeline for a session."""
+        # TODO: implement when session tracking is complete
+        return []
