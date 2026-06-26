@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+:root {
+  --color-surface-base:    #0c0c0f;
+  --color-surface-raised:  #13131a;
+  --color-surface-overlay: #1a1a24;
+  --color-border:          #ffffff14;
+  --color-border-strong:   #ffffff28;
+  --color-text-primary:    #e8e6e0;
+  --color-text-secondary:  #9b9890;
+  --color-text-muted:      #5c5a56;
+  --color-accent-amber:    #f59e0b;
+  --color-accent-emerald:  #10b981;
+  --color-accent-violet:   #8b5cf6;
+  --color-accent-red:      #ef4444;
+  --color-accent-slate:    #64748b;
+}
+
+@theme inline {
+  --color-surface-base:    var(--color-surface-base);
+  --color-surface-raised:  var(--color-surface-raised);
+  --color-surface-overlay: var(--color-surface-overlay);
+  --color-border:          var(--color-border);
+  --color-border-strong:   var(--color-border-strong);
+  --color-text-primary:    var(--color-text-primary);
+  --color-text-secondary:  var(--color-text-secondary);
+  --color-text-muted:      var(--color-text-muted);
+  --color-accent-amber:    var(--color-accent-amber);
+  --color-accent-emerald:  var(--color-accent-emerald);
+  --color-accent-violet:   var(--color-accent-violet);
+  --color-accent-red:      var(--color-accent-red);
+  --color-accent-slate:    var(--color-accent-slate);
+
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, monospace;
+}
+
+body {
+  background-color: var(--color-surface-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+}
+
+/* Accessibility: focus rings (brief §6) */
+*:focus-visible {
+  outline: 2px solid var(--color-accent-amber);
+  outline-offset: 2px;
+}
+
+/* Reduced motion (brief §6) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
