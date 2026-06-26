@@ -1,6 +1,6 @@
 ---
 name: jarvis-close
-description: "Sovereign AI closing sequence — C1 through C13. Run this after all plan work is complete. Includes test suite, lint, commit, tag, changelog, plans update, landmines update, push, and verification."
+description: "Sovereign AI closing sequence — C1 through C15. Run this after all plan work is complete. Includes test suite, lint, commit, tag, changelog, plans update, landmines update, execution log file creation, push, and verification."
 ---
 
 # Jarvis Close — Plan Closing Sequence
@@ -153,22 +153,100 @@ If this plan hit a new failure pattern not covered by existing landmines, append
 
 If no new failure patterns were encountered, skip this step. Silence is acceptable here (unlike C9 — landmines are only added when patterns actually emerge).
 
-## Step 12: Commit docs
+## Step 12: Create execution log file (NEW — auto-create for user paste)
+
+Create the execution log file at `logs/execution-log-prompt-{N}.md` (repo root `logs/` directory). This file is created with a header template only — the user will paste the actual Devin execution log content in Step C12.5 before the docs commit.
+
+**Purpose**: Eliminates the manual step of the user creating the log file. Devin creates the empty file with the correct naming convention and header, then PAUSES to let the user paste content. The pasted content is then included in the C13 docs commit — no separate commit needed.
+
+**Naming convention**: `execution-log-prompt-{N}.md` — matches the repo's existing `<descriptive>-prompt-{N}.md` pattern (see historical `scan/logs/checkpoint-scan-prompt-70.md` and `scan/logs/changelog-entry-prompt-{N}.md`).
+
+**Folder**: `logs/` at repo root (mirrors how `Prompts/` is a top-level folder). If the `logs/` directory does not exist, create it:
 ```powershell
-git add CHANGELOG.md PLANS.md LANDMINES.md "Prompts/plan-{N}*.md"
+if (-not (Test-Path "logs")) {
+    New-Item -ItemType Directory -Path "logs"
+}
+```
+
+Write the header template:
+```powershell
+$logHeader = @(
+    "# Execution Log — prompt-{N}",
+    "",
+    "**Plan**: <one-line plan title>",
+    "**Tag**: prompt-{N}",
+    "**Date**: <YYYY-MM-DD>",
+    "",
+    "---",
+    "",
+    "<!-- USER: Paste the full Devin execution log below this line. -->",
+    "<!-- This file was auto-created by jarvis-close Step C12. -->",
+    "<!-- Do not edit above this comment block. -->",
+    "",
+    ""
+)
+Set-Content -Path "logs\execution-log-prompt-{N}.md" -Value $logHeader -Encoding utf8
+```
+
+Verify the file was created:
+```powershell
+Get-Content "logs\execution-log-prompt-{N}.md" | Select-Object -First 15
+```
+Expected: the header template above.
+
+## Step 12.5: PAUSE for user paste (MANDATORY — do NOT skip)
+
+This is a hard pause. Devin MUST stop here and wait for the user before proceeding to C13.
+
+**Output this message to the user and STOP**:
+```
+--- EXECUTION LOG PASTE REQUIRED ---
+
+File created: logs/execution-log-prompt-{N}.md
+
+Action required:
+1. Open logs/execution-log-prompt-{N}.md in your editor
+2. Paste the full execution log content below the comment block
+3. Save the file
+4. Reply 'continue' to resume jarvis-close
+
+Devin is paused at Step C12.5. Do NOT proceed to C13 until the user replies.
+---
+```
+
+**Do NOT proceed to Step C13 until the user explicitly replies (e.g., "continue", "done", "pasted").**
+
+This pause ensures the user's pasted content is included in the C13 docs commit — no separate commit needed. Skipping this step would commit only the empty header, forcing a follow-up commit for the pasted content.
+
+If the user does not respond within a reasonable time, report the pause state and wait. Do not auto-continue.
+
+## Step 13: Commit docs
+
+**Before committing**, verify the user has pasted content into the execution log file (C12.5 pause should have been completed):
+```powershell
+$logLineCount = (Get-Content "logs\execution-log-prompt-{N}.md").Count
+if ($logLineCount -le 15) {
+    Write-Host "ERROR: Execution log file appears to still be header-only ($logLineCount lines)."
+    Write-Host "Did the user paste content at C12.5? If yes, proceed. If no, STOP."
+}
+```
+This is a soft check — if the user confirms they pasted content, proceed even if line count is low (some execution logs may be short).
+
+```powershell
+git add CHANGELOG.md PLANS.md LANDMINES.md "Prompts/plan-{N}*.md" "logs/execution-log-prompt-{N}.md"
 git commit -m "docs: prompt-{N} changelog, plans, and landmines update"
 ```
-(If `LANDMINES.md` was not updated this plan, omit it from the `git add`. The `"Prompts/plan-{N}*.md"` glob is REQUIRED per OR39 — plan files must be committed to git. If no plan files exist for this plan (e.g., named plans that don't follow the `plan-{N}` pattern), omit the glob. For named plans, substitute the actual plan file pattern, e.g., `"Prompts/plan-rule-cleanup*.md"`. (Directory name retained for filesystem compatibility; the Prompt Creator role can be GLM or Kimi.))
+(If `LANDMINES.md` was not updated this plan, omit it from the `git add`. The `"Prompts/plan-{N}*.md"` glob is REQUIRED per OR39 — plan files must be committed to git. If no plan files exist for this plan (e.g., named plans that don't follow the `plan-{N}` pattern), omit the glob. For named plans, substitute the actual plan file pattern, e.g., `"Prompts/plan-rule-cleanup*.md"`. The `"logs/execution-log-prompt-{N}.md"` file is REQUIRED — it was created in Step C12 and must contain the user-pasted content from Step C12.5. (Directory name retained for filesystem compatibility; the Prompt Creator role can be GLM or Kimi.))
 
-**OR39 reminder**: Plan files are part of the project record. Failing to commit them creates git history gaps (see L20). If `git status` shows untracked plan files at this step, they MUST be added.
+**OR39 reminder**: Plan files are part of the project record. Failing to commit them creates git history gaps (see L20). If `git status` shows untracked plan files at this step, they MUST be added. The execution log file created in C12 is also part of the project record — it MUST be committed.
 
-## Step 13: Push
+## Step 14: Push
 ```powershell
 git push origin master
 git push origin prompt-{N}
 ```
 
-## Step 14: Post-push verification (MANDATORY)
+## Step 15: Post-push verification (MANDATORY)
 ```powershell
 git ls-remote --tags origin | Select-String "prompt-{N}"
 ```
@@ -185,8 +263,10 @@ Paste ALL of:
 6. C9 rule proposal (block or "none" with justification)
 7. C10 PLANS.md updates (paste git diff showing all 6 sections: Completed Prompts, Test Baseline, Analysis Baseline, Queue Shift, Status Sections, Reconciliation Notes)
 8. C11 LANDMINES.md update (paste new entry, OR "no new failure patterns this plan")
-9. C12 docs commit output
-10. C13 push output
-11. C14 tag on origin (git ls-remote output)
+9. C12 execution log file created (paste first 15 lines showing header template)
+10. C12.5 user paste confirmation (paste the user's "continue" reply, OR confirm user pasted content)
+11. C13 docs commit output
+12. C14 push output
+13. C15 tag on origin (git ls-remote output)
 
 If ANY check fails or output is missing, the plan is NOT complete.
