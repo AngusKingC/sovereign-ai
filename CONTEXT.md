@@ -101,3 +101,12 @@ This file defines the domain terms, conventions, and shared vocabulary used acro
 | **proposal_type** | Field on `VersionUpdateProposal` (added Plan 77). Determines AutoCorrector classification. Values: `instruction_tweak` (safe, default), `routing_weight` (safe), `code_change` (unsafe), `model_download` (unsafe). Defaults to `instruction_tweak` for backward compatibility (OR27). |
 | **Safe proposal** | A proposal whose `proposal_type` is in `{instruction_tweak, routing_weight}`. Auto-applied without human approval. Reversible via `InstructionVersionManager.rollback()`. |
 | **Unsafe proposal** | A proposal whose `proposal_type` is in `{code_change, model_download}` or is unknown. Escalated to `ApprovalGate` for human-in-the-loop review. |
+
+## Model Routing Vocabulary (NEW — Plan 79)
+
+| Term | Definition |
+|---|---|
+| **ModelTierRouter** | Module (`core/model_tier_router.py`) that classifies tasks by complexity (SIMPLE/MEDIUM/COMPLEX) via keyword heuristics and routes to the cheapest capable model. No LLM calls for classification. Integrates with CostTracker for budget-aware tier downgrade. |
+| **TaskComplexity** | Enum returned by `ModelTierRouter.classify()`. Values: SIMPLE (arithmetic, lookups), MEDIUM (summarization, single-file edits), COMPLEX (debates, multi-file refactors, analysis). Default: MEDIUM (safer for unknown tasks). |
+| **ModelChoice** | Dataclass returned by `ModelTierRouter.route()`. Fields: model_name, complexity, reason, downgraded. `downgraded=True` when CostTracker fallback forced a lower tier. |
+| **Tier Downgrade** | When CostTracker indicates spend cap approaching, router downgrades: COMPLEX → MEDIUM → SIMPLE. SIMPLE cannot be downgraded further — CostTracker's hard fail takes over. |

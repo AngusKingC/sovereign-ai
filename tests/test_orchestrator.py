@@ -70,6 +70,7 @@ class TestOrchestrator:
             emitter=trace_emitter,
             worker_circuit_breaker=None,
             degraded_mode_threshold=0.5,
+            model_tier_router=None,
         )
 
     @pytest.fixture
@@ -569,6 +570,7 @@ class TestOrchestrator:
             emitter=trace_emitter,
             worker_circuit_breaker=None,
             degraded_mode_threshold=0.5,
+            model_tier_router=None,
         )
 
         # Create and register a worker

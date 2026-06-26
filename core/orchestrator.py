@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from core.escalation import EscalationEngine
     from core.evaluator import OutputEvaluator
     from core.memory_router import MemoryRouter
+    from core.model_tier_router import ModelTierRouter
     from core.orchestrator_improvement import OrchestratorImprovementLoop
     from core.trace_optimiser import TraceOptimiser
     from core.worker_base import WorkerBase
@@ -60,6 +61,7 @@ class Orchestrator:
         cost_tracker: "CostTracker | None" = None,
         worker_circuit_breaker: "WorkerCircuitBreaker | None" = None,
         degraded_mode_threshold: float = 0.5,
+        model_tier_router: "ModelTierRouter | None" = None,
     ) -> None:
         """Initialize the orchestrator with dependencies.
 
@@ -96,6 +98,7 @@ class Orchestrator:
         self._cost_tracker = cost_tracker
         self.worker_circuit_breaker = worker_circuit_breaker
         self.degraded_mode_threshold = degraded_mode_threshold
+        self.model_tier_router = model_tier_router
         # Issue #2 fix: type annotation matches runtime tuple storage.
         # Each entry is (task, worker_id, queued_at) for timeout tracking (Issue #5).
         self._queued_tasks: list[tuple[Task, str, datetime]] = []
@@ -408,11 +411,76 @@ class Orchestrator:
                             "error": f"Cost cap exceeded: {cost_decision.reason}"
                         },
                     )
-                if cost_decision.fallback_model is not None:
-                    # Route to fallback model (will be wired in Plan 78 — Model Routing)
-                    logger.warning(
-                        f"Cost fallback triggered: routing to {cost_decision.fallback_model}"
+                # Plan 79: Model routing (merged cost fallback + pre-execution routing)
+                # Rev2 Issues #1 + #2: single route() call, single ModelChoice, stored in task.metadata
+                if self.model_tier_router is not None:
+                    # Single routing decision — uses cost_decision if available (cost-cap aware)
+                    model_choice = self.model_tier_router.route(
+                        task,
+                        cost_decision=(
+                            cost_decision if self._cost_tracker is not None else None
+                        ),
                     )
+                    # Store routing decision in task.metadata so Plan 81 can read it
+                    # without re-routing (Rev2 Issue #1 fix)
+                    if not hasattr(task, "metadata") or task.metadata is None:  # type: ignore[attr-defined]
+                        task.metadata = {}  # type: ignore[attr-defined]
+                    task.metadata["model_choice"] = {  # type: ignore[attr-defined]
+                        "model_name": model_choice.model_name,
+                        "complexity": model_choice.complexity.value,
+                        "reason": model_choice.reason,
+                        "downgraded": model_choice.downgraded,
+                    }
+                    # Log routing decision (single log entry per task — Rev2 Issue #2 fix)
+                    if model_choice.downgraded:
+                        logger.warning(
+                            f"Cost fallback triggered for task {task.task_id}: routing to "
+                            f"{model_choice.model_name} (downgraded from higher tier, "
+                            f"reason: {model_choice.reason})"
+                        )
+                    else:
+                        logger.info(
+                            f"Task {task.task_id} routed to {model_choice.model_name} "
+                            f"(tier: {model_choice.complexity.value})"
+                        )
+                    # Emit trace event ONLY for cost fallback (downgraded=True).
+                    # Rev3 Issue #1 fix: non-downgraded routing uses logger.info only —
+                    # emitting OPERATION_ERROR for normal routing pollutes error traces
+                    # at PEMADS Phase 2 debate scale (multiple turns per debate).
+                    # COST_FALLBACK_TRIGGERED is the correct event type for downgraded routing.
+                    if model_choice.downgraded:
+                        try:
+                            await self._emitter.emit(
+                                TraceEvent(
+                                    event_type=TraceEventType.COST_FALLBACK_TRIGGERED,
+                                    component=TraceComponent.ORCHESTRATOR,
+                                    level=TraceLevel.WARNING,
+                                    message=f"Task routed to {model_choice.model_name} due to cost fallback",
+                                    data={
+                                        "task_id": task.task_id,
+                                        "model": model_choice.model_name,
+                                        "complexity": model_choice.complexity.value,
+                                        "downgraded": model_choice.downgraded,
+                                        "reason": model_choice.reason,
+                                    },
+                                    duration_ms=0,
+                                )
+                            )
+                        except Exception as e:
+                            # AR18: trace emission failure should not crash task processing
+                            logger.warning("Trace emission failed: %s", e)
+                else:
+                    # No router configured — backward compatible (legacy behavior)
+                    # Still log cost fallback if it was triggered, just can't route
+                    if (
+                        self._cost_tracker is not None
+                        and cost_decision is not None
+                        and cost_decision.fallback_model is not None
+                    ):
+                        logger.warning(
+                            f"Cost fallback triggered but no model_tier_router configured: "
+                            f"fallback_model={cost_decision.fallback_model}"
+                        )
             except Exception as e:
                 # Cost check failure should not crash task processing
                 # Per AR18: broad except requires inline comment + WARNING trace
