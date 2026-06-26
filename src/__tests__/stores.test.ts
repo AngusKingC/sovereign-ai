@@ -7,6 +7,7 @@ import { useWorkerStore } from "@/stores/workerStore";
 import { useCostStore } from "@/stores/costStore";
 import { useApprovalStore } from "@/stores/approvalStore";
 import { useUiStore, VIEWS, DRAWERS } from "@/stores/uiStore";
+import { useModelStore } from "@/stores/modelStore";
 
 describe("agentStore", () => {
   beforeEach(() => {
@@ -48,115 +49,87 @@ describe("agentStore", () => {
   });
 });
 
-describe("memoryStore", () => {
+describe("modelStore", () => {
   beforeEach(() => {
-    useMemoryStore.setState({
-      slots: [],
+    useModelStore.setState({
+      models: [],
+      activeModelId: null,
       searchQuery: "",
-      sortColumn: null,
-      sortDirection: "asc",
-      setSlots: useMemoryStore.getState().setSlots,
-      setSearchQuery: useMemoryStore.getState().setSearchQuery,
-      setSort: useMemoryStore.getState().setSort,
+      filterTag: null,
+      filterAdapter: null,
+      isLoading: false,
+      error: null,
+      setModels: useModelStore.getState().setModels,
+      setActiveModel: useModelStore.getState().setActiveModel,
+      setSearchQuery: useModelStore.getState().setSearchQuery,
+      setFilterTag: useModelStore.getState().setFilterTag,
+      setFilterAdapter: useModelStore.getState().setFilterAdapter,
+      setLoading: useModelStore.getState().setLoading,
+      setError: useModelStore.getState().setError,
     });
   });
 
-  it("initializes with empty slots", () => {
-    const state = useMemoryStore.getState();
-    expect(state.slots).toEqual([]);
+  it("initializes with default values", () => {
+    const state = useModelStore.getState();
+    expect(state.models).toEqual([]);
+    expect(state.activeModelId).toBeNull();
     expect(state.searchQuery).toBe("");
+    expect(state.filterTag).toBeNull();
+    expect(state.filterAdapter).toBeNull();
+    expect(state.isLoading).toBe(false);
+    expect(state.error).toBeNull();
   });
 
-  it("sets slots", () => {
-    const testSlots = [
-      { index: 0, key: "test", value: "test", activation: 0.5, lastWritten: 0 },
+  it("sets models", () => {
+    const models = [
+      { model_id: "model-1", name: "Test Model", source: "ollama", adapter_compatibility: ["ollama"], task_tags: ["code"], download_status: "downloaded", downloaded_quantisation: "Q4", license: "MIT", description: "Test" },
     ];
-    useMemoryStore.getState().setSlots(testSlots);
-    const state = useMemoryStore.getState();
-    expect(state.slots).toEqual(testSlots);
+    useModelStore.getState().setModels(models);
+    const state = useModelStore.getState();
+    expect(state.models).toEqual(models);
+  });
+
+  it("sets active model", () => {
+    useModelStore.getState().setActiveModel("model-1");
+    const state = useModelStore.getState();
+    expect(state.activeModelId).toBe("model-1");
   });
 
   it("sets search query", () => {
-    useMemoryStore.getState().setSearchQuery("test query");
-    const state = useMemoryStore.getState();
-    expect(state.searchQuery).toBe("test query");
+    useModelStore.getState().setSearchQuery("test");
+    const state = useModelStore.getState();
+    expect(state.searchQuery).toBe("test");
   });
 
-  it("sets sort", () => {
-    useMemoryStore.getState().setSort("activation", "desc");
-    const state = useMemoryStore.getState();
-    expect(state.sortColumn).toBe("activation");
-    expect(state.sortDirection).toBe("desc");
-  });
-});
-
-describe("toolStore", () => {
-  beforeEach(() => {
-    useToolStore.setState({
-      calls: [],
-      addCall: useToolStore.getState().addCall,
-      patchCall: useToolStore.getState().patchCall,
-      upsertCall: useToolStore.getState().upsertCall,
-      clearCalls: useToolStore.getState().clearCalls,
-    });
+  it("sets filter tag", () => {
+    useModelStore.getState().setFilterTag("code");
+    const state = useModelStore.getState();
+    expect(state.filterTag).toBe("code");
   });
 
-  it("initializes with empty calls", () => {
-    const state = useToolStore.getState();
-    expect(state.calls).toEqual([]);
+  it("sets filter adapter", () => {
+    useModelStore.getState().setFilterAdapter("ollama");
+    const state = useModelStore.getState();
+    expect(state.filterAdapter).toBe("ollama");
   });
 
-  it("adds a call", () => {
-    useToolStore.getState().addCall({
-      id: "call-1",
-      tool: "web_search",
-      status: "running",
-      args: { query: "test" },
-      startedAt: Date.now(),
-    });
-    const state = useToolStore.getState();
-    expect(state.calls).toHaveLength(1);
-    expect(state.calls[0].id).toBe("call-1");
+  it("sets loading state", () => {
+    useModelStore.getState().setLoading(true);
+    const state = useModelStore.getState();
+    expect(state.isLoading).toBe(true);
   });
 
-  it("upserts a call (add new)", () => {
-    useToolStore.getState().upsertCall({
-      id: "call-2",
-      tool: "memory_write",
-      status: "success",
-      args: { key: "test" },
-      output: "ok",
-      durationMs: 100,
-      startedAt: Date.now(),
-    });
-    const state = useToolStore.getState();
-    expect(state.calls).toHaveLength(1);
-    expect(state.calls[0].id).toBe("call-2");
+  it("sets error", () => {
+    useModelStore.getState().setError("Test error");
+    const state = useModelStore.getState();
+    expect(state.error).toBe("Test error");
   });
 
-  it("upserts a call (patch existing)", () => {
-    useToolStore.getState().upsertCall({
-      id: "call-2",
-      tool: "memory_write",
-      status: "success",
-      args: { key: "test" },
-      output: "ok",
-      durationMs: 100,
-      startedAt: Date.now(),
-    });
-    useToolStore.getState().upsertCall({
-      id: "call-2",
-      tool: "memory_write",
-      status: "success",
-      args: { key: "test" },
-      output: "updated",
-      durationMs: 150,
-      startedAt: Date.now(),
-    });
-    const state = useToolStore.getState();
-    expect(state.calls).toHaveLength(1);
-    expect(state.calls[0].output).toBe("updated");
-    expect(state.calls[0].durationMs).toBe(150);
+  it("clears error", () => {
+    useModelStore.getState().setError("Test error");
+    useModelStore.getState().setError(null);
+    const state = useModelStore.getState();
+    expect(state.error).toBeNull();
   });
 });
 
@@ -165,15 +138,14 @@ describe("taskStore", () => {
     useTaskStore.setState({
       tasks: [],
       activeTask: null,
-      setTasks: useTaskStore.getState().setTasks,
       addTask: useTaskStore.getState().addTask,
-      updateTask: useTaskStore.getState().updateTask,
       setActiveTask: useTaskStore.getState().setActiveTask,
+      updateTask: useTaskStore.getState().updateTask,
       clearTasks: useTaskStore.getState().clearTasks,
     });
   });
 
-  it("adds a task", () => {
+  it("adds task", () => {
     const task = {
       id: "task-1",
       intent: "test task",

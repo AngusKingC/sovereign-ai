@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+﻿import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { TasksPanel } from "@/components/panels/TasksPanel";
 import { WorkersPanel } from "@/components/panels/WorkersPanel";
@@ -6,11 +6,13 @@ import { ApprovalQueuePanel } from "@/components/panels/ApprovalQueuePanel";
 import { CostDashboardPanel } from "@/components/panels/CostDashboardPanel";
 import { MemoryDrawer } from "@/components/panels/MemoryDrawer";
 import { SettingsDrawer } from "@/components/panels/SettingsDrawer";
+import { ModelsPanel } from "@/components/panels/ModelsPanel";
 import { useTaskStore } from "@/stores/taskStore";
 import { useWorkerStore } from "@/stores/workerStore";
 import { useApprovalStore } from "@/stores/approvalStore";
 import { useCostStore } from "@/stores/costStore";
 import { useMemoryStore } from "@/stores/memoryStore";
+import { useModelStore } from "@/stores/modelStore";
 
 describe("TasksPanel", () => {
   it("renders active tasks section", () => {
@@ -132,5 +134,80 @@ describe("SettingsDrawer", () => {
     expect(screen.getByText("Circuit Breaker")).toBeInTheDocument();
     expect(screen.getByText("Sandbox")).toBeInTheDocument();
     expect(screen.getByText("Auth")).toBeInTheDocument();
+  });
+});
+
+describe("ModelsPanel", () => {
+  it("renders models panel", () => {
+    useModelStore.setState({
+      models: [
+        { model_id: "model-1", name: "Test Model", source: "ollama", adapter_compatibility: ["ollama"], task_tags: ["code"], download_status: "downloaded", downloaded_quantisation: "Q4", license: "MIT", description: "Test" },
+      ],
+      activeModelId: null,
+      searchQuery: "",
+      filterTag: null,
+      filterAdapter: null,
+      isLoading: false,
+      error: null,
+      setModels: useModelStore.getState().setModels,
+      setActiveModel: useModelStore.getState().setActiveModel,
+      setSearchQuery: useModelStore.getState().setSearchQuery,
+      setFilterTag: useModelStore.getState().setFilterTag,
+      setFilterAdapter: useModelStore.getState().setFilterAdapter,
+      setLoading: useModelStore.getState().setLoading,
+      setError: useModelStore.getState().setError,
+    });
+
+    render(<ModelsPanel />);
+    expect(screen.getByTestId("models-panel")).toBeInTheDocument();
+    expect(screen.getByText("Models")).toBeInTheDocument();
+  });
+
+  it("renders loading state", () => {
+    useModelStore.setState({
+      models: [],
+      activeModelId: null,
+      searchQuery: "",
+      filterTag: null,
+      filterAdapter: null,
+      isLoading: true,
+      error: null,
+      setModels: useModelStore.getState().setModels,
+      setActiveModel: useModelStore.getState().setActiveModel,
+      setSearchQuery: useModelStore.getState().setSearchQuery,
+      setFilterTag: useModelStore.getState().setFilterTag,
+      setFilterAdapter: useModelStore.getState().setFilterAdapter,
+      setLoading: useModelStore.getState().setLoading,
+      setError: useModelStore.getState().setError,
+    });
+
+    render(<ModelsPanel />);
+    expect(screen.getByTestId("models-panel")).toBeInTheDocument();
+    expect(screen.getByText("Loading models...")).toBeInTheDocument();
+  });
+
+  it("renders model cards", () => {
+    useModelStore.setState({
+      models: [
+        { model_id: "model-1", name: "Test Model", source: "ollama", adapter_compatibility: ["ollama"], task_tags: ["code"], download_status: "downloaded", downloaded_quantisation: "Q4", license: "MIT", description: "Test" },
+      ],
+      activeModelId: null,
+      searchQuery: "",
+      filterTag: null,
+      filterAdapter: null,
+      isLoading: false,
+      error: null,
+      setModels: useModelStore.getState().setModels,
+      setActiveModel: useModelStore.getState().setActiveModel,
+      setSearchQuery: useModelStore.getState().setSearchQuery,
+      setFilterTag: useModelStore.getState().setFilterTag,
+      setFilterAdapter: useModelStore.getState().setFilterAdapter,
+      setLoading: useModelStore.getState().setLoading,
+      setError: useModelStore.getState().setError,
+    });
+
+    render(<ModelsPanel />);
+    expect(screen.getByText("Test Model")).toBeInTheDocument();
+    expect(screen.getByText("model-1")).toBeInTheDocument();
   });
 });

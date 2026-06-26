@@ -194,3 +194,33 @@ export async function login(): Promise<void> {
 export function sseUrl(path: string): string {
   return `${BACKEND_URL}${path}`;
 }
+
+export interface ModelInfo {
+  model_id: string;
+  name: string;
+  source: string;
+  adapter_compatibility: string[];
+  task_tags: string[];
+  download_status: string;
+  downloaded_quantisation: string | null;
+  license: string;
+  description: string;
+}
+
+export async function getModels(): Promise<ModelInfo[]> {
+  const res = await fetch(`/api/models`);
+  if (!res.ok) throw new Error(`Models ${res.status}`);
+  return res.json();
+}
+
+export async function getModel(modelId: string): Promise<ModelInfo> {
+  const res = await fetch(`/api/models/${modelId}`);
+  if (!res.ok) throw new Error(`Model ${res.status}`);
+  return res.json();
+}
+
+export async function searchModels(query: string): Promise<ModelInfo[]> {
+  const res = await fetch(`/api/models/search?query=${encodeURIComponent(query)}`);
+  if (!res.ok) throw new Error(`Search ${res.status}`);
+  return res.json();
+}

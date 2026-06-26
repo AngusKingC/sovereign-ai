@@ -13,6 +13,7 @@ import { SkillsPanel } from "@/components/panels/SkillsPanel";
 import { HelpPanel } from "@/components/panels/HelpPanel";
 import { SystemStatsPanel } from "@/components/panels/SystemStatsPanel";
 import { SubagentPanel } from "@/components/panels/SubagentPanel";
+import { ModelsPanel } from "@/components/panels/ModelsPanel";
 import dynamic from "next/dynamic";
 
 const TerminalPanel = dynamic(() => import("@/components/panels/TerminalPanel").then(m => m.TerminalPanel), { ssr: false });
@@ -49,6 +50,8 @@ export default function Home() {
       return <SystemStatsPanel />;
     case VIEWS.SUBAGENTS:
       return <SubagentPanel />;
+    case VIEWS.MODELS:
+      return <ModelsPanel />;
     default:
       return <TerminalPanel />;
   }

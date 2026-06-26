@@ -46,6 +46,7 @@ if TYPE_CHECKING:
     from core.worker_circuit_breaker import WorkerCircuitBreaker
     from memory.debate_pool import DebatePool
     from orchestrator.improvement_loop import ImprovementLoopOrchestrator
+    from system.model_registry import ModelRegistry
 
 
 class Orchestrator:
@@ -74,6 +75,7 @@ class Orchestrator:
         debate_pool: "DebatePool | None" = None,
         pemads_judge: "PEMADSJudge | None" = None,
         implementation_gate: "ImplementationGate | None" = None,
+        model_registry: "ModelRegistry | None" = None,
     ) -> None:
         """Initialize the orchestrator with dependencies.
 
@@ -117,6 +119,7 @@ class Orchestrator:
         self.debate_pool = debate_pool
         self.pemads_judge = pemads_judge
         self.implementation_gate = implementation_gate
+        self.model_registry = model_registry
         # Issue #2 fix: type annotation matches runtime tuple storage.
         # Each entry is (task, worker_id, queued_at) for timeout tracking (Issue #5).
         self._queued_tasks: list[tuple[Task, str, datetime]] = []

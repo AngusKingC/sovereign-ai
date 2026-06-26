@@ -56,6 +56,18 @@ async def lifespan(app: FastAPI):
         )  # Secrets audit failure should not crash the server
         pass
 
+    # Initialize model registry if configured
+    try:
+        orchestrator = app.state.orchestrator
+        if orchestrator and orchestrator.model_registry:
+            try:
+                await orchestrator.model_registry.initialize(system_profile=None)
+                logger.info("Model registry initialized")
+            except Exception as e:
+                logger.error(f"Failed to initialize model registry: {e}")
+    except Exception as e:
+        logger.warning(f"Model registry initialization check failed: {e}")
+
     # Start Telegram polling if multi_channel_approval_gate is configured
     try:
         orchestrator = app.state.orchestrator

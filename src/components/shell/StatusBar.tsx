@@ -1,8 +1,9 @@
 "use client";
 import { useAgentStore } from "@/stores/agentStore";
-import { useUiStore, DRAWERS } from "@/stores/uiStore";
+import { useUiStore, DRAWERS, VIEWS } from "@/stores/uiStore";
 import { Play, Pause, Settings, Copy } from "lucide-react";
 import { useState } from "react";
+import { useModelStore } from "@/stores/modelStore";
 
 const PHASE_COLORS: Record<string, string> = {
   idle: "bg-accent-slate",
@@ -12,9 +13,15 @@ const PHASE_COLORS: Record<string, string> = {
 };
 
 export function StatusBar({ className }: { className?: string }) {
-  const { sessionId, phase, modelSlug, latency, isRunning, toggleRun } = useAgentStore();
+  const { sessionId, phase, latency, isRunning, toggleRun } = useAgentStore();
   const openDrawer = useUiStore((s) => s.openDrawer);
+  const setActiveView = useUiStore((s) => s.setActiveView);
+  const { activeModelId } = useModelStore();
   const [copied, setCopied] = useState(false);
+
+  const handleModelClick = () => {
+    setActiveView(VIEWS.MODELS);
+  };
 
   const copySessionId = () => {
     navigator.clipboard.writeText(sessionId);
@@ -39,8 +46,8 @@ export function StatusBar({ className }: { className?: string }) {
       >
         Sovereign · {phase.charAt(0).toUpperCase() + phase.slice(1)}
       </span>
-      <button className="font-mono text-xs text-text-secondary hover:text-text-primary" aria-label="Open model picker" title="Coming in Plan 89">
-        {modelSlug}
+      <button className="font-mono text-xs text-text-secondary hover:text-text-primary" aria-label="Open model picker" onClick={handleModelClick}>
+        {activeModelId || "No model selected"}
       </button>
       <span className="font-mono text-xs text-text-muted">{latency}ms</span>
       <div className="flex-1" />
