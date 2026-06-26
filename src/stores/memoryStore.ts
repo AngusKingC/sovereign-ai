@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-interface MemorySlot {
+export interface MemorySlot {
   index: number;
   key: string;
   value: string;
@@ -9,26 +9,21 @@ interface MemorySlot {
 }
 
 interface MemoryState {
-  slots: Map<number, MemorySlot>;
-  totalSlots: number;
-  activeSlots: number;
-  setActivation: (index: number, level: number) => void;
-  getSlot: (index: number) => MemorySlot | undefined;
+  slots: MemorySlot[];
+  searchQuery: string;
+  sortColumn: keyof MemorySlot | null;
+  sortDirection: "asc" | "desc";
+  setSlots: (slots: MemorySlot[]) => void;
+  setSearchQuery: (query: string) => void;
+  setSort: (column: keyof MemorySlot | null, direction: "asc" | "desc") => void;
 }
 
-export const useMemoryStore = create<MemoryState>((set, get) => ({
-  slots: new Map(),
-  totalSlots: 512,
-  activeSlots: 0,
-  setActivation: (index, level) =>
-    set((state) => {
-      const slots = new Map(state.slots);
-      const slot = slots.get(index);
-      if (slot) {
-        slots.set(index, { ...slot, activation: level });
-      }
-      const activeSlots = Array.from(slots.values()).filter((s) => s.activation > 0.1).length;
-      return { slots, activeSlots };
-    }),
-  getSlot: (index) => get().slots.get(index),
+export const useMemoryStore = create<MemoryState>((set) => ({
+  slots: [],
+  searchQuery: "",
+  sortColumn: null,
+  sortDirection: "asc",
+  setSlots: (slots) => set({ slots }),
+  setSearchQuery: (searchQuery) => set({ searchQuery }),
+  setSort: (sortColumn, sortDirection) => set({ sortColumn, sortDirection }),
 }));

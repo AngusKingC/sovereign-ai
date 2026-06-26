@@ -1,14 +1,12 @@
 ﻿"use client";
 import { useEffect } from "react";
 import { useAgentStore } from "@/stores/agentStore";
-import { useMemoryStore } from "@/stores/memoryStore";
 import { useSSE } from "@/hooks/useSSE";
 import { getStatus, sseUrl, login } from "@/lib/api";
 
 export default function Home() {
   const setPhase = useAgentStore((s) => s.setPhase);
   const setLatency = useAgentStore((s) => s.setLatency);
-  const setActivation = useMemoryStore((s) => s.setActivation);
 
   useEffect(() => {
     let intervalId: ReturnType<typeof setInterval> | undefined;
@@ -40,13 +38,14 @@ export default function Home() {
     };
   }, [setPhase, setLatency]);
 
-  useSSE({
-    url: sseUrl("/api/memory/activations"),
-    onMessage: (data) => {
-      const event = data as { index: number; activation: number };
-      setActivation(event.index, event.activation);
-    },
-  });
+  // SSE for memory activations deferred to Plan 83
+  // useSSE({
+  //   url: sseUrl("/api/memory/activations"),
+  //   onMessage: (data) => {
+  //     const event = data as { index: number; activation: number };
+  //     // Memory activation handling deferred
+  //   },
+  // });
 
   return null;
 }

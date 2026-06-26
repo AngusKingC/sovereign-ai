@@ -46,33 +46,42 @@ describe("agentStore", () => {
 describe("memoryStore", () => {
   beforeEach(() => {
     useMemoryStore.setState({
-      slots: new Map(),
-      totalSlots: 512,
-      activeSlots: 0,
-      setActivation: useMemoryStore.getState().setActivation,
-      getSlot: useMemoryStore.getState().getSlot,
+      slots: [],
+      searchQuery: "",
+      sortColumn: null,
+      sortDirection: "asc",
+      setSlots: useMemoryStore.getState().setSlots,
+      setSearchQuery: useMemoryStore.getState().setSearchQuery,
+      setSort: useMemoryStore.getState().setSort,
     });
   });
 
   it("initializes with empty slots", () => {
     const state = useMemoryStore.getState();
-    expect(state.slots.size).toBe(0);
-    expect(state.activeSlots).toBe(0);
+    expect(state.slots).toEqual([]);
+    expect(state.searchQuery).toBe("");
   });
 
-  it("sets activation", () => {
-    // First create a slot (memoryStore doesn't auto-create slots in this stub)
-    useMemoryStore.setState({
-      slots: new Map([[0, { index: 0, key: "test", value: "test", activation: 0, lastWritten: 0 }]]),
-      totalSlots: 512,
-      activeSlots: 0,
-      setActivation: useMemoryStore.getState().setActivation,
-      getSlot: useMemoryStore.getState().getSlot,
-    });
-    useMemoryStore.getState().setActivation(0, 0.5);
-    const slot = useMemoryStore.getState().getSlot(0);
-    expect(slot?.activation).toBe(0.5);
-    expect(useMemoryStore.getState().activeSlots).toBe(1);
+  it("sets slots", () => {
+    const testSlots = [
+      { index: 0, key: "test", value: "test", activation: 0.5, lastWritten: 0 },
+    ];
+    useMemoryStore.getState().setSlots(testSlots);
+    const state = useMemoryStore.getState();
+    expect(state.slots).toEqual(testSlots);
+  });
+
+  it("sets search query", () => {
+    useMemoryStore.getState().setSearchQuery("test query");
+    const state = useMemoryStore.getState();
+    expect(state.searchQuery).toBe("test query");
+  });
+
+  it("sets sort", () => {
+    useMemoryStore.getState().setSort("activation", "desc");
+    const state = useMemoryStore.getState();
+    expect(state.sortColumn).toBe("activation");
+    expect(state.sortDirection).toBe("desc");
   });
 });
 

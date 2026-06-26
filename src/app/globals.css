@@ -4,16 +4,22 @@
   --color-surface-base:    #0c0c0f;
   --color-surface-raised:  #13131a;
   --color-surface-overlay: #1a1a24;
+  --color-surface-elevated: #1a1a2e;
   --color-border:          #ffffff14;
   --color-border-strong:   #ffffff28;
+  --color-border-default:  #2a2a3e;
   --color-text-primary:    #e8e6e0;
   --color-text-secondary:  #9b9890;
   --color-text-muted:      #5c5a56;
+  --color-text-inverse:    #0c0c0f;
   --color-accent-amber:    #f59e0b;
   --color-accent-emerald:  #10b981;
   --color-accent-violet:   #8b5cf6;
   --color-accent-red:      #ef4444;
   --color-accent-slate:    #64748b;
+  --color-accent-blue:     #3b82f6;
+  --color-surface-hover:   #1f1f2e;
+  --color-border-accent:   rgba(245, 158, 11, 0.40);
 }
 
 @theme inline {
@@ -53,4 +59,54 @@ body {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* CSS Grid shell styles (Plan 82 S4) */
+.jarvis-shell {
+  display: grid;
+  grid-template-rows: 48px 1fr 64px;
+  grid-template-columns: 64px 1fr 320px;
+  grid-template-areas:
+    "status status status"
+    "sidebar main right"
+    "bottom bottom bottom";
+  height: 100vh;
+  overflow: hidden;
+  background: var(--color-surface-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+}
+
+.status-bar { grid-area: status; }
+.sidebar { grid-area: sidebar; }
+.main-pane { grid-area: main; overflow: auto; }
+.right-panel { grid-area: right; }
+.bottom-bar { grid-area: bottom; }
+
+/* Drawer overlay styles (Plan 82 S4 - Rev3 H7 fix) */
+.drawer-overlay {
+  position: fixed;
+  top: 48px;
+  right: 0;
+  bottom: 64px;
+  width: 480px;
+  z-index: 50;
+  background: var(--color-surface-elevated, #1a1a2e);
+  border-left: 1px solid var(--color-border-default, #2a2a3e);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 200ms ease-out;
+}
+.drawer-overlay[data-open="true"] {
+  transform: translateX(0);
+}
+.drawer-backdrop {
+  position: fixed;
+  top: 48px;
+  left: 0;
+  right: 0;
+  bottom: 64px;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 40;
 }

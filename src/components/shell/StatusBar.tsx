@@ -1,5 +1,6 @@
 "use client";
 import { useAgentStore } from "@/stores/agentStore";
+import { useUiStore, DRAWERS } from "@/stores/uiStore";
 import { Play, Pause, Settings, Copy } from "lucide-react";
 import { useState } from "react";
 
@@ -12,6 +13,7 @@ const PHASE_COLORS: Record<string, string> = {
 
 export function StatusBar({ className }: { className?: string }) {
   const { sessionId, phase, modelSlug, latency, isRunning, toggleRun } = useAgentStore();
+  const openDrawer = useUiStore((s) => s.openDrawer);
   const [copied, setCopied] = useState(false);
 
   const copySessionId = () => {
@@ -22,7 +24,8 @@ export function StatusBar({ className }: { className?: string }) {
 
   return (
     <header
-      className={`sticky top-0 z-50 flex h-12 items-center gap-4 border-b border-border bg-surface-raised px-4 ${className ?? ""}`}
+      className={`status-bar sticky top-0 z-50 flex h-12 items-center gap-4 border-b border-border bg-surface-raised px-4 ${className ?? ""}`}
+      data-testid="status-bar"
     >
       <button
         onClick={copySessionId}
@@ -36,7 +39,7 @@ export function StatusBar({ className }: { className?: string }) {
       >
         Sovereign · {phase.charAt(0).toUpperCase() + phase.slice(1)}
       </span>
-      <button className="font-mono text-xs text-text-secondary hover:text-text-primary" aria-label="Open model picker (deferred)">
+      <button className="font-mono text-xs text-text-secondary hover:text-text-primary" aria-label="Open model picker" title="Coming in Plan 89">
         {modelSlug}
       </button>
       <span className="font-mono text-xs text-text-muted">{latency}ms</span>
@@ -48,7 +51,11 @@ export function StatusBar({ className }: { className?: string }) {
       >
         {isRunning ? <Pause size={16} /> : <Play size={16} />}
       </button>
-      <button className="rounded p-1.5 hover:bg-surface-overlay" aria-label="Open settings (deferred)">
+      <button
+        onClick={() => openDrawer(DRAWERS.SETTINGS)}
+        className="rounded p-1.5 hover:bg-surface-overlay"
+        aria-label="Open settings"
+      >
         <Settings size={16} />
       </button>
     </header>
