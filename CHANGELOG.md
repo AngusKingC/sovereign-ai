@@ -1236,3 +1236,28 @@ This changelog documents all implementations, changes, and decisions made during
 - Vulture: 40 findings (all whitelisted)
 - Coverage: 82%
 - Tag: prompt-90 verified on origin
+
+## 2026-06-27 01:25 — prompt-91
+
+**Plan**: Wiring Model Registry Frontend
+
+**Changed**:
+- api/models.py: Wired stubs to ModelRegistry with get_model_registry dependency
+- core/orchestrator.py: Added model_registry optional parameter
+- web/server.py: Added ModelRegistry initialization in lifespan
+- tests/test_api_stubs.py: Updated tests for wired ModelRegistry
+- src/lib/api.ts: Added ModelInfo interface and getModels/getModel/searchModels functions
+- src/stores/modelStore.ts: Created Zustand store for model state
+- src/components/panels/ModelsPanel.tsx: Created ModelsPanel component
+- src/stores/uiStore.ts: Added MODELS view constant
+- src/components/shell/Sidebar.tsx: Added Models nav item with Boxes icon
+- src/app/page.tsx: Added MODELS view routing
+- src/components/shell/StatusBar.tsx: Wired model selector to activeModelId and MODELS view
+- src/__tests__/stores.test.ts: Added modelStore test suite
+- src/__tests__/components.test.tsx: Added ModelsPanel test suite
+
+**Results**:
+- Tests: 1458 passed, 67 skipped
+- Ruff: 0 errors
+- Coverage: 82%
+- Tag: prompt-91 verified on origin

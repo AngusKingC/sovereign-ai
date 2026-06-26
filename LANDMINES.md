@@ -149,3 +149,13 @@ Append-only historical record of failure patterns. See AGENTS.md for guidance on
 2. (OR39) Plan files from the CURRENT plan MUST be added in C12 docs commit. jarvis-close.md Step 12 updated to explicitly add `Prompts/plan-{N}*.md` to `git add`. This is the second line of defense: even if OR26's opening check misses something, the closing check ensures the current plan's file is committed.
 
 ---
+
+## L21 — PowerShell corrupts TypeScript files with backticks and template literals
+
+**Trigger**: Plan 91, S10 verification — PowerShell commands used to write TypeScript files (`src/lib/api.ts`, `src/components/shell/Sidebar.tsx`, `src/components/shell/StatusBar.tsx`) corrupted the content. PowerShell interprets backticks (`) as escape characters and `${}` as variable expansion, which broke TypeScript template literals.
+
+**Impact**: TypeScript compilation failed with numerous syntax errors (TS1109, TS1005, TS1128, TS2657, TS1127). Files had to be reverted multiple times. The Node.js writer script approach (array-of-strings + `.join('\n')`) was required to bypass PowerShell's string parsing.
+
+**Mitigation**: OR38 — When writing TypeScript files on Windows, use Node.js writer scripts with the array-of-strings + `.join('\n')` pattern instead of PowerShell string operations. The Node.js approach sidesteps PowerShell's string parsing entirely by writing the file through a separate process.
+
+---
