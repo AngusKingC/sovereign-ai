@@ -34,12 +34,14 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **Plan 87**: Test baseline updated from 1418 to 1429 passed (delta +11). Cause: 11 new tests in test_expert_panel_manager.py (ExpertPanelManager: registration, debate triggering, multi-round debates, circuit breaker integration, VRAM management, expert selection, debate pool persistence). All new tests are in-scope for Plan 87. Vulture baseline updated from 40 to 40 findings (delta 0). Cause: 4 new core/schemas.py cls entries (line shifts from metadata field addition at line 153). All whitelisted per OR19 (fixture parameters required by pytest/middleware). Coverage held at 82% (baseline held - 1% drop within ±5% tolerance).
 
+**Plan 88**: Test baseline updated from 1429 to 1440 passed (delta +11). Cause: 11 new tests (6 in test_pemads_judge.py + 5 in test_implementation_gate.py). PEMADSJudge tests: winner selection, threshold checks, no-solutions error, feedback generation, verdict summarization. ImplementationGate tests: auto-approve high quality, human approval medium quality, reject below threshold, reject below human threshold, approval request creation. All new tests are in-scope for Plan 88. Vulture baseline updated from 40 to 40 findings (delta 0). Cause: 4 new core/schemas.py cls entries (line shifts from existing code). All whitelisted per OR19 (fixture parameters required by pytest/middleware). Coverage held at 82% (baseline held).
+
 ---
 
 ## Test Baseline
 
-**Current baseline**: **1429 Python tests collected (1429 passed, 67 skipped) + 46 Vitest tests passed + 8 Playwright E2E tests passed**
-**Verified**: Plan 87, Step S6 (full test suite)
+**Current baseline**: **1440 Python tests collected (1440 passed, 67 skipped) + 46 Vitest tests passed + 8 Playwright E2E tests passed**
+**Verified**: Plan 88, Step S6 (full test suite)
 **Tolerance**: ±5 tests for Python (variance acceptable due to parameterized fixtures and environment variation)
 **Vitest baseline**: 46 tests passed (first baseline established Plan 84)
 **Playwright E2E baseline**: 8 tests passed (first baseline established Plan 85)
@@ -58,7 +60,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | **Mypy (full-repo)** | 0 errors | Plan 67 S6 | Delta: -294 from Plan 60 baseline (294 → 0). Full remediation of adapters, CLI, memory, workers, skills, tests, scripts (181 source files). |
 | **Bandit** | 3,384 low, 1 medium, 0 high | Plan 70 S4 | Delta: +205 low, +1 medium from Plan 60 baseline. New B608 finding in memory/postgres_trace_store.py:161 (false positive - asyncpg parameterized query). |
 | **pip-audit** | 19 CVEs across 4 packages | Plan 70 S5 | Stable across Plans 56-70. No actionable fixes (upstream only). |
-| **Vulture** | 40 high-confidence findings | Plan 87 S6 | Delta: 0 from Plan 85 baseline (40 → 40). 4 new core/schemas.py cls entries added to whitelist (line shifts from metadata field addition). All findings whitelisted per OR19 (fixture parameters required by pytest/middleware). |
+| **Vulture** | 40 high-confidence findings | Plan 88 S6 | Delta: 0 from Plan 87 baseline (40 → 40). 4 new core/schemas.py cls entries added to whitelist (line shifts from existing code). All findings whitelisted per OR19 (fixture parameters required by pytest/middleware). |
 | **detect-secrets** | 15 findings (baseline) | Plan 71 S9 | Baseline established with .secrets.baseline. All findings are false positives (test fixtures, doc examples). |
 | **pre-commit** | Configured | Plan 74 S2 | Hooks installed: trailing-whitespace, end-of-file-fixer, check-yaml, check-json, check-toml, black, ruff, isort, detect-secrets. Mypy hook removed (stall prevention — follows imports into out-of-scope files). |
 | **pytest-cov** | Configured | Plan 71 S11 | Coverage reports: term-missing + HTML. No fail threshold (baseline: 1% coverage). |
@@ -116,6 +118,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 85 | 5-Plan Milestone Scan and Fix | 1418 + 46 Vitest + 8 Playwright | Fixed mypy shadowing error in core/a2a_protocol.py:191 (renamed inner exception variable). Reconciled vulture baseline from 41 to 40 findings (discrepancy between static analysis table and reconciliation notes). Fixed Plan 81 test count inconsistency (9 → 7 tests). Ran Playwright E2E tests (8 passed). Fixed PLANS.md queue duplication (Terminal moved from Plan 85 to Plan 86, scan moved to Plan 90). Fixed pre-commit --check flag error in jarvis-open workflow (replaced with Test-Path). Full static analysis scan: Ruff 0 errors, Mypy 0 errors, Bandit 3568 low/5 medium/0 high, pip-audit 20 CVEs (baseline), Vulture 40 findings, detect-secrets 0 new. Full test suite: 1418 Python passed, 46 Vitest passed, 8 Playwright passed, TypeScript 0 errors, Coverage 83%. Coverage: 83% (baseline held). |
 | 86 | Terminal xterm.js + System Panels + Subagent UI | 1418 + 46 Vitest + 8 Playwright | Added xterm.js dependencies (@xterm/xterm, @xterm/addon-fit, @xterm/addon-web-links). Created useWebSocket hook with reconnection logic. Created TerminalPanel with xterm.js integration (dynamic import for SSR fix). SystemStatsPanel and SubagentPanel already existed from previous plans. Extended subagentStore with async killSubagent (calls backend DELETE endpoint). Added 3 nav items to Sidebar (Terminal, System, Subagents). Updated page.tsx with view routing for 3 new panels. Deleted TerminalPlaceholder. web/server.py already had /ws/pty WebSocket endpoint and DELETE /api/subagents/{id} endpoint. No test count changes (TypeScript only). Coverage: 83% (baseline held). |
 | 87 | PEMADS Phase 2: Expert Panel Manager + VRAM Hot-Swap | 1429 + 46 Vitest + 8 Playwright | ExpertPanelManager (core/expert_panel_manager.py) for multi-round debates with expert worker pool. VRAMManager (core/vram_manager.py) wrapper around ResourceManager for VRAM tracking and model hot-swap. Wired into Orchestrator (expert_panel_manager, vram_manager, debate_pool injection + debate trigger in _execute_task). Added metadata field to Task schema for debate_id storage. Added API endpoints: /api/vram/status and /api/debates/{id} (web/server.py). 11 new tests (test_expert_panel_manager.py). Coverage: 82% (baseline held - 1% drop within tolerance). |
+| 88 | PEMADS Phase 3: Judge + Implementation Gate | 1440 + 46 Vitest + 8 Playwright | PEMADSJudge (core/pemads_judge.py) for evaluating debate quality using TestingBatterySkill. ImplementationGate (core/implementation_gate.py) for gating solution implementation based on quality thresholds (auto-approve ≥90%, human 75-90%, reject <75%). Wired into Orchestrator (pemads_judge, implementation_gate injection + judging logic after debate trigger). Added API endpoint: /api/debates/{id}/verdict (web/server.py). 11 new tests (6 test_pemads_judge.py + 5 test_implementation_gate.py). Coverage: 82% (baseline held). |
 
 ---
 
@@ -123,11 +126,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **New structure**: 4-plan batches with scan prompts every 5 plans. Plan 85 is a scan prompt (Batch 1 completion). Scan moved to Plan 90.
 
-### Batch 2: Plans 88–91 (PEMADS + Scan)
-
-#### Plan 88 — PEMADS Phase 3: Judge + Implementation Gate (Priority 1)
-**Depends on**: `prompt-87` | **Tag**: `prompt-88`
-**Scope**: PEMADSJudge (evaluates debate quality, decides implementation), ImplementationGate (gates on quality threshold + approval). Quality thresholds per TaskType.
+### Batch 2: Plans 89–92 (Approvals + Scan)
 
 #### Plan 89 — Multi-Channel Approvals + Approval UI Enhancements (Priority 1)
 **Depends on**: `prompt-88` | **Tag**: `prompt-89`
@@ -137,11 +136,15 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 **Depends on**: `prompt-89` | **Tag**: `prompt-90`
 **Scope**: TBD
 
-### Scan Prompt: Plan 91 — 5-Plan Milestone Scan (Mandatory)
+#### Plan 91 — Open Slot (Priority TBD)
 **Depends on**: `prompt-90` | **Tag**: `prompt-91`
+**Scope**: TBD
+
+### Scan Prompt: Plan 92 — 5-Plan Milestone Scan (Mandatory)
+**Depends on**: `prompt-91` | **Tag**: `prompt-92`
 **Scope**: Whole-repo scan after Batch 2 completes. No new features. Fixes only. Verify all 4 plans have CHANGELOG entries and tags. Update baselines.
 **What to scan**:
-1. Full pytest suite (expected: 1429+ passed)
+1. Full pytest suite (expected: 1440+ passed)
 2. ruff check . (expected: 0)
 3. mypy core/ system/ (expected: 0)
 4. bandit, pip-audit, vulture
@@ -149,15 +152,11 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 6. cd src && npx playwright test (E2E baseline)
 7. Coverage ≥78% (82% baseline -4% tolerance)
 8. LANDMINES.md: any landmine without AR/OR rule → propose via C9
-9. CHANGELOG.md: verify Plans 86–89 have entries
+9. CHANGELOG.md: verify Plans 88–91 have entries
 10. PLANS.md: baselines current, queue reflects actual state
 **STOP condition**: If scan reveals structural problem requiring design decisions, STOP and report.
 
-### Batch 3: Plans 92–95 (Open Slot)
-
-#### Plan 92 — Open Slot (Priority TBD)
-**Depends on**: `prompt-91` | **Tag**: `prompt-92`
-**Scope**: TBD
+### Batch 3: Plans 93–96 (Open Slot)
 
 #### Plan 93 — Open Slot (Priority TBD)
 **Depends on**: `prompt-92` | **Tag**: `prompt-93`
@@ -171,15 +170,15 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 **Depends on**: `prompt-94` | **Tag**: `prompt-95`
 **Scope**: TBD
 
-### Scan Prompt: Plan 96 — 5-Plan Milestone Scan (Mandatory)
+#### Plan 96 — Open Slot (Priority TBD)
 **Depends on**: `prompt-95` | **Tag**: `prompt-96`
-**Scope**: Whole-repo scan after Batch 3 completes. No new features. Fixes only. Verify all 4 plans have CHANGELOG entries and tags. Update baselines.
+**Scope**: TBD
 
 ---
 
 **Batch Rules**:
-- Batch size: 4 plans per batch (83–86, 87–90, 92–95)
-- Scan prompts: Every 5 plans (86, 91, 96)
+- Batch size: 4 plans per batch (81–84, 86–89, 91–94, 96–99)
+- Scan prompts: Every 5 plans (85, 90, 95, 100)
 - Review tier: All batches use Tier 2 (5-AI panel)
 - Tagging: One tag per plan (not per batch)
 - Split: After panel clean pass, split combined file into 4 individual plan files
