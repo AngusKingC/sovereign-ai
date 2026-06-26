@@ -1,51 +1,45 @@
 ﻿"use client";
-import { useEffect } from "react";
-import { useAgentStore } from "@/stores/agentStore";
-import { useSSE } from "@/hooks/useSSE";
-import { getStatus, sseUrl, login } from "@/lib/api";
+import { useStatusPolling } from "@/hooks/useStatusPolling";
+import { useWorkersPolling } from "@/hooks/useWorkersPolling";
+import { useCostsPolling } from "@/hooks/useCostsPolling";
+import { useApprovalsPolling } from "@/hooks/useApprovalsPolling";
+import { useMemoryPolling } from "@/hooks/useMemoryPolling";
+import { useUiStore, VIEWS } from "@/stores/uiStore";
+import { TasksPanel } from "@/components/panels/TasksPanel";
+import { WorkersPanel } from "@/components/panels/WorkersPanel";
+import { ApprovalQueuePanel } from "@/components/panels/ApprovalQueuePanel";
+import { CostDashboardPanel } from "@/components/panels/CostDashboardPanel";
+import { SkillsPanel } from "@/components/panels/SkillsPanel";
+import { HelpPanel } from "@/components/panels/HelpPanel";
+import { TerminalPlaceholder } from "@/components/panels/TerminalPlaceholder";
 
 export default function Home() {
-  const setPhase = useAgentStore((s) => s.setPhase);
-  const setLatency = useAgentStore((s) => s.setLatency);
+  useStatusPolling();
+  useWorkersPolling();
+  useCostsPolling();
+  useApprovalsPolling();
+  useMemoryPolling();
 
-  useEffect(() => {
-    let intervalId: ReturnType<typeof setInterval> | undefined;
-    let cancelled = false;
+  const activeView = useUiStore((s) => s.activeView);
 
-    login()
-      .then(() => {
-        if (cancelled) return;
-        const poll = async () => {
-          try {
-            const start = performance.now();
-            const status = await getStatus();
-            const elapsed = performance.now() - start;
-            setPhase(status.phase);
-            setLatency(Math.round(elapsed));
-          } catch {
-          }
-        };
-        poll();
-        intervalId = setInterval(poll, 2000);
-      })
-      .catch(() => {
-        console.warn("Backend auth failed — SSE will not work");
-      });
-
-    return () => {
-      cancelled = true;
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [setPhase, setLatency]);
-
-  // SSE for memory activations deferred to Plan 83
-  // useSSE({
-  //   url: sseUrl("/api/memory/activations"),
-  //   onMessage: (data) => {
-  //     const event = data as { index: number; activation: number };
-  //     // Memory activation handling deferred
-  //   },
-  // });
-
-  return null;
+  // Rev3 L8 fix — use VIEWS constants, not raw string literals.
+  // Rev3 H7 fix — drawers are NOT rendered here; they render in ShellClient.tsx.
+  switch (activeView) {
+    case VIEWS.HOME:
+      return <TerminalPlaceholder />;
+    case VIEWS.TASKS:
+      return <TasksPanel />;
+    case VIEWS.WORKERS:
+      return <WorkersPanel />;
+    case VIEWS.APPROVALS:
+      return <ApprovalQueuePanel />;
+    case VIEWS.COSTS:
+      return <CostDashboardPanel />;
+    case VIEWS.TOOLS:
+      return <SkillsPanel />;
+    case VIEWS.HELP:
+      return <HelpPanel />;
+    default:
+      return <TerminalPlaceholder />;
+  }
 }
