@@ -25,9 +25,9 @@ Do NOT pull. Confirm branch is `master` and there are no uncommitted changes.
 
 ## Step 3: Verify pre-commit hooks are installed (NEW — Plan 72)
 ```powershell
-pre-commit install --check 2>&1
+Test-Path .git/hooks/pre-commit
 ```
-If output says "hooks are not installed", run `pre-commit install` and re-verify.
+If False, run `pre-commit install` and re-verify.
 If `pre-commit` command not found, STOP — dev deps not installed. Run `pip install -r requirements-dev.txt` and re-verify.
 
 ## Step 4: Verify .secrets.baseline exists (NEW — Plan 72)
