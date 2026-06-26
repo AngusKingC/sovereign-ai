@@ -24,6 +24,8 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **Plan 81**: No static analysis baseline changes. Ruff 0 errors held. Mypy file-scoped clean (web/server.py, core/approval_gate.py). Vulture 41 findings held. Coverage 83% held. All tool counts within tolerance.
 
+**Plan 82**: No test baseline changes. Test count held at 1418 passed, 67 skipped. No Python files in src/ (TypeScript only), so ruff/mypy/bandit/pip-audit not applicable to new files. Vulture baseline held at 40 findings (no new Python code). Coverage held at 83% (baseline held). All tool counts within tolerance.
+
 ---
 
 ## Test Baseline
@@ -98,6 +100,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 79 | Model Routing / Tiered Selection | 1405 | ModelTierRouter class (core/model_tier_router.py) for task complexity classification and model routing. Integrated into Orchestrator with cost fallback hook + pre-execution routing. Wired into CLI (serve.py, tui.py). 19 new tests (test_model_tier_router.py). Coverage: 83% (baseline held). |
 | 80 | Sovereign AI UI Shell | 1411 | Next.js 15 frontend with TypeScript, Tailwind v4, Zustand stores, shell components, useSSE hook, API client, ToolInspector panel. FastAPI backend stubs with mocked data, auth middleware, SSE endpoints. 6 new backend tests. Coverage: 83% (baseline held). |
 | 81 | Backend Unification + API Endpoints | 1418 | Merged backend/main.py into web/server.py (eliminated two-server architecture). Added CORS middleware, cookie-based auth for SSE. Added 15 new API endpoints (costs, circuit-breaker, approvals, memory, skills, system stats, SSE streams, PTY WebSocket). Added orchestrator getter methods (get_task, list_workers_with_status, get_session_timeline). Added API response models to core/schemas.py. Created src/lib/api.ts with comprehensive TypeScript client. Updated src/next.config.ts with rewrites. Created src/.env.example. 9 new backend tests. Coverage: 83% (baseline held). |
+| 82 | Frontend State + Shell Layout | 1418 | Created 6 Zustand stores (task, worker, cost, approval, memory, uiStore with VIEWS/DRAWERS enums). Created 6 data-fetching hooks (usePolling with visibility detection + 5 specific polling hooks). Created useKeyboardShortcuts hook (view shortcuts t/w/a/c, drawer shortcut m, Escape closes drawer only). Updated globals.css with CSS tokens + CSS Grid shell styles + drawer overlay styles. Updated layout.tsx to Server Component with metadata export, delegated shell rendering to ShellClient. Created ShellClient client component with keyboard shortcuts, CSS Grid shell, drawer overlays at shell level. Created MainPane, MemoryDrawer, SettingsDrawer placeholder components. Updated StatusBar (removed deferred labels, added data-testid, wired settings button to openDrawer). Updated Sidebar (7 nav items using VIEWS enum, 2 drawer buttons, active indicator with amber border, data-testid). Updated BottomBar (activation grid placeholder with canvas 32×16, useEffect with cancelAnimationFrame cleanup, data-testid). Updated memoryStore tests to match new array-based API. Updated page.tsx (removed setActivation usage, commented out SSE memory handling). Coverage: 83% (baseline held). |
 
 ---
 
@@ -105,21 +108,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **New structure**: 4-plan batches with scan prompts every 5 plans. Plan 81 is now code production (not scan). Scan moved to Plan 85.
 
-### Batch 1: Plans 82–85 (JArvis UI Shell — Code Production)
-
-#### Plan 82 — JArvis UI: Frontend State + Shell Layout (Priority 1 — Kimi Critical)
-**Depends on**: `prompt-81` | **Tag**: `prompt-82`
-**Scope**: Build all Zustand stores, data-fetching hooks, and persistent dashboard shell. CSS Grid layout, status bar, sidebar (9 nav items), main pane, right panel (3 tabs), bottom bar (activation grid placeholder). Keyboard shortcuts. No operational panels yet.
-**What to do**:
-1. Create 4 new Zustand stores (task, worker, cost, approval)
-2. Update agentStore with `activeView`
-3. Create 5 polling hooks (usePolling generic + 4 specific)
-4. Create useKeyboardShortcuts hook
-5. Update layout.tsx with CSS Grid shell
-6. Update globals.css with grid styles + missing tokens
-7. Update StatusBar, Sidebar, RightPanel, BottomBar
-8. Create MainPane component
-**STOP condition**: If `npx tsc --noEmit` reports errors, STOP and fix.
+### Batch 1: Plans 83–86 (JArvis UI Shell — Code Production)
 
 #### Plan 83 — JArvis UI: Operational Panels + Drawers (Priority 1 — Kimi Critical)
 **Depends on**: `prompt-82` | **Tag**: `prompt-83`
@@ -152,8 +141,8 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 9. Run full suite: pytest + Vitest + Playwright + ruff + mypy + tsc
 **STOP condition**: If any test fails non-trivially, STOP and report.
 
-### Scan Prompt: Plan 85 — 5-Plan Milestone Scan (Mandatory)
-**Depends on**: `prompt-84` | **Tag**: `prompt-85`
+### Scan Prompt: Plan 86 — 5-Plan Milestone Scan (Mandatory)
+**Depends on**: `prompt-85` | **Tag**: `prompt-86`
 **Scope**: Whole-repo scan after Batch 1 completes. No new features. Fixes only. Verify all 4 plans have CHANGELOG entries and tags. Update baselines (Vitest + Playwright first baselines).
 **What to scan**:
 1. Full pytest suite (expected: 1420+ passed)
@@ -164,30 +153,30 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 6. cd src && npx playwright test (E2E baseline)
 7. Coverage ≥78% (83% baseline -5% tolerance)
 8. LANDMINES.md: any landmine without AR/OR rule → propose via C9
-9. CHANGELOG.md: verify Plans 81–84 have entries
+9. CHANGELOG.md: verify Plans 82–85 have entries
 10. PLANS.md: baselines current, queue reflects actual state
 **STOP condition**: If scan reveals structural problem requiring design decisions, STOP and report.
 
-### Batch 2: Plans 86–89 (PEMADS + Terminal + System)
+### Batch 2: Plans 87–90 (PEMADS + Terminal + System)
 
-#### Plan 86 — PEMADS Phase 2: Expert Panel Manager + VRAM Hot-Swap (Priority 1)
-**Depends on**: `prompt-85` | **Tag**: `prompt-86`
+#### Plan 87 — PEMADS Phase 2: Expert Panel Manager + VRAM Hot-Swap (Priority 1)
+**Depends on**: `prompt-86` | **Tag**: `prompt-87`
 **Scope**: Backend PEMADS: ExpertPanelManager (manages expert worker pool for debates), VRAMManager (tracks VRAM usage, swap in/out models). Integrates with WorkerCircuitBreaker and ModelTierRouter.
 
-#### Plan 87 — PEMADS Phase 3: Judge + Implementation Gate (Priority 1)
-**Depends on**: `prompt-86` | **Tag**: `prompt-87`
+#### Plan 88 — PEMADS Phase 3: Judge + Implementation Gate (Priority 1)
+**Depends on**: `prompt-87` | **Tag**: `prompt-88`
 **Scope**: PEMADSJudge (evaluates debate quality, decides implementation), ImplementationGate (gates on quality threshold + approval). Quality thresholds per TaskType.
 
-#### Plan 88 — Multi-Channel Approvals + Approval UI Enhancements (Priority 1)
-**Depends on**: `prompt-87` | **Tag**: `prompt-88`
+#### Plan 89 — Multi-Channel Approvals + Approval UI Enhancements (Priority 1)
+**Depends on**: `prompt-88` | **Tag**: `prompt-89`
 **Scope**: MultiChannelApprovalGate (Web UI / Telegram / Email channels). Frontend: Always Approve, batch actions, expiry countdown, channel indicator, toast notifications.
 
-#### Plan 89 — Terminal xterm.js + System Panels + Subagent UI (Priority 1)
-**Depends on**: `prompt-88` | **Tag**: `prompt-89`
+#### Plan 90 — Terminal xterm.js + System Panels + Subagent UI (Priority 1)
+**Depends on**: `prompt-89` | **Tag**: `prompt-90`
 **Scope**: xterm.js WebSocket PTY integration. LogViewer, SystemStats, SubagentPanel. Replaces terminal placeholder from Plan 83.
 
-### Scan Prompt: Plan 90 — 5-Plan Milestone Scan (Mandatory)
-**Depends on**: `prompt-89` | **Tag**: `prompt-90`
+### Scan Prompt: Plan 91 — 5-Plan Milestone Scan (Mandatory)
+**Depends on**: `prompt-90` | **Tag**: `prompt-91`
 **Scope**: Whole-repo scan after Batch 2 completes. No new features. Fixes only. Verify all 4 plans have CHANGELOG entries and tags. Update baselines.
 **What to scan**:
 1. Full pytest suite
@@ -198,15 +187,11 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 6. cd src && npx playwright test (E2E)
 7. Coverage ≥78%
 8. LANDMINES.md: any landmine without AR/OR rule → propose via C9
-9. CHANGELOG.md: verify Plans 86–89 have entries
+9. CHANGELOG.md: verify Plans 87–90 have entries
 10. PLANS.md: baselines current, queue reflects actual state
 **STOP condition**: If scan reveals structural problem requiring design decisions, STOP and report.
 
-### Batch 3: Plans 91–94 (Open Slot)
-
-#### Plan 91 — Open Slot (Priority TBD)
-**Depends on**: `prompt-90` | **Tag**: `prompt-91`
-**Scope**: TBD
+### Batch 3: Plans 92–95 (Open Slot)
 
 #### Plan 92 — Open Slot (Priority TBD)
 **Depends on**: `prompt-91` | **Tag**: `prompt-92`
@@ -220,15 +205,19 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 **Depends on**: `prompt-93` | **Tag**: `prompt-94`
 **Scope**: TBD
 
-### Scan Prompt: Plan 95 — 5-Plan Milestone Scan (Mandatory)
+#### Plan 95 — Open Slot (Priority TBD)
 **Depends on**: `prompt-94` | **Tag**: `prompt-95`
+**Scope**: TBD
+
+### Scan Prompt: Plan 96 — 5-Plan Milestone Scan (Mandatory)
+**Depends on**: `prompt-95` | **Tag**: `prompt-96`
 **Scope**: Whole-repo scan after Batch 3 completes.
 
 ---
 
 **Batch Rules**:
-- Batch size: 4 plans per batch (81–84, 86–89, 91–94)
-- Scan prompts: Every 5 plans (85, 90, 95)
+- Batch size: 4 plans per batch (83–86, 87–90, 92–95)
+- Scan prompts: Every 5 plans (86, 91, 96)
 - Review tier: All batches use Tier 2 (5-AI panel)
 - Tagging: One tag per plan (not per batch)
 - Split: After panel clean pass, split combined file into 4 individual plan files

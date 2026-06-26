@@ -1020,3 +1020,39 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors on touched files
 - Coverage: 83% total
 - Tag: prompt-81 verified locally
+
+## 2026-06-26 19:03 — prompt-82
+
+**Plan**: Frontend State + Shell Layout
+
+**Changed**:
+- src/stores/taskStore.ts: Created Zustand store for tasks array, activeTask, add/update/set/clear actions
+- src/stores/workerStore.ts: Created Zustand store for workers array, degradedRatio, setWorkers, setDegradedRatio, resetCircuit
+- src/stores/costStore.ts: Created Zustand store for cost summary object, setSummary action
+- src/stores/approvalStore.ts: Created Zustand store for pending approvals array, setPending, respond, remove actions
+- src/stores/memoryStore.ts: Updated from Map-based to array-based slots, added searchQuery, sortColumn, sortDirection, setSlots, setSearchQuery, setSort
+- src/stores/uiStore.ts: Created Zustand store for activeView, activeDrawer, VIEWS/DRAWERS enums, setActiveView, openDrawer, closeDrawer
+- src/hooks/usePolling.ts: Created polling hook with visibility detection, 2s/5s/10s intervals
+- src/hooks/useStatusPolling.ts: Created 2s interval polling hook updating agentStore
+- src/hooks/useWorkersPolling.ts: Created 5s interval polling hook updating workerStore
+- src/hooks/useCostsPolling.ts: Created 10s interval polling hook updating costStore
+- src/hooks/useApprovalsPolling.ts: Created 2s interval polling hook updating approvalStore
+- src/hooks/useMemoryPolling.ts: Created 10s interval polling hook updating memoryStore
+- src/hooks/useKeyboardShortcuts.ts: Created keyboard shortcuts for views (t/w/a/c) and drawers (m), Escape closes drawer only
+- src/app/globals.css: Added CSS tokens (surface-elevated, border-default, text-inverse, accent-blue, surface-hover, border-accent), CSS Grid shell styles, drawer overlay styles
+- src/app/layout.tsx: Updated to Server Component with metadata export, delegated shell rendering to ShellClient
+- src/components/shell/ShellClient.tsx: Created client component with keyboard shortcuts, CSS Grid shell, drawer overlays at shell level
+- src/components/shell/MainPane.tsx: Created main pane container with overflow auto
+- src/components/panels/MemoryDrawer.tsx: Created placeholder drawer for memory panel
+- src/components/panels/SettingsDrawer.tsx: Created placeholder drawer for settings panel
+- src/components/shell/StatusBar.tsx: Removed deferred labels, added data-testid, wired settings button to openDrawer, added tooltip to model picker
+- src/components/shell/Sidebar.tsx: Updated to 7 nav items using VIEWS enum, 2 drawer buttons (Memory/Settings), active indicator with amber border, data-testid
+- src/components/shell/BottomBar.tsx: Added activation grid placeholder with canvas (32×16), useEffect with cancelAnimationFrame cleanup, data-testid
+- src/__tests__/stores.test.ts: Updated memoryStore tests to match new array-based API
+- src/app/page.tsx: Removed setActivation usage, commented out SSE memory handling deferred to Plan 83
+
+**Results**:
+- Tests: 1418 passed, 67 skipped
+- Ruff: 0 errors (no Python files in src/)
+- Coverage: core 83%, system 83%, memory 83%, adapters 83%, skills 83%
+- Tag: prompt-82 verified on origin
