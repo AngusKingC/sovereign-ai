@@ -9,7 +9,7 @@ Execute each step in order. Paste output for each. Do NOT skip steps.
 
 ## Step 1: Full test suite
 ```powershell
-python -m pytest tests/ -q --tb=short | Select-Object -Last 5
+python -m pytest tests
 ```
 Expected: check `PLANS.md` for current baseline. If tests fail, STOP.
 
