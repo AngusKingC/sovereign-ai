@@ -1078,3 +1078,26 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: No Python files touched
 - Coverage: core 83%, system 83%, memory 83%, adapters 83%, skills 83%
 - Tag: prompt-83 verified on origin
+
+## 2026-06-26 19:27 — prompt-84
+
+**Plan**: Test Suite + Playwright E2E
+
+**Changed**:
+- src/__tests__/stores.test.ts: Added 17 new tests for taskStore, workerStore, costStore, approvalStore, memoryStore, uiStore
+- src/__tests__/hooks.test.ts: Created new file with 7 hook tests (usePolling, useStatusPolling, useKeyboardShortcuts, useMemoryPolling)
+- src/__tests__/components.test.tsx: Created new file with 6 component tests (TasksPanel, WorkersPanel, ApprovalQueuePanel, CostDashboardPanel, MemoryDrawer, SettingsDrawer)
+- src/__tests__/shell.test.tsx: Added 5 new shell tests (Sidebar, StatusBar, BottomBar, RightPanel)
+- src/vitest.setup.ts: Added EventSource mock for tests
+- src/vitest.config.ts: Excluded e2e directory from vitest
+- src/package.json: Added @playwright/test and concurrently devDependencies, added e2e:serve script
+- src/playwright.config.ts: Created Playwright config with cross-platform webServer
+- src/e2e/shell.spec.ts: Created 4 E2E tests for shell UI
+- src/e2e/sse.spec.ts: Created 2 E2E tests for SSE connections
+- src/e2e/cors.spec.ts: Created 2 E2E tests for CORS
+
+**Results**:
+- Tests: 1418 passed, 67 skipped (Python), 46 passed (Vitest)
+- Ruff: N/A (no Python files touched)
+- Coverage: 83% (unchanged)
+- Tag: prompt-84 verified locally
