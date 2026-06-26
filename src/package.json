@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
-    "lint": "next lint"
+    "lint": "next lint",
+    "e2e:serve": "concurrently -k -n backend,frontend \"cd .. && python -m sovereign_ai.web.server\" \"next dev\""
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.0.0",
@@ -22,12 +23,14 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.40.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^26.0.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.3",
+    "concurrently": "^9.0.0",
     "eslint": "^10.5.0",
     "eslint-config-next": "^16.2.9",
     "jsdom": "^29.1.1",

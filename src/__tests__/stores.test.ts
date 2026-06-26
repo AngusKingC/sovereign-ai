@@ -2,6 +2,11 @@
 import { useAgentStore } from "@/stores/agentStore";
 import { useMemoryStore } from "@/stores/memoryStore";
 import { useToolStore } from "@/stores/toolStore";
+import { useTaskStore } from "@/stores/taskStore";
+import { useWorkerStore } from "@/stores/workerStore";
+import { useCostStore } from "@/stores/costStore";
+import { useApprovalStore } from "@/stores/approvalStore";
+import { useUiStore, VIEWS, DRAWERS } from "@/stores/uiStore";
 
 describe("agentStore", () => {
   beforeEach(() => {
@@ -152,5 +157,259 @@ describe("toolStore", () => {
     expect(state.calls).toHaveLength(1);
     expect(state.calls[0].output).toBe("updated");
     expect(state.calls[0].durationMs).toBe(150);
+  });
+});
+
+describe("taskStore", () => {
+  beforeEach(() => {
+    useTaskStore.setState({
+      tasks: [],
+      activeTask: null,
+      setTasks: useTaskStore.getState().setTasks,
+      addTask: useTaskStore.getState().addTask,
+      updateTask: useTaskStore.getState().updateTask,
+      setActiveTask: useTaskStore.getState().setActiveTask,
+      clearTasks: useTaskStore.getState().clearTasks,
+    });
+  });
+
+  it("adds a task", () => {
+    const task = {
+      id: "task-1",
+      intent: "test task",
+      priority: 1,
+      state: "pending",
+      created_at: "2024-01-01T00:00:00Z",
+    };
+    useTaskStore.getState().addTask(task);
+    const state = useTaskStore.getState();
+    expect(state.tasks).toHaveLength(1);
+    expect(state.tasks[0].id).toBe("task-1");
+  });
+
+  it("updates task by id", () => {
+    const task = {
+      id: "task-1",
+      intent: "test task",
+      priority: 1,
+      state: "pending",
+      created_at: "2024-01-01T00:00:00Z",
+    };
+    useTaskStore.getState().addTask(task);
+    useTaskStore.getState().updateTask("task-1", { state: "completed" });
+    const state = useTaskStore.getState();
+    expect(state.tasks[0].state).toBe("completed");
+  });
+
+  it("sets active task", () => {
+    const task = {
+      id: "task-1",
+      intent: "test task",
+      priority: 1,
+      state: "pending",
+      created_at: "2024-01-01T00:00:00Z",
+    };
+    useTaskStore.getState().setActiveTask(task);
+    const state = useTaskStore.getState();
+    expect(state.activeTask).toEqual(task);
+  });
+
+  it("clears all tasks", () => {
+    const task = {
+      id: "task-1",
+      intent: "test task",
+      priority: 1,
+      state: "pending",
+      created_at: "2024-01-01T00:00:00Z",
+    };
+    useTaskStore.getState().addTask(task);
+    useTaskStore.getState().setActiveTask(task);
+    useTaskStore.getState().clearTasks();
+    const state = useTaskStore.getState();
+    expect(state.tasks).toEqual([]);
+    expect(state.activeTask).toBeNull();
+  });
+});
+
+describe("workerStore", () => {
+  beforeEach(() => {
+    useWorkerStore.setState({
+      workers: [],
+      degradedRatio: 0,
+      setWorkers: useWorkerStore.getState().setWorkers,
+      setDegradedRatio: useWorkerStore.getState().setDegradedRatio,
+      resetCircuit: useWorkerStore.getState().resetCircuit,
+    });
+  });
+
+  it("sets workers", () => {
+    const workers = [
+      { worker_id: "worker-1", model: "GLM-4.5", capabilities: ["code"], status: "active" },
+    ];
+    useWorkerStore.getState().setWorkers(workers);
+    const state = useWorkerStore.getState();
+    expect(state.workers).toEqual(workers);
+  });
+
+  it("sets degraded ratio", () => {
+    useWorkerStore.getState().setDegradedRatio(0.5);
+    const state = useWorkerStore.getState();
+    expect(state.degradedRatio).toBe(0.5);
+  });
+
+  it("resets circuit for worker", () => {
+    useWorkerStore.getState().setDegradedRatio(0.8);
+    useWorkerStore.getState().resetCircuit();
+    const state = useWorkerStore.getState();
+    expect(state.degradedRatio).toBe(0);
+  });
+
+  it("preserves other workers on reset", () => {
+    const workers = [
+      { worker_id: "worker-1", model: "GLM-4.5", capabilities: ["code"], status: "active" },
+      { worker_id: "worker-2", model: "GLM-4.5", capabilities: ["chat"], status: "active" },
+    ];
+    useWorkerStore.getState().setWorkers(workers);
+    useWorkerStore.getState().setDegradedRatio(0.8);
+    useWorkerStore.getState().resetCircuit();
+    const state = useWorkerStore.getState();
+    expect(state.workers).toEqual(workers);
+    expect(state.degradedRatio).toBe(0);
+  });
+});
+
+describe("costStore", () => {
+  beforeEach(() => {
+    useCostStore.setState({
+      summary: null,
+      setSummary: useCostStore.getState().setSummary,
+    });
+  });
+
+  it("sets summary", () => {
+    const summary = {
+      total_cost_usd: 100,
+      daily_cost_usd: 10,
+      monthly_cost_usd: 50,
+      model_costs: { "GLM-4.5": 100 },
+    };
+    useCostStore.getState().setSummary(summary);
+    const state = useCostStore.getState();
+    expect(state.summary).toEqual(summary);
+  });
+
+  it("handles null summary", () => {
+    const summary = {
+      total_cost_usd: 100,
+      daily_cost_usd: 10,
+      monthly_cost_usd: 50,
+      model_costs: { "GLM-4.5": 100 },
+    };
+    useCostStore.getState().setSummary(summary);
+    useCostStore.getState().setSummary(null as any);
+    const state = useCostStore.getState();
+    expect(state.summary).toBeNull();
+  });
+});
+
+describe("approvalStore", () => {
+  beforeEach(() => {
+    useApprovalStore.setState({
+      pending: [],
+      setPending: useApprovalStore.getState().setPending,
+      respond: useApprovalStore.getState().respond,
+      remove: useApprovalStore.getState().remove,
+    });
+  });
+
+  it("sets pending requests", () => {
+    const requests = [
+      {
+        id: "req-1",
+        task_id: "task-1",
+        description: "test request",
+        proposed_action: "approve",
+        created_at: "2024-01-01T00:00:00Z",
+      },
+    ];
+    useApprovalStore.getState().setPending(requests);
+    const state = useApprovalStore.getState();
+    expect(state.pending).toEqual(requests);
+  });
+
+  it("removes responded request", () => {
+    const requests = [
+      {
+        id: "req-1",
+        task_id: "task-1",
+        description: "test request",
+        proposed_action: "approve",
+        created_at: "2024-01-01T00:00:00Z",
+      },
+    ];
+    useApprovalStore.getState().setPending(requests);
+    useApprovalStore.getState().respond("req-1", true);
+    const state = useApprovalStore.getState();
+    expect(state.pending).toHaveLength(0);
+  });
+
+  it("removes by id", () => {
+    const requests = [
+      {
+        id: "req-1",
+        task_id: "task-1",
+        description: "test request",
+        proposed_action: "approve",
+        created_at: "2024-01-01T00:00:00Z",
+      },
+    ];
+    useApprovalStore.getState().setPending(requests);
+    useApprovalStore.getState().remove("req-1");
+    const state = useApprovalStore.getState();
+    expect(state.pending).toHaveLength(0);
+  });
+});
+
+describe("memoryStore", () => {
+  it("filters by search query", () => {
+    const testSlots = [
+      { index: 0, key: "test", value: "test", activation: 0.5, lastWritten: 0 },
+      { index: 1, key: "other", value: "other", activation: 0.3, lastWritten: 0 },
+    ];
+    useMemoryStore.getState().setSlots(testSlots);
+    useMemoryStore.getState().setSearchQuery("test");
+    const state = useMemoryStore.getState();
+    expect(state.searchQuery).toBe("test");
+  });
+});
+
+describe("uiStore", () => {
+  beforeEach(() => {
+    useUiStore.setState({
+      activeView: VIEWS.HOME,
+      activeDrawer: null,
+      setActiveView: useUiStore.getState().setActiveView,
+      openDrawer: useUiStore.getState().openDrawer,
+      closeDrawer: useUiStore.getState().closeDrawer,
+    });
+  });
+
+  it("sets active view", () => {
+    useUiStore.getState().setActiveView(VIEWS.TASKS);
+    const state = useUiStore.getState();
+    expect(state.activeView).toBe(VIEWS.TASKS);
+  });
+
+  it("opens drawer", () => {
+    useUiStore.getState().openDrawer(DRAWERS.MEMORY);
+    const state = useUiStore.getState();
+    expect(state.activeDrawer).toBe(DRAWERS.MEMORY);
+  });
+
+  it("closes drawer", () => {
+    useUiStore.getState().openDrawer(DRAWERS.SETTINGS);
+    useUiStore.getState().closeDrawer();
+    const state = useUiStore.getState();
+    expect(state.activeDrawer).toBeNull();
   });
 });
