@@ -31,6 +31,8 @@ ENV/
 .coverage
 htmlcov/
 .tox/
+playwright-report/
+test-results/
 
 # IDE
 .vscode/
