@@ -31,7 +31,7 @@ Three actors collaborate on this project. Each has a distinct job — do not cro
 |---|---|---|
 | **User** | Pastes Devin's execution log to the Prompt Creator (GLM or Kimi) after each plan. Copies the Prompt Creator's download files to Devin's working tree when review fixes are needed. | IM chat with Prompt Creator; file copy on Devin's machine. |
 | **Prompt Creator** | 7-step post-execution workflow. Creates plans, review guides, and revised plans. **Never edits the repo directly** — produces files in `/home/z/my-project/download/` for the user to copy. | `git fetch origin`, `git show`, `git log` (read-only). No push, no commit, no tool runs on clone. |
-| **Devin** | Executes plans. Runs tests, ruff, mypy, bandit, pip-audit, vulture. Commits, tags, pushes. Updates CHANGELOG, handoff, and proposes rules. | PowerShell on Windows; the repo's working tree. |
+| **Devin** | Executes plans. Runs tests, ruff, mypy, bandit, pip-audit, vulture. Commits, tags, pushes. Updates CHANGELOG, handoff, and proposes rules. | Git Bash on Windows; the repo's working tree. |
 
 **Key separation rule**: The Prompt Creator does NOT commit to or push to the repo. Devin does NOT create plans or review guides. The user is the bridge — copies files between the Prompt Creator's download folder and Devin's working tree.
 
