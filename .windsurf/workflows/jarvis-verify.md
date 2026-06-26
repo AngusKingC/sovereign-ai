@@ -10,7 +10,7 @@ Run this after editing files, before proceeding to the next step or the closing 
 ## Step 1: Syntax check all edited .py files
 
 For each .py file you edited, run:
-```powershell
+```bash
 python -c "import ast; ast.parse(open('<file>.py').read())"
 ```
 
@@ -18,7 +18,7 @@ If ANY file has a syntax error, STOP — fix before proceeding. Do not wait for 
 
 ## Step 2: Diff check — confirm only intended files changed
 
-```powershell
+```bash
 git diff --stat
 ```
 
@@ -27,11 +27,11 @@ Review the output. If unexpected files appear in the diff, STOP and investigate.
 ## Step 3: Run targeted test file(s)
 
 For each production file you edited, run its corresponding test file:
-```powershell
+```bash
 python -m pytest tests/test_<name>.py -vvv
 ```
 
-**Note**: Do NOT use `-q --tb=short` or pipe to `Select-Object -Last 5`. Run with full verbose output (`-vvv`) so hangs, stuck tests, and failure details are all visible.
+**Note**: Do NOT use `-q --tb=short` or pipe to `tail -n 5`. Run with full verbose output (`-vvv`) so hangs, stuck tests, and failure details are all visible.
 
 If tests fail:
 1. Do NOT revert yet — read the failure output
@@ -41,14 +41,14 @@ If tests fail:
 
 ## Step 4: Ruff check on touched files
 
-```powershell
-ruff check <files_touched> 2>&1 | Select-Object -Last 3
+```bash
+ruff check <files_touched> 2>&1 | tail -n 3
 ```
 
 If ruff finds new errors introduced by your edits, fix them before proceeding.
 
 ## Step 5: detect-secrets scan on touched files (NEW — Plan 72)
-```powershell
+```bash
 detect-secrets scan --baseline .secrets.baseline
 ```
 If exit code != 0, a new secret-like string was introduced. Either:
@@ -56,7 +56,7 @@ If exit code != 0, a new secret-like string was introduced. Either:
 - If real secret: REMOVE from source immediately. Consider rotating the secret if it was committed.
 
 ## Step 6: Vulture check on touched files with whitelist (FIXED — Plan 75)
-```powershell
+```bash
 # Run vulture on touched files and check for new findings vs whitelist
 python -c "
 import subprocess, sys

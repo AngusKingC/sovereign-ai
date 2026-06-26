@@ -845,7 +845,7 @@ async def _windows_pty_websocket(websocket, winpty_module, emitter):
 
     # Create winpty PTY process
     pty_proc = winpty_module.PTY()
-    pty_proc.spawn("cmd.exe")  # or powershell.exe
+    pty_proc.spawn("cmd.exe")  # or bash.exe
 
     async def read_pty_output():
         try:

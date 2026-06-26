@@ -8,13 +8,13 @@ description: "Sovereign AI opening sequence — S0. Run this before starting any
 Execute each step in order. Paste output for each. Do NOT skip steps.
 
 ## Step 1: Verify previous prompt's tag on origin
-```powershell
-git ls-remote --tags origin | Select-String "prompt-{N-1}"
+```bash
+git ls-remote --tags origin | grep "prompt-{N-1}"
 ```
 If empty, STOP. Do not proceed — the previous plan's tag must exist before starting a new one.
 
 ## Step 2: Verify local working copy is clean and on master
-```powershell
+```bash
 git status
 git branch --show-current
 git rev-parse HEAD
@@ -24,8 +24,8 @@ Do NOT pull. Confirm branch is `master` and there are no uncommitted changes.
 **Note**: Changes to `Prompts/` directory should be ignored for working copy cleanliness check — these are plan artifacts managed separately. (Directory name retained for filesystem compatibility; the Prompt Creator role can be GLM or Kimi.)
 
 ## Step 3: Verify pre-commit hooks are installed (NEW — Plan 72, FIXED — Plan 85)
-```powershell
-Test-Path .git/hooks/pre-commit
+```bash
+test -f .git/hooks/pre-commit && echo "True" || echo "False"
 ```
 If output is `False`, run `pre-commit install` and re-verify.
 If `pre-commit` command not found when installing, STOP — dev deps not installed. Run `pip install -r requirements-dev.txt` and re-verify.
@@ -33,8 +33,8 @@ If `pre-commit` command not found when installing, STOP — dev deps not install
 **Note**: Plan 85 fixed this step — the original `pre-commit install --check` command fails with "unrecognized arguments: --check" on newer pre-commit versions. Use `Test-Path .git/hooks/pre-commit` instead.
 
 ## Step 4: Verify .secrets.baseline exists (NEW — Plan 72)
-```powershell
-Test-Path .secrets.baseline
+```bash
+test -f .secrets.baseline && echo "True" || echo "False"
 ```
 If False, STOP — baseline file missing. Either clone fresh or restore from git: `git checkout origin/master -- .secrets.baseline`.
 

@@ -59,7 +59,7 @@ AR21. `src/` (TypeScript/React frontend) follows TypeScript strict mode (`"stric
 ## Operational Rules
 
 ### Environment
-OR1. PowerShell only. Never use `grep`, `cat`, `sed`, `awk`, `head`, `tail`, `touch`. Use `Select-String`, `Get-Content`, `Set-Content`, `Add-Content`, `Get-ChildItem`, `Measure-Object`, `Where-Object`, `ForEach-Object`.
+OR1. Git Bash only. Use standard Unix commands: `grep`, `cat`, `sed`, `awk`, `head`, `tail`, `touch`, `ls`, `wc`, `xargs`. Avoid PowerShell-specific commands like `Select-String`, `Get-Content`, `Set-Content`, `Add-Content`, `Get-ChildItem`, `Measure-Object`, `Where-Object`, `ForEach-Object`.
 
 OR2. File-scoped mypy only. Never `mypy .` — except at 5-plan checkpoints (55, 60, 65, 70, 75, 80) where full-repo mypy is the point.
 
@@ -72,7 +72,7 @@ OR5. Never use `replace_all`. Edit each occurrence individually or use targeted 
 
 OR6. Syntax check after every file edit, BEFORE tests: `python -c "import ast; ast.parse(open('<file>.py').read())"`. If syntax error, STOP.
 
-OR7. Structured-markdown edits (AGENTS.md, AI_HANDOFF.md, plan files, CHANGELOG.md) — Edit tool only with exact `old_str`/`new_str` pairs. NEVER PowerShell `-replace`, `ForEach-Object`, or `Set-Content`. (Source: L3)
+OR7. Structured-markdown edits (AGENTS.md, AI_HANDOFF.md, plan files, CHANGELOG.md) — Edit tool only with exact `old_str`/`new_str` pairs. NEVER bash `sed`, or shell redirection operators (`>`, `>>`) for structured markdown. (Source: L3)
 
 OR8. Diff check after every file edit: `git diff --stat <file>`. Confirm only intended files changed.
 
@@ -81,7 +81,7 @@ OR9. Tag EVERY prompt. Even docs-only plans must have `git tag prompt-{N}`.
 
 OR10. Tag verification before push: `git tag --list prompt-{N}`. If empty, tag wasn't created.
 
-OR11. Post-push verification (mandatory): `git ls-remote --tags origin | Select-String "prompt-{N}"`. If empty, push failed.
+OR11. Post-push verification (mandatory): `git ls-remote --tags origin | grep "prompt-{N}"`. If empty, push failed.
 
 ### Commit discipline (NEW — Plan 72)
 OR32. Never use `git commit --no-verify`. Pre-commit hooks are the last gate before commit; bypassing them defeats the purpose of having hooks. If a hook fails, fix the issue — do not bypass the hook. The only acceptable exception is a hotfix to a broken hook itself, and even then, document the bypass in the commit message. (Source: landmine L11 — Plan 71 execution, Devin used `--no-verify` on both the checkpoint and docs commits, bypassing the pre-commit hooks that Plan 71 had just configured)
@@ -89,7 +89,7 @@ OR32. Never use `git commit --no-verify`. Pre-commit hooks are the last gate bef
 ### CHANGELOG discipline
 OR12. Append to END only. Never insert at top. Oldest entry at top, newest at bottom.
 
-OR13. Use temp-file pattern (not here-strings). Append via `Add-Content` with `-Encoding utf8`. After appending, DELETE the temp file. (Source: L4)
+OR13. Use temp-file pattern (not here-strings). Append via `cat >>` with proper encoding. After appending, DELETE the temp file. (Source: L4)
 
 OR14. Simplified format: ~10-15 lines per entry. Title, changed files, results, test count. No fluff.
 
@@ -133,14 +133,14 @@ OR24. Every new implementation (new module, new class, new public function) MUST
 ### Type remediation discipline
 OR27. When fixing type errors requires interface changes that would break existing tests, add compatibility shims to maintain backward compatibility. The shim should delegate to the new implementation while accepting the old signature. Mark the shim as deprecated with a docstring noting the legacy status. This allows type fixes without test modifications, which are outside scope for type-remediation plans. (Source: L9)
 
-### PowerShell discipline
-OR28. PowerShell session cleanup: After each command execution block, Devin MUST close the PowerShell session. If executing multiple commands in sequence, use a single session with `;` separation rather than spawning multiple sessions. At plan closing (or every 20 commands, whichever comes first), verify no orphaned processes remain:
-- **On Windows**: `Get-Process powershell | Where-Object { $_.Id -ne $PID } | Measure-Object` — if count >5, kill orphans before proceeding.
-- **On Linux/macOS**: `ps aux | grep -c powershell` or skip this check (Devin runs on Windows; this fallback is for local verification only).
-(Source: L10 — Devin leaves zombie PowerShell processes after execution)
+### Git Bash discipline
+OR28. Git Bash session cleanup: After each command execution block, Devin MUST close the Git Bash session. If executing multiple commands in sequence, use a single session with `;` separation rather than spawning multiple sessions. At plan closing (or every 20 commands, whichever comes first), verify no orphaned processes remain:
+- **On Windows**: `ps aux | grep -c bash` — if count >5, kill orphans before proceeding.
+- **On Linux/macOS**: `ps aux | grep -c bash` or skip this check.
+(Source: L10 — Devin leaves zombie shell processes after execution)
 
 ### Hook discipline (NEW — Plan 74)
-OR33. Never exclude files from pre-commit hooks (mypy, ruff, black, etc.) to bypass errors. If a hook fails on a file outside the plan's scope, STOP and report per OR16 — do not edit `.pre-commit-config.yaml` to exclude the file. The correct response is either: (a) fix the error if it's in-scope, (b) STOP and report if it's out-of-scope, or (c) use `$env:SKIP="<hook_id>"; git commit` (PowerShell syntax) for a single commit if the hook itself is broken. Never edit hook config to permanently exclude files. (Source: landmine L12 — Plan 73 execution, Devin attempted to exclude core/task_state_machine.py from mypy hook instead of fixing the type errors)
+OR33. Never exclude files from pre-commit hooks (mypy, ruff, black, etc.) to bypass errors. If a hook fails on a file outside the plan's scope, STOP and report per OR16 — do not edit `.pre-commit-config.yaml` to exclude the file. The correct response is either: (a) fix the error if it's in-scope, (b) STOP and report if it's out-of-scope, or (c) use `SKIP="<hook_id>" git commit` (bash syntax) for a single commit if the hook itself is broken. Never edit hook config to permanently exclude files. (Source: landmine L12 — Plan 73 execution, Devin attempted to exclude core/task_state_machine.py from mypy hook instead of fixing the type errors)
 
 ### Task list discipline (REVISED — Governance Directive 01)
 OR34. Execute plan steps in strict numerical order (S0 → S1 → S2 → ... → Sn). Do not START a later step until the current step is complete. Do not MARK a task complete based on work done in a different section — a task is complete only when its corresponding plan section is fully executed in order. If S0 (opening) edits a governance doc and S6 (plan body) also edits the same doc, completing S0 does NOT complete S6, and you must not start S6 until S1-S5 are done. If a step is blocked, STOP and report — do not jump ahead to a later step. (Source: landmine L17 — Plan 76 execution; revised by Governance Directive 01 to prohibit starting out of order, not just marking complete out of order)
@@ -150,23 +150,23 @@ OR35. Use token-efficient git commands to reduce context consumption:
 - Use `git status -s` (short format) for routine checks, NOT `git status` (full format). Short format returns one line per changed file.
 - Use `git diff --stat` for overview, NOT `git diff` (full diff). Only use full `git diff` when you need to see specific line changes.
 - Use `git log --oneline -N` (with count limit, e.g., `-5`), NEVER bare `git log`.
-- Pipe all git output through `Select-Object -Last N` to truncate: `git status -s | Select-Object -Last 10`
+- Pipe all git output through `tail -n N` to truncate: `git status -s | tail -n 10`
 - If output is needed in full (e.g., diagnosing a specific issue), note why before running the full command.
 
-### PowerShell output discipline (NEW — Governance Directive 01)
-OR36. Minimize PowerShell output to reduce context token consumption:
-- Always pipe command output through `Select-Object -Last N` (default N=5 unless more is needed).
+### Git Bash output discipline (NEW — Governance Directive 01)
+OR36. Minimize Git Bash output to reduce context token consumption:
+- Always pipe command output through `tail -n N` (default N=5 unless more is needed).
 - For multi-command verification, chain with `;` and capture only the final summary line.
 - Never run a command that produces >20 lines of output without truncation.
-- For pre-commit hooks: run with `2>&1 | Select-Object -Last 10` to capture only pass/fail summary. If a hook fails, re-run that specific hook without truncation to see full output.
-- For pytest: run with full verbose output using `-vvv` (no `-q`, no `--tb=short`, no piping to `Select-Object`). Full verbose output is required so hangs, stuck tests, and failure details are all visible. If the user needs truncated output for a specific case, they will request it explicitly.
-- For ruff/mypy: pipe through `Select-Object -Last 3` — you only need the error count.
+- For pre-commit hooks: run with `2>&1 | tail -n 10` to capture only pass/fail summary. If a hook fails, re-run that specific hook without truncation to see full output.
+- For pytest: run with full verbose output using `-vvv` (no `-q`, no `--tb=short`, no piping to `tail`). Full verbose output is required so hangs, stuck tests, and failure details are all visible. If the user needs truncated output for a specific case, they will request it explicitly.
+- For ruff/mypy: pipe through `tail -n 3` — you only need the error count.
 
 
 ### Batch verification (RENUMBERED — Governance Patch 03)
 OR37. Batch verification commands to reduce the number of separate command executions and output blocks:
 - Instead of running 6 separate verification commands (syntax, ruff, mypy, detect-secrets, vulture, tests), chain them with `;` and capture only the final summary.
-- Example: `python -c "import ast; ast.parse(open('file.py').read())" ; ruff check file.py ; mypy file.py --ignore-missing-imports ; echo "---CHECKS DONE---" 2>&1 | Select-Object -Last 5`
+- Example: `python -c "import ast; ast.parse(open('file.py').read())" ; ruff check file.py ; mypy file.py --ignore-missing-imports ; echo "---CHECKS DONE---" 2>&1 | tail -n 5`
 - If any check fails, the failure will appear in the last 5 lines. Then re-run the failing check individually for full output.
 - This reduces 6 Devin actions + 6 output blocks to 1 Devin action + 1 output block.
 

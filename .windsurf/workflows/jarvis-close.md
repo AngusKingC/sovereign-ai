@@ -8,25 +8,25 @@ description: "Sovereign AI closing sequence — C1 through C15. Run this after a
 Execute each step in order. Paste output for each. Do NOT skip steps.
 
 ## Step 1: Full test suite
-```powershell
+```bash
 python -m pytest tests/ -vvv
 ```
-**Note**: Do NOT use `-q --tb=short` or pipe to `Select-Object -Last 5`. Run with full verbose output (`-vvv`) so hangs, stuck tests, and failure details are all visible. If tests fail, STOP. Check `PLANS.md` for current baseline.
+**Note**: Do NOT use `-q --tb=short` or pipe to `tail -n 5`. Run with full verbose output (`-vvv`) so hangs, stuck tests, and failure details are all visible. If tests fail, STOP. Check `PLANS.md` for current baseline.
 
 ## Step 2: Ruff check on touched files
-```powershell
-ruff check <files_touched> 2>&1 | Select-Object -Last 3
+```bash
+ruff check <files_touched> 2>&1 | tail -n 3
 ```
 Expected: zero errors.
 
 ## Step 2.5: detect-secrets baseline check (NEW — Plan 72)
-```powershell
+```bash
 detect-secrets scan --baseline .secrets.baseline
 ```
 If exit code != 0, STOP — a new secret was introduced. Either update baseline (if false positive) or remove the secret. Do not commit until this passes.
 
 ## Step 2.7: Vulture whitelist check (FIXED — Plan 75)
-```powershell
+```bash
 # Run vulture and compare to whitelist (vulture doesn't accept whitelist files as args)
 python -c "
 import subprocess, sys
@@ -46,47 +46,47 @@ print(f'All {len(findings)} findings are whitelisted.')
 If new findings appear (not in whitelist), STOP — either fix the dead code or add to `vulture-whitelist.txt` (UTF-8 encoded). Do not commit until this passes.
 
 ## Step 2.8: Pre-commit run on staged files (NEW — Plan 72)
-```powershell
+```bash
 pre-commit run --files <staged_files>
 ```
 If any hook fails, STOP — fix the issue before committing. Pre-commit hooks are the last gate before `git commit`. Per OR32, NEVER use `git commit --no-verify` to bypass hooks.
 
 ## Step 3: File-scoped mypy on touched files
-```powershell
-mypy <files_touched> --ignore-missing-imports 2>&1 | Select-Object -Last 3
+```bash
+mypy <files_touched> --ignore-missing-imports 2>&1 | tail -n 3
 ```
 Expected: error count ≤ baseline. NEVER `mypy .` (except 5-plan checkpoints).
 
 ## Step 4: Commit code (in-scope files only)
-```powershell
+```bash
 git add <in-scope files only>
 git commit -m "checkpoint: prompt-{N}"
 ```
 
 ## Step 5: Create tag
-```powershell
+```bash
 git tag prompt-{N}
 ```
 
 ## Step 6: Tag existence check (MANDATORY)
-```powershell
+```bash
 git tag --list prompt-{N}
 ```
 If empty, tag wasn't created. Create it before proceeding.
 
 ## Step 7: Tag verification
-```powershell
-git show prompt-{N} --stat | Select-Object -First 30
+```bash
+git show prompt-{N} --stat | head -n 30
 ```
 Verify file list contains ONLY in-scope files. If unexpected files appear, delete tag, clean, re-commit, re-tag.
 
-## Step 8: Update CHANGELOG.md (here-string + Add-Content, append to END)
+## Step 8: Update CHANGELOG.md (cat >> append to END)
 
-**Why this pattern**: The previous temp-file pattern (array → Set-Content → Get-Content → Add-Content → count verify → Remove-Item) was 7 steps and caused Devin stalls. The here-string + Add-Content approach is 2 steps: build the entry, append it. No temp file, no count gymnastics.
+**Why this pattern**: Use bash heredoc with `cat >>` to append directly. This is simple and reliable.
 
-Write the entry using a PowerShell here-string (`@" ... "@`) and append directly:
-```powershell
-$entry = @"
+Write the entry using a bash heredoc and append directly:
+```bash
+cat >> CHANGELOG.md << 'EOF'
 
 ## <YYYY-MM-DD> HH:MM — prompt-{N}
 
@@ -100,21 +100,18 @@ $entry = @"
 - Ruff: <before> → <after>
 - Coverage: <X>%
 - Tag: prompt-{N} verified on origin
-"@
-
-Add-Content -Path "CHANGELOG.md" -Value $entry -Encoding utf8
+EOF
 ```
 
 Verify the entry was appended:
-```powershell
-Get-Content CHANGELOG.md | Select-Object -Last 12
+```bash
+tail -n 12 CHANGELOG.md
 ```
-Expected: the last 12 lines show the new entry. If not visible, STOP — `Add-Content` failed silently (rare, but check file permissions).
+Expected: the last 12 lines show the new entry. If not visible, STOP — append failed silently (rare, but check file permissions).
 
 **Notes**:
-- The here-string (`@" ... "@`) must start with `@"` on its own line and end with `"@` at the start of a line. Do NOT indent the closing `"@`.
-- No temp file is created. No count verification needed — `Add-Content` is atomic; if it fails, the error is immediate and visible.
-- Do NOT use the `$lines = @(...)` array pattern — it requires comma escaping for content with special characters and is verbose to generate.
+- The heredoc (`<< 'EOF' ... EOF`) must start with `<< 'EOF'` and end with `EOF` on its own line. Do NOT indent the closing `EOF`.
+- No temp file is created. The `cat >>` append is atomic; if it fails, the error is immediate and visible.
 
 ## Step 9: Rule proposal (L20 — MANDATORY)
 
@@ -126,7 +123,7 @@ Include either Option A (propose a new rule) or Option B (explicit none with jus
 
 `PLANS.md` (in repo root) is the dynamic project state.
 
-**IMPORTANT**: Use the Edit tool (AGENTS.md OR7) with exact `old_str`/`new_str` pairs. NEVER use PowerShell `-replace`, `ForEach-Object`, or `Set-Content`.
+**IMPORTANT**: Use the Edit tool (AGENTS.md OR7) with exact `old_str`/`new_str` pairs. NEVER use bash `sed`, or shell redirection operators (`>`, `>>`).
 
 Update all 6 sections:
 
@@ -138,8 +135,8 @@ Update all 6 sections:
 - **(f) Baseline reconciliation notes**: add explanation of any tool count deltas, with tolerance justification (within/outside acceptable range).
 
 After all updates, verify with:
-```powershell
-git diff PLANS.md | Select-Object -First 30
+```bash
+git diff PLANS.md | head -n 30
 ```
 Confirm only the 6 intended sections changed. If unexpected sections appear, revert and re-edit.
 
@@ -159,21 +156,23 @@ If no new failure patterns were encountered, skip this step. Silence is acceptab
 
 Check if the current tag is a decade boundary (prompt-{N}0 where N > 0, e.g., prompt-80, prompt-90, prompt-100). If yes, delete the previous decade's plan files from `Prompts/` directory per OR38.
 
-```powershell
+```bash
 # Check if this is a decade boundary (prompt-{N}0)
-$currentTag = "prompt-{N}"
-if ($currentTag -match "prompt-(\d+)0") {
-    $decade = [int]$matches[1] - 10
-    $pattern = "plan-${decade}*"
-    Write-Host "Decade boundary detected: $currentTag"
-    Write-Host "Deleting previous decade plan files: $pattern"
-    Get-ChildItem -Path "Prompts" -Filter $pattern | ForEach-Object {
-        Write-Host "  Deleting: $($_.Name)"
-        Remove-Item $_.FullName -Force
-    }
-} else {
-    Write-Host "Not a decade boundary: $currentTag — skipping plan file cleanup"
-}
+currentTag="prompt-{N}"
+if [[ $currentTag =~ prompt-([0-9]+)0 ]]; then
+    decade=$((BASH_REMATCH[1] - 10))
+    pattern="plan-${decade}*"
+    echo "Decade boundary detected: $currentTag"
+    echo "Deleting previous decade plan files: $pattern"
+    for file in Prompts/$pattern; do
+        if [ -f "$file" ]; then
+            echo "  Deleting: $(basename $file)"
+            rm "$file"
+        fi
+    done
+else
+    echo "Not a decade boundary: $currentTag — skipping plan file cleanup"
+fi
 ```
 
 If files were deleted, they will be included in the C13 docs commit. This automated enforcement prevents the human error factor (plan-90 didn't include the deletion step, so 80s files weren't deleted).
@@ -187,35 +186,31 @@ Create the execution log file at `logs/execution-log-prompt-{N}.md` (repo root `
 **Naming convention**: `execution-log-prompt-{N}.md` — matches the repo's existing `<descriptive>-prompt-{N}.md` pattern (see historical `scan/logs/checkpoint-scan-prompt-70.md` and `scan/logs/changelog-entry-prompt-{N}.md`).
 
 **Folder**: `logs/` at repo root (mirrors how `Prompts/` is a top-level folder). If the `logs/` directory does not exist, create it:
-```powershell
-if (-not (Test-Path "logs")) {
-    New-Item -ItemType Directory -Path "logs"
-}
+```bash
+mkdir -p logs
 ```
 
 Write the header template:
-```powershell
-$logHeader = @(
-    "# Execution Log — prompt-{N}",
-    "",
-    "**Plan**: <one-line plan title>",
-    "**Tag**: prompt-{N}",
-    "**Date**: <YYYY-MM-DD>",
-    "",
-    "---",
-    "",
-    "<!-- USER: Paste the full Devin execution log below this line. -->",
-    "<!-- This file was auto-created by jarvis-close Step C12. -->",
-    "<!-- Do not edit above this comment block. -->",
-    "",
-    ""
-)
-Set-Content -Path "logs\execution-log-prompt-{N}.md" -Value $logHeader -Encoding utf8
+```bash
+cat > "logs/execution-log-prompt-{N}.md" << 'EOF'
+# Execution Log — prompt-{N}
+
+**Plan**: <one-line plan title>
+**Tag**: prompt-{N}
+**Date**: <YYYY-MM-DD>
+
+---
+
+<!-- USER: Paste the full Devin execution log below this line. -->
+<!-- This file was auto-created by jarvis-close Step C12. -->
+<!-- Do not edit above this comment block. -->
+
+EOF
 ```
 
 Verify the file was created:
-```powershell
-Get-Content "logs\execution-log-prompt-{N}.md" | Select-Object -First 15
+```bash
+head -n 15 "logs/execution-log-prompt-{N}.md"
 ```
 Expected: the header template above.
 
@@ -248,16 +243,16 @@ If the user does not respond within a reasonable time, report the pause state an
 ## Step 13: Commit docs
 
 **Before committing**, verify the user has pasted content into the execution log file (C12.5 pause should have been completed):
-```powershell
-$logLineCount = (Get-Content "logs\execution-log-prompt-{N}.md").Count
-if ($logLineCount -le 15) {
-    Write-Host "ERROR: Execution log file appears to still be header-only ($logLineCount lines)."
-    Write-Host "Did the user paste content at C12.5? If yes, proceed. If no, STOP."
-}
+```bash
+logLineCount=$(wc -l < "logs/execution-log-prompt-{N}.md")
+if [ "$logLineCount" -le 15 ]; then
+    echo "ERROR: Execution log file appears to still be header-only ($logLineCount lines)."
+    echo "Did the user paste content at C12.5? If yes, proceed. If no, STOP."
+fi
 ```
 This is a soft check — if the user confirms they pasted content, proceed even if line count is low (some execution logs may be short).
 
-```powershell
+```bash
 git add CHANGELOG.md PLANS.md LANDMINES.md "Prompts/plan-{N}*.md" "logs/execution-log-prompt-{N}.md"
 git commit -m "docs: prompt-{N} changelog, plans, and landmines update"
 ```
@@ -266,14 +261,14 @@ git commit -m "docs: prompt-{N} changelog, plans, and landmines update"
 **OR39 reminder**: Plan files are part of the project record. Failing to commit them creates git history gaps (see L20). If `git status` shows untracked plan files at this step, they MUST be added. The execution log file created in C12 is also part of the project record — it MUST be committed.
 
 ## Step 14: Push
-```powershell
+```bash
 git push origin master
 git push origin prompt-{N}
 ```
 
 ## Step 15: Post-push verification (MANDATORY)
-```powershell
-git ls-remote --tags origin | Select-String "prompt-{N}"
+```bash
+git ls-remote --tags origin | grep "prompt-{N}"
 ```
 If empty, push failed. Fix before reporting completion.
 
