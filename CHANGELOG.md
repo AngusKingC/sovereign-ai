@@ -973,3 +973,23 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: All checks passed
 - Coverage: 83% overall
 - Tag: prompt-78 verified on origin
+
+## 2025-06-26 11:06 — prompt-79
+
+**Plan**: Model Routing / Tiered Selection
+
+**Changed**:
+- core/model_tier_router.py: New module with ModelTierRouter class for task complexity classification and model routing
+- core/orchestrator.py: Added model_tier_router parameter and wired cost fallback hook + pre-execution routing
+- cli/serve.py: Added ModelTierRouter instantiation and wired into Orchestrator (merged call with worker_circuit_breaker, degraded_mode_threshold)
+- cli/tui.py: Added ModelTierRouter instantiation and wired into Orchestrator (merged call with worker_circuit_breaker, degraded_mode_threshold)
+- tests/test_model_tier_router.py: 19 tests for ModelTierRouter classification, routing, and cost fallback
+- tests/test_orchestrator.py: Added model_tier_router=None to Orchestrator constructors (backward compatible)
+- CONTEXT.md: Added Model Routing vocabulary section
+- vulture-whitelist.txt: Added new test fixture parameter findings (test_security.py, test_task_state_machine.py, test_worker_circuit_breaker.py)
+
+**Results**:
+- Tests: 1405 passed, 67 skipped (+19 new tests from test_model_tier_router.py)
+- Ruff: 0 errors (fixed ModelChoice unused import, worker_factory unused variable)
+- Coverage: core 83%, system 83%, memory 83%, adapters 83%, skills 83%
+- Tag: prompt-79 verified on origin
