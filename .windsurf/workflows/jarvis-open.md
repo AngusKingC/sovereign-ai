@@ -30,7 +30,7 @@ test -f .git/hooks/pre-commit && echo "True" || echo "False"
 If output is `False`, run `pre-commit install` and re-verify.
 If `pre-commit` command not found when installing, STOP — dev deps not installed. Run `pip install -r requirements-dev.txt` and re-verify.
 
-**Note**: Plan 85 fixed this step — the original `pre-commit install --check` command fails with "unrecognized arguments: --check" on newer pre-commit versions. Use `Test-Path .git/hooks/pre-commit` instead.
+**Note**: Plan 85 fixed this step — the original `pre-commit install --check` command fails with "unrecognized arguments: --check" on newer pre-commit versions. Use `test -f .git/hooks/pre-commit` instead.
 
 ## Step 4: Verify .secrets.baseline exists (NEW — Plan 72)
 ```bash
