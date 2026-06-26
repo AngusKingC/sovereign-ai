@@ -11,7 +11,11 @@ import { ApprovalQueuePanel } from "@/components/panels/ApprovalQueuePanel";
 import { CostDashboardPanel } from "@/components/panels/CostDashboardPanel";
 import { SkillsPanel } from "@/components/panels/SkillsPanel";
 import { HelpPanel } from "@/components/panels/HelpPanel";
-import { TerminalPlaceholder } from "@/components/panels/TerminalPlaceholder";
+import { SystemStatsPanel } from "@/components/panels/SystemStatsPanel";
+import { SubagentPanel } from "@/components/panels/SubagentPanel";
+import dynamic from "next/dynamic";
+
+const TerminalPanel = dynamic(() => import("@/components/panels/TerminalPanel").then(m => m.TerminalPanel), { ssr: false });
 
 export default function Home() {
   useStatusPolling();
@@ -26,7 +30,7 @@ export default function Home() {
   // Rev3 H7 fix — drawers are NOT rendered here; they render in ShellClient.tsx.
   switch (activeView) {
     case VIEWS.HOME:
-      return <TerminalPlaceholder />;
+      return <TerminalPanel />;
     case VIEWS.TASKS:
       return <TasksPanel />;
     case VIEWS.WORKERS:
@@ -39,7 +43,13 @@ export default function Home() {
       return <SkillsPanel />;
     case VIEWS.HELP:
       return <HelpPanel />;
+    case VIEWS.TERMINAL:
+      return <TerminalPanel />;
+    case VIEWS.SYSTEM:
+      return <SystemStatsPanel />;
+    case VIEWS.SUBAGENTS:
+      return <SubagentPanel />;
     default:
-      return <TerminalPlaceholder />;
+      return <TerminalPanel />;
   }
 }
