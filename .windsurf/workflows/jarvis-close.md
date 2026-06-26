@@ -80,39 +80,41 @@ git show prompt-{N} --stat | Select-Object -First 30
 ```
 Verify file list contains ONLY in-scope files. If unexpected files appear, delete tag, clean, re-commit, re-tag.
 
-## Step 8: Update CHANGELOG.md (temp-file pattern, append to END)
-Write entry to temp file:
-```powershell
-$lines = @(
-    "",
-    "## <YYYY-MM-DD> HH:MM — prompt-{N}",
-    "",
-    "**Plan**: <one-line plan title>",
-    "",
-    "**Changed**:",
-    "- <file>: <what changed (1 line per file)>",
-    "",
-    "**Results**:",
-    "- Tests: <count> passed, <count> skipped",
-    "- Ruff: <before> → <after>",
-    "- Coverage: core <X>%, system <Y>%, memory <Z>%, adapters <A>%, skills <B>%",
-    "- Tag: prompt-{N} verified on origin"
-)
-Set-Content -Path "C:\Jarvis\scan\logs\changelog-entry-prompt-{N}.md" -Value $lines -Encoding utf8
-```
-Record old count, append, verify new count:
-```powershell
-$oldCount = [System.IO.File]::ReadAllLines("C:\Jarvis\CHANGELOG.md").Count
-Get-Content C:\Jarvis\scan\logs\changelog-entry-prompt-{N}.md | Add-Content -Path "C:\Jarvis\CHANGELOG.md" -Encoding utf8
-$newCount = [System.IO.File]::ReadAllLines("C:\Jarvis\CHANGELOG.md").Count
-Get-Content C:\Jarvis\CHANGELOG.md | Select-Object -Last 12
-```
-Verify: `$newCount > $oldCount` and last 12 lines show the new entry.
+## Step 8: Update CHANGELOG.md (here-string + Add-Content, append to END)
 
-Clean up temp file:
+**Why this pattern**: The previous temp-file pattern (array → Set-Content → Get-Content → Add-Content → count verify → Remove-Item) was 7 steps and caused Devin stalls. The here-string + Add-Content approach is 2 steps: build the entry, append it. No temp file, no count gymnastics.
+
+Write the entry using a PowerShell here-string (`@" ... "@`) and append directly:
 ```powershell
-Remove-Item "C:\Jarvis\scan\logs\changelog-entry-prompt-{N}.md"
+$entry = @"
+
+## <YYYY-MM-DD> HH:MM — prompt-{N}
+
+**Plan**: <one-line plan title>
+
+**Changed**:
+- <file>: <what changed (1 line per file)>
+
+**Results**:
+- Tests: <count> passed, <count> skipped
+- Ruff: <before> → <after>
+- Coverage: <X>%
+- Tag: prompt-{N} verified on origin
+"@
+
+Add-Content -Path "CHANGELOG.md" -Value $entry -Encoding utf8
 ```
+
+Verify the entry was appended:
+```powershell
+Get-Content CHANGELOG.md | Select-Object -Last 12
+```
+Expected: the last 12 lines show the new entry. If not visible, STOP — `Add-Content` failed silently (rare, but check file permissions).
+
+**Notes**:
+- The here-string (`@" ... "@`) must start with `@"` on its own line and end with `"@` at the start of a line. Do NOT indent the closing `"@`.
+- No temp file is created. No count verification needed — `Add-Content` is atomic; if it fails, the error is immediate and visible.
+- Do NOT use the `$lines = @(...)` array pattern — it requires comma escaping for content with special characters and is verbose to generate.
 
 ## Step 9: Rule proposal (L20 — MANDATORY)
 

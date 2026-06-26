@@ -318,7 +318,7 @@ describe("approvalStore", () => {
       pending: [],
       setPending: useApprovalStore.getState().setPending,
       respond: useApprovalStore.getState().respond,
-      remove: useApprovalStore.getState().remove,
+      removeRequest: useApprovalStore.getState().removeRequest,
     });
   });
 
@@ -364,7 +364,7 @@ describe("approvalStore", () => {
       },
     ];
     useApprovalStore.getState().setPending(requests);
-    useApprovalStore.getState().remove("req-1");
+    useApprovalStore.getState().removeRequest("req-1");
     const state = useApprovalStore.getState();
     expect(state.pending).toHaveLength(0);
   });

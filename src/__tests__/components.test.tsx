@@ -76,11 +76,11 @@ describe("ApprovalQueuePanel", () => {
       ],
       setPending: useApprovalStore.getState().setPending,
       respond: useApprovalStore.getState().respond,
-      remove: useApprovalStore.getState().remove,
+      removeRequest: useApprovalStore.getState().removeRequest,
     });
 
     render(<ApprovalQueuePanel />);
-    expect(screen.getByTestId("approval-queue-panel")).toBeInTheDocument();
+    expect(screen.getByTestId("approvals-panel")).toBeInTheDocument();
     expect(screen.getByText("test request")).toBeInTheDocument();
   });
 });
