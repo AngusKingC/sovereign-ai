@@ -36,12 +36,14 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **Plan 88**: Test baseline updated from 1429 to 1440 passed (delta +11). Cause: 11 new tests (6 in test_pemads_judge.py + 5 in test_implementation_gate.py). PEMADSJudge tests: winner selection, threshold checks, no-solutions error, feedback generation, verdict summarization. ImplementationGate tests: auto-approve high quality, human approval medium quality, reject below threshold, reject below human threshold, approval request creation. All new tests are in-scope for Plan 88. Vulture baseline updated from 40 to 40 findings (delta 0). Cause: 4 new core/schemas.py cls entries (line shifts from existing code). All whitelisted per OR19 (fixture parameters required by pytest/middleware). Coverage held at 82% (baseline held).
 
+**Plan 89**: Test baseline updated from 1440 to 1451 passed (delta +11). Cause: 12 new tests (9 in test_multi_channel_approval_gate.py + 3 in test_email_gateway.py). MultiChannelApprovalGate tests: fan-out to Telegram and Email, web-only operation, response handling from different channels, Telegram polling for commands. EmailGateway tests: sending approval request emails, general notification emails, SMTP failure handling. All new tests are in-scope for Plan 89. Vulture baseline held at 40 findings (delta 0). No new vulture findings. Coverage held at 82% (baseline held).
+
 ---
 
 ## Test Baseline
 
-**Current baseline**: **1440 Python tests collected (1440 passed, 67 skipped) + 46 Vitest tests passed + 8 Playwright E2E tests passed**
-**Verified**: Plan 88, Step S6 (full test suite)
+**Current baseline**: **1451 Python tests collected (1451 passed, 67 skipped) + 46 Vitest tests passed + 8 Playwright E2E tests passed**
+**Verified**: Plan 89, Step C1 (full test suite)
 **Tolerance**: ±5 tests for Python (variance acceptable due to parameterized fixtures and environment variation)
 **Vitest baseline**: 46 tests passed (first baseline established Plan 84)
 **Playwright E2E baseline**: 8 tests passed (first baseline established Plan 85)
@@ -119,6 +121,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 86 | Terminal xterm.js + System Panels + Subagent UI | 1418 + 46 Vitest + 8 Playwright | Added xterm.js dependencies (@xterm/xterm, @xterm/addon-fit, @xterm/addon-web-links). Created useWebSocket hook with reconnection logic. Created TerminalPanel with xterm.js integration (dynamic import for SSR fix). SystemStatsPanel and SubagentPanel already existed from previous plans. Extended subagentStore with async killSubagent (calls backend DELETE endpoint). Added 3 nav items to Sidebar (Terminal, System, Subagents). Updated page.tsx with view routing for 3 new panels. Deleted TerminalPlaceholder. web/server.py already had /ws/pty WebSocket endpoint and DELETE /api/subagents/{id} endpoint. No test count changes (TypeScript only). Coverage: 83% (baseline held). |
 | 87 | PEMADS Phase 2: Expert Panel Manager + VRAM Hot-Swap | 1429 + 46 Vitest + 8 Playwright | ExpertPanelManager (core/expert_panel_manager.py) for multi-round debates with expert worker pool. VRAMManager (core/vram_manager.py) wrapper around ResourceManager for VRAM tracking and model hot-swap. Wired into Orchestrator (expert_panel_manager, vram_manager, debate_pool injection + debate trigger in _execute_task). Added metadata field to Task schema for debate_id storage. Added API endpoints: /api/vram/status and /api/debates/{id} (web/server.py). 11 new tests (test_expert_panel_manager.py). Coverage: 82% (baseline held - 1% drop within tolerance). |
 | 88 | PEMADS Phase 3: Judge + Implementation Gate | 1440 + 46 Vitest + 8 Playwright | PEMADSJudge (core/pemads_judge.py) for evaluating debate quality using TestingBatterySkill. ImplementationGate (core/implementation_gate.py) for gating solution implementation based on quality thresholds (auto-approve ≥90%, human 75-90%, reject <75%). Wired into Orchestrator (pemads_judge, implementation_gate injection + judging logic after debate trigger). Added API endpoint: /api/debates/{id}/verdict (web/server.py). 11 new tests (6 test_pemads_judge.py + 5 test_implementation_gate.py). Coverage: 82% (baseline held). |
+| 89 | Multi-Channel Approvals + Approval UI Enhancements | 1451 + 46 Vitest + 8 Playwright | EmailGateway (gateways/email/gateway.py) for async SMTP email sending. MultiChannelApprovalGate (core/multi_channel_approval_gate.py) for fan-out to Web UI, Telegram, Email. ApprovalGate.load_scopes (core/approval_gate.py) with Postgres query for active scopes. Orchestrator wiring (core/orchestrator.py) multi_channel_approval_gate into escalation approval logic. Web server (web/server.py) Telegram polling background task with startup/shutdown handlers. ApprovalQueuePanel (src/components/panels/ApprovalQueuePanel.tsx) batch actions, expiry countdown, channel indicator, toast notifications. approvalStore (src/stores/approvalStore.ts) expires_at, risk, channels fields. 12 new tests (test_multi_channel_approval_gate.py + test_email_gateway.py). Coverage: 82% (baseline held). |
 
 ---
 
@@ -126,11 +129,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **New structure**: 4-plan batches with scan prompts every 5 plans. Plan 85 is a scan prompt (Batch 1 completion). Scan moved to Plan 90.
 
-### Batch 2: Plans 89–92 (Approvals + Scan)
-
-#### Plan 89 — Multi-Channel Approvals + Approval UI Enhancements (Priority 1)
-**Depends on**: `prompt-88` | **Tag**: `prompt-89`
-**Scope**: MultiChannelApprovalGate (Web UI / Telegram / Email channels). Frontend: Always Approve, batch actions, expiry countdown, channel indicator, toast notifications.
+### Batch 2: Plans 90–93 (Approvals + Scan)
 
 #### Plan 90 — Open Slot (Priority TBD)
 **Depends on**: `prompt-89` | **Tag**: `prompt-90`
@@ -140,11 +139,15 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 **Depends on**: `prompt-90` | **Tag**: `prompt-91`
 **Scope**: TBD
 
-### Scan Prompt: Plan 92 — 5-Plan Milestone Scan (Mandatory)
+#### Plan 92 — Open Slot (Priority TBD)
 **Depends on**: `prompt-91` | **Tag**: `prompt-92`
+**Scope**: TBD
+
+### Scan Prompt: Plan 93 — 5-Plan Milestone Scan (Mandatory)
+**Depends on**: `prompt-92` | **Tag**: `prompt-93`
 **Scope**: Whole-repo scan after Batch 2 completes. No new features. Fixes only. Verify all 4 plans have CHANGELOG entries and tags. Update baselines.
 **What to scan**:
-1. Full pytest suite (expected: 1440+ passed)
+1. Full pytest suite (expected: 1451+ passed)
 2. ruff check . (expected: 0)
 3. mypy core/ system/ (expected: 0)
 4. bandit, pip-audit, vulture
@@ -152,15 +155,11 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 6. cd src && npx playwright test (E2E baseline)
 7. Coverage ≥78% (82% baseline -4% tolerance)
 8. LANDMINES.md: any landmine without AR/OR rule → propose via C9
-9. CHANGELOG.md: verify Plans 88–91 have entries
+9. CHANGELOG.md: verify Plans 89–92 have entries
 10. PLANS.md: baselines current, queue reflects actual state
 **STOP condition**: If scan reveals structural problem requiring design decisions, STOP and report.
 
-### Batch 3: Plans 93–96 (Open Slot)
-
-#### Plan 93 — Open Slot (Priority TBD)
-**Depends on**: `prompt-92` | **Tag**: `prompt-93`
-**Scope**: TBD
+### Batch 3: Plans 94–97 (Open Slot)
 
 #### Plan 94 — Open Slot (Priority TBD)
 **Depends on**: `prompt-93` | **Tag**: `prompt-94`
@@ -174,11 +173,15 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 **Depends on**: `prompt-95` | **Tag**: `prompt-96`
 **Scope**: TBD
 
+#### Plan 96 — Open Slot (Priority TBD)
+**Depends on**: `prompt-95` | **Tag**: `prompt-96`
+**Scope**: TBD
+
 ---
 
 **Batch Rules**:
-- Batch size: 4 plans per batch (81–84, 86–89, 91–94, 96–99)
-- Scan prompts: Every 5 plans (85, 90, 95, 100)
+- Batch size: 4 plans per batch (81–84, 86–89, 90–93, 94–97)
+- Scan prompts: Every 5 plans (85, 93, 100)
 - Review tier: All batches use Tier 2 (5-AI panel)
 - Tagging: One tag per plan (not per batch)
 - Split: After panel clean pass, split combined file into 4 individual plan files
@@ -212,7 +215,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **Datetime handling** — Zero naive/aware mixing; all core/system/skills using timezone-aware UTC
 - **Ruff baseline** — 0 errors (Plan 59 cleanup held through Plans 56-83)
 - **Mypy baseline** — Full-repo mypy clean (0 errors, 181 source files). Adapters, CLI, memory, workers, skills, tests, scripts all remediated through Plan 67.
-- **Test suite** — 1418 passed, 67 skipped (Plan 83 operational panels + drawers; Plan 82 frontend state + shell layout; Plan 81 backend unification; Plan 80 UI shell; Plan 79 model routing; Plan 78 worker circuit breaker + degraded mode; Plan 77 AutoCorrector + IVM; Plan 76 PEMADS Phase 1; Plan 68 skill taxonomy + CONTEXT.md; Plan 67 mypy remediation; Plan 66 system cleanup; Plan 63b added 7 integration + E2E tests; restored 2 orchestrator integration tests)
+- **Test suite** — 1451 passed, 67 skipped (Plan 89 multi-channel approvals; Plan 88 PEMADS Phase 3; Plan 87 PEMADS Phase 2; Plan 86 Terminal xterm.js + System Panels + Subagent UI; Plan 85 5-Plan Milestone Scan; Plan 84 Test Suite + Playwright E2E; Plan 83 operational panels + drawers; Plan 82 frontend state + shell layout; Plan 81 backend unification; Plan 80 UI shell; Plan 79 model routing; Plan 78 worker circuit breaker + degraded mode; Plan 77 AutoCorrector + IVM; Plan 76 PEMADS Phase 1; Plan 68 skill taxonomy + CONTEXT.md; Plan 67 mypy remediation; Plan 66 system cleanup; Plan 63b added 7 integration + E2E tests; restored 2 orchestrator integration tests)
 - **Eval harness** — Metrics (exact_match, token_f1, bleu, cosine_similarity) operational with trace emitter integration. Validation suite with 15 static tasks confirms metric behavior across 5 categories.
 - **Skill taxonomy** — SkillTier enum (USER_INVOKED, AGENT_INVOKED, HYBRID), SkillClassification dataclass, SkillTaxonomyRegistry. Default registry with 25 built-in skill classifications. CONTEXT.md project-level shared vocabulary.
 - **Worker Circuit Breaker** — WorkerCircuitBreaker class with failure tracking and auto-reset. Integrated into Orchestrator with degraded mode (task queuing when too many workers fail). QUEUED task status added to TaskStateMachine. Comprehensive tests covering worker-level and aggregate behavior.

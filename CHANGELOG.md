@@ -1188,3 +1188,27 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: All checks passed (7 auto-fixes applied)
 - Coverage: 82% overall
 - Tag: prompt-88 verified on origin
+
+## 2026-06-26 22:53 — prompt-89
+
+**Plan**: Multi-Channel Approvals + Approval UI Enhancements
+
+**Changed**:
+- gateways/email/gateway.py: Created EmailGateway for async SMTP email sending
+- gateways/email/__init__.py: EmailGateway package init file
+- core/multi_channel_approval_gate.py: Created MultiChannelApprovalGate for fan-out to Web UI, Telegram, Email
+- core/approval_gate.py: Implemented load_scopes with Postgres query for active scopes
+- core/orchestrator.py: Wired multi_channel_approval_gate into escalation approval logic
+- web/server.py: Added Telegram polling background task with startup/shutdown handlers
+- src/components/panels/ApprovalQueuePanel.tsx: Added batch actions, expiry countdown, channel indicator, toast notifications
+- src/stores/approvalStore.ts: Added expires_at, risk, channels fields to ApprovalRequest
+- tests/test_multi_channel_approval_gate.py: Added tests for MultiChannelApprovalGate
+- tests/test_email_gateway.py: Added tests for EmailGateway
+- tests/test_approval_gate.py: Updated load_scopes test to verify Postgres query
+
+**Results**:
+- Tests: 1451 passed, 67 skipped
+- Ruff: 0 errors
+- Mypy: 0 errors
+- Coverage: 82% overall
+- Tag: prompt-89 verified on origin
