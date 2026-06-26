@@ -1149,3 +1149,23 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors
 - Coverage: 82% overall
 - Tag: prompt-86 verified locally
+
+## 2026-06-26 22:09 — prompt-87
+
+**Plan**: PEMADS Phase 2: Expert Panel Manager + VRAM Hot-Swap
+
+**Changed**:
+- core/expert_panel_manager.py: ExpertPanelManager for multi-round debates with expert workers
+- core/vram_manager.py: VRAMManager wrapper around ResourceManager for VRAM tracking
+- core/orchestrator.py: Added expert_panel_manager, vram_manager, debate_pool injection + debate trigger
+- core/schemas.py: Added metadata field to Task for debate_id storage
+- web/server.py: Added /api/vram/status and /api/debates/{id} endpoints
+- tests/test_expert_panel_manager.py: 11 tests for ExpertPanelManager
+- vulture-whitelist.txt: Added 4 new unused variable findings from schemas.py
+
+**Results**:
+- Tests: 1429 passed, 67 skipped
+- Ruff: All checks passed
+- Mypy: Success: no issues found in 6 source files
+- Coverage: 82% overall
+- Tag: prompt-87 verified locally
