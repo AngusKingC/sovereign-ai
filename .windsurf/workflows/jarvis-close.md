@@ -158,7 +158,7 @@ If no new failure patterns were encountered, skip this step. Silence is acceptab
 git add CHANGELOG.md PLANS.md LANDMINES.md "GLM Prompts/plan-{N}*.md"
 git commit -m "docs: prompt-{N} changelog, plans, and landmines update"
 ```
-(If `LANDMINES.md` was not updated this plan, omit it from the `git add`. The `"GLM Prompts/plan-{N}*.md"` glob is REQUIRED per OR39 — plan files must be committed to git. If no plan files exist for this plan (e.g., named plans that don't follow the `plan-{N}` pattern), omit the glob. For named plans, substitute the actual plan file pattern, e.g., `"GLM Prompts/plan-rule-cleanup*.md"`.)
+(If `LANDMINES.md` was not updated this plan, omit it from the `git add`. The `"GLM Prompts/plan-{N}*.md"` glob is REQUIRED per OR39 — plan files must be committed to git. If no plan files exist for this plan (e.g., named plans that don't follow the `plan-{N}` pattern), omit the glob. For named plans, substitute the actual plan file pattern, e.g., `"GLM Prompts/plan-rule-cleanup*.md"`. (Directory name retained for filesystem compatibility; the Prompt Creator role can be GLM or Kimi.))
 
 **OR39 reminder**: Plan files are part of the project record. Failing to commit them creates git history gaps (see L20). If `git status` shows untracked plan files at this step, they MUST be added.
 

@@ -21,7 +21,7 @@ git rev-parse HEAD
 ```
 Do NOT pull. Confirm branch is `master` and there are no uncommitted changes.
 
-**Note**: Changes to `GLM Prompts/` directory should be ignored for working copy cleanliness check — these are plan artifacts managed separately.
+**Note**: Changes to `GLM Prompts/` directory should be ignored for working copy cleanliness check — these are plan artifacts managed separately. (Directory name retained for filesystem compatibility; the Prompt Creator role can be GLM or Kimi.)
 
 ## Step 3: Verify pre-commit hooks are installed (NEW — Plan 72)
 ```powershell

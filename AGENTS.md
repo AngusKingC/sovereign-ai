@@ -94,7 +94,7 @@ OR13. Use temp-file pattern (not here-strings). Append via `Add-Content` with `-
 OR14. Simplified format: ~10-15 lines per entry. Title, changed files, results, test count. No fluff.
 
 ### Scope discipline
-OR15. Pre-declare scope before editing. List files you WILL edit and files you will NOT edit. Any file outside the "will edit" list requires STOP and GLM authorization.
+OR15. Pre-declare scope before editing. List files you WILL edit and files you will NOT edit. Any file outside the "will edit" list requires STOP and Prompt Creator authorization.
 
 OR16. HARD STOP on scope expansion. If you discover work outside the plan's scope,
 STOP and report using this format:
@@ -128,7 +128,7 @@ OR22. Re-read AGENTS.md before any file edit; never edit outside scope. Before e
 OR23. Cite rules by number when applying them. When executing a step that applies a rule, cite it: "Applying AR{n}: <rule name>" or "Applying OR{n}: <rule name>". When a rule prevents an action, cite it: "Blocked by AR{n}: <rule name>". This creates an audit trail and makes rule compliance explicit and verifiable in the execution log.
 
 ### Test with new implementations
-OR24. Every new implementation (new module, new class, new public function) MUST have a corresponding test file with tests covering the key paths. No implementation is "complete" until its tests pass. (Source: GLM-direct, no landmine)
+OR24. Every new implementation (new module, new class, new public function) MUST have a corresponding test file with tests covering the key paths. No implementation is "complete" until its tests pass. (Source: Prompt Creator-direct, no landmine)
 
 ### Type remediation discipline
 OR27. When fixing type errors requires interface changes that would break existing tests, add compatibility shims to maintain backward compatibility. The shim should delegate to the new implementation while accepting the old signature. Mark the shim as deprecated with a docstring noting the legacy status. This allows type fixes without test modifications, which are outside scope for type-remediation plans. (Source: L9)
@@ -170,14 +170,14 @@ OR37. Batch verification commands to reduce the number of separate command execu
 - If any check fails, the failure will appear in the last 5 lines. Then re-run the failing check individually for full output.
 - This reduces 6 Devin actions + 6 output blocks to 1 Devin action + 1 output block.
 
-### GLM Prompts directory hygiene (REVISED — Governance Patch 04)
+### Prompt Creator Prompts directory hygiene (REVISED — Governance Patch 04)
 OR38. At decade boundary tags (prompt-{N}0 where N > 0, e.g., prompt-80, prompt-90), delete the previous decade's plan files from `GLM Prompts/` directory. Delete files matching `plan-{previous_decade}*` (e.g., at prompt-80, delete plan-70* through plan-79*; at prompt-90, delete plan-80* through plan-89*). Commit the deletions as part of the decade boundary plan's docs commit (C12). This prevents the directory from growing unbounded and avoids "deleted files reappear" cycles. Do NOT delete governance directives, governance patches, or the current decade's files.
 
 **Catch-up clause** (revised at Governance Patch 04): if `GLM Prompts/` contains files from decade N-2 or earlier at any plan's opening (S0.1), where N is the current decade, delete them at that opening as a `docs: cleanup pre-{tag}` commit per OR26. Files from the immediately previous decade (N-1) are NOT eligible for catch-up deletion — wait for the decade boundary. Example: at prompt-75 (N=70s), files from the 50s or earlier (N-2=50s) are eligible for catch-up; files from the 60s (N-1=60s) are NOT — wait for prompt-80.
 
 **Decade definition**: the decade is determined by the tens digit of the prompt number. prompt-70 through prompt-79 = 70s decade. prompt-80 through prompt-89 = 80s decade. Named plans (e.g., `ar18-fix-all`, `rule-cleanup`) inherit the decade of their predecessor tag.
 
-(Source: GLM observation; revised at Governance Patch 04 to disambiguate "2+ decades ago" which was misinterpreted as "previous decade" during ar18-fix-all execution, causing premature deletion of 60s files at 70s opening. Original language from Governance Patch 03.)
+(Source: Prompt Creator observation; revised at Governance Patch 04 to disambiguate "2+ decades ago" which was misinterpreted as "previous decade" during ar18-fix-all execution, causing premature deletion of 60s files at 70s opening. Original language from Governance Patch 03.)
 
 ### Plan file retention (NEW — Governance Patch 04)
 OR39. Plan files (`plan-{N}.md`, `plan-{N}-Rev{n}.md`, `plan-{N}-Rev{n}-context-brief.md`, `plan-{N}-context-brief.md`) MUST be committed to git. The current plan's files MUST be added in the C12 docs commit (`git add CHANGELOG.md PLANS.md LANDMINES.md "GLM Prompts/plan-{N}*.md"`). Plan files from previous plans discovered untracked at /jarvis-open (S0.1) are an OR26 violation — commit them as `docs: cleanup pre-{tag}` with tag `docs-cleanup-{N}` before proceeding. Plan files are part of the project record; they document what Devin executed against. Losing them to git history gaps makes retroactive review impossible. (Source: L20 — plan files for prompts 72-77 were never committed to git; only 70 and 71 were. The CHANGELOG and PLANS.md document what those plans did, but the actual plan files are lost to git.)
@@ -207,7 +207,7 @@ This section maps landmines to their corresponding rules.
 ## Reading and writing LANDMINES.md
 
 **When to read LANDMINES.md**:
-- GLM Workflow Step 3: re-read landmines before creating new plan
+- Prompt Creator Workflow Step 3: re-read landmines before creating new plan
 - Devin (on-demand): if an AGENTS.md rule's application is ambiguous, read the source landmine for diagnostic context
 
 **When to write LANDMINES.md** (at C11, closing step 11):
@@ -226,7 +226,7 @@ Keep entries concise — trigger and impact only. No narrative, no cross-referen
 
 **Process for graduating a landmine to a rule**:
 1. Devin captures L{n} at C11 (closing step 11)
-2. GLM reviews at Workflow Step 4 and proposes rule OR{m} or VR{m}
+2. Prompt Creator reviews at Workflow Step 4 and proposes rule OR{m} or VR{m}
 3. Devin adds rule to AGENTS.md at S0.3 of next plan with source reference: "OR{m}. <rule statement> (Source: L{n})"
 4. Rule is live; Devin complies with it going forward
 

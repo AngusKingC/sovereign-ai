@@ -696,7 +696,7 @@ This changelog documents all implementations, changes, and decisions made during
 - Coverage: 82% (24,664 statements, 4,359 missing) - matches Plan 71 baseline
 - Tag: prompt-72 verified on origin
 
-**Plan 71 scope violation noted**: Plan 71's checkpoint commit (72e2aa6) bundled 10 GLM Prompts/ plan files into the prompt-71 tag, violating OR26. Going forward, governance doc and plan file edits discovered at /jarvis-open MUST be a separate docs-cleanup-{N} commit and tag. This plan does not retroactively split Plan 71's commit (git history is immutable), but the pattern is now enforced via OR32 and the workflow doc updates in S6-S8.
+**Plan 71 scope violation noted**: Plan 71's checkpoint commit (72e2aa6) bundled 10 Prompt Creator Prompts/ plan files into the prompt-71 tag, violating OR26. Going forward, governance doc and plan file edits discovered at /jarvis-open MUST be a separate docs-cleanup-{N} commit and tag. This plan does not retroactively split Plan 71's commit (git history is immutable), but the pattern is now enforced via OR32 and the workflow doc updates in S6-S8.
 
 ## 2026-06-24 23:50 — prompt-73
 
@@ -844,7 +844,7 @@ This changelog documents all implementations, changes, and decisions made during
 
 ## 2026-06-25 06:15 — governance-patch-03
 
-**Governance Patch 03**: Removed OR37 (todo list discipline — non-functional, IDE controls todo list rendering). Renumbered OR38 (batch verification) → OR37. Added new OR38 (GLM Prompts cleanup at decade boundaries — delete previous decade's plan files when hitting prompt-{N}0 tags). No code or test changes.
+**Governance Patch 03**: Removed OR37 (todo list discipline — non-functional, IDE controls todo list rendering). Renumbered OR38 (batch verification) → OR37. Added new OR38 (Prompt Creator Prompts cleanup at decade boundaries — delete previous decade's plan files when hitting prompt-{N}0 tags). No code or test changes.
 
 **Changed**:
 - AGENTS.md: Removed OR37, renumbered OR38→OR37, added new OR38
@@ -945,7 +945,7 @@ This changelog documents all implementations, changes, and decisions made during
 **Changed**:
 - AGENTS.md: revised OR38 (catch-up clause now explicit N-2 formula with example), added OR39 (plan files must be committed to git)
 - LANDMINES.md: appended L20 (plan files 72-77 not committed to git, history gaps)
-- .windsurf/workflows/jarvis-close.md: updated C12 to explicitly add GLM Prompts/plan-{N}*.md to git add
+- .windsurf/workflows/jarvis-close.md: updated C12 to explicitly add Prompt Creator Prompts/plan-{N}*.md to git add
 
 **Results**:
 - Tests: 1364 passed, 67 skipped (rule-cleanup baseline: 1364)

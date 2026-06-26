@@ -172,7 +172,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ### Plan infra-remediation — Infrastructure & Modularity Remediation (deferred from Plan 78 Rev1)
 
-**Scope**: Fix systematic gaps between AGENTS.md rules and code reality discovered in GLM AST scan (2026-06-26, verified counts):
+**Scope**: Fix systematic gaps between AGENTS.md rules and code reality discovered in Prompt Creator AST scan (2026-06-26, verified counts):
 - 2 AR1 violations (core/worker_factory.py:38, core/resource_budget.py:23 — inline imports of system/)
 - 264 AR18 violations (bare `except Exception: pass` across 43 files — top: skills/notes/notes_skill.py:36, skills/calendar/calendar_skill.py:24, skills/reminder/reminder_skill.py:18)
 - 38 print() statements in production code (top: core/observability.py:5)
@@ -193,7 +193,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **Plan 89**: 5-plan milestone scan (mandatory)
 - **Plan 90**: [Open Slot] (Priority TBD)
 
-**Roadmap source**: Claude's Option C from the 5-AI panel review (2026-06-25). See `roadmap-sequencing-strategy-and-review-request.md` for the full review process and GLM's evaluation.
+**Roadmap source**: Claude's Option C from the 5-AI panel review (2026-06-25). See `roadmap-sequencing-strategy-and-review-request.md` for the full review process and the Prompt Creator's evaluation.
 
 ---
 
@@ -208,7 +208,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **detect-secrets**: Baseline established at Plan 71 with 15 findings (all false positives). No change at Plan 72-74.
 - **pre-commit**: Configured at Plan 71 with 10 hooks. Mypy hook removed at Plan 74 (stall prevention — follows imports into out-of-scope files, causing Plan 73 stall).
 - **pytest-cov**: Configured at Plan 71 with term-missing and HTML reports. Coverage baseline captured at Plan 71: 82% (24,664 statements, 4,359 missing). No change at Plan 72-74 (coverage held at 82%). Coverage increased to 83% at Plan 74.5 (25,626 statements, 4,476 missing) due to new adapter tests.
-- **Plan 71 scope violation**: Plan 71's checkpoint commit (72e2aa6) bundled 10 GLM Prompts/ plan files into the prompt-71 tag, violating OR26. Plan 72 documented this violation and enforced the going-forward pattern via OR32 and workflow doc updates.
+- **Plan 71 scope violation**: Plan 71's checkpoint commit (72e2aa6) bundled 10 Prompt Creator Prompts/ plan files into the prompt-71 tag, violating OR26. Plan 72 documented this violation and enforced the going-forward pattern via OR32 and workflow doc updates.
 - **Plan 73 stall**: Plan 73 stalled due to mypy hook following imports into out-of-scope files (core/task_state_machine.py). Plan 74 removed mypy from pre-commit (stall prevention) and added OR33 (no hook exclusions per L12).
 - **Plan 75 CI vulture job failure**: CI vulture job has been failing since Plan 72 due to broken whitelist syntax (passing whitelist file as positional arg instead of Python-based comparison). Plan 75 fixed the syntax (jarvis-close.md, jarvis-verify.md, ci.yml). CI should now pass.
 
@@ -320,7 +320,7 @@ These features add defense, portability, and resilience:
 - **Git workflow** → `jarvis-open.md` (opening), `jarvis-close.md` (closing)
 - **Verification procedure** → `jarvis-verify.md` (post-edit checks)
 - **Full scan procedure** → `jarvis-scan.md` (5-plan checkpoints only)
-- **GLM review process** → `AI_HANDOFF.md` (7-step workflow)
+- **Prompt Creator review process** → `AI_HANDOFF.md` (7-step workflow)
 - **Known failure patterns** → `LANDMINES.md` (append-only; trigger + impact only)
 
 ---
@@ -335,6 +335,6 @@ These features add defense, portability, and resilience:
 
 ---
 
-**Maintained by**: Devin (at plan closing), GLM (review only, does not edit directly)
+**Maintained by**: Devin (at plan closing), Prompt Creator (review only, does not edit directly)
 **Format**: Markdown, append-only where applicable (completed prompts, queue shift)
 **Governance**: Source of truth for baselines and queue. All references to test counts point here.
