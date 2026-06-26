@@ -95,19 +95,31 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Next 5 Prompts Queue
 
-### Plan 80 — 5-Plan Milestone Full Scan (Priority 1 — mandatory)
+### Plan 80 — Sovereign AI UI Shell (Priority 1 — user-directed)
 
-**Scope**: Full 6-tool checkpoint scan (pytest, ruff, mypy, bandit, pip-audit, vulture) + coverage verification. Baseline reconciliation after Plans 76-79. Validates PEMADS Phase 1 + 3 Kimi gaps before Phase 2 begins.
+**Scope**: Next.js 15 + FastAPI shell layout with placeholder panels, backend stubs serving mocked data, wiring for live (mocked) data end-to-end. Defers xterm.js/PTY terminal, memory drawer, subagent panel, and full panel implementations to follow-on plans.
 
-**Expected impact**: Baseline verification, trend analysis.
+**Expected impact**: Web UI foundation for Sovereign AI. First web UI plan — introduces Next.js, TypeScript, Zustand, shadcn/ui to the project.
 
-**Baseline changes**: All baselines should hold within tolerance.
+**Baseline changes**: Introduces Vitest test suite (frontend) alongside existing pytest (backend). ~15 new tests total (~5 Vitest + ~10 pytest).
 
-**Gate**: All 6 tools pass, coverage ≥78% (83% baseline -5%).
+**Gate**: Full pytest suite pass (1405 baseline held), Vitest suite pass, ruff 0, mypy 0 (backend only), TypeScript strict compile pass, ESLint pass.
 
 ---
 
-### Plan 81 — PEMADS Phase 2: Expert Panel Manager + VRAM Hot-Swap (Priority 1 — Kimi Critical #4)
+### Plan 81 — 5-Plan Milestone Full Scan (Priority 1 — mandatory, deferred from Plan 80)
+
+**Scope**: Full 6-tool checkpoint scan (pytest, ruff, mypy, bandit, pip-audit, vulture) + coverage verification + NEW Vitest baseline verification. Baseline reconciliation after Plans 76-80. Validates PEMADS Phase 1 + 3 Kimi gaps + UI shell foundation before Phase 2 begins.
+
+**Expected impact**: Baseline verification, trend analysis. First scan to include Vitest baseline.
+
+**Baseline changes**: All baselines should hold within tolerance. New Vitest baseline established.
+
+**Gate**: All 6 Python tools pass, Vitest passes, coverage ≥78% (83% baseline -5%).
+
+---
+
+### Plan 82 — PEMADS Phase 2: Expert Panel Manager + VRAM Hot-Swap (Priority 1 — Kimi Critical #4)
 
 **Scope**: ExpertPanelManager (orchestrates turn-based debates between diverse architectures), VRAM hot-swap (unload models between debate rounds to fit multiple experts). Requires Plans 78-79 prerequisites (circuit breaker, model routing).
 

@@ -52,6 +52,8 @@ AR19. All code execution and terminal command execution MUST go through `Sandbox
 
 AR20. Local LLM adapters that require a custom build of `llama.cpp` (e.g., PrismML's Q1_0 ternary weight fork) MUST be implemented as adapter-managed subprocess servers, NOT as in-process Python bindings. The adapter is responsible for: (a) verifying the binary exists, (b) launching `llama-server` as a subprocess, (c) health-checking the HTTP endpoint, (d) calling the OpenAI-compatible API via `httpx`, (e) graceful shutdown on adapter close. This avoids fragile C++ build dependencies in `requirements.txt` and keeps the modified `llama.cpp` as an external binary managed by `system/model_acquisition.py`. (Source: GLM-direct, Plan 74.5 — PrismML Ternary Bonsai integration requires Q1_0 quantization support not in stock `llama-cpp-python`)
 
+AR21. `src/` (TypeScript/React frontend) follows TypeScript strict mode (`"strict": true` in `tsconfig.json`) and ESLint with `@typescript-eslint/recommended`. `src/` does NOT import from any Python directory (`core/`, `adapters/`, `cli/`, `web/`, `backend/`, etc.). `src/` communicates with the backend exclusively via HTTP (fetch) and SSE (EventSource). Type safety is enforced by TypeScript strict mode (equivalent to AR14 for Python). Code quality is enforced by ESLint (equivalent to ruff for Python). (Source: Plan 80 Tier 2 review — AR1-AR8 are Python-only; TypeScript directory needs its own governance rule.)
+
 ---
 
 ## Operational Rules
