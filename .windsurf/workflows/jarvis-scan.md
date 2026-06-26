@@ -10,8 +10,10 @@ description: "Run the 6-tool full checkpoint scan SEQUENTIALLY (never in paralle
 ## Tool 1: pytest (full suite)
 
 ```powershell
-python -m pytest tests/ -q --tb=short | Select-Object -Last 5
+python -m pytest tests/ -vvv
 ```
+
+**Note**: Do NOT use `-q --tb=short` or pipe to `Select-Object -Last 5`. Run with full verbose output (`-vvv`) so hangs, stuck tests, and failure details are all visible.
 
 Wait for completion. Record: `<N> passed, <M> skipped`. Expected: check PLANS.md for current baseline.
 

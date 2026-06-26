@@ -28,8 +28,10 @@ Review the output. If unexpected files appear in the diff, STOP and investigate.
 
 For each production file you edited, run its corresponding test file:
 ```powershell
-python -m pytest tests/test_<name>.py -v | Select-Object -Last 5
+python -m pytest tests/test_<name>.py -vvv
 ```
+
+**Note**: Do NOT use `-q --tb=short` or pipe to `Select-Object -Last 5`. Run with full verbose output (`-vvv`) so hangs, stuck tests, and failure details are all visible.
 
 If tests fail:
 1. Do NOT revert yet — read the failure output

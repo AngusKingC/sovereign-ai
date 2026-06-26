@@ -23,12 +23,14 @@ Do NOT pull. Confirm branch is `master` and there are no uncommitted changes.
 
 **Note**: Changes to `Prompts/` directory should be ignored for working copy cleanliness check — these are plan artifacts managed separately. (Directory name retained for filesystem compatibility; the Prompt Creator role can be GLM or Kimi.)
 
-## Step 3: Verify pre-commit hooks are installed (NEW — Plan 72)
+## Step 3: Verify pre-commit hooks are installed (NEW — Plan 72, FIXED — Plan 85)
 ```powershell
 Test-Path .git/hooks/pre-commit
 ```
-If False, run `pre-commit install` and re-verify.
-If `pre-commit` command not found, STOP — dev deps not installed. Run `pip install -r requirements-dev.txt` and re-verify.
+If output is `False`, run `pre-commit install` and re-verify.
+If `pre-commit` command not found when installing, STOP — dev deps not installed. Run `pip install -r requirements-dev.txt` and re-verify.
+
+**Note**: Plan 85 fixed this step — the original `pre-commit install --check` command fails with "unrecognized arguments: --check" on newer pre-commit versions. Use `Test-Path .git/hooks/pre-commit` instead.
 
 ## Step 4: Verify .secrets.baseline exists (NEW — Plan 72)
 ```powershell
