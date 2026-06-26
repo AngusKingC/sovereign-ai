@@ -454,6 +454,21 @@ def create_app(
             logger.warning(f"get_debate failed: {e}")
             return {"error": str(e)}, 500
 
+    # GET /api/debates/{debate_id}/verdict — auth required
+    @app.get("/api/debates/{debate_id}/verdict")
+    async def get_verdict(debate_id: str):
+        """Return judge verdict for a debate."""
+        try:
+            if not orchestrator.pemads_judge:
+                return {"error": "PEMADS judge not configured"}, 404
+            # Return last verdict for this debate (cached or re-judged)
+            # For now, re-judge on demand
+            # In production, cache verdicts
+            return {"debate_id": debate_id, "verdict": "endpoint placeholder"}
+        except Exception as e:
+            logger.warning(f"get_verdict failed: {e}")
+            return {"error": str(e)}, 500
+
     # GET /api/memory/slots — auth required
     @app.get("/api/memory/slots")
     async def get_memory_slots():

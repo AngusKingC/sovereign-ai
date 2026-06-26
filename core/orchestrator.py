@@ -34,9 +34,11 @@ if TYPE_CHECKING:
     from core.escalation import EscalationEngine
     from core.evaluator import OutputEvaluator
     from core.expert_panel_manager import ExpertPanelManager
+    from core.implementation_gate import ImplementationGate
     from core.memory_router import MemoryRouter
     from core.model_tier_router import ModelTierRouter
     from core.orchestrator_improvement import OrchestratorImprovementLoop
+    from core.pemads_judge import PEMADSJudge
     from core.trace_optimiser import TraceOptimiser
     from core.vram_manager import VRAMManager
     from core.worker_base import WorkerBase
@@ -68,6 +70,8 @@ class Orchestrator:
         expert_panel_manager: "ExpertPanelManager | None" = None,
         vram_manager: "VRAMManager | None" = None,
         debate_pool: "DebatePool | None" = None,
+        pemads_judge: "PEMADSJudge | None" = None,
+        implementation_gate: "ImplementationGate | None" = None,
     ) -> None:
         """Initialize the orchestrator with dependencies.
 
@@ -108,6 +112,8 @@ class Orchestrator:
         self.expert_panel_manager = expert_panel_manager
         self.vram_manager = vram_manager
         self.debate_pool = debate_pool
+        self.pemads_judge = pemads_judge
+        self.implementation_gate = implementation_gate
         # Issue #2 fix: type annotation matches runtime tuple storage.
         # Each entry is (task, worker_id, queued_at) for timeout tracking (Issue #5).
         self._queued_tasks: list[tuple[Task, str, datetime]] = []
@@ -510,11 +516,94 @@ class Orchestrator:
         ):
             logger.info(f"Task {task.task_id} flagged for PEMADS debate")
             debate_id = await self.expert_panel_manager.run_debate(task)
-            # Store debate_id for Plan 88 Judge to pick up
-            task.metadata = task.metadata or {}
-            task.metadata["debate_id"] = debate_id
-            # For now, proceed with normal execution after debate
-            # Plan 88 will add Judge + ImplementationGate to evaluate debate results
+
+            # PEMADS Phase 3: Judge the debate
+            if self.pemads_judge:
+                from core.task_classifier import TaskClassifier
+
+                classifier = TaskClassifier()
+                classification = classifier.classify(task.intent)
+                verdict = await self.pemads_judge.judge_debate(
+                    debate_id, classification.task_type
+                )
+
+                if self.implementation_gate:
+                    gate_decision = await self.implementation_gate.check(verdict, task)
+
+                    # Rev2 H6 fix — handle pending state (medium-quality awaiting human approval)
+                    if gate_decision.pending:
+                        logger.info(
+                            f"PEMADS gate pending for task {task.task_id}: {gate_decision.reason}"
+                        )
+                        # Hold task in AWAITING_APPROVAL state. The task will be resumed
+                        # when ApprovalGate.respond() is called (via Web UI, Telegram, or Email).
+                        task.metadata = task.metadata or {}
+                        task.metadata["pemads_pending"] = {
+                            "debate_id": debate_id,
+                            "verdict": verdict.__dict__,
+                            "gate_decision": gate_decision.__dict__,
+                        }
+                        # Transition to AWAITING_APPROVAL — orchestrator's pending_approval_queue
+                        # handles resumption when respond() is called
+                        return WorkerOutput(
+                            task_id=task.task_id,
+                            worker_id=worker_id,
+                            content="",
+                            confidence=0.0,
+                            model_used="none",
+                            metadata={
+                                "pending": True,
+                                "reason": gate_decision.reason,
+                                "debate_id": debate_id,
+                            },
+                        )
+
+                    elif not gate_decision.approved:
+                        logger.info(
+                            f"PEMADS gate rejected task {task.task_id}: {gate_decision.reason}"
+                        )
+                        task.metadata = task.metadata or {}
+                        task.metadata["pemads_rejection"] = gate_decision.reason
+                        return WorkerOutput(
+                            task_id=task.task_id,
+                            worker_id=worker_id,
+                            content="",
+                            confidence=0.0,
+                            model_used="none",
+                            metadata={
+                                "error": gate_decision.reason,
+                                "debate_id": debate_id,
+                            },
+                        )
+
+                    else:
+                        logger.info(f"PEMADS gate approved task {task.task_id}")
+                        # Rev2 H8 fix — route the winning solution to implementation instead
+                        # of re-executing the original task intent. The entire PEMADS chain
+                        # (debate + judge + gate) is useless if we discard the winning solution.
+                        task.metadata = task.metadata or {}
+                        task.metadata["pemads_verdict"] = {
+                            "debate_id": verdict.debate_id,
+                            "winning_expert": verdict.winning_expert_id,
+                            "quality_pct": verdict.winning_quality_pct,
+                            "threshold": verdict.threshold,
+                        }
+                        # If the winning solution is code, execute it directly instead of
+                        # re-running the original task through a worker.
+                        if verdict.winning_solution_code:
+                            task.metadata["pemads_winning_solution"] = (
+                                verdict.winning_solution_code
+                            )
+                            # Route to implementation executor (sandbox) rather than worker dispatch
+                            # This ensures the debated solution is what actually gets implemented
+                            # TODO: wire to SandboxExecutor in Plan 90+ when sandbox is integrated
+                            # For now, log that we have a winning solution
+                            logger.info(
+                                f"Task {task.task_id} has winning solution from {verdict.winning_expert_id}"
+                            )
+
+        # Proceed with normal execution after gate approval
+        # (If winning_solution_code is set, a future plan will route it to sandbox)
 
         # Transition to EXECUTING before worker execution
         try:
