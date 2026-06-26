@@ -1056,3 +1056,25 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors (no Python files in src/)
 - Coverage: core 83%, system 83%, memory 83%, adapters 83%, skills 83%
 - Tag: prompt-82 verified on origin
+
+## 2026-06-26 19:13 — prompt-83
+
+**Plan**: Operational Panels + Drawers
+
+**Changed**:
+- src/app/page.tsx: Wired polling hooks and view routing using VIEWS constants
+- src/components/panels/TasksPanel.tsx: Created full-page task list with Active/Completed/Failed sections
+- src/components/panels/WorkersPanel.tsx: Created worker registry with circuit state badges
+- src/components/panels/ApprovalQueuePanel.tsx: Created approval queue with risk levels and expiry countdown
+- src/components/panels/CostDashboardPanel.tsx: Created cost dashboard with daily/monthly progress bars
+- src/components/panels/MemoryDrawer.tsx: Replaced placeholder with full implementation (search, sort, expandable rows, export/import)
+- src/components/panels/SettingsDrawer.tsx: Replaced placeholder with 4-tab implementation (Cost Policy, Circuit Breaker, Sandbox, Auth)
+- src/components/panels/SkillsPanel.tsx: Created skill registry with tier badges and enabled toggle
+- src/components/panels/HelpPanel.tsx: Created static help panel with keyboard shortcuts
+- src/components/panels/TerminalPlaceholder.tsx: Created placeholder for terminal (xterm.js deferred to Plan 89)
+
+**Results**:
+- Tests: 1418 passed, 67 skipped
+- Ruff: No Python files touched
+- Coverage: core 83%, system 83%, memory 83%, adapters 83%, skills 83%
+- Tag: prompt-83 verified on origin

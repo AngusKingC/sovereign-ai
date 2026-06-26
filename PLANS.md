@@ -26,12 +26,14 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **Plan 82**: No test baseline changes. Test count held at 1418 passed, 67 skipped. No Python files in src/ (TypeScript only), so ruff/mypy/bandit/pip-audit not applicable to new files. Vulture baseline held at 40 findings (no new Python code). Coverage held at 83% (baseline held). All tool counts within tolerance.
 
+**Plan 83**: No test baseline changes. Test count held at 1418 passed, 67 skipped. No Python files in src/ (TypeScript only), so ruff/mypy/bandit/pip-audit not applicable to new files. Vulture baseline held at 40 findings (no new Python code). Coverage held at 83% (baseline held). All tool counts within tolerance.
+
 ---
 
 ## Test Baseline
 
 **Current baseline**: **1418 tests collected (1418 passed, 67 skipped)**
-**Verified**: Plan 81, Step C1 (full test suite)
+**Verified**: Plan 83, Step C1 (full test suite)
 **Tolerance**: ±5 tests (variance acceptable due to parameterized fixtures and environment variation)
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -101,6 +103,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 80 | Sovereign AI UI Shell | 1411 | Next.js 15 frontend with TypeScript, Tailwind v4, Zustand stores, shell components, useSSE hook, API client, ToolInspector panel. FastAPI backend stubs with mocked data, auth middleware, SSE endpoints. 6 new backend tests. Coverage: 83% (baseline held). |
 | 81 | Backend Unification + API Endpoints | 1418 | Merged backend/main.py into web/server.py (eliminated two-server architecture). Added CORS middleware, cookie-based auth for SSE. Added 15 new API endpoints (costs, circuit-breaker, approvals, memory, skills, system stats, SSE streams, PTY WebSocket). Added orchestrator getter methods (get_task, list_workers_with_status, get_session_timeline). Added API response models to core/schemas.py. Created src/lib/api.ts with comprehensive TypeScript client. Updated src/next.config.ts with rewrites. Created src/.env.example. 9 new backend tests. Coverage: 83% (baseline held). |
 | 82 | Frontend State + Shell Layout | 1418 | Created 6 Zustand stores (task, worker, cost, approval, memory, uiStore with VIEWS/DRAWERS enums). Created 6 data-fetching hooks (usePolling with visibility detection + 5 specific polling hooks). Created useKeyboardShortcuts hook (view shortcuts t/w/a/c, drawer shortcut m, Escape closes drawer only). Updated globals.css with CSS tokens + CSS Grid shell styles + drawer overlay styles. Updated layout.tsx to Server Component with metadata export, delegated shell rendering to ShellClient. Created ShellClient client component with keyboard shortcuts, CSS Grid shell, drawer overlays at shell level. Created MainPane, MemoryDrawer, SettingsDrawer placeholder components. Updated StatusBar (removed deferred labels, added data-testid, wired settings button to openDrawer). Updated Sidebar (7 nav items using VIEWS enum, 2 drawer buttons, active indicator with amber border, data-testid). Updated BottomBar (activation grid placeholder with canvas 32×16, useEffect with cancelAnimationFrame cleanup, data-testid). Updated memoryStore tests to match new array-based API. Updated page.tsx (removed setActivation usage, commented out SSE memory handling). Coverage: 83% (baseline held). |
+| 83 | Operational Panels + Drawers | 1418 | Created 9 panel components: TasksPanel (active/completed/failed sections), WorkersPanel (registry + circuit status), ApprovalQueuePanel (pending + respond actions), CostDashboardPanel (progress bars + breakdown), MemoryDrawer (full implementation with search/sort/export/import), SettingsDrawer (4 tabs with mocked fields), SkillsPanel (skill registry), HelpPanel (static shortcuts), TerminalPlaceholder. Updated page.tsx with polling hooks and view routing using VIEWS constants. StatusBar already wired to settings gear (Plan 82). Coverage: 83% (baseline held). |
 
 ---
 
@@ -108,23 +111,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **New structure**: 4-plan batches with scan prompts every 5 plans. Plan 81 is now code production (not scan). Scan moved to Plan 85.
 
-### Batch 1: Plans 83–86 (JArvis UI Shell — Code Production)
-
-#### Plan 83 — JArvis UI: Operational Panels + Drawers (Priority 1 — Kimi Critical)
-**Depends on**: `prompt-82` | **Tag**: `prompt-83`
-**Scope**: Build all operational panels: Tasks, Workers, Approvals, Costs. Memory Drawer, Settings Drawer, Skills Panel, Help Panel. Terminal placeholder (xterm.js deferred to Plan 89). Update page.tsx with view routing.
-**What to do**:
-1. Create TasksPanel (active/completed/failed sections)
-2. Create WorkersPanel (registry + circuit status)
-3. Create ApprovalQueuePanel (pending + respond actions)
-4. Create CostDashboardPanel (progress bars + breakdown)
-5. Create MemoryDrawer (slide-in, search, export/import)
-6. Create SettingsDrawer (4 tabs, mocked fields)
-7. Create SkillsPanel (skill registry)
-8. Create HelpPanel (static shortcuts)
-9. Create TerminalPlaceholder
-10. Update page.tsx with view routing
-**STOP condition**: If any panel throws TypeScript error, STOP and fix.
+### Batch 1: Plans 84–86 (JArvis UI Shell — Code Production)
 
 #### Plan 84 — JArvis UI: Test Suite + Playwright E2E (Priority 1 — Kimi Critical)
 **Depends on**: `prompt-83` | **Tag**: `prompt-84`
@@ -249,12 +236,13 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **Memory router** — All memory access routed through MemoryRouter; no direct imports; BackendRouter supports trace store registration
 - **Serialization** — Jsonify strict mode, circular ref detection, type coercion all working
 - **Datetime handling** — Zero naive/aware mixing; all core/system/skills using timezone-aware UTC
-- **Ruff baseline** — 0 errors (Plan 59 cleanup held through Plans 56-78)
+- **Ruff baseline** — 0 errors (Plan 59 cleanup held through Plans 56-83)
 - **Mypy baseline** — Full-repo mypy clean (0 errors, 181 source files). Adapters, CLI, memory, workers, skills, tests, scripts all remediated through Plan 67.
-- **Test suite** — 1386 passed, 67 skipped (Plan 78 worker circuit breaker + degraded mode; Plan 77 AutoCorrector + IVM; Plan 76 PEMADS Phase 1; Plan 68 skill taxonomy + CONTEXT.md; Plan 67 mypy remediation; Plan 66 system cleanup; Plan 63b added 7 integration + E2E tests; restored 2 orchestrator integration tests)
+- **Test suite** — 1418 passed, 67 skipped (Plan 83 operational panels + drawers; Plan 82 frontend state + shell layout; Plan 81 backend unification; Plan 80 UI shell; Plan 79 model routing; Plan 78 worker circuit breaker + degraded mode; Plan 77 AutoCorrector + IVM; Plan 76 PEMADS Phase 1; Plan 68 skill taxonomy + CONTEXT.md; Plan 67 mypy remediation; Plan 66 system cleanup; Plan 63b added 7 integration + E2E tests; restored 2 orchestrator integration tests)
 - **Eval harness** — Metrics (exact_match, token_f1, bleu, cosine_similarity) operational with trace emitter integration. Validation suite with 15 static tasks confirms metric behavior across 5 categories.
 - **Skill taxonomy** — SkillTier enum (USER_INVOKED, AGENT_INVOKED, HYBRID), SkillClassification dataclass, SkillTaxonomyRegistry. Default registry with 25 built-in skill classifications. CONTEXT.md project-level shared vocabulary.
 - **Worker Circuit Breaker** — WorkerCircuitBreaker class with failure tracking and auto-reset. Integrated into Orchestrator with degraded mode (task queuing when too many workers fail). QUEUED task status added to TaskStateMachine. Comprehensive tests covering worker-level and aggregate behavior.
+- **UI Shell** — Next.js 15 frontend with TypeScript, Tailwind v4, Zustand stores, shell components, polling hooks, API client. FastAPI backend with CORS, cookie-based auth, SSE endpoints. Operational panels: Tasks, Workers, Approvals, Costs, Skills, Help. Memory Drawer (search/sort/export/import), Settings Drawer (4 tabs). Terminal placeholder (xterm.js deferred to Plan 89).
 
 ### What's Broken Right Now
 
