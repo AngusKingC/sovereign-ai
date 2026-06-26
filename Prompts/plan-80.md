@@ -306,7 +306,7 @@ git branch --show-current
 
 **Applying OR26**: If `git status -s` shows modified/untracked governance docs or plan files, commit them as `docs: cleanup pre-prompt-80` tagged `docs-cleanup-80` BEFORE proceeding.
 
-**Applying OR39**: If `plan-79*.md` files are untracked in `GLM Prompts/`, they are an OR26 violation — commit them in the `docs-cleanup-80` commit. The current plan's file (`plan-80*.md`) will be added in C12.
+**Applying OR39**: If `plan-79*.md` files are untracked in `Prompts/`, they are an OR26 violation — commit them in the `docs-cleanup-80` commit. The current plan's file (`plan-80*.md`) will be added in C12.
 
 If the workflow is missing or fails, STOP and report.
 
@@ -2391,12 +2391,12 @@ cat README.md | head -5
 
 Run `/jarvis-close` per workflow file `.windsurf/workflows/jarvis-close.md`.
 
-**Applying OR39**: Ensure `GLM Prompts/plan-80*.md` is added in the C12 docs commit:
+**Applying OR39**: Ensure `Prompts/plan-80*.md` is added in the C12 docs commit:
 ```powershell
-git add CHANGELOG.md PLANS.md LANDMINES.md "GLM Prompts/plan-80*.md"
+git add CHANGELOG.md PLANS.md LANDMINES.md "Prompts/plan-80*.md"
 ```
 
-**Applying OR38**: Plan 80 is in the 80s decade. **Decade boundary triggered!** Per OR38, at decade boundary tags (prompt-80), delete the previous decade's plan files from `GLM Prompts/`. Delete files matching `plan-70*` through `plan-79*` (the 70s decade). Commit the deletions as part of the C12 docs commit. Do NOT delete governance directives, governance patches, or the current decade's files.
+**Applying OR38**: Plan 80 is in the 80s decade. **Decade boundary triggered!** Per OR38, at decade boundary tags (prompt-80), delete the previous decade's plan files from `Prompts/`. Delete files matching `plan-70*` through `plan-79*` (the 70s decade). Commit the deletions as part of the C12 docs commit. Do NOT delete governance directives, governance patches, or the current decade's files.
 
 ### Expected results
 

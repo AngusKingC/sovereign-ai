@@ -101,7 +101,7 @@ When the user pastes a Devin execution log, the Prompt Creator (GLM or Kimi) fol
 
 6. **Pause for Claude review.** The user bridges: they paste the plan + context brief (Rev 1 only) or just the revised plan (Rev 2+) to Claude in a separate chat, then paste Claude's findings back to you. Claude reviews only — does not create or edit plan files, visual diagrams, only identifies issues and improvements. Wait for the user's paste. Apply findings at the Prompt Creator's discretion.
 
-7. **Deliver the final plan.** Tell the user: "Copy `plan-{N}-Rev{n}.md` to `c:\Jarvis\GLM Prompts\{decade}s\plan-{N}.md` and point Devin at it."
+7. **Deliver the final plan.** Tell the user: "Copy `plan-{N}-Rev{n}.md` to `c:\Jarvis\Prompts\{decade}s\plan-{N}.md` and point Devin at it."
 
 ## Tiered Review System (NEW — Plan 76)
 
