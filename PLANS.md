@@ -1,6 +1,6 @@
 # PLANS.md — Sovereign AI Project State
 
-**Last updated**: Post-Plan 91 (2026-06-27)
+**Last updated**: Post-Plan 92 (2026-06-27)
 
 This document tracks the dynamic state of the Sovereign AI project: baselines, completed prompts, and the next-5-prompt queue. It is the canonical source for test counts, static analysis baselines, and which prompt is currently active.
 
@@ -40,12 +40,14 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **Plan 91**: Test baseline updated from 1451 to 1458 passed (delta +7). Cause: 7 new tests in test_api_stubs.py (wired ModelRegistry integration tests: list_all, get, search endpoints). All new tests are in-scope for Plan 91. Vulture baseline held at 40 findings (delta 0). No new vulture findings. Coverage held at 82% (baseline held). No static analysis baseline changes. Ruff 0 errors held. Mypy file-scoped clean (api/models.py, web/server.py, core/orchestrator.py). Vulture 40 findings held. Coverage 82% held. All tool counts within tolerance.
 
+**Plan 92**: Test baseline updated from 1458 to 1468 passed (delta +10). Cause: 10 new tests (5 in test_model_download.py + 5 in test_fallback_chain.py). Model download tests: already_downloaded, initiates_download, requires_approval, get_status, get_status_not_found. Fallback chain tests: get_empty, get_with_adapters, set_chain, set_invalid, get_available. All new tests are in-scope for Plan 92. Vulture baseline held at 40 findings (delta 0). No new vulture findings (all findings pre-existing in other files). Coverage held at 82% (baseline held). No static analysis baseline changes. Ruff 0 errors held. Mypy file-scoped clean (all touched files). Vulture 40 findings held. Coverage 82% held. All tool counts within tolerance.
+
 ---
 
 ## Test Baseline
 
-**Current baseline**: **1458 Python tests collected (1458 passed, 67 skipped) + 46 Vitest tests passed + 8 Playwright E2E tests passed**
-**Verified**: Plan 91, Step C1 (full test suite)
+**Current baseline**: **1468 Python tests collected (1468 passed, 67 skipped) + 46 Vitest tests passed + 8 Playwright E2E tests passed**
+**Verified**: Plan 92, Step C1 (full test suite)
 **Tolerance**: ±5 tests for Python (variance acceptable due to parameterized fixtures and environment variation)
 **Vitest baseline**: 46 tests passed (first baseline established Plan 84)
 **Playwright E2E baseline**: 8 tests passed (first baseline established Plan 85)
@@ -125,6 +127,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 88 | PEMADS Phase 3: Judge + Implementation Gate | 1440 + 46 Vitest + 8 Playwright | PEMADSJudge (core/pemads_judge.py) for evaluating debate quality using TestingBatterySkill. ImplementationGate (core/implementation_gate.py) for gating solution implementation based on quality thresholds (auto-approve ≥90%, human 75-90%, reject <75%). Wired into Orchestrator (pemads_judge, implementation_gate injection + judging logic after debate trigger). Added API endpoint: /api/debates/{id}/verdict (web/server.py). 11 new tests (6 test_pemads_judge.py + 5 test_implementation_gate.py). Coverage: 82% (baseline held). |
 | 89 | Multi-Channel Approvals + Approval UI Enhancements | 1451 + 46 Vitest + 8 Playwright | EmailGateway (gateways/email/gateway.py) for async SMTP email sending. MultiChannelApprovalGate (core/multi_channel_approval_gate.py) for fan-out to Web UI, Telegram, Email. ApprovalGate.load_scopes (core/approval_gate.py) with Postgres query for active scopes. Orchestrator wiring (core/orchestrator.py) multi_channel_approval_gate into escalation approval logic. Web server (web/server.py) Telegram polling background task with startup/shutdown handlers. ApprovalQueuePanel (src/components/panels/ApprovalQueuePanel.tsx) batch actions, expiry countdown, channel indicator, toast notifications. approvalStore (src/stores/approvalStore.ts) expires_at, risk, channels fields. 12 new tests (test_multi_channel_approval_gate.py + test_email_gateway.py). Coverage: 82% (baseline held). |
 | 91 | Model & Adapter Management (Phase 1a) | 1458 + 46 Vitest + 8 Playwright | Wired api/models.py stubs to ModelRegistry with get_model_registry dependency. Added model_registry optional parameter to Orchestrator. Added ModelRegistry initialization in web/server.py lifespan. Updated tests/test_api_stubs.py for wired ModelRegistry. Added ModelInfo interface and getModels/getModel/searchModels functions to src/lib/api.ts. Created src/stores/modelStore.ts (Zustand store for model state). Created src/components/panels/ModelsPanel.tsx. Added MODELS view to src/stores/uiStore.ts. Added Models nav item with Boxes icon to src/components/shell/Sidebar.tsx. Added MODELS view routing to src/app/page.tsx. Wired model selector to activeModelId and MODELS view in src/components/shell/StatusBar.tsx. Added modelStore test suite to src/__tests__/stores.test.ts. Added ModelsPanel test suite to src/__tests__/components.test.tsx. 7 new tests (test_api_stubs.py updates). Coverage: 82% (baseline held). |
+| 92 | Model Downloader + Fallback Chain (Phase 1b) | 1468 + 46 Vitest + 8 Playwright | Added download endpoints (POST /api/models/download, GET /api/models/download/{id}/status) with approval gate integration and background task tracking. Added fallback chain endpoints (GET/PUT /api/adapters/fallback, GET /api/adapters/available). Added ADAPTER_TYPES constant to cli/adapter_factory.py. Added _in_flight_downloads tracking and get_download_status() to ModelAcquisition Added resource_manager and model_acquisition to Orchestrator TYPE_CHECKING imports. Created ModelDownloader.tsx modal component for model search and download. Added fallback chain editor tab to SettingsDrawer.tsx. Added Download Model button to ModelsPanel.tsx. Added downloadModel, getDownloadStatus, getFallbackChain, setFallbackChain, getAvailableAdapters to src/lib/api.ts. Fixed duplicate Models entries in Sidebar.tsx. 10 new tests (test_model_download.py + test_fallback_chain.py). Coverage: 82% (baseline held). |
 
 ---
 
@@ -154,7 +157,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 5. Add `VIEWS.MODELS` to `uiStore.ts`, nav item to `Sidebar.tsx`, routing to `page.tsx`
 **STOP condition**: If `npx tsc --noEmit` fails, STOP and fix.
 
-#### Plan 92 — Model Downloader + Fallback Chain (Phase 1b) — CRITICAL (Active)
+#### Plan 92 — Model Downloader + Fallback Chain (Phase 1b) — CRITICAL (Completed)
 **Depends on**: `prompt-91` | **Tag**: `prompt-92`
 **Scope**: Enable model search/download from HuggingFace/Ollama and fallback chain configuration. Backend: wire `api/models.py` search/download stubs to `system/model_acquisition.py` (`GET /api/models/search`, `POST /api/models/download`, `GET /api/models/download/{id}/status`). Add fallback chain endpoints (`GET /api/adapters/fallback`, `PUT /api/adapters/fallback`). Frontend: `ModelDownloader.tsx` (search catalogue, select quantisation, download with progress), Fallback Chain Editor (drag-and-drop ordered list).
 **Gap Analysis ref**: §3.1 Gap #1, §6 Phase 1, §7.2 Backend API Additions
@@ -166,7 +169,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 5. Add hardware compatibility check before download (VRAM/RAM requirements vs system)
 **STOP condition**: If download approval flow fails (approval gate integration), STOP and report.
 
-#### Plan 93 — Worker Creation & Configuration (Phase 2) — CRITICAL
+#### Plan 93 — Worker Creation & Configuration (Phase 2) — CRITICAL (Active)
 **Depends on**: `prompt-92` | **Tag**: `prompt-93`
 **Scope**: Enable worker creation from natural language descriptions via UI. Backend: wire `api/workers.py` stubs to `core/worker_factory.py` (full implementation — `POST /api/workers/create`, `PUT /api/workers/{id}`, `DELETE /api/workers/{id}`). Frontend: `WorkerCreator.tsx` (natural language input generates profile), Worker Editor (modify complexity, verbosity, preferred model, capabilities), Worker Detail View (click worker to see profile, task history).
 **Gap Analysis ref**: §3.2 Gap #2 (Worker Creation — CRITICAL), §6 Phase 2

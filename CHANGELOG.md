@@ -1261,3 +1261,29 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors
 - Coverage: 82%
 - Tag: prompt-91 verified on origin
+
+## 2026-06-27 12:39 — prompt-92
+
+**Plan**: Plan 92 Phase 1b: Model Downloader + Fallback Chain
+
+**Changed**:
+- api/adapters.py: New API router for fallback chain management (GET/PUT /api/adapters/fallback, GET /api/adapters/available)
+- api/models.py: Added download endpoints (POST /api/models/download, GET /api/models/download/{id}/status) with approval gate integration
+- cli/adapter_factory.py: Added ADAPTER_TYPES constant for adapter discoverability
+- core/orchestrator.py: Added ResourceManager and ModelAcquisition to TYPE_CHECKING imports
+- system/model_acquisition.py: Added _in_flight_downloads tracking and get_download_status() method
+- web/server.py: Included adapters router in FastAPI app
+- tests/test_model_download.py: New test file for download endpoints (5 tests)
+- tests/test_fallback_chain.py: New test file for fallback chain endpoints (5 tests)
+- src/lib/api.ts: Added downloadModel, getDownloadStatus, getFallbackChain, setFallbackChain, getAvailableAdapters functions
+- src/components/panels/ModelDownloader.tsx: New modal component for model search and download
+- src/components/panels/SettingsDrawer.tsx: Added fallback chain editor tab
+- src/components/panels/ModelsPanel.tsx: Added Download Model button
+- src/stores/uiStore.ts: Added MODELS view constant
+- src/components/shell/Sidebar.tsx: Fixed duplicate Models entries
+
+**Results**:
+- Tests: 1468 passed, 67 skipped
+- Ruff: 0 errors
+- Coverage: 82%
+- Tag: prompt-92 verified
