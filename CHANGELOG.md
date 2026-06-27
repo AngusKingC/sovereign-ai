@@ -1357,3 +1357,12 @@ This changelog documents all implementations, changes, and decisions made during
 - Mypy: 0 errors
 - Coverage: 82%
 - Tag: prompt-95 verified locally
+
+## web-gui-rebuild-cleanup (2026-06-27)
+- Removed src/ (Next.js + React + TypeScript + Vitest + Playwright).
+  After Web GUI Fixes 1-3 (final round in d8fb61a), the vanilla JS UI in
+  web/static/ is the live frontend. Old src/ commits preserved in git
+  history for reference.
+- Updated backend/main.py docstrings (5 lines) to point at web/static/api.js.
+- Known follow-up: terminal panel /ws/pty has a Windows pywinpty API
+  compatibility issue (tracked separately).

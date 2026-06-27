@@ -45,7 +45,7 @@ assert isinstance(DEV_TOKEN, str)
 
 
 class AgentStatus(BaseModel):
-    """Matches src/lib/api.ts AgentStatus interface."""
+    """Matches web/static/api.js AgentStatus interface."""
 
     sessionId: str
     phase: str
@@ -54,7 +54,7 @@ class AgentStatus(BaseModel):
 
 
 class MemorySlot(BaseModel):
-    """Matches src/lib/api.ts MemorySlot interface."""
+    """Matches web/static/api.js MemorySlot interface."""
 
     index: int
     key: str
@@ -64,7 +64,7 @@ class MemorySlot(BaseModel):
 
 
 class ToolCallEvent(BaseModel):
-    """Matches src/lib/api.ts ToolCallEvent interface."""
+    """Matches web/static/api.js ToolCallEvent interface."""
 
     id: str
     tool: str
@@ -75,7 +75,7 @@ class ToolCallEvent(BaseModel):
 
 
 class TimelineSegment(BaseModel):
-    """Matches src/lib/api.ts TimelineSegment interface."""
+    """Matches web/static/api.js TimelineSegment interface."""
 
     phase: str
     startMs: int
@@ -84,7 +84,7 @@ class TimelineSegment(BaseModel):
 
 
 class Subagent(BaseModel):
-    """Matches src/lib/api.ts Subagent interface."""
+    """Matches web/static/api.js Subagent interface."""
 
     id: str
     task: str
