@@ -3,11 +3,13 @@ import { useState, useMemo } from "react";
 import { usePolling } from "@/hooks/usePolling";
 import { getModels, ModelInfo } from "@/lib/api";
 import { useModelStore } from "@/stores/modelStore";
+import { ModelDownloader } from "./ModelDownloader";
 
 export function ModelsPanel() {
   const { data, isLoading } = usePolling<ModelInfo[]>(getModels, 30000);
   const { activeModelId, setActiveModel, setSearchQuery, searchQuery, filterTag, setFilterTag, filterAdapter, setFilterAdapter } = useModelStore();
   const [localSearch, setLocalSearch] = useState("");
+  const [showDownloader, setShowDownloader] = useState(false);
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -35,7 +37,15 @@ export function ModelsPanel() {
 
   return (
     <div data-testid="models-panel" className="p-4 space-y-4">
-      <h2 className="text-lg font-semibold">Models</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-semibold">Models</h2>
+        <button
+          onClick={() => setShowDownloader(true)}
+          className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 rounded text-sm"
+        >
+          Download Model
+        </button>
+      </div>
 
       <div className="space-y-2">
         <input
@@ -101,6 +111,7 @@ export function ModelsPanel() {
           </div>
         ))}
       </div>
+      {showDownloader && <ModelDownloader onClose={() => setShowDownloader(false)} />}
     </div>
   );
 }

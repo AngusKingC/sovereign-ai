@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import os
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
@@ -62,6 +62,8 @@ class ModelAcquisition:
                 "Set HF_TOKEN environment variable to enable."
             )
         self.ollama_api_url = "http://localhost:11434"
+        # Track in-flight downloads for status polling
+        self._in_flight_downloads: dict[str, dict[str, Any]] = {}
 
     async def search(
         self, query: str, task_tags: list[str] | None = None, max_results: int = 10
@@ -998,3 +1000,14 @@ class ModelAcquisition:
                 "total_disk_used_gb": 0.0,
                 "available_disk_gb": 0.0,
             }
+
+    async def get_download_status(self, download_id: str) -> dict[str, Any] | None:
+        """Get the status of an in-flight download by download_id.
+
+        Args:
+            download_id: The download ID returned by request_download
+
+        Returns:
+            Dict with status info or None if download_id not found
+        """
+        return self._in_flight_downloads.get(download_id)

@@ -11,6 +11,7 @@ export const VIEWS = {
   TERMINAL: "terminal",
   SYSTEM: "system",
   SUBAGENTS: "subagents",
+  MODELS: "models",
 } as const;
 
 export const DRAWERS = {

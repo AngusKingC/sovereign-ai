@@ -10,6 +10,21 @@ from typing import Any
 from core.worker_base import LLMAdapter
 from workers.ollama_worker import OllamaWorker
 
+# Plan 92 S2 adaptation: ADAPTER_TYPES constant for discoverability
+ADAPTER_TYPES = [
+    "ollama",
+    "lm_studio",
+    "openai",
+    "cohere",
+    "groq",
+    "anthropic",
+    "mistral",
+    "together",
+    "deepseek",
+    "huggingface",
+    "prism_llama",
+]
+
 
 def create_adapter(
     adapter_name: str,

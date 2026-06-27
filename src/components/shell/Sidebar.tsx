@@ -14,12 +14,6 @@ const NAV_ITEMS = [
   { icon: ActivityIcon, label: "System", view: VIEWS.SYSTEM },
   { icon: Users, label: "Subagents", view: VIEWS.SUBAGENTS },
   { icon: Boxes, label: "Models", view: VIEWS.MODELS },
-  { icon: Boxes, label: "Models", view: VIEWS.MODELS },
-  { icon: Boxes, label: "Models", view: VIEWS.MODELS },
-  { icon: Boxes, label: "Models", view: VIEWS.MODELS },
-  { icon: Boxes, label: "Models", view: VIEWS.MODELS },
-  { icon: Boxes, label: "Models", view: VIEWS.MODELS },
-  { icon: Boxes, label: "Models", view: VIEWS.MODELS },
 ];
 
 export function Sidebar() {

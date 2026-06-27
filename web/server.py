@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
+from api.adapters import router as adapters_router
 from api.models import router as models_router
 from api.workers import router as workers_router
 from core.auth import AuthManager
@@ -831,6 +832,7 @@ def create_app(
     # Include new API routers (stubs for Plans 91-94)
     app.include_router(models_router)
     app.include_router(workers_router)
+    app.include_router(adapters_router)
 
     # Mount static files
     app.mount("/static", StaticFiles(directory="web/static"), name="static")

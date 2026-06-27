@@ -224,3 +224,46 @@ export async function searchModels(query: string): Promise<ModelInfo[]> {
   if (!res.ok) throw new Error(`Search ${res.status}`);
   return res.json();
 }
+
+export interface DownloadStatus {
+  download_id: string;
+  model_id: string;
+  status: "initiated" | "downloading" | "complete" | "failed";
+  progress_pct: number;
+  started_at: string;
+  error?: string;
+}
+
+export async function downloadModel(modelId: string, quantisation: string = "default"): Promise<{ download_id: string; status: string }> {
+  const res = await fetch(`/api/models/download?model_id=${encodeURIComponent(modelId)}&quantisation=${encodeURIComponent(quantisation)}`, { method: "POST" });
+  if (!res.ok) throw new Error(`Download ${res.status}`);
+  return res.json();
+}
+
+export async function getDownloadStatus(downloadId: string): Promise<DownloadStatus> {
+  const res = await fetch(`/api/models/download/${downloadId}/status`);
+  if (!res.ok) throw new Error(`Status ${res.status}`);
+  return res.json();
+}
+
+export async function getFallbackChain(): Promise<{ chain: string[] }> {
+  const res = await fetch(`/api/adapters/fallback`);
+  if (!res.ok) throw new Error(`Fallback ${res.status}`);
+  return res.json();
+}
+
+export async function setFallbackChain(chain: string[]): Promise<{ chain: string[]; resolved_count: number }> {
+  const res = await fetch(`/api/adapters/fallback`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chain }),  // Rev2 H5 fix — wrap in object
+  });
+  if (!res.ok) throw new Error(`Set fallback ${res.status}`);
+  return res.json();
+}
+
+export async function getAvailableAdapters(): Promise<{ adapters: string[] }> {
+  const res = await fetch(`/api/adapters/available`);
+  if (!res.ok) throw new Error(`Adapters ${res.status}`);
+  return res.json();
+}
