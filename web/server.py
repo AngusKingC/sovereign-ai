@@ -9,17 +9,22 @@ import random
 import time
 import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+# Rev2 H12 fix — module-level import, not inside endpoint
+import psutil
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
 from api.adapters import router as adapters_router
 from api.models import router as models_router
 from api.workers import router as workers_router
 from core.auth import AuthManager
+from core.cost_tracker import CostPolicy
 from core.input_sanitiser import InputSanitiser
 from core.observability import (
     MemoryTraceEmitter,
@@ -39,6 +44,17 @@ logger = logging.getLogger(__name__)
 
 # Store the polling task handle so we can cancel it on shutdown
 _telegram_poll_task: asyncio.Task | None = None
+
+
+# Rev2 L2 fix — validation constraints on thresholds and caps
+class CostPolicyUpdate(BaseModel):
+    """Request to update cost policy. Rev2 L2 fix — validated constraints."""
+
+    daily_cap_usd: float | None = Field(None, ge=0)
+    monthly_cap_usd: float | None = Field(None, ge=0)
+    alert_threshold_pct: float | None = Field(None, ge=0, le=1)
+    fallback_threshold_pct: float | None = Field(None, ge=0, le=1)
+    fallback_model: str | None = None
 
 
 @asynccontextmanager
@@ -405,6 +421,148 @@ def create_app(
         except Exception as e:
             logger.warning(f"get_costs_daily failed: {e}")
             return {"date": "", "total_usd": 0.0, "entries": []}
+
+    # PUT /api/costs/policy — auth required (Plan 94)
+    @app.put("/api/costs/policy")
+    async def update_cost_policy(update: CostPolicyUpdate):
+        """Update cost policy (caps, thresholds, fallback model)."""
+        if (
+            not orchestrator
+            or not hasattr(orchestrator, "cost_tracker")
+            or not orchestrator.cost_tracker
+        ):
+            raise HTTPException(status_code=503, detail="Cost tracker not configured")
+
+        # Rev2 H2 fix — use get_policy() instead of _policy
+        current = orchestrator.cost_tracker.get_policy()
+
+        # Rev2 L2 fix — validate alert <= fallback
+        new_alert = (
+            update.alert_threshold_pct
+            if update.alert_threshold_pct is not None
+            else current.alert_threshold_pct
+        )
+        new_fallback = (
+            update.fallback_threshold_pct
+            if update.fallback_threshold_pct is not None
+            else current.fallback_threshold_pct
+        )
+        if new_alert > new_fallback:
+            raise HTTPException(
+                status_code=422,
+                detail=f"alert_threshold ({new_alert}) cannot exceed fallback_threshold ({new_fallback})",
+            )
+
+        # Apply updates (only non-None fields)
+        new_policy = CostPolicy(
+            daily_cap_usd=(
+                update.daily_cap_usd
+                if update.daily_cap_usd is not None
+                else current.daily_cap_usd
+            ),
+            monthly_cap_usd=(
+                update.monthly_cap_usd
+                if update.monthly_cap_usd is not None
+                else current.monthly_cap_usd
+            ),
+            alert_threshold_pct=new_alert,
+            fallback_threshold_pct=new_fallback,
+            fallback_model=(
+                update.fallback_model
+                if update.fallback_model is not None
+                else current.fallback_model
+            ),
+            enable_traces=current.enable_traces,
+        )
+
+        orchestrator.cost_tracker.update_policy(new_policy)
+
+        return {
+            "status": "updated",
+            "policy": {
+                "daily_cap_usd": new_policy.daily_cap_usd,
+                "monthly_cap_usd": new_policy.monthly_cap_usd,
+                "alert_threshold_pct": new_policy.alert_threshold_pct,
+                "fallback_threshold_pct": new_policy.fallback_threshold_pct,
+                "fallback_model": new_policy.fallback_model,
+            },
+        }
+
+    # GET /api/costs/policy — auth required (Plan 94)
+    @app.get("/api/costs/policy")
+    async def get_cost_policy():
+        """Get current cost policy."""
+        if (
+            not orchestrator
+            or not hasattr(orchestrator, "cost_tracker")
+            or not orchestrator.cost_tracker
+        ):
+            raise HTTPException(status_code=503, detail="Cost tracker not configured")
+
+        # Rev2 H2 fix — use get_policy() instead of _policy
+        p = orchestrator.cost_tracker.get_policy()
+        return {
+            "daily_cap_usd": p.daily_cap_usd,
+            "monthly_cap_usd": p.monthly_cap_usd,
+            "alert_threshold_pct": p.alert_threshold_pct,
+            "fallback_threshold_pct": p.fallback_threshold_pct,
+            "fallback_model": p.fallback_model,
+        }
+
+    # GET /api/resources/monitor — auth required (Plan 94)
+    @app.get("/api/resources/monitor")
+    async def get_resource_monitor():
+        """Get real-time system resource usage (CPU, RAM, VRAM, Disk).
+
+        Rev2 H8 fix: Defensive accessors for SystemProfile fields.
+        Rev2 H11 fix: Guard against empty storage list.
+        Rev2 H12 fix: psutil fallback uses interval=None (non-blocking).
+        """
+        if (
+            not orchestrator
+            or not hasattr(orchestrator, "system_profiler")
+            or not orchestrator.system_profiler
+        ):
+            # Fallback: return basic psutil stats if profiler not configured
+            # Rev2 H12 fix — interval=None is non-blocking (returns 0.0 on first call, then real %)
+            return {
+                "cpu_percent": psutil.cpu_percent(interval=None),
+                "memory_percent": psutil.virtual_memory().percent,
+                "disk_percent": psutil.disk_usage("/").percent,
+                "gpu_percent": None,
+                "gpu_memory_used_mb": None,
+                "gpu_memory_total_mb": None,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+
+        profile = await orchestrator.system_profiler.refresh()
+
+        # Rev2 H8 fix — handle both object and dict return types
+        def _get(obj, attr, default=None):
+            """Get attribute from object or key from dict."""
+            if isinstance(obj, dict):
+                return obj.get(attr, default)
+            return getattr(obj, attr, default)
+
+        cpu = _get(profile, "cpu", None)
+        ram = _get(profile, "ram", None)
+        storage = _get(profile, "storage", [])
+        gpu = _get(profile, "gpu", None)
+
+        # Rev2 H11 fix — guard against empty storage list
+        disk_percent = 0.0
+        if storage and len(storage) > 0:
+            disk_percent = _get(storage[0], "percent", 0.0)
+
+        return {
+            "cpu_percent": _get(cpu, "percent", 0.0) if cpu else 0.0,
+            "memory_percent": _get(ram, "percent", 0.0) if ram else 0.0,
+            "disk_percent": disk_percent,
+            "gpu_percent": _get(gpu, "percent", None) if gpu else None,
+            "gpu_memory_used_mb": _get(gpu, "memory_used_mb", None) if gpu else None,
+            "gpu_memory_total_mb": _get(gpu, "memory_total_mb", None) if gpu else None,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
 
     # GET /api/circuit-breaker/status — auth required
     @app.get("/api/circuit-breaker/status")

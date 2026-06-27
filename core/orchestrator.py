@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from orchestrator.improvement_loop import ImprovementLoopOrchestrator
     from system.model_acquisition import ModelAcquisition
     from system.model_registry import ModelRegistry
+    from system.profiler import SystemProfiler
 
 
 class Orchestrator:
@@ -82,6 +83,7 @@ class Orchestrator:
         resource_manager: "ResourceManager | None" = None,
         model_acquisition: "ModelAcquisition | None" = None,
         worker_factory: "WorkerFactory | None" = None,
+        system_profiler: "SystemProfiler | None" = None,  # Plan 94
     ) -> None:
         """Initialize the orchestrator with dependencies.
 
@@ -129,6 +131,7 @@ class Orchestrator:
         self.resource_manager = resource_manager
         self.model_acquisition = model_acquisition
         self.worker_factory = worker_factory
+        self.system_profiler = system_profiler  # Plan 94
         # Issue #2 fix: type annotation matches runtime tuple storage.
         # Each entry is (task, worker_id, queued_at) for timeout tracking (Issue #5).
         self._queued_tasks: list[tuple[Task, str, datetime]] = []

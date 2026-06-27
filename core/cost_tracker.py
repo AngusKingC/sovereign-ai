@@ -79,6 +79,20 @@ class CostTracker:
         self._model_spend: dict[str, float] = {}  # model -> usd (all-time)
         self._lock = asyncio.Lock()
 
+    def get_policy(self) -> CostPolicy:
+        """Get the current cost policy. Public accessor for _policy."""
+        return self._policy
+
+    def update_policy(self, policy: CostPolicy) -> None:
+        """Update the cost policy at runtime.
+
+        Allows UI to change caps and thresholds without restart.
+        """
+        self._policy = policy
+        logger.info(
+            f"Cost policy updated: daily_cap={policy.daily_cap_usd}, monthly_cap={policy.monthly_cap_usd}"
+        )
+
     async def check_spend(self, estimated_cost_usd: float = 0.0) -> CostDecision:
         """Check if a new task would exceed caps. Call BEFORE executing.
 

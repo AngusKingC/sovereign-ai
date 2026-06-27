@@ -1,6 +1,6 @@
 ---
 name: jarvis-close
-description: "Sovereign AI closing sequence — C1 through C15. Run this after all plan work is complete. Includes test suite, lint, commit, tag, changelog, plans update, landmines update, execution log file creation, push, and verification."
+description: "Sovereign AI closing sequence — C1 through C16. Run this after all plan work is complete. Includes test suite, lint, commit, tag, changelog, plans update, landmines update, execution log file creation, push, verification, and Git Bash session cleanup."
 ---
 
 # Jarvis Close — Plan Closing Sequence
@@ -115,9 +115,36 @@ Expected: the last 12 lines show the new entry. If not visible, STOP — append 
 
 ## Step 9: Rule proposal (L20 — MANDATORY)
 
-Include either Option A (propose a new rule) or Option B (explicit none with justification listing patterns considered). Silence is NOT acceptable.
+**This step produces TEXT OUTPUT only — do NOT edit AGENTS.md.** The Prompt Creator reviews the proposal and decides whether to add it to AGENTS.md in the next plan cycle.
 
-**If proposing a rule based on a landmine captured at Step 11**, include the source reference: e.g., "Source: landmine L{n}" — so the rule's diagnostic context is traceable. The landmine itself is never edited after capture (append-only).
+Output one of the following as plain text (no file edit needed):
+
+### Option A — Propose a new rule
+
+If you observed a recurring failure pattern this plan that a rule could prevent, output:
+
+```
+C9 RULE PROPOSAL:
+- Proposed rule: <AR{n} or OR{n}>. <One-line rule description>
+- Source: <landmine L{n} if applicable, or "Plan {N} observation">
+- Pattern: <What happened — concrete, with file + line>
+- Mitigation: <What the rule would require>
+```
+
+### Option B — No new rule (explicit none)
+
+If no new patterns emerged, output:
+
+```
+C9 RULE PROPOSAL: None
+Justification: Considered the following patterns — none warranted a new rule:
+- <Pattern 1 considered>: <Why it doesn't need a rule>
+- <Pattern 2 considered>: <Why it doesn't need a rule>
+```
+
+**Silence is NOT acceptable** — you MUST output either Option A or Option B. If you output nothing, the plan is NOT complete.
+
+**Note**: If proposing a rule based on a landmine captured at Step 11, include the source reference (e.g., "Source: landmine L{n}") so the rule's diagnostic context is traceable.
 
 ## Step 10: Update PLANS.md
 

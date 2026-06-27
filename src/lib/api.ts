@@ -84,6 +84,24 @@ export interface SystemStats {
   active_workers: number;
 }
 
+export interface CostPolicy {
+  daily_cap_usd: number;
+  monthly_cap_usd: number;
+  alert_threshold_pct: number;
+  fallback_threshold_pct: number;
+  fallback_model: string | null;
+}
+
+export interface ResourceMonitor {
+  cpu_percent: number;
+  memory_percent: number;
+  disk_percent: number;
+  gpu_percent: number | null;
+  gpu_memory_used_mb: number | null;
+  gpu_memory_total_mb: number | null;
+  timestamp: string;
+}
+
 export interface ToolCallEvent {
   id: string;
   tool: string;
@@ -328,4 +346,26 @@ export async function updateWorker(workerId: string, config: Partial<WorkerProfi
 export async function deleteWorker(workerId: string): Promise<void> {
   const res = await fetch(`/api/workers/${workerId}`, { method: "DELETE" });
   if (!res.ok) throw new Error(`Delete ${res.status}`);
+}
+
+export async function getCostPolicy(): Promise<CostPolicy> {
+  const res = await fetch(`/api/costs/policy`);
+  if (!res.ok) throw new Error(`Policy ${res.status}`);
+  return res.json();
+}
+
+export async function updateCostPolicy(policy: Partial<CostPolicy>): Promise<CostPolicy> {
+  const res = await fetch(`/api/costs/policy`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(policy),
+  });
+  if (!res.ok) throw new Error(`Update policy ${res.status}`);
+  return res.json();
+}
+
+export async function getResourceMonitor(): Promise<ResourceMonitor> {
+  const res = await fetch(`/api/resources/monitor`);
+  if (!res.ok) throw new Error(`Resources ${res.status}`);
+  return res.json();
 }
