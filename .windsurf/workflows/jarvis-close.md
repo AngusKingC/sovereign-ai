@@ -288,5 +288,19 @@ Paste ALL of:
 11. C13 docs commit output
 12. C14 push output
 13. C15 tag on origin (git ls-remote output)
+14. C16 Git Bash session cleanup (confirm "killed all bash.exe processes")
 
 If ANY check fails or output is missing, the plan is NOT complete.
+
+---
+
+## Step 16: Git Bash session cleanup (NEW — OR28 enforcement)
+
+Kill all Git Bash processes to prevent zombie session accumulation (per OR28/L10).
+This is the FINAL step — all prior steps must be complete, including the completion checklist.
+
+```bash
+taskkill //F //IM bash.exe 2>/dev/null || true
+```
+
+No output expected. This command kills all `bash.exe` processes on the system, including the current session. The plan is complete — no further commands will execute.
