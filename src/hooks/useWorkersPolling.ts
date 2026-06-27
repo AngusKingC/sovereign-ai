@@ -1,13 +1,36 @@
 import { usePolling } from "./usePolling";
 import { useWorkerStore } from "@/stores/workerStore";
 
+interface WorkerProfile {
+  worker_id: string;
+  worker_type: string;
+  name: string;
+  description: string;
+  purpose: string;
+  capabilities: string[];
+  complexity_min: number;
+  complexity_max: number;
+  preferred_complexity: number;
+  depth_preference: number;
+  speculation_tolerance: number;
+  source_skepticism: number;
+  verbosity: number;
+  standing_instructions: string[];
+  preferred_model: string;
+  preferred_models: string[];
+  escalation_threshold: number;
+  tasks_completed: number;
+  avg_confidence: number;
+  performance_score: number;
+  active_tasks: number;
+  version: number;
+  status: string;
+  creation_date: string;
+  instruction_file_ref: string | null;
+}
+
 interface WorkerResponse {
-  workers: Array<{
-    worker_id: string;
-    model: string;
-    capabilities: string[];
-    status: string;
-  }>;
+  workers: WorkerProfile[];
   degraded_ratio: number;
 }
 

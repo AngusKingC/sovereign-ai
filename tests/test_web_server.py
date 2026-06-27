@@ -1,11 +1,12 @@
 """Tests for web server."""
 
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import AsyncMock, Mock
+
 from fastapi.testclient import TestClient
 
-from web.server import create_app
 from core.auth import AuthManager
 from core.observability import MemoryTraceEmitter
+from web.server import create_app
 
 
 class TestWebServer:
@@ -44,8 +45,7 @@ class TestWebServer:
     def test_get_tasks_returns_200_with_valid_token(self):
         """Test that GET /api/tasks returns 200 with valid token."""
         response = self.client.get(
-            "/api/tasks",
-            headers={"Authorization": "Bearer test-token"}
+            "/api/tasks", headers={"Authorization": "Bearer test-token"}
         )
         assert response.status_code == 200
 
@@ -53,8 +53,7 @@ class TestWebServer:
         """Test that GET /api/tasks returns {"tasks": []} when orchestrator has no tasks."""
         self.orchestrator.list_tasks = AsyncMock(return_value=[])
         response = self.client.get(
-            "/api/tasks",
-            headers={"Authorization": "Bearer test-token"}
+            "/api/tasks", headers={"Authorization": "Bearer test-token"}
         )
         assert response.json() == {"tasks": []}
 
@@ -68,7 +67,7 @@ class TestWebServer:
         response = self.client.post(
             "/api/tasks",
             json={"intent": "test intent", "priority": "medium"},
-            headers={"Authorization": "Bearer test-token"}
+            headers={"Authorization": "Bearer test-token"},
         )
         assert response.status_code == 200
 
@@ -77,45 +76,33 @@ class TestWebServer:
         response = self.client.post(
             "/api/tasks",
             json={"intent": "test intent", "priority": "medium"},
-            headers={"Authorization": "Bearer test-token"}
+            headers={"Authorization": "Bearer test-token"},
         )
         data = response.json()
         assert "task_id" in data
         assert "status" in data
         assert data["status"] == "queued"
 
-    def test_get_workers_returns_200_with_valid_token(self):
-        """Test that GET /api/workers returns 200 with valid token."""
-        response = self.client.get(
-            "/api/workers",
-            headers={"Authorization": "Bearer test-token"}
-        )
-        assert response.status_code == 200
-
-    def test_get_workers_returns_empty_list_when_no_workers(self):
-        """Test that GET /api/workers returns {"workers": []} when no workers registered."""
-        self.orchestrator.list_workers = AsyncMock(return_value=[])
-        response = self.client.get(
-            "/api/workers",
-            headers={"Authorization": "Bearer test-token"}
-        )
-        assert response.json() == {"workers": []}
-
     def test_get_trace_returns_200_with_valid_token(self):
         """Test that GET /api/trace returns 200 with valid token."""
         response = self.client.get(
-            "/api/trace",
-            headers={"Authorization": "Bearer test-token"}
+            "/api/trace", headers={"Authorization": "Bearer test-token"}
         )
         assert response.status_code == 200
 
     def test_get_trace_returns_events_with_at_most_100(self):
         """Test that GET /api/trace returns {"events": [...]} with at most 100 events."""
         # Add 150 events to emitter
-        from core.observability import TraceEvent, TraceComponent, TraceLevel, TraceEventType
         from datetime import datetime, timezone
         from uuid import uuid4
-        
+
+        from core.observability import (
+            TraceComponent,
+            TraceEvent,
+            TraceEventType,
+            TraceLevel,
+        )
+
         for i in range(150):
             event = TraceEvent(
                 event_id=uuid4(),
@@ -128,10 +115,9 @@ class TestWebServer:
                 timestamp=datetime.now(timezone.utc),
             )
             self.emitter._events.append(event)
-        
+
         response = self.client.get(
-            "/api/trace",
-            headers={"Authorization": "Bearer test-token"}
+            "/api/trace", headers={"Authorization": "Bearer test-token"}
         )
         data = response.json()
         assert "events" in data
@@ -141,8 +127,7 @@ class TestWebServer:
         """Test that GET /api/tasks returns 401 with invalid token."""
         self.auth_manager.validate_token = AsyncMock(return_value=False)
         response = self.client.get(
-            "/api/tasks",
-            headers={"Authorization": "Bearer invalid-token"}
+            "/api/tasks", headers={"Authorization": "Bearer invalid-token"}
         )
         assert response.status_code == 401
 

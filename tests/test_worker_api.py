@@ -17,8 +17,8 @@ def mock_orchestrator():
 
     # Mock worker factory
     worker_factory = Mock()
-    worker_factory.create_worker = AsyncMock()
-    worker_factory.list_workers = AsyncMock()
+    worker_factory.create_worker = AsyncMock(return_value=Mock())
+    worker_factory.list_workers = AsyncMock(return_value=[])
     worker_factory.deregister_worker = AsyncMock()
     worker_factory.persistence = Mock()
     worker_factory.persistence.save = AsyncMock()
@@ -102,7 +102,6 @@ def test_create_worker_from_description(
     mock_orchestrator.worker_factory.create_worker.assert_called_once()
 
 
-@pytest.mark.skip(reason="KeyError: 0 - response model serialization issue")
 def test_list_workers(client, mock_orchestrator, sample_worker_profile):
     """Test listing all registered workers."""
     # Mock the worker list

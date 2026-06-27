@@ -231,19 +231,6 @@ def create_app(
             logger.warning(f"create_task failed: {e}")
             return {"task_id": "", "status": "error"}
 
-    # GET /api/workers — auth required
-    @app.get("/api/workers")
-    async def get_workers():
-        """Return list of registered workers."""
-        try:
-            if hasattr(orchestrator, "list_workers"):
-                workers = await orchestrator.list_workers()
-                return {"workers": workers}
-            return {"workers": []}
-        except Exception as e:
-            logger.warning(f"get_workers failed: {e}")
-            return {"workers": []}
-
     # GET /api/subagents — auth required
     @app.get("/api/subagents")
     async def get_subagents():
