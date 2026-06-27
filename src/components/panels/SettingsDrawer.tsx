@@ -1,9 +1,110 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getFallbackChain, setFallbackChain, getAvailableAdapters } from "@/lib/api";
+import { getFallbackChain, setFallbackChain, getAvailableAdapters, getCostPolicy, updateCostPolicy, CostPolicy } from "@/lib/api";
 
 type Tab = "cost" | "circuit" | "sandbox" | "auth" | "fallback";
+
+function CostPolicyTab() {
+  const [policy, setPolicy] = useState<CostPolicy | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getCostPolicy().then(setPolicy).catch((e) => setError(e.message));
+  }, []);
+
+  const handleSave = async () => {
+    if (!policy) return;
+    setIsSaving(true);
+    setError(null);
+    try {
+      const updated = await updateCostPolicy(policy);
+      setPolicy(updated);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (!policy) return <div className="p-4">Loading policy...</div>;
+
+  return (
+    <div className="space-y-4">
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Daily Cap ($)</label>
+        <input
+          type="number"
+          step="0.01"
+          value={policy.daily_cap_usd}
+          onChange={(e) => setPolicy({ ...policy, daily_cap_usd: parseFloat(e.target.value) })}
+          className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Monthly Cap ($)</label>
+        <input
+          type="number"
+          step="0.01"
+          value={policy.monthly_cap_usd}
+          onChange={(e) => setPolicy({ ...policy, monthly_cap_usd: parseFloat(e.target.value) })}
+          className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Alert Threshold (%)</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          max="1"
+          value={policy.alert_threshold_pct}
+          onChange={(e) => setPolicy({ ...policy, alert_threshold_pct: parseFloat(e.target.value) })}
+          className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+        />
+        <p className="text-xs text-gray-500 mt-1">Alert triggered at this % of cap (0.80 = 80%)</p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Fallback Threshold (%)</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          max="1"
+          value={policy.fallback_threshold_pct}
+          onChange={(e) => setPolicy({ ...policy, fallback_threshold_pct: parseFloat(e.target.value) })}
+          className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+        />
+        <p className="text-xs text-gray-500 mt-1">Fallback to cheaper model at this % of cap (0.90 = 90%)</p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Fallback Model</label>
+        <input
+          type="text"
+          value={policy.fallback_model || ""}
+          onChange={(e) => setPolicy({ ...policy, fallback_model: e.target.value || null })}
+          placeholder="e.g., llama3.2:1b"
+          className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+        />
+      </div>
+
+      <button
+        onClick={handleSave}
+        disabled={isSaving}
+        className="px-4 py-2 bg-blue-500 text-white rounded text-sm disabled:opacity-50"
+      >
+        {isSaving ? "Saving..." : "Save Policy"}
+      </button>
+    </div>
+  );
+}
 
 export function SettingsDrawer() {
   const [activeTab, setActiveTab] = useState<Tab>("cost");
@@ -73,37 +174,7 @@ export function SettingsDrawer() {
         </div>
 
         <div className="flex-1 p-4 overflow-y-auto">
-          {activeTab === "cost" && (
-            <div className="space-y-4">
-              <div className="opacity-50" data-mocked title="Coming in Plan 89">
-                <label className="block text-sm font-medium mb-1">Daily Cap ($)</label>
-                <input
-                  type="number"
-                  defaultValue={10}
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
-                  disabled
-                />
-              </div>
-              <div className="opacity-50" data-mocked title="Coming in Plan 89">
-                <label className="block text-sm font-medium mb-1">Monthly Cap ($)</label>
-                <input
-                  type="number"
-                  defaultValue={100}
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
-                  disabled
-                />
-              </div>
-              <div className="opacity-50" data-mocked title="Coming in Plan 89">
-                <label className="block text-sm font-medium mb-1">Alert Threshold (%)</label>
-                <input
-                  type="number"
-                  defaultValue={80}
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
-                  disabled
-                />
-              </div>
-            </div>
-          )}
+          {activeTab === "cost" && <CostPolicyTab />}
 
           {activeTab === "circuit" && (
             <div className="space-y-4">

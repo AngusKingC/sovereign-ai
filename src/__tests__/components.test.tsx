@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from "vitest";
+﻿import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { TasksPanel } from "@/components/panels/TasksPanel";
 import { WorkersPanel } from "@/components/panels/WorkersPanel";
@@ -7,12 +7,40 @@ import { CostDashboardPanel } from "@/components/panels/CostDashboardPanel";
 import { MemoryDrawer } from "@/components/panels/MemoryDrawer";
 import { SettingsDrawer } from "@/components/panels/SettingsDrawer";
 import { ModelsPanel } from "@/components/panels/ModelsPanel";
+import { ResourceMonitorPanel } from "@/components/panels/ResourceMonitorPanel";
 import { useTaskStore } from "@/stores/taskStore";
 import { useWorkerStore } from "@/stores/workerStore";
 import { useApprovalStore } from "@/stores/approvalStore";
 import { useCostStore } from "@/stores/costStore";
 import { useMemoryStore } from "@/stores/memoryStore";
 import { useModelStore } from "@/stores/modelStore";
+
+// Mock API functions for Plan 94 tests
+vi.mock("@/lib/api", () => ({
+  getCostPolicy: vi.fn(() => Promise.resolve({
+    daily_cap_usd: 10.0,
+    monthly_cap_usd: 100.0,
+    alert_threshold_pct: 0.80,
+    fallback_threshold_pct: 0.90,
+    fallback_model: null,
+  })),
+  updateCostPolicy: vi.fn(() => Promise.resolve({
+    daily_cap_usd: 20.0,
+    monthly_cap_usd: 200.0,
+    alert_threshold_pct: 0.80,
+    fallback_threshold_pct: 0.90,
+    fallback_model: null,
+  })),
+  getResourceMonitor: vi.fn(() => Promise.resolve({
+    cpu_percent: 50.0,
+    memory_percent: 60.0,
+    disk_percent: 70.0,
+    gpu_percent: null,
+    gpu_memory_used_mb: null,
+    gpu_memory_total_mb: null,
+    timestamp: new Date().toISOString(),
+  })),
+}));
 
 describe("TasksPanel", () => {
   it("renders active tasks section", () => {
@@ -414,5 +442,34 @@ describe("WorkersPanel with Create Button", () => {
 
     render(<WorkersPanel />);
     expect(screen.getByText("+ Create Worker")).toBeInTheDocument();
+  });
+});
+
+describe("SettingsDrawer Cost Policy Tab (Plan 94)", () => {
+  it("renders cost policy inputs when cost tab is active", async () => {
+    render(<SettingsDrawer />);
+    expect(screen.getByText("Daily Cap ($)")).toBeInTheDocument();
+    expect(screen.getByText("Monthly Cap ($)")).toBeInTheDocument();
+    expect(screen.getByText("Alert Threshold (%)")).toBeInTheDocument();
+  });
+
+  it("renders Save Policy button", async () => {
+    render(<SettingsDrawer />);
+    expect(screen.getByText("Save Policy")).toBeInTheDocument();
+  });
+});
+
+describe("ResourceMonitorPanel (Plan 94)", () => {
+  it("renders resource monitor with metric cards", async () => {
+    render(<ResourceMonitorPanel />);
+    expect(screen.getByText("Resource Monitor")).toBeInTheDocument();
+    expect(screen.getByText("CPU")).toBeInTheDocument();
+    expect(screen.getByText("Memory")).toBeInTheDocument();
+    expect(screen.getByText("Disk")).toBeInTheDocument();
+  });
+
+  it("renders GPU metric when GPU data available", async () => {
+    render(<ResourceMonitorPanel />);
+    expect(screen.getByText("GPU")).toBeInTheDocument();
   });
 });
