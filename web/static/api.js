@@ -1,30 +1,77 @@
 // API wrapper — all fetch calls go through here
 const API = {
+  // Get token from localStorage
+  getToken() {
+    return localStorage.getItem('sovereign_token');
+  },
+
+  // Clear stale token on 401
+  clearToken() {
+    localStorage.removeItem('sovereign_token');
+    // Reload page to show token modal
+    location.reload();
+  },
+
   async get(path) {
-    const res = await fetch(path);
+    const token = this.getToken();
+    if (!token) throw new Error('Auth token required');
+    const res = await fetch(path, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.status === 401) {
+      this.clearToken();
+      throw new Error('Unauthorized');
+    }
     if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
     return res.json();
   },
   async post(path, body) {
+    const token = this.getToken();
+    if (!token) throw new Error('Auth token required');
     const res = await fetch(path, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
       body: JSON.stringify(body),
     });
+    if (res.status === 401) {
+      this.clearToken();
+      throw new Error('Unauthorized');
+    }
     if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
     return res.json();
   },
   async put(path, body) {
+    const token = this.getToken();
+    if (!token) throw new Error('Auth token required');
     const res = await fetch(path, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
       body: JSON.stringify(body),
     });
+    if (res.status === 401) {
+      this.clearToken();
+      throw new Error('Unauthorized');
+    }
     if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
     return res.json();
   },
   async del(path) {
-    const res = await fetch(path, { method: "DELETE" });
+    const token = this.getToken();
+    if (!token) throw new Error('Auth token required');
+    const res = await fetch(path, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    if (res.status === 401) {
+      this.clearToken();
+      throw new Error('Unauthorized');
+    }
     if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
     return res.json();
   },

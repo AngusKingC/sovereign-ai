@@ -4,13 +4,79 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>JArvis — Sovereign AI</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
   <link rel="stylesheet" href="/style.css">
   <!-- xterm.js from CDN (terminal) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css">
   <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+  <style>
+    #token-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+    }
+    #token-modal.show {
+      display: flex;
+    }
+    .token-modal-content {
+      background: #1a1a1e;
+      padding: 24px;
+      border-radius: 8px;
+      max-width: 400px;
+      width: 90%;
+    }
+    .token-modal-content h2 {
+      margin-top: 0;
+      color: #e0e0e0;
+    }
+    .token-modal-content p {
+      color: #a0a0a0;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .token-modal-content input {
+      width: 100%;
+      padding: 8px 12px;
+      background: #0c0c0f;
+      border: 1px solid #333;
+      border-radius: 4px;
+      color: #e0e0e0;
+      font-family: monospace;
+      margin-bottom: 16px;
+      box-sizing: border-box;
+    }
+    .token-modal-content button {
+      padding: 8px 16px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .token-modal-content button:hover {
+      background: #2563eb;
+    }
+  </style>
 </head>
 <body>
+  <!-- Token Entry Modal -->
+  <div id="token-modal">
+    <div class="token-modal-content">
+      <h2>Authentication Required</h2>
+      <p>Enter your Jarvis auth token (shown in server startup output):</p>
+      <input type="text" id="token-input" placeholder="Paste your token here..." autocomplete="off">
+      <button onclick="submitToken()">Connect</button>
+    </div>
+  </div>
+
   <div id="app">
     <!-- Status Bar -->
     <div id="status-bar">
@@ -21,77 +87,74 @@
       <span id="status-session" class="status-session">No session</span>
     </div>
 
-    <!-- Main Layout -->
-    <div id="main-layout">
-      <!-- Sidebar -->
-      <div id="sidebar">
-        <div class="sidebar-section">
-          <div class="sidebar-item" data-panel="terminal" title="Terminal">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-            <span>Terminal</span>
-          </div>
-          <div class="sidebar-item" data-panel="tasks" title="Tasks">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-            <span>Tasks</span>
-          </div>
-          <div class="sidebar-item" data-panel="workers" title="Workers">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            <span>Workers</span>
-          </div>
-          <div class="sidebar-item" data-panel="approvals" title="Approvals">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            <span>Approvals</span>
-          </div>
-          <div class="sidebar-item" data-panel="costs" title="Costs">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            <span>Costs</span>
-          </div>
-          <div class="sidebar-item" data-panel="models" title="Models">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-            <span>Models</span>
-          </div>
-          <div class="sidebar-item" data-panel="memory" title="Memory">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-            <span>Memory</span>
-          </div>
-          <div class="sidebar-item" data-panel="resources" title="Resources">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-            <span>Resources</span>
-          </div>
-          <div class="sidebar-item" data-panel="logs" title="Logs">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            <span>Logs</span>
-          </div>
+    <!-- Sidebar -->
+    <div id="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-item" data-panel="terminal" title="Terminal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          <span>Terminal</span>
+        </div>
+        <div class="sidebar-item" data-panel="tasks" title="Tasks">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <span>Tasks</span>
+        </div>
+        <div class="sidebar-item" data-panel="workers" title="Workers">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Workers</span>
+        </div>
+        <div class="sidebar-item" data-panel="approvals" title="Approvals">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>Approvals</span>
+        </div>
+        <div class="sidebar-item" data-panel="costs" title="Costs">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span>Costs</span>
+        </div>
+        <div class="sidebar-item" data-panel="models" title="Models">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          <span>Models</span>
+        </div>
+        <div class="sidebar-item" data-panel="memory" title="Memory">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          <span>Memory</span>
+        </div>
+        <div class="sidebar-item" data-panel="resources" title="Resources">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <span>Resources</span>
+        </div>
+        <div class="sidebar-item" data-panel="logs" title="Logs">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Logs</span>
         </div>
       </div>
+    </div>
 
-      <!-- Main Content -->
-      <div id="main-content">
-        <!-- Panels render here -->
-        <div id="panel-terminal" class="panel active"></div>
-        <div id="panel-tasks" class="panel"></div>
-        <div id="panel-workers" class="panel"></div>
-        <div id="panel-approvals" class="panel"></div>
-        <div id="panel-costs" class="panel"></div>
-        <div id="panel-models" class="panel"></div>
-        <div id="panel-memory" class="panel"></div>
-        <div id="panel-resources" class="panel"></div>
-        <div id="panel-logs" class="panel"></div>
+    <!-- Main Content -->
+    <div id="main-content">
+      <!-- Panels render here -->
+      <div id="panel-terminal" class="panel active"></div>
+      <div id="panel-tasks" class="panel"></div>
+      <div id="panel-workers" class="panel"></div>
+      <div id="panel-approvals" class="panel"></div>
+      <div id="panel-costs" class="panel"></div>
+      <div id="panel-models" class="panel"></div>
+      <div id="panel-memory" class="panel"></div>
+      <div id="panel-resources" class="panel"></div>
+      <div id="panel-logs" class="panel"></div>
+    </div>
+
+    <!-- Right Panel -->
+    <div id="right-panel">
+      <div class="right-panel-tabs">
+        <button class="rp-tab active" data-tab="tools">Tools</button>
+        <button class="rp-tab" data-tab="timeline">Timeline</button>
       </div>
-
-      <!-- Right Panel -->
-      <div id="right-panel">
-        <div class="right-panel-tabs">
-          <button class="rp-tab active" data-tab="tools">Tools</button>
-          <button class="rp-tab" data-tab="timeline">Timeline</button>
+      <div id="rp-content">
+        <div id="rp-tools" class="rp-tab-content active">
+          <p class="muted">Tool calls will appear here.</p>
         </div>
-        <div id="rp-content">
-          <div id="rp-tools" class="rp-tab-content active">
-            <p class="muted">Tool calls will appear here.</p>
-          </div>
-          <div id="rp-timeline" class="rp-tab-content">
-            <p class="muted">Timeline will appear here.</p>
-          </div>
+        <div id="rp-timeline" class="rp-tab-content">
+          <p class="muted">Timeline will appear here.</p>
         </div>
       </div>
     </div>
@@ -114,5 +177,31 @@
   <script src="/costs.js"></script>
   <script src="/memory.js"></script>
   <script src="/logs.js"></script>
+  <script>
+    // Token modal logic
+    function checkToken() {
+      const token = localStorage.getItem('sovereign_token');
+      if (!token) {
+        document.getElementById('token-modal').classList.add('show');
+      }
+    }
+
+    function submitToken() {
+      const token = document.getElementById('token-input').value.trim();
+      if (token) {
+        localStorage.setItem('sovereign_token', token);
+        document.getElementById('token-modal').classList.remove('show');
+        location.reload();
+      }
+    }
+
+    // Allow Enter key to submit
+    document.getElementById('token-input').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') submitToken();
+    });
+
+    // Check token on load
+    checkToken();
+  </script>
 </body>
 </html>

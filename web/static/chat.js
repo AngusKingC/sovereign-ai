@@ -8,8 +8,14 @@ const Chat = {
     const container = document.getElementById("panel-terminal");
     container.innerHTML = '<div id="terminal-container" style="height:calc(100vh - 120px);"></div>';
 
-    // Defer terminal init until container has dimensions
-    requestAnimationFrame(() => this.setupTerminal());
+    // Wait for token before initializing terminal
+    const checkToken = setInterval(() => {
+      const token = localStorage.getItem('sovereign_token');
+      if (token) {
+        clearInterval(checkToken);
+        requestAnimationFrame(() => this.setupTerminal());
+      }
+    }, 100);
   },
 
   setupTerminal() {
@@ -30,8 +36,9 @@ const Chat = {
     this.term.open(container);
     this.fit.fit();
 
-    // Connect WebSocket
-    const wsUrl = `ws://${window.location.host}/ws/pty`;
+    // Connect WebSocket with token in query string
+    const token = localStorage.getItem('sovereign_token');
+    const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/pty?token=${encodeURIComponent(token || '')}`;
     this.ws = new WebSocket(wsUrl);
 
     this.ws.onopen = () => {

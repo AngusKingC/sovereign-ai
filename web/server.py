@@ -292,6 +292,20 @@ def create_app(
             logger.warning(f"kill_subagent failed: {e}")
             return {"status": "error", "subagent": subagent_id}
 
+    # GET /api/workers — auth required
+    @app.get("/api/workers")
+    async def get_workers():
+        """Return list of registered workers."""
+        try:
+            if hasattr(orchestrator, "worker_registry"):
+                workers = orchestrator.worker_registry.list_workers()
+                return {"workers": workers, "degraded_ratio": 0.0}
+            # Fallback: return empty list
+            return {"workers": [], "degraded_ratio": 0.0}
+        except Exception as e:
+            logger.warning(f"get_workers failed: {e}")
+            return {"workers": [], "degraded_ratio": 0.0}
+
     # SSE generator helper
     async def sse_generator(event_factory):
         """Generate SSE events with data: <JSON>\n\n framing."""
@@ -1336,14 +1350,14 @@ async def _windows_pty_websocket(websocket, winpty_module, emitter):
     loop = asyncio.get_event_loop()
 
     # Create winpty PTY process
-    pty_proc = winpty_module.PTY()
+    pty_proc = winpty_module.PTY(cols=80, rows=24)
     pty_proc.spawn("cmd.exe")  # or bash.exe
 
     async def read_pty_output():
         try:
             while True:
                 # winpty read is blocking — run in executor
-                data = await loop.run_in_executor(None, lambda: pty_proc.read(4096))
+                data = await loop.run_in_executor(None, lambda: pty_proc.read())
                 if data:
                     await websocket.send_text(data)
         except Exception as e:
@@ -1372,4 +1386,13 @@ async def _windows_pty_websocket(websocket, winpty_module, emitter):
             except asyncio.CancelledError:
                 pass
     finally:
-        pty_proc.close()
+        # pywinpty cleanup - try multiple possible methods
+        try:
+            if hasattr(pty_proc, "terminate"):
+                pty_proc.terminate()
+            elif hasattr(pty_proc, "close"):
+                pty_proc.close()
+            elif hasattr(pty_proc, "kill"):
+                pty_proc.kill()
+        except Exception as e:
+            logger.warning(f"Failed to cleanup PTY: {e}")

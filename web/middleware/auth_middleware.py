@@ -67,14 +67,14 @@ class AuthMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Exempt polling API endpoints from auth for development
-        exempt_paths = [
+        exempt_prefixes = [
             "/api/status",
             "/api/workers",
             "/api/costs",
             "/api/approvals",
             "/api/memory",
         ]
-        if request.url.path in exempt_paths:
+        if any(request.url.path.startswith(prefix) for prefix in exempt_prefixes):
             return await call_next(request)
 
         # Extract bearer token from Authorization header
