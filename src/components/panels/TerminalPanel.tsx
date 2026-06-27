@@ -33,7 +33,22 @@ export function TerminalPanel() {
     term.loadAddon(fit);
     term.loadAddon(new WebLinksAddon());
     term.open(containerRef.current);
-    fit.fit();
+
+    // Defer initial fit to ensure container has dimensions
+    const fitWithGuard = () => {
+      try {
+        if (containerRef.current && containerRef.current.offsetWidth > 0 && containerRef.current.offsetHeight > 0) {
+          fit.fit();
+        }
+      } catch (e) {
+        console.error("[TerminalPanel] FitAddon error:", e);
+      }
+    };
+
+    // Initial fit after DOM is rendered
+    requestAnimationFrame(fitWithGuard);
+    // Fallback with setTimeout if requestAnimationFrame is too early
+    setTimeout(fitWithGuard, 100);
 
     termRef.current = term;
     fitRef.current = fit;
@@ -42,7 +57,7 @@ export function TerminalPanel() {
       send(data);
     });
 
-    const handleResize = () => fit.fit();
+    const handleResize = () => fitWithGuard();
     window.addEventListener("resize", handleResize);
 
     return () => {
