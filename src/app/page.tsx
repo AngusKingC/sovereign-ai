@@ -5,6 +5,7 @@ import { useCostsPolling } from "@/hooks/useCostsPolling";
 import { useApprovalsPolling } from "@/hooks/useApprovalsPolling";
 import { useMemoryPolling } from "@/hooks/useMemoryPolling";
 import { useUiStore, VIEWS } from "@/stores/uiStore";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TasksPanel } from "@/components/panels/TasksPanel";
 import { WorkersPanel } from "@/components/panels/WorkersPanel";
 import { ApprovalQueuePanel } from "@/components/panels/ApprovalQueuePanel";
@@ -32,30 +33,30 @@ export default function Home() {
   // Rev3 H7 fix — drawers are NOT rendered here; they render in ShellClient.tsx.
   switch (activeView) {
     case VIEWS.HOME:
-      return <TerminalPanel />;
+      return <ErrorBoundary componentName="TerminalPanel"><TerminalPanel /></ErrorBoundary>;
     case VIEWS.TASKS:
-      return <TasksPanel />;
+      return <ErrorBoundary componentName="TasksPanel"><TasksPanel /></ErrorBoundary>;
     case VIEWS.WORKERS:
-      return <WorkersPanel />;
+      return <ErrorBoundary componentName="WorkersPanel"><WorkersPanel /></ErrorBoundary>;
     case VIEWS.APPROVALS:
-      return <ApprovalQueuePanel />;
+      return <ErrorBoundary componentName="ApprovalQueuePanel"><ApprovalQueuePanel /></ErrorBoundary>;
     case VIEWS.COSTS:
-      return <CostDashboardPanel />;
+      return <ErrorBoundary componentName="CostDashboardPanel"><CostDashboardPanel /></ErrorBoundary>;
     case VIEWS.TOOLS:
-      return <SkillsPanel />;
+      return <ErrorBoundary componentName="SkillsPanel"><SkillsPanel /></ErrorBoundary>;
     case VIEWS.HELP:
-      return <HelpPanel />;
+      return <ErrorBoundary componentName="HelpPanel"><HelpPanel /></ErrorBoundary>;
     case VIEWS.TERMINAL:
-      return <TerminalPanel />;
+      return <ErrorBoundary componentName="TerminalPanel"><TerminalPanel /></ErrorBoundary>;
     case VIEWS.SYSTEM:
-      return <SystemStatsPanel />;
+      return <ErrorBoundary componentName="SystemStatsPanel"><SystemStatsPanel /></ErrorBoundary>;
     case VIEWS.SUBAGENTS:
-      return <SubagentPanel />;
+      return <ErrorBoundary componentName="SubagentPanel"><SubagentPanel /></ErrorBoundary>;
     case VIEWS.MODELS:
-      return <ModelsPanel />;
+      return <ErrorBoundary componentName="ModelsPanel"><ModelsPanel /></ErrorBoundary>;
     case VIEWS.RESOURCES:
-      return <ResourceMonitorPanel />;
+      return <ErrorBoundary componentName="ResourceMonitorPanel"><ResourceMonitorPanel /></ErrorBoundary>;
     default:
-      return <TerminalPanel />;
+      return <ErrorBoundary componentName="TerminalPanel"><TerminalPanel /></ErrorBoundary>;
   }
 }

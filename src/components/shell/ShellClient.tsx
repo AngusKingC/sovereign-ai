@@ -1,6 +1,9 @@
 "use client";
+import { useEffect } from "react";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useUiStore } from "@/stores/uiStore";
+import { startErrorLogging } from "@/hooks/useErrorLogger";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { StatusBar } from "./StatusBar";
 import { Sidebar } from "./Sidebar";
 import { MainPane } from "./MainPane";
@@ -14,21 +17,26 @@ export function ShellClient({ children }: { children: React.ReactNode }) {
   const activeDrawer = useUiStore((s) => s.activeDrawer);
   const closeDrawer = useUiStore((s) => s.closeDrawer);
 
+  useEffect(() => {
+    const cleanup = startErrorLogging();
+    return cleanup;
+  }, []);
+
   return (
     <div className="jarvis-shell" data-testid="jarvis-shell">
-      <StatusBar />
-      <Sidebar />
+      <ErrorBoundary componentName="StatusBar"><StatusBar /></ErrorBoundary>
+      <ErrorBoundary componentName="Sidebar"><Sidebar /></ErrorBoundary>
       <MainPane>{children}</MainPane>
-      <RightPanel />
-      <BottomBar />
+      <ErrorBoundary componentName="RightPanel"><RightPanel /></ErrorBoundary>
+      <ErrorBoundary componentName="BottomBar"><BottomBar /></ErrorBoundary>
 
       {/* Drawers render at shell level (outside CSS Grid) as fixed overlays.
           Rev3 H7 fix — render here, NOT inside page.tsx/MainPane. */}
       {activeDrawer && (
         <>
           <div className="drawer-backdrop" onClick={closeDrawer} data-testid="drawer-backdrop" />
-          {activeDrawer === "memory" && <MemoryDrawer />}
-          {activeDrawer === "settings" && <SettingsDrawer />}
+          {activeDrawer === "memory" && <ErrorBoundary componentName="MemoryDrawer"><MemoryDrawer /></ErrorBoundary>}
+          {activeDrawer === "settings" && <ErrorBoundary componentName="SettingsDrawer"><SettingsDrawer /></ErrorBoundary>}
         </>
       )}
     </div>

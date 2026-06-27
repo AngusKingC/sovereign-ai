@@ -52,6 +52,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if request.url.path == "/health":
             return await call_next(request)
 
+        # Exempt POST /api/errors/log from auth (frontend error logging)
+        # GET and DELETE still require auth (retrieving/clearing logs)
+        if request.url.path == "/api/errors/log" and request.method == "POST":
+            return await call_next(request)
+
         # Extract bearer token from Authorization header
         auth_header = request.headers.get("Authorization")
         token = None

@@ -10,7 +10,8 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, List, Optional
 
 # Rev2 H12 fix — module-level import, not inside endpoint
 import psutil
@@ -44,6 +45,24 @@ logger = logging.getLogger(__name__)
 
 # Store the polling task handle so we can cancel it on shutdown
 _telegram_poll_task: asyncio.Task | None = None
+
+
+# Rev3: Frontend error log models (defined at module level for Pydantic)
+class ErrorLogItem(BaseModel):
+    timestamp: str
+    type: str
+    message: str
+    stack: Optional[str] = None
+    filename: Optional[str] = None
+    line: Optional[int] = None
+    column: Optional[int] = None
+    componentStack: Optional[str] = None
+    componentName: Optional[str] = None
+
+
+class ErrorLogRequest(BaseModel):
+    # Rev3: max 200 items per batch
+    errors: List[ErrorLogItem] = Field(default_factory=list, max_length=200)
 
 
 # Rev2 L2 fix — validation constraints on thresholds and caps
@@ -978,6 +997,58 @@ def create_app(
     app.include_router(models_router)
     app.include_router(workers_router)
     app.include_router(adapters_router)
+
+    # Rev3: absolute path
+    ERROR_LOG_FILE = (
+        Path(__file__).resolve().parent.parent / "logs" / "frontend-errors.log"
+    )
+
+    @app.post("/api/errors/log")
+    async def log_frontend_errors(error_request: dict):
+        """Receive frontend error logs and append to local file."""
+
+        # Rev3: async file I/O — don't block event loop
+        def _write():
+            ERROR_LOG_FILE.parent.mkdir(exist_ok=True)
+            with open(ERROR_LOG_FILE, "a", encoding="utf-8") as f:
+                errors = error_request.get("errors", [])
+                for error in errors:
+                    f.write(json.dumps(error, default=str) + "\n")
+
+        await asyncio.to_thread(_write)
+        return {"status": "ok", "received": len(error_request.get("errors", []))}
+
+    @app.get("/api/errors/log")
+    async def get_frontend_errors():
+        """Retrieve frontend error log for upload to GLM."""
+
+        # Rev3: async file read
+        def _read():
+            if not ERROR_LOG_FILE.exists():
+                return []
+            lines = ERROR_LOG_FILE.read_text(encoding="utf-8").strip().split("\n")
+            errors = []
+            for line in lines:
+                if line.strip():
+                    try:
+                        errors.append(json.loads(line))
+                    except Exception:
+                        pass
+            return errors
+
+        errors = await asyncio.to_thread(_read)
+        return {"errors": errors, "count": len(errors)}
+
+    @app.delete("/api/errors/log")
+    async def clear_frontend_errors():
+        """Clear frontend error log after upload."""
+
+        def _clear():
+            if ERROR_LOG_FILE.exists():
+                ERROR_LOG_FILE.unlink()
+
+        await asyncio.to_thread(_clear)
+        return {"status": "cleared"}
 
     # Mount static files
     app.mount("/static", StaticFiles(directory="web/static"), name="static")
