@@ -326,6 +326,8 @@ If ANY check fails or output is missing, the plan is NOT complete.
 Kill all Git Bash processes to prevent zombie session accumulation (per OR28/L10).
 This is the FINAL step — all prior steps must be complete, including the completion checklist.
 
+**IMPORTANT**: This is a Windows-specific command. Do NOT use Unix commands like `ps aux | grep -c bash` — they will fail on Windows Git Bash.
+
 ```bash
 taskkill //F //IM bash.exe
 ```
