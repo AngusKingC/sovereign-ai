@@ -1287,3 +1287,29 @@ This changelog documents all implementations, changes, and decisions made during
 - Ruff: 0 errors
 - Coverage: 82%
 - Tag: prompt-92 verified
+
+
+## 2026-06-27 13:04 — prompt-93
+
+**Plan**: Worker Creation & Configuration
+
+**Changed**:
+- api/workers.py: Wired stubs to WorkerFactory with Pydantic models and get_worker_factory dependency
+- web/server.py: Added worker_factory parameter to Orchestrator.__init__
+- core/orchestrator.py: Added optional worker_factory injection
+- src/lib/api.ts: Added WorkerProfile interface and worker CRUD API functions
+- src/stores/workerStore.ts: Extended with createWorker, updateWorker, deleteWorker, loadWorkers
+- src/components/panels/WorkerCreator.tsx: Created natural language worker creation modal
+- src/components/panels/WorkerEditor.tsx: Created worker configuration editor with sliders
+- src/components/panels/WorkersPanel.tsx: Added Create Worker button and click-to-edit
+- tests/test_worker_api.py: Added 6 backend API tests (5 passed, 1 skipped)
+- tests/test_api_stubs.py: Skipped 3 stub tests now implemented in Plan 93
+- src/__tests__/components.test.tsx: Added WorkerCreator, WorkerEditor, WorkersPanel tests
+- src/.gitignore: Added exception for lib directory
+
+**Results**:
+- Tests: 1470 passed, 71 skipped
+- Ruff: 0 errors
+- Mypy: 0 errors
+- Coverage: 82%
+- Tag: prompt-93 verified on origin
