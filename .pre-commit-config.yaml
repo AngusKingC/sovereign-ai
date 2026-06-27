@@ -35,6 +35,13 @@ repos:
   # Pre-commit is for fast feedback (ruff, black, isort, detect-secrets) only.
   # See stall-root-cause-and-fixes.md Fix 1.
 
+  - repo: local
+    hooks:
+      - id: forbid-root-txt-files
+        name: forbid-root-txt-files
+        entry: python scripts/check-no-root-txt.py
+        language: system
+
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:
