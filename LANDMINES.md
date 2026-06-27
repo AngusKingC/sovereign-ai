@@ -159,3 +159,13 @@ Append-only historical record of failure patterns. See AGENTS.md for guidance on
 **Mitigation**: OR38 — When writing TypeScript files on Windows, use Node.js writer scripts with the array-of-strings + `.join('\n')` pattern instead of PowerShell string operations. The Node.js approach sidesteps PowerShell's string parsing entirely by writing the file through a separate process.
 
 ---
+
+## L22 — vulture --make-whitelist writes to current directory, not txt/ folder
+
+**Trigger**: Plan 95 execution, vulture was run with `--make-whitelist` flag from repo root, which wrote `vulture-whitelist.txt` to the root directory instead of `txt/vulture-whitelist.txt`. The flag always writes to the current working directory.
+
+**Impact**: Root .txt files are recreated, violating the txt/ folder convention. Git tracking restoration or manual cleanup required. Confusion about which file is the source of truth.
+
+**Mitigation**: When using `vulture --make-whitelist`, either (a) run from `txt/` directory, or (b) move the generated file to `txt/` immediately after generation. The scan scripts in jarvis-close.md and jarvis-verify.md already read from `txt/vulture-whitelist.txt` — ensure manual whitelist generation follows the same pattern.
+
+---
