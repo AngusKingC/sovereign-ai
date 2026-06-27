@@ -411,8 +411,8 @@ pip install sovereign-ai[memory-all]
    - **Memory Search** — unified search box, type filters, results show which backend found them
    - **Memory Config** — toggle backends on/off, see health status, entry counts
 
-4. **Store**: `memoryMapStore.ts` with Zustand — holds graph data, search results, backend status, selected node.
+4. **Panel module**: `web/static/memory.js` (extend the existing `Memory` object, or create `web/static/memory-map.js` + `web/static/memory-search.js` + `web/static/memory-config.js` as separate panel modules). Each exposes an object with `init()` and `update()` methods — no Zustand store, no React state. Panel state (graph data, search results, selected node, backend status) is held as module-level `let` variables inside the `.js` file. (See `AGENTS.md` AR21b for vanilla JS panel conventions. The original React/Zustand approach using `memoryMapStore.ts` was abandoned with `src/` in commit `c48ce4c` — see `LANDMINES.md` L23, `DECISIONS.md` Decision 11.)
 
-5. **Integration**: Add "Memory Map" and "Memory Search" to Sidebar. Route in `page.tsx`. Add API functions to `api.ts`.
+5. **Integration**: Add "Memory Map", "Memory Search", and "Memory Config" entries to the sidebar in `web/static/ui.js` (the `UI.SIDEBAR_ITEMS` array or equivalent). Add `<script>` tags for the new `.js` files in `web/static/index.html`. Add API functions (`searchMemory`, `getMemoryGraph`, `getMemoryHealth`, `getMemoryConfig`, `setMemoryConfig`) to `web/static/api.js` in the `API` object.
 
 **No need for**: Round table review, context brief, 7-step workflow. This is a reference document, not a plan file.

@@ -110,3 +110,16 @@ This file defines the domain terms, conventions, and shared vocabulary used acro
 | **TaskComplexity** | Enum returned by `ModelTierRouter.classify()`. Values: SIMPLE (arithmetic, lookups), MEDIUM (summarization, single-file edits), COMPLEX (debates, multi-file refactors, analysis). Default: MEDIUM (safer for unknown tasks). |
 | **ModelChoice** | Dataclass returned by `ModelTierRouter.route()`. Fields: model_name, complexity, reason, downgraded. `downgraded=True` when CostTracker fallback forced a lower tier. |
 | **Tier Downgrade** | When CostTracker indicates spend cap approaching, router downgrades: COMPLEX → MEDIUM → SIMPLE. SIMPLE cannot be downgraded further — CostTracker's hard fail takes over. |
+
+## UI Architecture Vocabulary (NEW — Web GUI Rebuild, 2026-06-27)
+
+| Term | Definition |
+|---|---|
+| **Vanilla JS UI** | The current web frontend in `web/static/` — plain HTML + CSS + JavaScript (ES modules), no build step, no React, no TypeScript. Served via FastAPI `StaticFiles` mount at `/`. Replaced the abandoned Next.js/React stack (see L23, Decision 11). |
+| **Panel Module** | A single `.js` file in `web/static/` exposing one object (e.g., `Workers`, `Approvals`, `Costs`) with `init()` and `update()` methods. Mirrors the role of a React component but with no lifecycle methods, no hooks, no virtual DOM. |
+| **API Wrapper** | The `API` object in `web/static/api.js`. All `fetch()` calls go through this wrapper, which attaches `Authorization: Bearer <token>` from `localStorage.sovereign_token` and clears the token on 401 (triggering the token-entry modal). |
+| **Token-Entry Modal** | First-load UX in `index.html`. If `localStorage.sovereign_token` is missing or rejected (401), a modal prompts the user to paste the auth token printed by the server at startup. Token is stored in `localStorage` and attached to all subsequent requests. |
+| **Same-Origin Mount** | FastAPI serves both the static frontend (`/`) and the API (`/api/*`) on the same port (`:8000`). Eliminates CORS configuration that plagued the Next.js dev server (`:3000`) → FastAPI (`:8000`) split. |
+| **Exempt Prefixes** | List of `/api/*` path prefixes in `web/middleware/auth_middleware.py` that bypass auth: `/api/status`, `/api/workers`, `/api/costs`, `/api/approvals`, `/api/memory`, `/api/logs` (GET only), `/health`, `/api/errors/log` (POST only). All other `/api/*` paths require bearer token. WebSocket `/ws/pty` accepts `?token=` query param (browsers cannot set headers on WS handshake). |
+| **CDN-loaded xterm.js** | The terminal emulator library is loaded via `<script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js">` in `index.html`. No npm install, no bundler. Trade-off: requires internet on first load (cached thereafter). |
+| **AR21b** | Governance rule in `AGENTS.md` for the vanilla JS frontend. Supersedes AR21 (which governed the deleted TypeScript/React `src/` directory). |

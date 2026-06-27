@@ -5,6 +5,8 @@
 **Repo State**: Post-Plan 87, `prompt-87` tag, `03a2fe7` commit
 **Scope**: Web UI (Next.js 15 + TypeScript + Tailwind v4), CLI (Textual TUI + Rich CLI), and Backend API (FastAPI)
 
+> **⚠️ ARCHITECTURE UPDATE (2026-06-27, commit `c48ce4c`)**: The Next.js 15 + TypeScript + Tailwind v4 frontend described in this document was **abandoned and removed**. The current web UI is **vanilla JavaScript** in `web/static/`, served by FastAPI `StaticFiles` at the same origin as the API. See `DECISIONS.md` Decision 11, `LANDMINES.md` L23, and `AGENTS.md` AR21b for full context. The gap analysis below is still valid — the UI-UX gaps it identifies (model management, worker creation, debate UI, security panels, observability, etc.) apply equally to the vanilla JS UI. However, all `src/components/panels/*.tsx`, `src/stores/*.ts`, `src/hooks/*.ts`, and `src/lib/api.ts` file path references throughout this document are **historical** — the equivalent files now live in `web/static/*.js` (e.g., `web/static/workers.js` ≈ old `src/components/panels/WorkersPanel.tsx`). Plans 96–99 should target the vanilla JS UI, not the deleted React components.
+
 ---
 
 ## Executive Summary

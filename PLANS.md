@@ -44,12 +44,12 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 ## Test Baseline
 
-**Current baseline**: **1476 Python tests collected (1476 passed, 70 skipped) + 52 Vitest tests passed (7 skipped) + 8 Playwright E2E tests passed**
+**Current baseline**: **1476 Python tests collected (1476 passed, 70 skipped)**
 **Verified**: Plan 95, Step C1 (full test suite)
 **Tolerance**: ±5 tests for Python (variance acceptable due to parameterized fixtures and environment variation)
-**Vitest baseline**: 52 tests passed, 7 skipped (updated Plan 95)
-**Playwright E2E baseline**: 8 tests passed (first baseline established Plan 85, deferred execution due to web server startup issue)
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
+
+**Removed suites (commit `c48ce4c`, tag `web-gui-rebuild-cleanup-1`)**: The 52 Vitest tests and 8 Playwright E2E tests (established Plans 84–85) tested React/Next.js components in `src/` that were deleted in the vanilla JS UI rebuild. See `LANDMINES.md` L23 and `DECISIONS.md` Decision 11. A future plan may add a Playwright suite against `http://localhost:8000/` for E2E coverage of the vanilla JS UI; until then, pytest is the only active test suite.
 
 ---
 
@@ -255,11 +255,11 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 - **Eval harness** — Metrics (exact_match, token_f1, bleu, cosine_similarity) operational with trace emitter integration. Validation suite with 15 static tasks confirms metric behavior across 5 categories.
 - **Skill taxonomy** — SkillTier enum (USER_INVOKED, AGENT_INVOKED, HYBRID), SkillClassification dataclass, SkillTaxonomyRegistry. Default registry with 25 built-in skill classifications. CONTEXT.md project-level shared vocabulary.
 - **Worker Circuit Breaker** — WorkerCircuitBreaker class with failure tracking and auto-reset. Integrated into Orchestrator with degraded mode (task queuing when too many workers fail). QUEUED task status added to TaskStateMachine. Comprehensive tests covering worker-level and aggregate behavior.
-- **UI Shell** — Next.js 15 frontend with TypeScript, Tailwind v4, Zustand stores, shell components, polling hooks, API client. FastAPI backend with CORS, cookie-based auth, SSE endpoints. Operational panels: Tasks, Workers, Approvals, Costs, Skills, Help, Terminal (xterm.js), System Stats, Subagents. Memory Drawer (search/sort/export/import), Settings Drawer (4 tabs).
+- **UI Shell** — Vanilla JS frontend (`web/static/`) served by FastAPI `StaticFiles` at the same origin as the API (`:8000`). No build step, no npm, no React, no TypeScript. Panels: Terminal (xterm.js via CDN), Tasks (via `/api/status`), Workers, Approvals, Costs, Models, Memory, Logs, Resources. Bearer-token auth via `Authorization` header, persisted in `localStorage`. (History: Next.js 15 + React + TypeScript + Tailwind v4 + Zustand frontend was removed in commit `c48ce4c` after 3 failed remediation rounds — see `LANDMINES.md` L23, `DECISIONS.md` Decision 11.)
 
 ### What's Broken Right Now
 
-None
+- **Terminal panel `/ws/pty`** — Windows `pywinpty` API compatibility issue (`cols`/`rows` params, `read`/`terminate` method signatures). Terminal renders but PTY I/O is unreliable. All other panels return 200 OK. Tracked as a follow-up; not blocking.
 
 ### What's Built But Not Reachable
 
@@ -270,7 +270,7 @@ None
 - **LLM provider rotation** — background worker management, fallback chains (Priority 5+)
 - **AIS data integration** — weather + vessel tracking (Priority 5+)
 - **User preference learning** — adaptive command ranking (Priority 5+)
-- **Web UI refinement** — responsive design, accessibility (Priority 5+)
+- **Web UI refinement** — vanilla JS UI (`web/static/`) is functional but minimal. Future work: Playwright E2E suite, responsive design, accessibility audit, light-mode theme toggle. (Priority 5+)
 
 ---
 

@@ -6,7 +6,7 @@ Sovereign AI is a local-first, self-improving AI assistant framework built for a
 
 **Core philosophy**: Strong, robust, modular, simple core. Wire as you go. No new horizontal capability until the existing stack is reachable and demonstrably improving worker outputs.
 
-**Stack**: Python 3.12, Textual TUI + Rich CLI + FastAPI web server.
+**Stack**: Python 3.12, Textual TUI + Rich CLI + FastAPI web server, vanilla JS frontend (`web/static/`) served via FastAPI `StaticFiles`.
 
 ---
 
@@ -54,7 +54,7 @@ The minimum needed to start working. Full environment (Python version, OS, optio
 
 When the user pastes a Devin execution log, the Prompt Creator (GLM or Kimi) follows these steps in order. Do not skip steps. Do not improvise.
 
-1. **Read the execution log end-to-end.** Extract: actual test counts for ALL test suites (pytest, Vitest, Playwright — not just Python), ruff/mypy/bandit/pip-audit/vulture counts, any STOP conditions triggered, any rule proposals Devin submitted (C9), any deviations from the plan. **When new test suites are added (e.g., Vitest in Plan 84, Playwright in Plan 85), the extract step must include them — the test count list is not fixed.**
+1. **Read the execution log end-to-end.** Extract: actual test counts for ALL test suites (pytest is the only active suite — Vitest and Playwright were removed with `src/` in commit `c48ce4c`; see `LANDMINES.md` L23), ruff/mypy/bandit/pip-audit/vulture counts, any STOP conditions triggered, any rule proposals Devin submitted (C9), any deviations from the plan. **If a new test suite is introduced in a future plan (e.g., a Playwright suite against `web/static/`), the extract step must include it — the test count list is not fixed.**
 
 2. **Verify the repo state.** `git fetch origin` → check the prompt's tag exists on origin → check the CHANGELOG entry matches → check the commit stat matches the plan's scope (no scope creep) → check `PLANS.md` was updated (completed prompts row, baselines, queue shift). If anything doesn't match, flag to the user.
 
@@ -239,7 +239,7 @@ Whole-repo scan. No new features. No new architecture. Fixes only.
 - Scan CHANGELOG.md: verify every plan in the completed batch has a CHANGELOG entry.
 - Scan PLANS.md: verify baselines are current and the next-5-queue reflects actual state.
 - Scan all docstrings for references to removed/renamed modules.
-- Run full test suite: pytest, Vitest, Playwright (if applicable).
+- Run full test suite: pytest. (Vitest and Playwright were removed with `src/` in commit `c48ce4c` — see `LANDMINES.md` L23. A future plan may re-introduce a Playwright suite against `web/static/`; until then, pytest is the only test suite.)
 - Verify coverage has not dropped >5% from baseline.
 
 ### What NOT to do

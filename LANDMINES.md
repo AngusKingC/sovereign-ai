@@ -152,11 +152,13 @@ Append-only historical record of failure patterns. See AGENTS.md for guidance on
 
 ## L21 — PowerShell corrupts TypeScript files with backticks and template literals
 
+**Status**: **HISTORICAL** — The `src/` directory (Next.js + TypeScript frontend) was removed in commit `c48ce4c` (tag `web-gui-rebuild-cleanup-1`). The vanilla JS UI in `web/static/` does not use backtick template literals in a way that triggers this landmine, and Devin now uses Git Bash (OR1) instead of PowerShell for all file operations. Retained for historical context and as a cautionary note if TypeScript is ever re-introduced.
+
 **Trigger**: Plan 91, S10 verification — PowerShell commands used to write TypeScript files (`src/lib/api.ts`, `src/components/shell/Sidebar.tsx`, `src/components/shell/StatusBar.tsx`) corrupted the content. PowerShell interprets backticks (`) as escape characters and `${}` as variable expansion, which broke TypeScript template literals.
 
 **Impact**: TypeScript compilation failed with numerous syntax errors (TS1109, TS1005, TS1128, TS2657, TS1127). Files had to be reverted multiple times. The Node.js writer script approach (array-of-strings + `.join('\n')`) was required to bypass PowerShell's string parsing.
 
-**Mitigation**: OR38 — When writing TypeScript files on Windows, use Node.js writer scripts with the array-of-strings + `.join('\n')` pattern instead of PowerShell string operations. The Node.js approach sidesteps PowerShell's string parsing entirely by writing the file through a separate process.
+**Mitigation**: OR38 — When writing TypeScript files on Windows, use Node.js writer scripts with the array-of-strings + `.join('\n')` pattern instead of PowerShell string operations. The Node.js approach sidesteps PowerShell's string parsing entirely by writing the file through a separate process. (Note: OR38 is now moot for the vanilla JS UI but retained in case TypeScript is re-introduced.)
 
 ---
 
@@ -167,5 +169,15 @@ Append-only historical record of failure patterns. See AGENTS.md for guidance on
 **Impact**: Root .txt files are recreated, violating the txt/ folder convention. Git tracking restoration or manual cleanup required. Confusion about which file is the source of truth.
 
 **Mitigation**: When using `vulture --make-whitelist`, either (a) run from `txt/` directory, or (b) move the generated file to `txt/` immediately after generation. The scan scripts in jarvis-close.md and jarvis-verify.md already read from `txt/vulture-whitelist.txt` — ensure manual whitelist generation follows the same pattern.
+
+---
+
+## L23 — Next.js/React/TypeScript frontend abandoned after 3 failed remediation rounds
+
+**Trigger**: Plans 80–95 built a Next.js 15 + React + TypeScript + Tailwind v4 + Zustand frontend in `src/`. Three remediation rounds (Web GUI Fixes 1, 2, 3 — see `Prompts/web-gui-fixes-1*.md`) could not resolve persistent framework-level errors: hydration mismatches in `ShellClient.tsx`, TypeScript strict-mode breakage in `api.ts`/`useWorkersPolling.ts`/`workerStore.ts`, xterm.js SSR crashes in `TerminalPanel.tsx`, `useEffect` dependency loops in polling hooks, and auth/CORS friction between `:3000` (Next dev) and `:8000` (FastAPI). Compounding factor: PowerShell corrupted `.ts`/`.tsx` files (L21), forcing Node.js writer-script workarounds.
+
+**Impact**: 15+ prompts (80–95) of frontend work effectively discarded. The 52 Vitest tests and 8 Playwright E2E tests (Plans 84–85) tested React components that no longer exist and were lost with `src/`. User confidence in framework-heavy frontends for single-user local-first tools eroded. Time spent on hydration fixes, strict-mode patches, and PowerShell workarounds was sunk.
+
+**Mitigation**: Web GUI rebuild (commits `5de16ba` → `d8fb61a` → `c48ce4c`) replaced the React stack with vanilla JS in `web/static/` served via FastAPI `StaticFiles`. AR21b now governs the vanilla JS frontend. Decision 11 in `DECISIONS.md` documents the abandonment rationale and supersedes Decisions 1, 2, 4, 5, 8, 9, 10. Lesson: for single-user local-first tools, prefer no-build vanilla JS over framework-heavy stacks — the operational overhead (build step, npm deps, SSR/hydration, strict-mode breakage, PowerShell file corruption) exceeds the productivity benefit. Re-introduce TypeScript/frameworks only if the frontend grows to >5000 LOC or multi-user requirements emerge.
 
 ---
