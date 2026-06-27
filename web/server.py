@@ -1320,6 +1320,13 @@ def create_app(
     # Mount static files
     app.mount("/static", StaticFiles(directory="web/static"), name="static")
 
+    # Serve vanilla JS frontend (replaces Next.js)
+    _static_dir = Path(__file__).resolve().parent / "static"
+    if _static_dir.exists():
+        app.mount(
+            "/", StaticFiles(directory=str(_static_dir), html=True), name="frontend"
+        )
+
     return app
 
 

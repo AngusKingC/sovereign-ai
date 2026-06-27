@@ -1,312 +1,118 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jarvis Web UI</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #1a1a1a;
-            color: #e0e0e0;
-            padding: 20px;
-        }
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid #444;
-            margin-bottom: 20px;
-        }
-        .tab {
-            padding: 10px 20px;
-            cursor: pointer;
-            background-color: #2a2a2a;
-            border: 1px solid #444;
-            border-bottom: none;
-            margin-right: 5px;
-        }
-        .tab.active {
-            background-color: #3a3a3a;
-            border-bottom: 1px solid #3a3a3a;
-        }
-        .tab-content {
-            display: none;
-        }
-        .tab-content.active {
-            display: block;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        th, td {
-            border: 1px solid #444;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #2a2a2a;
-        }
-        #chat-input {
-            width: 70%;
-            padding: 10px;
-            background-color: #2a2a2a;
-            border: 1px solid #444;
-            color: #e0e0e0;
-            margin-right: 10px;
-        }
-        #send-btn {
-            padding: 10px 20px;
-            background-color: #3a3a3a;
-            border: 1px solid #444;
-            color: #e0e0e0;
-            cursor: pointer;
-        }
-        #send-btn:hover {
-            background-color: #4a4a4a;
-        }
-        #chat-history {
-            height: 400px;
-            overflow-y: auto;
-            border: 1px solid #444;
-            padding: 10px;
-            margin-bottom: 10px;
-            background-color: #2a2a2a;
-        }
-        .chat-message {
-            margin-bottom: 10px;
-            padding: 5px;
-            border-left: 3px solid #3a3a3a;
-            padding-left: 10px;
-        }
-        #trace-log {
-            height: 400px;
-            overflow-y: auto;
-            border: 1px solid #444;
-            padding: 10px;
-            background-color: #2a2a2a;
-            font-family: monospace;
-            font-size: 12px;
-        }
-        .trace-entry {
-            margin-bottom: 5px;
-            padding: 5px;
-            border-left: 2px solid #444;
-            padding-left: 10px;
-        }
-        .trace-entry.warning {
-            border-left-color: #ff6600;
-        }
-        .trace-entry.error {
-            border-left-color: #ff0000;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JArvis — Sovereign AI</title>
+  <link rel="stylesheet" href="/style.css">
+  <!-- xterm.js from CDN (terminal) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css">
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
 </head>
 <body>
-    <h1>Jarvis Web UI</h1>
-    
-    <div class="tabs">
-        <div class="tab active" onclick="switchTab('chat')">Chat</div>
-        <div class="tab" onclick="switchTab('workers')">Workers</div>
-        <div class="tab" onclick="switchTab('tasks')">Tasks</div>
-        <div class="tab" onclick="switchTab('trace')">Trace</div>
+  <div id="app">
+    <!-- Status Bar -->
+    <div id="status-bar">
+      <span id="status-phase" class="badge badge-idle">idle</span>
+      <span id="status-model" class="status-model">No model</span>
+      <span id="status-latency" class="status-latency"></span>
+      <span id="status-tokens" class="status-tokens">0 tokens</span>
+      <span id="status-session" class="status-session">No session</span>
     </div>
 
-    <div id="chat" class="tab-content active">
-        <div id="chat-history"></div>
-        <div>
-            <input type="text" id="chat-input" placeholder="Enter your message...">
-            <button id="send-btn" onclick="sendMessage()">Send</button>
+    <!-- Main Layout -->
+    <div id="main-layout">
+      <!-- Sidebar -->
+      <div id="sidebar">
+        <div class="sidebar-section">
+          <div class="sidebar-item" data-panel="terminal" title="Terminal">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            <span>Terminal</span>
+          </div>
+          <div class="sidebar-item" data-panel="tasks" title="Tasks">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <span>Tasks</span>
+          </div>
+          <div class="sidebar-item" data-panel="workers" title="Workers">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>Workers</span>
+          </div>
+          <div class="sidebar-item" data-panel="approvals" title="Approvals">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span>Approvals</span>
+          </div>
+          <div class="sidebar-item" data-panel="costs" title="Costs">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <span>Costs</span>
+          </div>
+          <div class="sidebar-item" data-panel="models" title="Models">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            <span>Models</span>
+          </div>
+          <div class="sidebar-item" data-panel="memory" title="Memory">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            <span>Memory</span>
+          </div>
+          <div class="sidebar-item" data-panel="resources" title="Resources">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <span>Resources</span>
+          </div>
+          <div class="sidebar-item" data-panel="logs" title="Logs">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <span>Logs</span>
+          </div>
         </div>
+      </div>
+
+      <!-- Main Content -->
+      <div id="main-content">
+        <!-- Panels render here -->
+        <div id="panel-terminal" class="panel active"></div>
+        <div id="panel-tasks" class="panel"></div>
+        <div id="panel-workers" class="panel"></div>
+        <div id="panel-approvals" class="panel"></div>
+        <div id="panel-costs" class="panel"></div>
+        <div id="panel-models" class="panel"></div>
+        <div id="panel-memory" class="panel"></div>
+        <div id="panel-resources" class="panel"></div>
+        <div id="panel-logs" class="panel"></div>
+      </div>
+
+      <!-- Right Panel -->
+      <div id="right-panel">
+        <div class="right-panel-tabs">
+          <button class="rp-tab active" data-tab="tools">Tools</button>
+          <button class="rp-tab" data-tab="timeline">Timeline</button>
+        </div>
+        <div id="rp-content">
+          <div id="rp-tools" class="rp-tab-content active">
+            <p class="muted">Tool calls will appear here.</p>
+          </div>
+          <div id="rp-timeline" class="rp-tab-content">
+            <p class="muted">Timeline will appear here.</p>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div id="workers" class="tab-content">
-        <table>
-            <thead>
-                <tr>
-                    <th>Worker ID</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="workers-table">
-            </tbody>
-        </table>
+    <!-- Bottom Bar -->
+    <div id="bottom-bar">
+      <span class="bottom-label">Activation Grid</span>
+      <canvas id="activation-canvas" width="256" height="32"></canvas>
+      <span id="bottom-tokens" class="bottom-tokens">0 / 128000</span>
     </div>
+  </div>
 
-    <div id="tasks" class="tab-content">
-        <table>
-            <thead>
-                <tr>
-                    <th>Task ID</th>
-                    <th>Intent</th>
-                    <th>Status</th>
-                    <th>Priority</th>
-                </tr>
-            </thead>
-            <tbody id="tasks-table">
-            </tbody>
-        </table>
-    </div>
-
-    <div id="trace" class="tab-content">
-        <div id="trace-log"></div>
-    </div>
-
-    <script>
-        let token = localStorage.getItem('jarvis_token');
-        let ws = null;
-
-        function getToken() {
-            if (!token) {
-                token = prompt('Enter your auth token:');
-                if (token) {
-                    localStorage.setItem('jarvis_token', token);
-                }
-            }
-            return token;
-        }
-
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
-            document.getElementById(tabId).classList.add('active');
-            
-            if (tabId === 'workers') {
-                loadWorkers();
-            } else if (tabId === 'tasks') {
-                loadTasks();
-            } else if (tabId === 'trace') {
-                loadTrace();
-            } else if (tabId === 'chat') {
-                connectWebSocket();
-            }
-        }
-
-        async function loadWorkers() {
-            const response = await fetch('/api/workers', {
-                headers: {
-                    'Authorization': `Bearer ${getToken()}`
-                }
-            });
-            const data = await response.json();
-            const tbody = document.getElementById('workers-table');
-            tbody.innerHTML = '';
-            data.workers.forEach(worker => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${worker.id || 'N/A'}</td>
-                    <td>${worker.type || 'N/A'}</td>
-                    <td>${worker.status || 'N/A'}</td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        async function loadTasks() {
-            const response = await fetch('/api/tasks', {
-                headers: {
-                    'Authorization': `Bearer ${getToken()}`
-                }
-            });
-            const data = await response.json();
-            const tbody = document.getElementById('tasks-table');
-            tbody.innerHTML = '';
-            data.tasks.forEach(task => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${task.id || 'N/A'}</td>
-                    <td>${task.intent || 'N/A'}</td>
-                    <td>${task.status || 'N/A'}</td>
-                    <td>${task.priority || 'N/A'}</td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        async function loadTrace() {
-            const response = await fetch('/api/trace', {
-                headers: {
-                    'Authorization': `Bearer ${getToken()}`
-                }
-            });
-            const data = await response.json();
-            const log = document.getElementById('trace-log');
-            log.innerHTML = '';
-            data.events.forEach(event => {
-                const entry = document.createElement('div');
-                entry.className = `trace-entry ${event.level}`;
-                entry.textContent = `[${event.timestamp}] ${event.level}: ${event.message}`;
-                log.appendChild(entry);
-            });
-        }
-
-        function connectWebSocket() {
-            if (ws) {
-                ws.close();
-            }
-            
-            const wsUrl = `ws://localhost:7000/ws?token=${getToken()}`;
-            ws = new WebSocket(wsUrl);
-            
-            ws.onopen = () => {
-                addChatMessage('Connected to Jarvis', 'system');
-            };
-            
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                addChatMessage(`Task submitted: ${data.task_id}`, 'system');
-            };
-            
-            ws.onclose = () => {
-                addChatMessage('Disconnected from Jarvis', 'system');
-            };
-            
-            ws.onerror = () => {
-                addChatMessage('Connection error', 'error');
-            };
-        }
-
-        function sendMessage() {
-            const input = document.getElementById('chat-input');
-            const message = input.value.trim();
-            if (!message) return;
-            
-            addChatMessage(message, 'user');
-            
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ intent: message }));
-                input.value = '';
-            } else {
-                addChatMessage('Not connected to WebSocket', 'error');
-            }
-        }
-
-        function addChatMessage(message, type) {
-            const history = document.getElementById('chat-history');
-            const msgDiv = document.createElement('div');
-            msgDiv.className = 'chat-message';
-            msgDiv.textContent = `[${type}] ${message}`;
-            history.appendChild(msgDiv);
-            history.scrollTop = history.scrollHeight;
-        }
-
-        // Auto-refresh trace every 5 seconds
-        setInterval(() => {
-            if (document.getElementById('trace').classList.contains('active')) {
-                loadTrace();
-            }
-        }, 5000);
-
-        // Initialize
-        getToken();
-        connectWebSocket();
-    </script>
+  <!-- Scripts (load order matters) -->
+  <script src="/api.js"></script>
+  <script src="/ui.js"></script>
+  <script src="/chat.js"></script>
+  <script src="/models.js"></script>
+  <script src="/workers.js"></script>
+  <script src="/approvals.js"></script>
+  <script src="/costs.js"></script>
+  <script src="/memory.js"></script>
+  <script src="/logs.js"></script>
 </body>
 </html>

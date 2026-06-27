@@ -48,6 +48,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
         Returns:
             Response from call_next or 401 if authentication fails
         """
+        # Exempt static files (vanilla JS frontend)
+        if not request.url.path.startswith("/api/"):
+            return await call_next(request)
+
         # Exempt /health path from auth
         if request.url.path == "/health":
             return await call_next(request)
