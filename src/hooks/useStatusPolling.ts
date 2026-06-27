@@ -1,5 +1,6 @@
 import { usePolling } from "./usePolling";
 import { useAgentStore } from "@/stores/agentStore";
+import { logHttpError } from "./useErrorLogger";
 
 interface StatusResponse {
   phase: string;
@@ -15,7 +16,10 @@ export function useStatusPolling() {
 
   const fetcher = async (): Promise<StatusResponse> => {
     const response = await fetch("http://localhost:8000/api/status");
-    if (!response.ok) throw new Error("Failed to fetch status");
+    if (!response.ok) {
+      logHttpError("http://localhost:8000/api/status", response.status, "Failed to fetch status");
+      throw new Error("Failed to fetch status");
+    }
     return response.json();
   };
 

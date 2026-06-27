@@ -1,5 +1,6 @@
 import { usePolling } from "./usePolling";
 import { useMemoryStore } from "@/stores/memoryStore";
+import { logHttpError } from "./useErrorLogger";
 
 interface MemoryResponse {
   slots: Array<{
@@ -16,7 +17,10 @@ export function useMemoryPolling() {
 
   const fetcher = async (): Promise<MemoryResponse> => {
     const response = await fetch("http://localhost:8000/api/memory");
-    if (!response.ok) throw new Error("Failed to fetch memory");
+    if (!response.ok) {
+      logHttpError("http://localhost:8000/api/memory", response.status, "Failed to fetch memory");
+      throw new Error("Failed to fetch memory");
+    }
     return response.json();
   };
 

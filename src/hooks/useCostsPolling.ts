@@ -1,5 +1,6 @@
 import { usePolling } from "./usePolling";
 import { useCostStore } from "@/stores/costStore";
+import { logHttpError } from "./useErrorLogger";
 
 interface CostResponse {
   total_cost_usd: number;
@@ -13,7 +14,10 @@ export function useCostsPolling() {
 
   const fetcher = async (): Promise<CostResponse> => {
     const response = await fetch("http://localhost:8000/api/costs");
-    if (!response.ok) throw new Error("Failed to fetch costs");
+    if (!response.ok) {
+      logHttpError("http://localhost:8000/api/costs", response.status, "Failed to fetch costs");
+      throw new Error("Failed to fetch costs");
+    }
     return response.json();
   };
 

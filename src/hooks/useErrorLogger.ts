@@ -172,4 +172,12 @@ export function logComponentError(error: Error, componentStack?: string, compone
   });
 }
 
+export function logHttpError(url: string, status: number, message: string) {
+  addToBuffer({
+    timestamp: new Date().toISOString(),
+    type: "error",
+    message: `HTTP ${status} error from ${url}: ${message}`,
+  });
+}
+
 export { flushSync };

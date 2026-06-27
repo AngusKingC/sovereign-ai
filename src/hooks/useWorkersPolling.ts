@@ -1,5 +1,6 @@
 import { usePolling } from "./usePolling";
 import { useWorkerStore } from "@/stores/workerStore";
+import { logHttpError } from "./useErrorLogger";
 
 interface WorkerProfile {
   worker_id: string;
@@ -40,7 +41,10 @@ export function useWorkersPolling() {
 
   const fetcher = async (): Promise<WorkerResponse> => {
     const response = await fetch("http://localhost:8000/api/workers");
-    if (!response.ok) throw new Error("Failed to fetch workers");
+    if (!response.ok) {
+      logHttpError("http://localhost:8000/api/workers", response.status, "Failed to fetch workers");
+      throw new Error("Failed to fetch workers");
+    }
     return response.json();
   };
 
