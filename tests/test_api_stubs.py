@@ -2,6 +2,7 @@
 
 from unittest.mock import AsyncMock, Mock
 
+import pytest
 from fastapi.testclient import TestClient
 
 from core.auth import AuthManager
@@ -68,6 +69,9 @@ class TestApiStubs:
         )
         assert res.status_code == 200
 
+    @pytest.mark.skip(
+        reason="Worker API stubs implemented in Plan 93 - see test_worker_api.py"
+    )
     def test_create_worker_stub_501(self):
         """Test /api/workers/create returns 501 (stub)."""
         res = self.client.post(
@@ -77,6 +81,9 @@ class TestApiStubs:
         assert res.status_code == 501
         assert "not yet implemented" in res.json()["detail"].lower()
 
+    @pytest.mark.skip(
+        reason="Worker API stubs implemented in Plan 93 - see test_worker_api.py"
+    )
     def test_update_worker_stub_501(self):
         """Test /api/workers/{id} PUT returns 501 (stub)."""
         res = self.client.put(
@@ -87,6 +94,9 @@ class TestApiStubs:
         assert res.status_code == 501
         assert "not yet implemented" in res.json()["detail"].lower()
 
+    @pytest.mark.skip(
+        reason="Worker API stubs implemented in Plan 93 - see test_worker_api.py"
+    )
     def test_delete_worker_stub_501(self):
         """Test /api/workers/{id} DELETE returns 501 (stub)."""
         res = self.client.delete(

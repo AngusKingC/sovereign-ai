@@ -211,3 +211,208 @@ describe("ModelsPanel", () => {
     expect(screen.getByText("model-1")).toBeInTheDocument();
   });
 });
+
+describe("WorkerCreator", () => {
+  it("renders form with description and task intent fields", () => {
+    render(<WorkerCreator onClose={() => {}} />);
+    expect(screen.getByTestId("worker-creator")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/e.g., Create a Python code review worker/)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/What task will this worker handle?/)).toBeInTheDocument();
+  });
+
+  it("shows Create Worker button", () => {
+    render(<WorkerCreator onClose={() => {}} />);
+    expect(screen.getByText("Create Worker")).toBeInTheDocument();
+  });
+});
+
+describe("WorkerEditor", () => {
+  it("renders config fields for worker", () => {
+    const mockWorker: WorkerProfile = {
+      worker_id: "test-worker",
+      worker_type: "code_worker",
+      name: "Test Worker",
+      description: "A test worker",
+      purpose: "Testing",
+      capabilities: ["code"],
+      complexity_min: 0.3,
+      complexity_max: 0.8,
+      preferred_complexity: 0.5,
+      depth_preference: 0.6,
+      speculation_tolerance: 0.4,
+      source_skepticism: 0.5,
+      verbosity: 0.7,
+      standing_instructions: ["Be thorough"],
+      preferred_model: "gpt-4",
+      preferred_models: ["gpt-4"],
+      escalation_threshold: 0.8,
+      tasks_completed: 10,
+      avg_confidence: 0.85,
+      performance_score: 0.9,
+      active_tasks: 2,
+      status: "active",
+    };
+
+    render(<WorkerEditor worker={mockWorker} onClose={() => {}} />);
+    expect(screen.getByTestId("worker-editor")).toBeInTheDocument();
+    expect(screen.getByText("Edit Test Worker")).toBeInTheDocument();
+    expect(screen.getByText("Complexity Min")).toBeInTheDocument();
+    expect(screen.getByText("Verbosity")).toBeInTheDocument();
+    expect(screen.getByText("Preferred Model")).toBeInTheDocument();
+  });
+
+  it("shows Save and Delete buttons", () => {
+    const mockWorker: WorkerProfile = {
+      worker_id: "test-worker",
+      worker_type: "code_worker",
+      name: "Test Worker",
+      description: "A test worker",
+      purpose: "Testing",
+      capabilities: ["code"],
+      complexity_min: 0.3,
+      complexity_max: 0.8,
+      preferred_complexity: 0.5,
+      depth_preference: 0.6,
+      speculation_tolerance: 0.4,
+      source_skepticism: 0.5,
+      verbosity: 0.7,
+      standing_instructions: ["Be thorough"],
+      preferred_model: "gpt-4",
+      preferred_models: ["gpt-4"],
+      escalation_threshold: 0.8,
+      tasks_completed: 10,
+      avg_confidence: 0.85,
+      performance_score: 0.9,
+      active_tasks: 2,
+      status: "active",
+    };
+
+    render(<WorkerEditor worker={mockWorker} onClose={() => {}} />);
+    expect(screen.getByText("Delete Worker")).toBeInTheDocument();
+    expect(screen.getByText("Save")).toBeInTheDocument();
+  });
+});
+
+describe("WorkersPanel with Create Button", () => {
+  it("shows Create Worker button in header", () => {
+    useWorkerStore.setState({
+      workers: [],
+      degradedRatio: 0,
+      setWorkers: useWorkerStore.getState().setWorkers,
+      setDegradedRatio: useWorkerStore.getState().setDegradedRatio,
+      resetCircuit: useWorkerStore.getState().resetCircuit,
+      createWorker: useWorkerStore.getState().createWorker,
+      updateWorker: useWorkerStore.getState().updateWorker,
+      deleteWorker: useWorkerStore.getState().deleteWorker,
+      setSelectedWorker: useWorkerStore.getState().setSelectedWorker,
+      selectedWorkerId: null,
+      loadWorkers: useWorkerStore.getState().loadWorkers,
+    });
+
+    render(<WorkersPanel />);
+    expect(screen.getByText("+ Create Worker")).toBeInTheDocument();
+  });
+});
+
+
+describe("WorkerCreator", () => {
+  it("renders form with description and task intent fields", () => {
+    render(<WorkerCreator onClose={() => {}} />);
+    expect(screen.getByTestId("worker-creator")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/e.g., Create a Python code review worker/)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/What task will this worker handle?/)).toBeInTheDocument();
+  });
+
+  it("shows Create Worker button", () => {
+    render(<WorkerCreator onClose={() => {}} />);
+    expect(screen.getByText("Create Worker")).toBeInTheDocument();
+  });
+});
+
+describe("WorkerEditor", () => {
+  it("renders config fields for worker", () => {
+    const mockWorker: WorkerProfile = {
+      worker_id: "test-worker",
+      worker_type: "code_worker",
+      name: "Test Worker",
+      description: "A test worker",
+      purpose: "Testing",
+      capabilities: ["code"],
+      complexity_min: 0.3,
+      complexity_max: 0.8,
+      preferred_complexity: 0.5,
+      depth_preference: 0.6,
+      speculation_tolerance: 0.4,
+      source_skepticism: 0.5,
+      verbosity: 0.7,
+      standing_instructions: ["Be thorough"],
+      preferred_model: "gpt-4",
+      preferred_models: ["gpt-4"],
+      escalation_threshold: 0.8,
+      tasks_completed: 10,
+      avg_confidence: 0.85,
+      performance_score: 0.9,
+      active_tasks: 2,
+      status: "active",
+    };
+
+    render(<WorkerEditor worker={mockWorker} onClose={() => {}} />);
+    expect(screen.getByTestId("worker-editor")).toBeInTheDocument();
+    expect(screen.getByText("Edit Test Worker")).toBeInTheDocument();
+    expect(screen.getByText("Complexity Min")).toBeInTheDocument();
+    expect(screen.getByText("Verbosity")).toBeInTheDocument();
+    expect(screen.getByText("Preferred Model")).toBeInTheDocument();
+  });
+
+  it("shows Save and Delete buttons", () => {
+    const mockWorker: WorkerProfile = {
+      worker_id: "test-worker",
+      worker_type: "code_worker",
+      name: "Test Worker",
+      description: "A test worker",
+      purpose: "Testing",
+      capabilities: ["code"],
+      complexity_min: 0.3,
+      complexity_max: 0.8,
+      preferred_complexity: 0.5,
+      depth_preference: 0.6,
+      speculation_tolerance: 0.4,
+      source_skepticism: 0.5,
+      verbosity: 0.7,
+      standing_instructions: ["Be thorough"],
+      preferred_model: "gpt-4",
+      preferred_models: ["gpt-4"],
+      escalation_threshold: 0.8,
+      tasks_completed: 10,
+      avg_confidence: 0.85,
+      performance_score: 0.9,
+      active_tasks: 2,
+      status: "active",
+    };
+
+    render(<WorkerEditor worker={mockWorker} onClose={() => {}} />);
+    expect(screen.getByText("Delete Worker")).toBeInTheDocument();
+    expect(screen.getByText("Save")).toBeInTheDocument();
+  });
+});
+
+describe("WorkersPanel with Create Button", () => {
+  it("shows Create Worker button in header", () => {
+    useWorkerStore.setState({
+      workers: [],
+      degradedRatio: 0,
+      setWorkers: useWorkerStore.getState().setWorkers,
+      setDegradedRatio: useWorkerStore.getState().setDegradedRatio,
+      resetCircuit: useWorkerStore.getState().resetCircuit,
+      createWorker: useWorkerStore.getState().createWorker,
+      updateWorker: useWorkerStore.getState().updateWorker,
+      deleteWorker: useWorkerStore.getState().deleteWorker,
+      setSelectedWorker: useWorkerStore.getState().setSelectedWorker,
+      selectedWorkerId: null,
+      loadWorkers: useWorkerStore.getState().loadWorkers,
+    });
+
+    render(<WorkersPanel />);
+    expect(screen.getByText("+ Create Worker")).toBeInTheDocument();
+  });
+});

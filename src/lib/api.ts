@@ -267,3 +267,65 @@ export async function getAvailableAdapters(): Promise<{ adapters: string[] }> {
   if (!res.ok) throw new Error(`Adapters ${res.status}`);
   return res.json();
 }
+
+export interface WorkerProfile {
+  worker_id: string;
+  worker_type: string;
+  name: string;
+  description: string;
+  purpose: string;
+  capabilities: string[];
+  complexity_min: number;
+  complexity_max: number;
+  preferred_complexity: number;
+  depth_preference: number;
+  speculation_tolerance: number;
+  source_skepticism: number;
+  verbosity: number;
+  standing_instructions: string[];
+  preferred_model: string;
+  preferred_models: string[];
+  escalation_threshold: number;
+  tasks_completed: number;
+  avg_confidence: number;
+  performance_score: number;
+  active_tasks: number;
+  status: string;
+}
+
+export async function createWorker(description: string, taskIntent: string = ""): Promise<WorkerProfile> {
+  const res = await fetch(`/api/workers/create`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ description, task_intent: taskIntent }),
+  });
+  if (!res.ok) throw new Error(`Create ${res.status}`);
+  return res.json();
+}
+
+export async function getWorkersList(): Promise<WorkerProfile[]> {
+  const res = await fetch(`/api/workers`);
+  if (!res.ok) throw new Error(`Workers ${res.status}`);
+  return res.json();
+}
+
+export async function getWorker(workerId: string): Promise<WorkerProfile> {
+  const res = await fetch(`/api/workers/${workerId}`);
+  if (!res.ok) throw new Error(`Worker ${res.status}`);
+  return res.json();
+}
+
+export async function updateWorker(workerId: string, config: Partial<WorkerProfile>): Promise<WorkerProfile> {
+  const res = await fetch(`/api/workers/${workerId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(config),
+  });
+  if (!res.ok) throw new Error(`Update ${res.status}`);
+  return res.json();
+}
+
+export async function deleteWorker(workerId: string): Promise<void> {
+  const res = await fetch(`/api/workers/${workerId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`Delete ${res.status}`);
+}

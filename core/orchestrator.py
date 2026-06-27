@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from core.vram_manager import VRAMManager
     from core.worker_base import WorkerBase
     from core.worker_circuit_breaker import WorkerCircuitBreaker
+    from core.worker_factory import WorkerFactory
     from memory.debate_pool import DebatePool
     from orchestrator.improvement_loop import ImprovementLoopOrchestrator
     from system.model_acquisition import ModelAcquisition
@@ -80,6 +81,7 @@ class Orchestrator:
         model_registry: "ModelRegistry | None" = None,
         resource_manager: "ResourceManager | None" = None,
         model_acquisition: "ModelAcquisition | None" = None,
+        worker_factory: "WorkerFactory | None" = None,
     ) -> None:
         """Initialize the orchestrator with dependencies.
 
@@ -126,6 +128,7 @@ class Orchestrator:
         self.model_registry = model_registry
         self.resource_manager = resource_manager
         self.model_acquisition = model_acquisition
+        self.worker_factory = worker_factory
         # Issue #2 fix: type annotation matches runtime tuple storage.
         # Each entry is (task, worker_id, queued_at) for timeout tracking (Issue #5).
         self._queued_tasks: list[tuple[Task, str, datetime]] = []
