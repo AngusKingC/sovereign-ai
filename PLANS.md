@@ -1,6 +1,6 @@
 # PLANS.md — Sovereign AI Project State
 
-**Last updated**: Post-Plan 93 (2026-06-27)
+**Last updated**: Post-Plan 94 (2026-06-27)
 
 This document tracks the dynamic state of the Sovereign AI project: baselines, completed prompts, and the next-5-prompt queue. It is the canonical source for test counts, static analysis baselines, and which prompt is currently active.
 
@@ -44,14 +44,16 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 
 **Plan 93**: Test baseline updated from 1468 to 1470 passed (delta +2). Cause: 6 new tests in test_worker_api.py (worker API CRUD endpoints: create, list, get, update, delete) + 3 tests skipped in test_api_stubs.py (stub tests now implemented in Plan 93). Net delta: +2 passed, +4 skipped. All new tests are in-scope for Plan 93. Vulture baseline held at 40 findings (delta 0). No new vulture findings. Coverage held at 82% (baseline held). No static analysis baseline changes. Ruff 0 errors held. Mypy file-scoped clean (api/workers.py, web/server.py, core/orchestrator.py). Vulture 40 findings held. Coverage 82% held. All tool counts within tolerance.
 
+**Plan 94**: Test baseline updated from 1470 to 1477 passed (delta +7). Cause: 7 new backend tests (3 in test_cost_policy_api.py + 4 in test_resource_monitor.py) for cost policy and resource monitor API endpoints. All new tests are in-scope for Plan 94. Vulture baseline held at 40 findings (delta 0). No new vulture findings. Coverage held at 82% (baseline held). No static analysis baseline changes. Ruff 0 errors held. Mypy file-scoped clean (core/cost_tracker.py, core/orchestrator.py, web/server.py, test files). Vulture 40 findings held. Coverage 82% held. All tool counts within tolerance.
+
 ---
 
 ## Test Baseline
 
-**Current baseline**: **1470 Python tests collected (1470 passed, 71 skipped) + 46 Vitest tests passed + 8 Playwright E2E tests passed**
-**Verified**: Plan 93, Step C1 (full test suite)
+**Current baseline**: **1477 Python tests collected (1477 passed, 71 skipped) + 50 Vitest tests passed + 8 Playwright E2E tests passed**
+**Verified**: Plan 94, Step C1 (full test suite)
 **Tolerance**: ±5 tests for Python (variance acceptable due to parameterized fixtures and environment variation)
-**Vitest baseline**: 46 tests passed (first baseline established Plan 84)
+**Vitest baseline**: 50 tests passed (updated Plan 94 - added 4 tests for CostPolicyTab and ResourceMonitorPanel)
 **Playwright E2E baseline**: 8 tests passed (first baseline established Plan 85)
 **Delta tracking**: If S1 test count differs from baseline, update this entry + note in CHANGELOG.
 
@@ -131,6 +133,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 | 91 | Model & Adapter Management (Phase 1a) | 1458 + 46 Vitest + 8 Playwright | Wired api/models.py stubs to ModelRegistry with get_model_registry dependency. Added model_registry optional parameter to Orchestrator. Added ModelRegistry initialization in web/server.py lifespan. Updated tests/test_api_stubs.py for wired ModelRegistry. Added ModelInfo interface and getModels/getModel/searchModels functions to src/lib/api.ts. Created src/stores/modelStore.ts (Zustand store for model state). Created src/components/panels/ModelsPanel.tsx. Added MODELS view to src/stores/uiStore.ts. Added Models nav item with Boxes icon to src/components/shell/Sidebar.tsx. Added MODELS view routing to src/app/page.tsx. Wired model selector to activeModelId and MODELS view in src/components/shell/StatusBar.tsx. Added modelStore test suite to src/__tests__/stores.test.ts. Added ModelsPanel test suite to src/__tests__/components.test.tsx. 7 new tests (test_api_stubs.py updates). Coverage: 82% (baseline held). |
 | 92 | Model Downloader + Fallback Chain (Phase 1b) | 1468 + 46 Vitest + 8 Playwright | Added download endpoints (POST /api/models/download, GET /api/models/download/{id}/status) with approval gate integration and background task tracking. Added fallback chain endpoints (GET/PUT /api/adapters/fallback, GET /api/adapters/available). Added ADAPTER_TYPES constant to cli/adapter_factory.py. Added _in_flight_downloads tracking and get_download_status() to ModelAcquisition Added resource_manager and model_acquisition to Orchestrator TYPE_CHECKING imports. Created ModelDownloader.tsx modal component for model search and download. Added fallback chain editor tab to SettingsDrawer.tsx. Added Download Model button to ModelsPanel.tsx. Added downloadModel, getDownloadStatus, getFallbackChain, setFallbackChain, getAvailableAdapters to src/lib/api.ts. Fixed duplicate Models entries in Sidebar.tsx. 10 new tests (test_model_download.py + test_fallback_chain.py). Coverage: 82% (baseline held). |
 | 93 | Worker Creation & Configuration (Phase 2) | 1470 + 46 Vitest + 8 Playwright | Wired api/workers.py stubs to WorkerFactory with Pydantic models (CreateWorkerRequest, WorkerProfileResponse, UpdateWorkerRequest) and get_worker_factory dependency. Added worker_factory optional parameter to Orchestrator.__init__. Created WorkerCreator.tsx (natural language worker creation modal), WorkerEditor.tsx (worker configuration editor with sliders), updated WorkersPanel.tsx (Create Worker button, click-to-edit). Extended workerStore.ts with createWorker, updateWorker, deleteWorker, loadWorkers actions. Added WorkerProfile interface and worker CRUD API functions to src/lib/api.ts. Added 6 backend tests (test_worker_api.py: create, list, get, update, delete). Skipped 3 stub tests in test_api_stubs.py (now implemented). Added frontend Vitest tests for WorkerCreator, WorkerEditor, WorkersPanel. Fixed src/.gitignore to allow lib directory. Coverage: 82% (baseline held). |
+| 94 | Cost & Resource Controls (Phase 3) | 1477 + 50 Vitest + 8 Playwright | Added CostTracker.get_policy() and update_policy() public methods. Added system_profiler optional parameter to Orchestrator. Added PUT /api/costs/policy and GET /api/costs/policy endpoints with validation. Added GET /api/resources/monitor endpoint with psutil fallback. Added CostPolicy and ResourceMonitor interfaces to src/lib/api.ts. Un-mocked SettingsDrawer Cost Policy tab with CostPolicyTab component. Created ResourceMonitorPanel.tsx for real-time resource monitoring. Added VIEWS.RESOURCES to uiStore.ts. Added Resources nav item to Sidebar.tsx. Added ResourceMonitorPanel routing to page.tsx. Added 7 backend tests (test_cost_policy_api.py, test_resource_monitor.py). Added 4 Vitest tests for CostPolicyTab and ResourceMonitorPanel. Coverage: 82% (baseline held). |
 
 ---
 
@@ -184,7 +187,7 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 5. Extend `workerStore.ts` with creation/editing actions
 **STOP condition**: If `WorkerFactory.create_worker()` API signature doesn't match, STOP and report.
 
-#### Plan 94 — Cost & Resource Controls (Phase 3) — HIGH (Active)
+#### Plan 94 — Cost & Resource Controls (Phase 3) — HIGH (Completed)
 **Depends on**: `prompt-93` | **Tag**: `prompt-94`
 **Scope**: Un-mock the SettingsDrawer cost settings. Add real-time resource monitoring. Backend: `PUT /api/costs/policy` (editable daily/monthly caps, alert/fallback thresholds), `GET /api/resources/monitor` (real-time CPU/RAM/VRAM). Frontend: un-mock `SettingsDrawer.tsx` Cost Policy tab (remove `opacity-50`, `data-mocked`), `ResourceMonitorPanel.tsx` (real-time charts), alert configuration with save functionality.
 **Gap Analysis ref**: §3.4 Gap #4 (Cost & Resource Controls — HIGH), §6 Phase 3
@@ -196,16 +199,16 @@ This document tracks the dynamic state of the Sovereign AI project: baselines, c
 5. Add `VIEWS.RESOURCES` to `uiStore.ts`, nav item, routing
 **STOP condition**: If cost policy write fails (Pydantic validation), STOP and fix.
 
-### Scan Prompt: Plan 95 — 5-Plan Milestone Scan (Mandatory)
+### Scan Prompt: Plan 95 — 5-Plan Milestone Scan (Mandatory) — Active
 **Depends on**: `prompt-94` | **Tag**: `prompt-95`
 **Scope**: Whole-repo scan after Batch 3 (UI Remediation) completes. No new features. Fixes only. Verify all 4 plans have CHANGELOG entries and tags. Update baselines. Verify UI Gap Analysis gaps are closed (re-run gap analysis checklist).
 **What to scan**:
-1. Full pytest suite (expected: 1456+ passed)
+1. Full pytest suite (expected: 1477+ passed)
 2. ruff check . (expected: 0)
 3. mypy core/ system/ (expected: 0)
 4. bandit, pip-audit, vulture
-5. cd src && npm test (Vitest baseline)
-6. cd src && npx playwright test (E2E baseline)
+5. cd src && npm test (Vitest baseline: 50 tests)
+6. cd src && npx playwright test (E2E baseline: 8 tests)
 7. Coverage ≥77% (82% baseline -5% tolerance)
 8. LANDMINES.md: any landmine without AR/OR rule → propose via C9
 9. CHANGELOG.md: verify Plans 90–94 have entries

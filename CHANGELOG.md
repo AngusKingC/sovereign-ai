@@ -1313,3 +1313,27 @@ This changelog documents all implementations, changes, and decisions made during
 - Mypy: 0 errors
 - Coverage: 82%
 - Tag: prompt-93 verified on origin
+
+## 2026-06-27 13:32 — prompt-94
+
+**Plan**: Cost and Resource Controls (Phase 3) — Un-mock cost settings and add resource monitoring
+
+**Changed**:
+- core/cost_tracker.py: Added public methods get_policy() and update_policy() for cost policy access
+- core/orchestrator.py: Added optional system_profiler parameter for resource monitoring integration
+- web/server.py: Added PUT /api/costs/policy and GET /api/costs/policy endpoints with validation; added GET /api/resources/monitor endpoint with psutil fallback
+- src/lib/api.ts: Added CostPolicy and ResourceMonitor interfaces; added getCostPolicy, updateCostPolicy, getResourceMonitor functions
+- src/components/panels/SettingsDrawer.tsx: Un-mocked Cost Policy tab with real API integration via CostPolicyTab component
+- src/components/panels/ResourceMonitorPanel.tsx: Created new component for real-time resource monitoring with metric cards
+- src/stores/uiStore.ts: Added VIEWS.RESOURCES constant
+- src/components/shell/Sidebar.tsx: Added Resources nav item with Cpu icon
+- src/app/page.tsx: Added ResourceMonitorPanel routing for VIEWS.RESOURCES
+- tests/test_cost_policy_api.py: Created 3 tests for cost policy API endpoints
+- tests/test_resource_monitor.py: Created 4 tests for resource monitor API endpoint
+- src/__tests__/components.test.tsx: Added 4 Vitest tests for CostPolicyTab and ResourceMonitorPanel
+
+**Results**:
+- Tests: 1477 passed, 71 skipped
+- Ruff: 0 errors (backend files)
+- Coverage: 82%
+- Tag: prompt-94 verified locally
