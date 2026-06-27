@@ -57,6 +57,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if request.url.path == "/api/errors/log" and request.method == "POST":
             return await call_next(request)
 
+        # Exempt GET /api/logs from auth (log viewing for UI)
+        # POST and DELETE still require auth (clearing logs)
+        if request.url.path.startswith("/api/logs") and request.method == "GET":
+            return await call_next(request)
+
         # Exempt polling API endpoints from auth for development
         exempt_paths = [
             "/api/status",

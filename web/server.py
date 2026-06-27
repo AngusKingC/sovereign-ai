@@ -43,6 +43,22 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Configure backend logging to file — Hermes-style
+LOG_FILE = Path(__file__).resolve().parent.parent / "logs" / "backend.log"
+LOG_FILE.parent.mkdir(exist_ok=True)
+
+# Configure root logger to write to file
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler(str(LOG_FILE), encoding="utf-8"),
+        logging.StreamHandler(),  # Also log to console
+    ],
+)
+
+logger = logging.getLogger("sovereign_ai")
+
 # Store the polling task handle so we can cancel it on shutdown
 _telegram_poll_task: asyncio.Task | None = None
 
@@ -1049,6 +1065,257 @@ def create_app(
 
         await asyncio.to_thread(_clear)
         return {"status": "cleared"}
+
+    @app.get("/api/logs")
+    async def get_logs(
+        source: str = "all",
+        tail: int = 100,
+        level: str | None = None,
+    ):
+        """Read log files from disk. Hermes-style backend log serving.
+
+        Sources:
+        - 'agent' — Python backend logs (if logging configured)
+        - 'web' — frontend errors (logs/frontend-errors.log)
+        - 'system' — system/trace events
+        - 'all' — combined from all sources
+
+        Returns last N lines, optionally filtered by level.
+        """
+        lines = []
+
+        # Frontend errors log
+        frontend_log = (
+            Path(__file__).resolve().parent.parent / "logs" / "frontend-errors.log"
+        )
+        if frontend_log.exists() and source in ("web", "all"):
+            try:
+                content = frontend_log.read_text(encoding="utf-8", errors="replace")
+                for line in content.strip().split("\n"):
+                    if line.strip():
+                        try:
+                            entry = json.loads(line)
+                            lines.append(
+                                {
+                                    "source": "web",
+                                    "timestamp": entry.get("timestamp", ""),
+                                    "level": "ERROR",
+                                    "message": entry.get("message", ""),
+                                    "stack": entry.get("stack", ""),
+                                    "component": entry.get("componentName", ""),
+                                }
+                            )
+                        except Exception:
+                            lines.append(
+                                {
+                                    "source": "web",
+                                    "timestamp": "",
+                                    "level": "ERROR",
+                                    "message": line,
+                                    "stack": "",
+                                    "component": "",
+                                }
+                            )
+            except Exception as e:
+                lines.append(
+                    {
+                        "source": "web",
+                        "timestamp": "",
+                        "level": "ERROR",
+                        "message": f"Failed to read frontend log: {e}",
+                        "stack": "",
+                        "component": "",
+                    }
+                )
+
+        # Backend Python logs — read from stderr capture or log file
+        backend_log_paths = [
+            Path(__file__).resolve().parent.parent / "logs" / "backend.log",
+            Path(__file__).resolve().parent.parent / "logs" / "agent.log",
+        ]
+
+        if source in ("agent", "all"):
+            for log_path in backend_log_paths:
+                if log_path.exists():
+                    try:
+                        content = log_path.read_text(encoding="utf-8", errors="replace")
+                        for line in content.strip().split("\n")[-tail:]:
+                            if line.strip():
+                                # Parse level from line (Python logging format: "2026-06-27 12:00:00,000 - module - LEVEL - message")
+                                log_level = "INFO"
+                                if "ERROR" in line or "CRITICAL" in line:
+                                    log_level = "ERROR"
+                                elif "WARNING" in line or "WARN" in line:
+                                    log_level = "WARNING"
+                                elif "DEBUG" in line:
+                                    log_level = "DEBUG"
+
+                                if level and log_level != level:
+                                    continue
+
+                                lines.append(
+                                    {
+                                        "source": "agent",
+                                        "timestamp": (
+                                            line[:23] if len(line) > 23 else ""
+                                        ),
+                                        "level": log_level,
+                                        "message": line,
+                                        "stack": "",
+                                        "component": "",
+                                    }
+                                )
+                    except Exception as e:
+                        lines.append(
+                            {
+                                "source": "agent",
+                                "timestamp": "",
+                                "level": "ERROR",
+                                "message": f"Failed to read backend log: {e}",
+                                "stack": "",
+                                "component": "",
+                            }
+                        )
+                    break
+
+            # Also capture recent stderr output if no log file exists
+            if not any(p.exists() for p in backend_log_paths):
+                lines.append(
+                    {
+                        "source": "agent",
+                        "timestamp": "",
+                        "level": "INFO",
+                        "message": "No backend log file found. Configure Python logging to write to logs/backend.log",
+                        "stack": "",
+                        "component": "",
+                    }
+                )
+
+        # Trace events from the emitter (if configured)
+        if source in ("system", "all"):
+            try:
+                events = _emitter.get_events(limit=tail)
+                for event in events:
+                    event_level = getattr(event, "level", "INFO")
+                    if hasattr(event_level, "value"):
+                        event_level = event_level.value
+
+                    if level and event_level != level:
+                        continue
+
+                    lines.append(
+                        {
+                            "source": "system",
+                            "timestamp": str(getattr(event, "timestamp", "")),
+                            "level": str(event_level),
+                            "message": str(getattr(event, "message", str(event))),
+                            "stack": "",
+                            "component": str(getattr(event, "component", "")),
+                        }
+                    )
+            except Exception as e:
+                lines.append(
+                    {
+                        "source": "system",
+                        "timestamp": "",
+                        "level": "ERROR",
+                        "message": f"Failed to read trace events: {e}",
+                        "stack": "",
+                        "component": "",
+                    }
+                )
+
+        # Sort by timestamp (newest last, so tail works correctly)
+        try:
+            lines.sort(key=lambda x: x.get("timestamp", ""))
+        except Exception:
+            pass  # Keep insertion order if sorting fails
+
+        # Apply tail limit
+        result = lines[-tail:] if len(lines) > tail else lines
+
+        return {"lines": result, "count": len(result), "source": source}
+
+    @app.get("/api/logs/sources")
+    async def get_log_sources():
+        """List available log sources for the UI dropdown."""
+        sources = []
+
+        # Check frontend errors log
+        frontend_log = (
+            Path(__file__).resolve().parent.parent / "logs" / "frontend-errors.log"
+        )
+        if frontend_log.exists():
+            size = frontend_log.stat().st_size
+            line_count = sum(
+                1 for _ in open(frontend_log, encoding="utf-8", errors="replace")
+            )
+            sources.append(
+                {
+                    "id": "web",
+                    "label": "Frontend Errors",
+                    "file": str(frontend_log),
+                    "size_bytes": size,
+                    "lines": line_count,
+                }
+            )
+        else:
+            sources.append(
+                {
+                    "id": "web",
+                    "label": "Frontend Errors",
+                    "file": "",
+                    "size_bytes": 0,
+                    "lines": 0,
+                }
+            )
+
+        # Check backend logs
+        backend_log_paths = [
+            ("backend.log", "Backend Log"),
+            ("agent.log", "Agent Log"),
+        ]
+        for filename, label in backend_log_paths:
+            log_path = Path(__file__).resolve().parent.parent / "logs" / filename
+            if log_path.exists():
+                size = log_path.stat().st_size
+                line_count = sum(
+                    1 for _ in open(log_path, encoding="utf-8", errors="replace")
+                )
+                sources.append(
+                    {
+                        "id": "agent",
+                        "label": label,
+                        "file": str(log_path),
+                        "size_bytes": size,
+                        "lines": line_count,
+                    }
+                )
+
+        # Trace events
+        sources.append(
+            {
+                "id": "system",
+                "label": "System Traces",
+                "file": "",
+                "size_bytes": 0,
+                "lines": 0,
+            }
+        )
+
+        return {"sources": sources}
+
+    @app.delete("/api/logs")
+    async def clear_logs(source: str = "web"):
+        """Clear a log file."""
+        if source == "web":
+            log_path = (
+                Path(__file__).resolve().parent.parent / "logs" / "frontend-errors.log"
+            )
+            if log_path.exists():
+                log_path.unlink()
+            return {"status": "cleared", "source": source}
+        return {"status": "not_supported", "source": source}
 
     # Mount static files
     app.mount("/static", StaticFiles(directory="web/static"), name="static")

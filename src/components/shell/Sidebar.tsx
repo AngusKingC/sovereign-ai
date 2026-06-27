@@ -1,5 +1,5 @@
 "use client";
-import { Home, ListTodo, Users, Shield, DollarSign, Wrench, HelpCircle, Database, Settings, Terminal as TerminalIcon, Activity as ActivityIcon, Boxes, Cpu } from "lucide-react";
+import { Home, ListTodo, Users, Shield, DollarSign, Wrench, HelpCircle, Database, Settings, Terminal as TerminalIcon, Activity as ActivityIcon, Boxes, Cpu, ScrollText } from "lucide-react";
 import { useUiStore, VIEWS, DRAWERS } from "@/stores/uiStore";
 
 const NAV_ITEMS = [
@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { icon: Users, label: "Subagents", view: VIEWS.SUBAGENTS },
   { icon: Boxes, label: "Models", view: VIEWS.MODELS },
   { icon: Cpu, label: "Resources", view: VIEWS.RESOURCES },
+  { icon: ScrollText, label: "Logs", view: VIEWS.LOGS },
 ];
 
 export function Sidebar() {

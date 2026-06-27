@@ -18,6 +18,7 @@ import { SystemStatsPanel } from "@/components/panels/SystemStatsPanel";
 import { SubagentPanel } from "@/components/panels/SubagentPanel";
 import { ModelsPanel } from "@/components/panels/ModelsPanel";
 import { ResourceMonitorPanel } from "@/components/panels/ResourceMonitorPanel";
+import { LogsPanel } from "@/components/panels/LogsPanel";
 import dynamic from "next/dynamic";
 
 const TerminalPanel = dynamic(() => import("@/components/panels/TerminalPanel").then(m => m.TerminalPanel), { ssr: false });
@@ -63,6 +64,8 @@ export default function Home() {
       return <ErrorBoundary componentName="ModelsPanel"><ModelsPanel /></ErrorBoundary>;
     case VIEWS.RESOURCES:
       return <ErrorBoundary componentName="ResourceMonitorPanel"><ResourceMonitorPanel /></ErrorBoundary>;
+    case VIEWS.LOGS:
+      return <ErrorBoundary componentName="LogsPanel"><LogsPanel /></ErrorBoundary>;
     default:
       return <ErrorBoundary componentName="TerminalPanel"><TerminalPanel /></ErrorBoundary>;
   }

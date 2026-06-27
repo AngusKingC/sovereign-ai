@@ -13,6 +13,7 @@ export const VIEWS = {
   SUBAGENTS: "subagents",
   MODELS: "models",
   RESOURCES: "resources",
+  LOGS: "logs",
 } as const;
 
 export const DRAWERS = {

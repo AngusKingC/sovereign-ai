@@ -129,8 +129,11 @@ export function startErrorLogging() {
       });
       if (!res.ok) {
         if (isStarted) {
-          uniqueErrors.push(...uniqueBackup);
-          errorBuffer.push(...mainBackup);
+          // FIXED — replace arrays entirely, then cap
+          uniqueErrors.length = 0;
+          uniqueErrors.push(...uniqueBackup.slice(0, MAX_UNIQUE_FIRST));
+          errorBuffer.length = 0;
+          errorBuffer.push(...mainBackup.slice(-MAX_BUFFER_SIZE)); // keep most recent
           seenMessages.clear();
           seenBackup.forEach(m => seenMessages.add(m));
         }
@@ -140,8 +143,11 @@ export function startErrorLogging() {
       }
     } catch {
       if (isStarted) {
-        uniqueErrors.push(...uniqueBackup);
-        errorBuffer.push(...mainBackup);
+        // FIXED — replace arrays entirely, then cap
+        uniqueErrors.length = 0;
+        uniqueErrors.push(...uniqueBackup.slice(0, MAX_UNIQUE_FIRST));
+        errorBuffer.length = 0;
+        errorBuffer.push(...mainBackup.slice(-MAX_BUFFER_SIZE)); // keep most recent
         seenMessages.clear();
         seenBackup.forEach(m => seenMessages.add(m));
       } else if (typeof navigator !== "undefined" && navigator.sendBeacon) {
