@@ -547,7 +547,7 @@ cd src && npm test
 
 **Rev2 C1 fix**: The original STOP condition referenced `_policy` private attribute access, which is self-contradictory — Rev2 already added `get_policy()` public method. The vestigial STOP is removed.
 
-If `system/profiler.py` `refresh()` signature doesn't match S0.5 verification (returns unexpected type), STOP and report. If `psutil` is not in project dependencies, STOP and add it to `requirements.txt`.
+If `system/profiler.py` `refresh()` signature doesn't match S0.5 verification (returns unexpected type), STOP and report. If `psutil` is not in project dependencies, STOP and add it to `txt/requirements.txt`.
 
 ---
 

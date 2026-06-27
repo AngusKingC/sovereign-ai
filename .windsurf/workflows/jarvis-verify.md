@@ -69,7 +69,7 @@ findings = [l for l in result.stdout.splitlines() if 'confidence' in l]
 if not findings:
     print('No vulture findings.')
     sys.exit(0)
-with open('vulture-whitelist.txt', encoding='utf-8') as f:
+with open('txt/vulture-whitelist.txt', encoding='utf-8') as f:
     whitelist = set(l.strip() for l in f if l.strip())
 new_findings = [f for f in findings if f not in whitelist]
 if new_findings:
@@ -82,7 +82,7 @@ print(f'All {len(findings)} findings are whitelisted.')
 ```
 If new findings appear (not in whitelist), either:
 - Fix the dead code (preferred), OR
-- Add to `vulture-whitelist.txt` (UTF-8 encoded) with an inline comment in the source file explaining why it's whitelisted (e.g., `# vulture-whitelist: required by ABC interface`).
+- Add to `txt/vulture-whitelist.txt` (UTF-8 encoded) with an inline comment in the source file explaining why it's whitelisted (e.g., `# vulture-whitelist: required by ABC interface`).
 
 ## Expected result
 

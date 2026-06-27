@@ -38,7 +38,7 @@ npm run lint   # ESLint
 
 `ash
 cd backend
-pip install -r requirements.txt
+pip install -r txt/requirements.txt
 uvicorn main:app --reload  # http://localhost:8000
 `
 

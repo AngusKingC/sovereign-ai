@@ -32,7 +32,7 @@ python -c "
 import subprocess, sys
 result = subprocess.run(['vulture', '.', '--min-confidence', '80', '--exclude', '.venv,venv,env,.git,node_modules,__pycache__,build,dist,.tox,.eggs,.pytest_cache'], capture_output=True, text=True)
 findings = [l for l in result.stdout.splitlines() if 'confidence' in l]
-with open('vulture-whitelist.txt', encoding='utf-8') as f:
+with open('txt/vulture-whitelist.txt', encoding='utf-8') as f:
     whitelist = set(l.strip() for l in f if l.strip())
 new_findings = [f for f in findings if f not in whitelist]
 if new_findings:
@@ -43,7 +43,7 @@ if new_findings:
 print(f'All {len(findings)} findings are whitelisted.')
 "
 ```
-If new findings appear (not in whitelist), STOP — either fix the dead code or add to `vulture-whitelist.txt` (UTF-8 encoded). Do not commit until this passes.
+If new findings appear (not in whitelist), STOP — either fix the dead code or add to `txt/vulture-whitelist.txt` (UTF-8 encoded). Do not commit until this passes.
 
 ## Step 2.8: Pre-commit run on staged files (NEW — Plan 72)
 ```bash
@@ -327,7 +327,7 @@ Kill all Git Bash processes to prevent zombie session accumulation (per OR28/L10
 This is the FINAL step — all prior steps must be complete, including the completion checklist.
 
 ```bash
-taskkill //F //IM bash.exe 2>/dev/null || true
+taskkill //F //IM bash.exe
 ```
 
 No output expected. This command kills all `bash.exe` processes on the system, including the current session. The plan is complete — no further commands will execute.
