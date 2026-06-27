@@ -1,4 +1,5 @@
 ﻿"use client";
+import { useEffect } from "react";
 import { useStatusPolling } from "@/hooks/useStatusPolling";
 import { useWorkersPolling } from "@/hooks/useWorkersPolling";
 import { useCostsPolling } from "@/hooks/useCostsPolling";
@@ -6,6 +7,7 @@ import { useApprovalsPolling } from "@/hooks/useApprovalsPolling";
 import { useMemoryPolling } from "@/hooks/useMemoryPolling";
 import { useUiStore, VIEWS } from "@/stores/uiStore";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { startErrorLogging } from "@/hooks/useErrorLogger";
 import { TasksPanel } from "@/components/panels/TasksPanel";
 import { WorkersPanel } from "@/components/panels/WorkersPanel";
 import { ApprovalQueuePanel } from "@/components/panels/ApprovalQueuePanel";
@@ -21,6 +23,11 @@ import dynamic from "next/dynamic";
 const TerminalPanel = dynamic(() => import("@/components/panels/TerminalPanel").then(m => m.TerminalPanel), { ssr: false });
 
 export default function Home() {
+  useEffect(() => {
+    const cleanup = startErrorLogging();
+    return cleanup;
+  }, []);
+
   useStatusPolling();
   useWorkersPolling();
   useCostsPolling();

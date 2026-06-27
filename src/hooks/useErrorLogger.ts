@@ -23,7 +23,8 @@ let isStarted = false;
 const handledErrors = new WeakSet<Error>();
 
 function getErrorHash(entry: { message: string; stack?: string }): string {
-  return (entry.message.slice(0, 100) + "|" + (entry.stack || "").slice(0, 200));
+  // Include more of the message to differentiate between different HTTP errors
+  return (entry.message.slice(0, 200) + "|" + (entry.stack || "").slice(0, 100));
 }
 
 function addToBuffer(entry: ErrorLogEntry) {

@@ -1,8 +1,6 @@
 "use client";
-import { useEffect } from "react";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useUiStore } from "@/stores/uiStore";
-import { startErrorLogging } from "@/hooks/useErrorLogger";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { StatusBar } from "./StatusBar";
 import { Sidebar } from "./Sidebar";
@@ -16,11 +14,6 @@ export function ShellClient({ children }: { children: React.ReactNode }) {
   useKeyboardShortcuts();
   const activeDrawer = useUiStore((s) => s.activeDrawer);
   const closeDrawer = useUiStore((s) => s.closeDrawer);
-
-  useEffect(() => {
-    const cleanup = startErrorLogging();
-    return cleanup;
-  }, []);
 
   return (
     <div className="jarvis-shell" data-testid="jarvis-shell">
