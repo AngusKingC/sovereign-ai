@@ -57,6 +57,17 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if request.url.path == "/api/errors/log" and request.method == "POST":
             return await call_next(request)
 
+        # Exempt polling API endpoints from auth for development
+        exempt_paths = [
+            "/api/status",
+            "/api/workers",
+            "/api/costs",
+            "/api/approvals",
+            "/api/memory",
+        ]
+        if request.url.path in exempt_paths:
+            return await call_next(request)
+
         # Extract bearer token from Authorization header
         auth_header = request.headers.get("Authorization")
         token = None
